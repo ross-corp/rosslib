@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/auth"
+	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 	"github.com/tristansaldanha/rosslib/api/internal/users"
 )
 
@@ -38,9 +39,17 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	r.POST("/auth/register", authHandler.Register)
 	r.POST("/auth/login", authHandler.Login)
 
+	secret := []byte(jwtSecret)
+
 	usersHandler := users.NewHandler(pool)
 	r.GET("/users", usersHandler.SearchUsers)
-	r.GET("/users/:username", usersHandler.GetProfile)
+	r.GET("/users/:username", middleware.OptionalAuth(secret), usersHandler.GetProfile)
+
+	authed := r.Group("/")
+	authed.Use(middleware.Auth(secret))
+	authed.PATCH("/users/me", usersHandler.UpdateMe)
+	authed.POST("/users/:username/follow", usersHandler.Follow)
+	authed.DELETE("/users/:username/follow", usersHandler.Unfollow)
 
 	return r
 }

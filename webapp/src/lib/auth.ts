@@ -14,6 +14,11 @@ function decodeJWT(token: string): Record<string, unknown> | null {
   }
 }
 
+export async function getToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get("token")?.value ?? null;
+}
+
 export async function getUser(): Promise<AuthUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;

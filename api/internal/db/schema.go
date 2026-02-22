@@ -21,6 +21,14 @@ CREATE TABLE IF NOT EXISTS users (
 	created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 	deleted_at    TIMESTAMPTZ
 );
+
+CREATE TABLE IF NOT EXISTS follows (
+	follower_id UUID        NOT NULL REFERENCES users(id),
+	followee_id UUID        NOT NULL REFERENCES users(id),
+	status      VARCHAR(20) NOT NULL DEFAULT 'active',
+	created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	PRIMARY KEY (follower_id, followee_id)
+);
 `
 
 func Migrate(pool *pgxpool.Pool) error {

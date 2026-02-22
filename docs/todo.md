@@ -1,165 +1,146 @@
-# Todo
+# Features
 
-Organized by area. MVP items are unmarked; post-MVP items are labeled `[post-MVP]`.
-
----
-
-## Infrastructure
-
-- [x] Initialize Go API project (module, directory structure, linter config)
-- [x] Initialize Next.js frontend project (TypeScript, Tailwind)
-- [x] Set up PostgreSQL locally (Docker Compose for dev)
-- [x] Set up Redis locally (Docker Compose)
-- [x] Write Docker Compose file (webapp, api, postgres, redis, meilisearch)
-- [x] Set up Meilisearch (Docker Compose service)
-- [x] Write initial DB migration (startup schema via `db/schema.go`; `CREATE TABLE IF NOT EXISTS` on boot — no migration tool yet)
-- [ ] Set up GitHub Actions CI pipeline (lint, test, build)
-- [ ] Create AWS accounts / IAM roles for deployment
-- [ ] Set up nginx on host with Let's Encrypt (Certbot)
-- [ ] Provision EC2 instance (t3.medium or t3.large)
-- [ ] Set up S3 bucket for file storage (covers, avatars, exports)
-- [ ] Configure IAM role on EC2 for S3 access (no credentials in app)
-- [ ] Configure Secrets Manager for credentials
-- [ ] Set up Route 53 + ACM for domain
+Backlog of all things we need #todo
 
 ---
 
-## Database
+## WEBAPP
 
-- [ ] Write migrations for all core tables (see `datamodel.md`)
-  - [x] users (created in startup schema)
-  - [ ] books, authors, book_authors
-  - [ ] genres, book_genres
-  - [ ] collections, collection_items
-  - [ ] reviews
-  - [ ] follows
-  - [ ] threads, comments
-  - [ ] links
-  - [ ] activity
-  - [ ] book_stats
-  - [ ] book_edits
-- [ ] Seed script: import sample book data from Open Library
+- [ ]  User Accounts
+  - [x] Registration & Login
+  - [x] Register with username + email + password (bcrypt hashed, stored in `users` table).
+  - [x] Login with email + password, returns a 30-day JWT set as an httpOnly cookie.
+  - [ ] Email verification required before full access.
+  - [ ] Password reset via email link.
+  - [ ] OAuth via Google.
+- [ ] Profile
+  - [ ] Public profile page at `/@username` showing:
+    - [ ] Display name, bio, avatar.
+    - [ ] Public collections (read, want to read, favorites, etc.).
+    - [ ] Recent activity (reviews, threads, list updates).
+    - [ ] Stats: books read, reviews written, followers/following count.
+  - [ ] Profiles can be set to private; followers must be approved.
+- [ ] Objects
+  - [ ] User pages at /u/greg
+  - [ ] Work pages at /w/dune
+  - [ ] Author pages at /a/frank_herbert
 
----
-
-## Auth
-
-- [x] POST `/auth/register` — bcrypt hash, returns 30-day JWT
-- [x] POST `/auth/login` — bcrypt compare, returns 30-day JWT
-- [ ] POST `/auth/refresh`
-- [ ] POST `/auth/logout` (API-side token revocation; logout is currently cookie-delete only in the webapp)
-- [ ] POST `/auth/password-reset/request`
-- [ ] POST `/auth/password-reset/confirm`
-- [ ] JWT middleware (access token validation on protected API routes)
-- [ ] `[post-MVP]` OAuth via Google
+- [ ] Searchbar
+  - [x] search for users
+  - [ ] filter by select fields: works, authors, users
+  - [ ] fuzzier search, not exact string match
 
 ---
 
-## Users
+## DATA MODEL
 
-- [ ] GET `/users/:username` — public profile
-- [ ] PATCH `/users/me` — update profile (display name, bio, avatar)
-- [ ] POST `/users/me/avatar` — upload avatar to S3
-- [ ] GET `/users/me/feed` — activity feed (cursor-paginated)
-- [ ] POST `/users/:username/follow`
-- [ ] DELETE `/users/:username/follow`
-- [ ] GET `/users/:username/followers`
-- [ ] GET `/users/:username/following`
-- [ ] `[post-MVP]` Private account follow approval flow
+- [ ] Collections
+  - [ ] 3 default collections for all users: want to read, reading, read
+  - [ ] custom collections
+    - [ ] Non-exclusive by default (a book can appear in multiple custom collections).
+    - [ ] Example: "Favorites", "Recommended to me", "Books set in Japan".
+    - [ ] Collections can be made private or public.
+    - [ ] Custom collections can also be marked exclusive and grouped if desired (e.g. a "Currently Reading" + "audiobook").
+  - [ ] Computed collections
+    - [ ] Union: books in list A or list B.
+    - [ ] Intersection: books in both list A and list B.
+    - [ ] Difference: books in list A but not list B.
+    - [ ] compute an operation + save as new collection
+      - [ ] Example: "Books I've read that are also in my friend's Want to Read list."
+    - [ ] enable continuous v. one-time computed collections
+
+- [ ] Sublists / Hierarchical Tags
+  - [ ] A collection can have sub-labels that form a hierarchy:
+    - [ ] Example: a "Science Fiction" collection with sub-labels "Space Opera", "Hard SF", "Cyberpunk".
+    - [ ] Sub-labels are tags on `CollectionItem`, not separate collections.
+    - [ ] Display as nested groupings on the collection page.
+
+- [ ] User Follow System
+  - [ ] Asymmetric: you follow someone without them needing to follow back.
+  - [ ] Private accounts require approval before a follow is accepted.
+  - [ ] Following someone surfaces their activity in your feed.
+  - [ ] "Friends" (mutual follows) can be surfaced in the UI as a distinct tier.
+- [ ] users can follow Authors and see new publications
+- [ ] users can follow Works and see sequels / new discussions / links
 
 ---
 
-## Books
+## BOOK CATALOG + DB
 
-- [ ] Integrate Open Library API client
-- [ ] GET `/books/search?q=` — full-text search via Meilisearch
-- [ ] GET `/books/:id` — book detail page data
-- [ ] Background job: index books to Meilisearch on create/update
-- [ ] Background job: refresh book_stats aggregates
-- [ ] `[post-MVP]` POST `/books/:id/edits` — submit metadata correction
-- [ ] `[post-MVP]` Admin moderation queue for book edits
-- [ ] `[post-MVP]` Edition grouping (link multiple ISBNs as same work)
+- [ ] Search
+  - [ ] Full-text search by title, author, ISBN.
+  - [ ] Faceted filters: genre, published year range, language.
+  - [ ] Results ranked by relevance, with popular books surfaced higher.
+- [ ] Book pages
+  - [ ] Metadata: title, author(s), cover, description, publisher, year, page count.
+  - [ ] Aggregate stats: average rating, read count, want-to-read count.
+  - [ ] User's own status (added to which collection, their rating/review).
+  - [ ] Community reviews and discussion threads.
+  - [ ] Community links to related works.
+- [ ] Author page
+- [ ] Genre pages
 
----
-
-## Collections
-
-- [ ] Seed default collections on user registration (Read, Currently Reading, Want to Read)
-- [ ] GET `/users/:username/collections` — list user's public collections
-- [ ] GET `/users/:username/collections/:slug` — collection detail + items
-- [ ] POST `/users/me/collections` — create collection
-- [ ] PATCH `/users/me/collections/:id` — rename, update description/visibility
-- [ ] DELETE `/users/me/collections/:id`
-- [ ] POST `/users/me/collections/:id/items` — add book (enforce exclusive_group logic)
-- [ ] DELETE `/users/me/collections/:id/items/:bookId`
-- [ ] PATCH `/users/me/collections/:id/items/:bookId` — update notes, sort_order
-- [ ] GET `/users/me/collections/set-op?op=union|intersection|difference&a=:id&b=:id` — set operations
-- [ ] `[post-MVP]` Save set operation result as new collection
-- [ ] `[post-MVP]` Sub-labels / hierarchical tags on collection items
+- [ ] Edition handling
 
 ---
 
 ## Reviews & Ratings
 
-- [ ] POST `/books/:id/reviews` — create/update review + rating
-- [ ] DELETE `/books/:id/reviews` — delete own review
-- [ ] GET `/books/:id/reviews` — list reviews (followers first, then recency)
-- [ ] GET `/users/:username/reviews` — all reviews by user
+- [ ] A user can rate a book 1–5 stars with half stars
+- [ ] A rating alone (no review text) is valid.
+- [ ] Review text is optional; can include a spoiler flag.
+- [ ] One review per user per book; can be edited or deleted.
+- [ ] Reviews are shown on book pages sorted by recency and follower relationships (reviews from people you follow shown first).
 
 ---
 
-## Threads & Comments
+## Discussion Threads
 
-- [ ] GET `/books/:id/threads` — list threads for a book
-- [ ] POST `/books/:id/threads` — create thread
-- [ ] GET `/threads/:id` — thread detail with comments
-- [ ] DELETE `/threads/:id` — soft delete own thread
-- [ ] POST `/threads/:id/comments` — add comment or reply
-- [ ] DELETE `/comments/:id` — soft delete own comment
+- [ ] Any user can open a thread on a book's page.
+- [ ] Thread has a title, body, and optional spoiler flag.
+- [ ] Threads get reccommended for union if they're similar enough
+  - [ ] link to similar comments if similarity score > some percentage
+- [ ] Threaded comments support one level of nesting (reply to a comment, not reply to a reply).
+- [ ] No upvotes at MVP; chronological sort only.
+- [ ] Author can delete their own thread or comments; soft delete.
 
 ---
 
-## Community Links
+## Community Links (Wiki)
 
-- [ ] GET `/books/:id/links` — outbound links (sorted by upvotes)
-- [ ] POST `/books/:id/links` — submit link to another book
-- [ ] POST `/links/:id/upvote`
-- [ ] DELETE `/links/:id/upvote`
-- [ ] `[post-MVP]` Soft delete / moderator removal of links
+Users can submit directional links between books:
+
+- [ ] Link types: `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`.
+- [ ] Optional note explaining the connection.
+- [ ] Links are upvotable; sorted by upvotes on book pages.
+- [ ] Soft-deleted by moderators if spam or incorrect.
+- [ ] Future: edit queue similar to book metadata edits.
 
 ---
 
 ## Import / Export
 
-- [ ] POST `/import/goodreads` — upload CSV, parse, return preview
-- [ ] POST `/import/goodreads/confirm` — commit import after user reviews
-- [ ] GET `/export/collections` — generate CSV export, return pre-signed S3 URL
+### Goodreads Import
+
+- [ ] Accept a Goodreads CSV export file.
+- [ ] Map Goodreads shelves to rosslib collections
+- [ ] Attempt to match books by ISBN, falling back to title + author fuzzy match.
+- [ ] Show a review screen before committing: matched / unmatched / ambiguous.
+- [ ] Import star ratings and review text where present.
+
+### CSV Export
+
+- [ ] Export any collection (or all collections) to CSV.
+- [ ] Columns: title, author, ISBN, date added, rating, review, collection name.
+- [ ] Generated server-side and made available via a pre-signed S3 URL.
 
 ---
 
-## Frontend
+## Feed
 
-- [x] Auth pages: login and register (wired to API via Next.js route handlers, httpOnly cookie, error states, loading states)
-- [ ] Auth pages: forgot password
-- [ ] User profile page (`/@username`)
-- [ ] Collection page (`/@username/:collection-slug`)
-- [ ] Book page (`/books/:id`)
-- [ ] Search results page
-- [ ] Feed page (home for logged-in users)
-- [ ] Settings page (profile edit, account)
-- [ ] Thread page (`/threads/:id`)
-- [ ] Import flow (upload + review + confirm)
-- [ ] Export flow
-- [ ] `[post-MVP]` Set operation builder UI
-- [ ] `[post-MVP]` Book edit submission UI
+- [ ] Chronological feed of activity from users you follow.
+- [ ] Activity types surfaced: added to collection, wrote a review, started/finished a book, created a thread, submitted a link, followed a new user.
+- [ ] No algorithmic ranking at MVP; pure chronological.
+- [ ] Paginated (cursor-based).
 
 ---
-
-## Polish / Post-MVP
-
-- [ ] Email notifications (new follower, reply to your thread)
-- [ ] Reading goals (e.g. 50 books in a year) with progress tracking
-- [ ] "Reading journal" per book (private notes, date started/finished)
-- [ ] Lists shareable as public URLs with a static view
-- [ ] Mobile app (React Native, reusing API)
-- [ ] Algorithmic recommendations based on collection overlap with followed users

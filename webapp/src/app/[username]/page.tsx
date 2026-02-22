@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import Nav from "@/components/nav";
-import { getUser } from "@/lib/auth";
+import FollowButton from "@/components/follow-button";
+import { getUser, getToken } from "@/lib/auth";
 
 type UserProfile = {
   user_id: string;
@@ -10,11 +12,17 @@ type UserProfile = {
   avatar_url: string | null;
   is_private: boolean;
   member_since: string;
+  is_following: boolean;
 };
 
-async function fetchProfile(username: string): Promise<UserProfile | null> {
+async function fetchProfile(
+  username: string,
+  token?: string
+): Promise<UserProfile | null> {
+  const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
   const res = await fetch(`${process.env.API_URL}/users/${username}`, {
     cache: "no-store",
+    headers,
   });
   if (!res.ok) return null;
   return res.json();
@@ -26,10 +34,8 @@ export default async function UserPage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  const [profile, currentUser] = await Promise.all([
-    fetchProfile(username),
-    getUser(),
-  ]);
+  const [currentUser, token] = await Promise.all([getUser(), getToken()]);
+  const profile = await fetchProfile(username, token ?? undefined);
 
   if (!profile) notFound();
 
@@ -55,11 +61,19 @@ export default async function UserPage({
                 </p>
               )}
             </div>
-            {isOwnProfile && (
-              <button className="text-sm text-stone-500 hover:text-stone-900 border border-stone-300 px-3 py-1.5 rounded transition-colors">
+            {isOwnProfile ? (
+              <Link
+                href="/settings"
+                className="text-sm text-stone-500 hover:text-stone-900 border border-stone-300 px-3 py-1.5 rounded transition-colors"
+              >
                 Edit profile
-              </button>
-            )}
+              </Link>
+            ) : currentUser ? (
+              <FollowButton
+                username={profile.username}
+                initialFollowing={profile.is_following}
+              />
+            ) : null}
           </div>
 
           {profile.bio && (
