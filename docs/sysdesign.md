@@ -67,15 +67,16 @@ Next.js is not a static export — it runs as a server because SSR is needed for
 
 REST JSON API. Organized into modules:
 
-- `auth` — registration, login, token refresh, password reset
-- `users` — profiles, follow/friend graph
-- `books` — catalog CRUD, search proxy to Meilisearch
-- `collections` — user lists, list items, set operations
-- `reviews` — ratings, text reviews, per-book aggregate stats
-- `threads` — discussion threads on book pages
-- `links` — community-submitted links between works (wiki)
-- `import` — Goodreads CSV ingestion
-- `export` — CSV generation, S3 upload, pre-signed URL response
+- `auth` — registration, login, token refresh, password reset. **Implemented:** `POST /auth/register`, `POST /auth/login`.
+- `middleware` — JWT auth. **Implemented:** `Auth` (required) and `OptionalAuth` (optional) middleware.
+- `users` — profiles, follow/friend graph. **Implemented:** `GET /users` (search + paginated list), `GET /users/:username` (profile + follow status), `PATCH /users/me` (edit profile), `POST/DELETE /users/:username/follow`.
+- `books` — catalog CRUD, search proxy to Meilisearch. _Not yet implemented._
+- `collections` — user lists, list items, set operations. _Not yet implemented._
+- `reviews` — ratings, text reviews, per-book aggregate stats. _Not yet implemented._
+- `threads` — discussion threads on book pages. _Not yet implemented._
+- `links` — community-submitted links between works (wiki). _Not yet implemented._
+- `import` — Goodreads CSV ingestion. _Not yet implemented._
+- `export` — CSV generation, S3 upload, pre-signed URL response. _Not yet implemented._
 
 The Go binary is compiled and run in a minimal Docker container. Single process, no orchestration overhead.
 
@@ -160,18 +161,21 @@ Book metadata seeded from the Open Library API. Strategy:
 
 ## Auth Flow
 
-Current implementation (MVP):
+Current implementation:
 
 1. `POST /auth/register` or `POST /auth/login` — Go API validates credentials, returns a signed 30-day HS256 JWT containing `sub` (user UUID) and `username`.
 2. The Next.js webapp intercepts these calls via route handlers (`/api/auth/login`, `/api/auth/register`). The route handler proxies to the Go API server-to-server, then sets the JWT as an httpOnly `token` cookie on the browser.
-3. Server components (e.g. Nav) read the cookie via `next/headers` and decode the payload to determine the current user. No verification needed on the webapp side — the API is the source of truth for all authenticated actions.
+3. Server components (e.g. Nav, profile page) read the cookie via `next/headers` and decode the payload to determine the current user. No verification on the webapp side — the API is the source of truth for all authenticated actions.
 4. Logout deletes the cookie via a Next.js route handler (`/api/auth/logout`). No server-side revocation yet.
+5. For mutating API calls (profile update, follow/unfollow), Next.js route handlers read the `token` cookie and forward it as `Authorization: Bearer <token>` to the Go API.
+6. The Go API has two middleware variants in `internal/middleware`:
+   - `Auth` — requires a valid Bearer token; returns 401 otherwise. Applied to `PATCH /users/me`, `POST/DELETE /users/:username/follow`.
+   - `OptionalAuth` — enriches the Gin context with user info if a valid token is present, passes through regardless. Applied to `GET /users/:username` so `is_following` can be included in the response for logged-in callers.
 
 Planned (not yet implemented):
 
 - Short-lived access tokens (15 min) + long-lived refresh tokens (30 days) stored in Redis for revocation support.
 - `POST /auth/refresh` — validates refresh token in Redis, issues new access token.
-- `JWT middleware` on the Go API to protect routes via `Authorization: Bearer <token>`.
 - Password reset via email link.
 
 ## Key Design Decisions

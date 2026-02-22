@@ -6,7 +6,7 @@ Backlog of all things we need #todo
 
 ## WEBAPP
 
-- [ ]  User Accounts
+- [ ] User Accounts
   - [x] Registration & Login
   - [x] Register with username + email + password (bcrypt hashed, stored in `users` table).
   - [x] Login with email + password, returns a 30-day JWT set as an httpOnly cookie.
@@ -14,21 +14,32 @@ Backlog of all things we need #todo
   - [ ] Password reset via email link.
   - [ ] OAuth via Google.
 - [ ] Profile
-  - [ ] Public profile page at `/@username` showing:
-    - [ ] Display name, bio, avatar.
-    - [ ] Public collections (read, want to read, favorites, etc.).
-    - [ ] Recent activity (reviews, threads, list updates).
-    - [ ] Stats: books read, reviews written, followers/following count.
+  - [x] Public profile page at `/{username}` — display name, byline, member since.
+  - [x] Edit profile page at `/settings` — set display name and byline.
+  - [ ] Avatar upload.
+  - [ ] Public collections (read, want to read, favorites, etc.) on profile.
+  - [ ] Recent activity (reviews, threads, list updates) on profile.
+  - [ ] Stats: books read, reviews written, followers/following count.
   - [ ] Profiles can be set to private; followers must be approved.
 - [ ] Objects
-  - [ ] User pages at /u/greg
   - [ ] Work pages at /w/dune
   - [ ] Author pages at /a/frank_herbert
 
-- [ ] Searchbar
-  - [x] search for users
-  - [ ] filter by select fields: works, authors, users
-  - [ ] fuzzier search, not exact string match
+- [ ] Search & Discovery
+  - [x] Search bar in nav — submits GET to /search.
+  - [x] `/search` page — search users by username or display name (substring match, up to 20 results).
+  - [x] `/users` page — browse all users, alphabetical, paginated (20/page).
+  - [ ] Filter search by type: works, authors, users.
+  - [ ] Full-text book/author search via Meilisearch.
+
+- [ ] Social
+  - [x] Follow / unfollow users (asymmetric). Follow button on profile page; `is_following` returned from profile endpoint.
+  - [x] `follows` table with `(follower_id, followee_id)` PK and `status` field.
+  - [ ] Private accounts require follow approval (status = 'pending').
+  - [ ] Followers / following counts on profile.
+  - [ ] "Friends" (mutual follows) surfaced in UI.
+  - [ ] Follow authors, see new publications.
+  - [ ] Follow works, see sequels / new discussions / links.
 
 ---
 
@@ -54,14 +65,6 @@ Backlog of all things we need #todo
     - [ ] Example: a "Science Fiction" collection with sub-labels "Space Opera", "Hard SF", "Cyberpunk".
     - [ ] Sub-labels are tags on `CollectionItem`, not separate collections.
     - [ ] Display as nested groupings on the collection page.
-
-- [ ] User Follow System
-  - [ ] Asymmetric: you follow someone without them needing to follow back.
-  - [ ] Private accounts require approval before a follow is accepted.
-  - [ ] Following someone surfaces their activity in your feed.
-  - [ ] "Friends" (mutual follows) can be surfaced in the UI as a distinct tier.
-- [ ] users can follow Authors and see new publications
-- [ ] users can follow Works and see sequels / new discussions / links
 
 ---
 
