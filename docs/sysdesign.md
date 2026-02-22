@@ -160,10 +160,19 @@ Book metadata seeded from the Open Library API. Strategy:
 
 ## Auth Flow
 
-1. `POST /auth/register` — creates user, returns access token (15 min) + refresh token (30 days, stored in httpOnly cookie).
-2. `POST /auth/refresh` — validates refresh token in Redis, issues new access token.
-3. Access token sent as `Authorization: Bearer <token>` on authenticated API requests.
-4. Refresh tokens stored in Redis keyed by `refresh:{token}` → `user_id`, enabling revocation.
+Current implementation (MVP):
+
+1. `POST /auth/register` or `POST /auth/login` — Go API validates credentials, returns a signed 30-day HS256 JWT containing `sub` (user UUID) and `username`.
+2. The Next.js webapp intercepts these calls via route handlers (`/api/auth/login`, `/api/auth/register`). The route handler proxies to the Go API server-to-server, then sets the JWT as an httpOnly `token` cookie on the browser.
+3. Server components (e.g. Nav) read the cookie via `next/headers` and decode the payload to determine the current user. No verification needed on the webapp side — the API is the source of truth for all authenticated actions.
+4. Logout deletes the cookie via a Next.js route handler (`/api/auth/logout`). No server-side revocation yet.
+
+Planned (not yet implemented):
+
+- Short-lived access tokens (15 min) + long-lived refresh tokens (30 days) stored in Redis for revocation support.
+- `POST /auth/refresh` — validates refresh token in Redis, issues new access token.
+- `JWT middleware` on the Go API to protect routes via `Authorization: Bearer <token>`.
+- Password reset via email link.
 
 ## Key Design Decisions
 

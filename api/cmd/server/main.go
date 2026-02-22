@@ -23,7 +23,11 @@ func main() {
 	}
 	defer pool.Close()
 
-	router := server.NewRouter(pool)
+	if err := db.Migrate(pool); err != nil {
+		log.Fatalf("failed to migrate database: %v", err)
+	}
+
+	router := server.NewRouter(pool, cfg.JWTSecret)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,

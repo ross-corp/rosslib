@@ -1,14 +1,47 @@
-import Link from "next/link";
+"use client";
 
-export const metadata = {
-  title: "Create account — rosslib",
-};
+import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const form = e.currentTarget;
+    const data = {
+      username: (form.elements.namedItem("username") as HTMLInputElement).value,
+      email: (form.elements.namedItem("email") as HTMLInputElement).value,
+      password: (form.elements.namedItem("password") as HTMLInputElement).value,
+    };
+
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    setLoading(false);
+
+    if (!res.ok) {
+      const body = await res.json();
+      setError(body.error || "Something went wrong.");
+      return;
+    }
+
+    router.push("/");
+    router.refresh();
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="font-semibold text-stone-900 text-xl">
             rosslib
@@ -18,8 +51,13 @@ export default function RegisterPage() {
           </h1>
         </div>
 
-        {/* Form */}
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+              {error}
+            </p>
+          )}
+
           <div>
             <label
               htmlFor="username"
@@ -72,6 +110,7 @@ export default function RegisterPage() {
               type="password"
               autoComplete="new-password"
               required
+              minLength={8}
               className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm"
               placeholder="••••••••"
             />
@@ -80,9 +119,10 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            className="w-full bg-stone-900 text-white py-2.5 rounded font-medium hover:bg-stone-700 transition-colors text-sm"
+            disabled={loading}
+            className="w-full bg-stone-900 text-white py-2.5 rounded font-medium hover:bg-stone-700 transition-colors text-sm disabled:opacity-50"
           >
-            Create account
+            {loading ? "Creating account..." : "Create account"}
           </button>
         </form>
 

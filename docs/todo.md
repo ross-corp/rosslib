@@ -12,7 +12,7 @@ Organized by area. MVP items are unmarked; post-MVP items are labeled `[post-MVP
 - [x] Set up Redis locally (Docker Compose)
 - [x] Write Docker Compose file (webapp, api, postgres, redis, meilisearch)
 - [x] Set up Meilisearch (Docker Compose service)
-- [ ] Write initial DB migration tooling (golang-migrate or similar)
+- [x] Write initial DB migration (startup schema via `db/schema.go`; `CREATE TABLE IF NOT EXISTS` on boot — no migration tool yet)
 - [ ] Set up GitHub Actions CI pipeline (lint, test, build)
 - [ ] Create AWS accounts / IAM roles for deployment
 - [ ] Set up nginx on host with Let's Encrypt (Certbot)
@@ -27,7 +27,7 @@ Organized by area. MVP items are unmarked; post-MVP items are labeled `[post-MVP
 ## Database
 
 - [ ] Write migrations for all core tables (see `datamodel.md`)
-  - [ ] users
+  - [x] users (created in startup schema)
   - [ ] books, authors, book_authors
   - [ ] genres, book_genres
   - [ ] collections, collection_items
@@ -44,13 +44,13 @@ Organized by area. MVP items are unmarked; post-MVP items are labeled `[post-MVP
 
 ## Auth
 
-- [ ] POST `/auth/register`
-- [ ] POST `/auth/login`
+- [x] POST `/auth/register` — bcrypt hash, returns 30-day JWT
+- [x] POST `/auth/login` — bcrypt compare, returns 30-day JWT
 - [ ] POST `/auth/refresh`
-- [ ] POST `/auth/logout`
+- [ ] POST `/auth/logout` (API-side token revocation; logout is currently cookie-delete only in the webapp)
 - [ ] POST `/auth/password-reset/request`
 - [ ] POST `/auth/password-reset/confirm`
-- [ ] JWT middleware (access token validation)
+- [ ] JWT middleware (access token validation on protected API routes)
 - [ ] `[post-MVP]` OAuth via Google
 
 ---
@@ -139,7 +139,8 @@ Organized by area. MVP items are unmarked; post-MVP items are labeled `[post-MVP
 
 ## Frontend
 
-- [ ] Auth pages: login, register, forgot password
+- [x] Auth pages: login and register (wired to API via Next.js route handlers, httpOnly cookie, error states, loading states)
+- [ ] Auth pages: forgot password
 - [ ] User profile page (`/@username`)
 - [ ] Collection page (`/@username/:collection-slug`)
 - [ ] Book page (`/books/:id`)

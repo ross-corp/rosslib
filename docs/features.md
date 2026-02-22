@@ -4,101 +4,75 @@ Detailed specifications for all planned features.
 
 ---
 
-## User Accounts
+## Basic auth
 
-### Registration & Login
-
-- [ ] Register with email + password, or via OAuth (Google).
-- [ ] Email verification required before full access.
-- [ ] Login returns a JWT access token + httpOnly refresh token cookie.
-- [ ] Password reset via email link.
-
-### Profile
-
-- [ ] Public profile page at `/@username` showing:
-  - [ ] Display name, bio, avatar.
-  - [ ] Public collections (read, want to read, favorites, etc.).
-  - [ ] Recent activity (reviews, threads, list updates).
-  - [ ] Stats: books read, reviews written, followers/following count.
-- [ ] Profiles can be set to private; followers must be approved.
-
-### Follow System
-
-- [ ] Asymmetric: you follow someone without them needing to follow back.
-- [ ] Private accounts require approval before a follow is accepted.
-- [ ] Following someone surfaces their activity in your feed.
-- [ ] "Friends" (mutual follows) can be surfaced in the UI as a distinct tier.
+- [ ]  User Accounts
+  - [ ] Registration & Login
+  - [x] Register with username + email + password (bcrypt hashed, stored in `users` table).
+  - [x] Login with email + password, returns a 30-day JWT set as an httpOnly cookie.
+  - [ ] Email verification required before full access.
+  - [ ] Password reset via email link.
+  - [ ] `[post-MVP]` OAuth via Google.
+- [ ] Profile
+  - [ ] Public profile page at `/@username` showing:
+    - [ ] Display name, bio, avatar.
+    - [ ] Public collections (read, want to read, favorites, etc.).
+    - [ ] Recent activity (reviews, threads, list updates).
+    - [ ] Stats: books read, reviews written, followers/following count.
+  - [ ] Profiles can be set to private; followers must be approved.
+- [ ] Follow System
+  - [ ] Asymmetric: you follow someone without them needing to follow back.
+  - [ ] Private accounts require approval before a follow is accepted.
+  - [ ] Following someone surfaces their activity in your feed.
+  - [ ] "Friends" (mutual follows) can be surfaced in the UI as a distinct tier.
 
 ---
 
 ## Collections
 
-Collections are the core organizational unit. Every user starts with three default exclusive collections:
+- [ ] 3 default collections: want to read, reading, read
 
-- [ ] **Read** — books the user has finished.
-- [ ] **Currently Reading** — in progress.
-- [ ] **Want to Read** — the to-read pile.
-
-These three share an `exclusive_group`, so a book can only be in one of them at a time. Moving a book from "Want to Read" to "Read" removes it from the former automatically.
-
-### Custom Collections
-
-Users can create additional collections with any name:
-
-- [ ] Non-exclusive by default (a book can appear in multiple custom collections).
-- [ ] Example: "Favorites", "Recommended to me", "Books set in Japan".
-- [ ] Collections can be made private or public.
-- [ ] Custom collections can also be marked exclusive and grouped if desired (e.g. a "Currently Listening" audiobook group).
-
-### Set Operations
-
-Users can derive new views from their collections using set operations:
-
-- [ ] **Union**: books in list A or list B.
-- [ ] **Intersection**: books in both list A and list B.
-- [ ] **Difference**: books in list A but not list B.
-
-Example: "Books I've read that are also in my friend's Want to Read list."
-
-Set operation results are not persisted — they are computed on demand. Users can optionally save a result as a new collection.
-
-### Sublists / Hierarchical Tags
-
-A collection can have sub-labels that form a hierarchy:
-
-- [ ] Example: a "Science Fiction" collection with sub-labels "Space Opera", "Hard SF", "Cyberpunk".
-- [ ] Sub-labels are tags on `CollectionItem`, not separate collections.
-- [ ] Display as nested groupings on the collection page.
+- [ ] custom collections
+  - [ ] Non-exclusive by default (a book can appear in multiple custom collections).
+  - [ ] Example: "Favorites", "Recommended to me", "Books set in Japan".
+  - [ ] Collections can be made private or public.
+  - [ ] Custom collections can also be marked exclusive and grouped if desired (e.g. a "Currently Reading" + "audiobook").
+- [ ] Computed collections
+  - [ ] Union: books in list A or list B.
+  - [ ] Intersection: books in both list A and list B.
+  - [ ] Difference: books in list A but not list B.
+  - [ ] compute an operation + save as new collection
+    - [ ] Example: "Books I've read that are also in my friend's Want to Read list."
+- [ ] Sublists / Hierarchical Tags
+  - [ ] A collection can have sub-labels that form a hierarchy:
+    - [ ] Example: a "Science Fiction" collection with sub-labels "Space Opera", "Hard SF", "Cyberpunk".
+    - [ ] Sub-labels are tags on `CollectionItem`, not separate collections.
+    - [ ] Display as nested groupings on the collection page.
 
 ---
 
 ## Book Catalog
 
-### Search
+- [ ] Search
+  - [ ] Full-text search by title, author, ISBN.
+  - [ ] Faceted filters: genre, published year range, language.
+  - [ ] Results ranked by relevance, with popular books surfaced higher.
+- [ ] Book pages
+  - [ ] Metadata: title, author(s), cover, description, publisher, year, page count.
+  - [ ] Aggregate stats: average rating, read count, want-to-read count.
+  - [ ] User's own status (added to which collection, their rating/review).
+  - [ ] Community reviews and discussion threads.
+  - [ ] Community links to related works.
+- [ ] Author page
+- [ ] Genre pages
 
-- [ ] Full-text search by title, author, ISBN.
-- [ ] Faceted filters: genre, published year range, language.
-- [ ] Results ranked by relevance, with popular books surfaced higher.
-
-### Book Pages
-
-Each book has a public page showing:
-
-- [ ] Metadata: title, author(s), cover, description, publisher, year, page count.
-- [ ] Aggregate stats: average rating, read count, want-to-read count.
-- [ ] User's own status (added to which collection, their rating/review).
-- [ ] Community reviews and discussion threads.
-- [ ] Community links to related works.
-
-### Editions
-
-Multiple editions of the same work are modeled as separate `Book` records linked by an `editions` relationship (future work). MVP treats each ISBN as a distinct book.
+- [ ] Edition handling
 
 ---
 
 ## Reviews & Ratings
 
-- [ ] A user can rate a book 1–5 stars (half-star not supported at MVP).
+- [ ] A user can rate a book 1–5 stars with half stars
 - [ ] A rating alone (no review text) is valid.
 - [ ] Review text is optional; can include a spoiler flag.
 - [ ] One review per user per book; can be edited or deleted.
@@ -133,11 +107,7 @@ Users can submit directional links between books:
 ### Goodreads Import
 
 - [ ] Accept a Goodreads CSV export file.
-- [ ] Map Goodreads shelves to rosslib collections:
-  - [ ] "read" → Read
-  - [ ] "to-read" → Want to Read
-  - [ ] "currently-reading" → Currently Reading
-  - [ ] Custom shelves → custom collections (created if they don't exist).
+- [ ] Map Goodreads shelves to rosslib collections
 - [ ] Attempt to match books by ISBN, falling back to title + author fuzzy match.
 - [ ] Show a review screen before committing: matched / unmatched / ambiguous.
 - [ ] Import star ratings and review text where present.
@@ -158,16 +128,3 @@ Users can submit directional links between books:
 - [ ] Paginated (cursor-based).
 
 ---
-
-## Differentiation from Goodreads
-
-The features that make rosslib meaningfully better:
-
-| Area | Goodreads | Rosslib |
-|---|---|---|
-| Collections | Fixed shelves, limited custom | Flexible collections with set operations and sublists |
-| Social graph | Mutual friends, clunky | Asymmetric follows, clean feed |
-| Discussion | Cluttered, dated UI | Clean threads, spoiler flags |
-| Book connections | None | Community-submitted typed links |
-| Data portability | CSV export (limited) | Full CSV export + Goodreads import |
-| Metadata edits | No | Wiki-style edit queue |

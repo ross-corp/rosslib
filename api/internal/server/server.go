@@ -7,9 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tristansaldanha/rosslib/api/internal/auth"
 )
 
-func NewRouter(pool *pgxpool.Pool) http.Handler {
+func NewRouter(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	r := gin.Default()
 
 	r.GET("/health", func(c *gin.Context) {
@@ -31,6 +32,10 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 			"db":     dbStatus,
 		})
 	})
+
+	authHandler := auth.NewHandler(pool, jwtSecret)
+	r.POST("/auth/register", authHandler.Register)
+	r.POST("/auth/login", authHandler.Login)
 
 	return r
 }
