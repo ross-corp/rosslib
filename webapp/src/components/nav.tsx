@@ -6,14 +6,28 @@ export default async function Nav() {
 
   return (
     <header className="border-b border-stone-200 bg-white">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
         <Link
           href="/"
-          className="font-semibold text-stone-900 tracking-tight text-lg"
+          className="font-semibold text-stone-900 tracking-tight text-lg shrink-0"
         >
           rosslib
         </Link>
-        <nav className="flex items-center gap-2">
+        <form action="/search" method="get" className="flex-1 max-w-xs">
+          <input
+            name="q"
+            type="search"
+            placeholder="Search users..."
+            className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded bg-stone-50 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent"
+          />
+        </form>
+        <nav className="flex items-center gap-2 ml-auto shrink-0">
+          <Link
+            href="/users"
+            className="text-sm text-stone-500 hover:text-stone-900 px-3 py-1.5 rounded transition-colors hidden sm:inline-flex"
+          >
+            People
+          </Link>
           {user ? (
             <>
               <Link

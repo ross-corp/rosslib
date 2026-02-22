@@ -4,7 +4,7 @@ Detailed specifications for all planned features.
 
 ---
 
-## Basic auth
+## WEBAPP
 
 - [ ]  User Accounts
   - [ ] Registration & Login
@@ -20,38 +20,47 @@ Detailed specifications for all planned features.
     - [ ] Recent activity (reviews, threads, list updates).
     - [ ] Stats: books read, reviews written, followers/following count.
   - [ ] Profiles can be set to private; followers must be approved.
-- [ ] Follow System
-  - [ ] Asymmetric: you follow someone without them needing to follow back.
-  - [ ] Private accounts require approval before a follow is accepted.
-  - [ ] Following someone surfaces their activity in your feed.
-  - [ ] "Friends" (mutual follows) can be surfaced in the UI as a distinct tier.
+
+- [ ] Searchbar
+  - [x] search for users
+  - [ ] select fields: books, authors, users
+  - [ ] fuzzier search, not exact string match
 
 ---
 
-## Collections
+## DATA MODEL
 
-- [ ] 3 default collections: want to read, reading, read
+- [ ] Collections
+  - [ ] 3 default collections for all users: want to read, reading, read
+  - [ ] custom collections
+    - [ ] Non-exclusive by default (a book can appear in multiple custom collections).
+    - [ ] Example: "Favorites", "Recommended to me", "Books set in Japan".
+    - [ ] Collections can be made private or public.
+    - [ ] Custom collections can also be marked exclusive and grouped if desired (e.g. a "Currently Reading" + "audiobook").
+  - [ ] Computed collections
+    - [ ] Union: books in list A or list B.
+    - [ ] Intersection: books in both list A and list B.
+    - [ ] Difference: books in list A but not list B.
+    - [ ] compute an operation + save as new collection
+      - [ ] Example: "Books I've read that are also in my friend's Want to Read list."
 
-- [ ] custom collections
-  - [ ] Non-exclusive by default (a book can appear in multiple custom collections).
-  - [ ] Example: "Favorites", "Recommended to me", "Books set in Japan".
-  - [ ] Collections can be made private or public.
-  - [ ] Custom collections can also be marked exclusive and grouped if desired (e.g. a "Currently Reading" + "audiobook").
-- [ ] Computed collections
-  - [ ] Union: books in list A or list B.
-  - [ ] Intersection: books in both list A and list B.
-  - [ ] Difference: books in list A but not list B.
-  - [ ] compute an operation + save as new collection
-    - [ ] Example: "Books I've read that are also in my friend's Want to Read list."
 - [ ] Sublists / Hierarchical Tags
   - [ ] A collection can have sub-labels that form a hierarchy:
     - [ ] Example: a "Science Fiction" collection with sub-labels "Space Opera", "Hard SF", "Cyberpunk".
     - [ ] Sub-labels are tags on `CollectionItem`, not separate collections.
     - [ ] Display as nested groupings on the collection page.
 
+- [ ] User Follow System
+  - [ ] Asymmetric: you follow someone without them needing to follow back.
+  - [ ] Private accounts require approval before a follow is accepted.
+  - [ ] Following someone surfaces their activity in your feed.
+  - [ ] "Friends" (mutual follows) can be surfaced in the UI as a distinct tier.
+- [ ] users can follow Authors and see new publications
+- [ ] users can follow Works and see sequels / new discussions / links
+
 ---
 
-## Book Catalog
+## BOOK CATALOG + DB
 
 - [ ] Search
   - [ ] Full-text search by title, author, ISBN.
@@ -84,6 +93,8 @@ Detailed specifications for all planned features.
 
 - [ ] Any user can open a thread on a book's page.
 - [ ] Thread has a title, body, and optional spoiler flag.
+- [ ] Threads get reccommended for union if they're similar enough
+  - [ ] link to similar comments if similarity score > some percentage
 - [ ] Threaded comments support one level of nesting (reply to a comment, not reply to a reply).
 - [ ] No upvotes at MVP; chronological sort only.
 - [ ] Author can delete their own thread or comments; soft delete.
