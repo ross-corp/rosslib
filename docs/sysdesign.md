@@ -9,7 +9,7 @@ Rosslib is a social reading site — a Goodreads/Letterboxd equivalent for books
 | Layer | Choice | Rationale |
 |---|---|---|
 | Webapp | Next.js (TypeScript) | SSR for SEO on book/profile pages; runs as a persistent Node.js process |
-| Backend API | Go (Gin or Chi) | Fast, low memory footprint, single binary deploys cleanly on a VPS |
+| Backend API | Go (Gin) | Fast, low memory footprint, single binary deploys cleanly on a VPS |
 | Database | PostgreSQL | Relational model fits social graph + book catalog; self-hosted, no managed service needed |
 | Cache | Redis | Session storage, feed caching, rate limiting; lightweight, easy to self-host |
 | Search | Meilisearch | Full-text book/author search with faceting; single binary, ~50MB RAM at rest, VPS-friendly |

@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rosslib}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rosslib}
+      POSTGRES_DB: ${POSTGRES_DB:-rosslib}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rosslib}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKey}
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilidata:/meili_data
+
+  api:
+    build:
+      context: ./api
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-rosslib}:${POSTGRES_PASSWORD:-rosslib}@postgres:5432/${POSTGRES_DB:-rosslib}?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      PORT: 8080
+    volumes:
+      - ./api:/app
+      - gomodcache:/root/go/pkg/mod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  webapp:
+    build:
+      context: ./webapp
+    ports:
+      - "3000:3000"
+    environment:
+      API_URL: http://api:8080
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    volumes:
+      - ./webapp:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  redisdata:
+  meilidata:
+  gomodcache:

@@ -6,19 +6,19 @@ Organized by area. MVP items are unmarked; post-MVP items are labeled `[post-MVP
 
 ## Infrastructure
 
-- [ ] Initialize Go API project (module, directory structure, linter config)
-- [ ] Initialize Next.js frontend project (TypeScript, Tailwind)
-- [ ] Set up PostgreSQL locally (Docker Compose for dev)
-- [ ] Set up Redis locally (Docker Compose)
+- [x] Initialize Go API project (module, directory structure, linter config)
+- [x] Initialize Next.js frontend project (TypeScript, Tailwind)
+- [x] Set up PostgreSQL locally (Docker Compose for dev)
+- [x] Set up Redis locally (Docker Compose)
+- [x] Write Docker Compose file (webapp, api, postgres, redis, meilisearch)
+- [x] Set up Meilisearch (Docker Compose service)
 - [ ] Write initial DB migration tooling (golang-migrate or similar)
 - [ ] Set up GitHub Actions CI pipeline (lint, test, build)
 - [ ] Create AWS accounts / IAM roles for deployment
-- [ ] Write Docker Compose file (webapp, api, postgres, redis, meilisearch)
 - [ ] Set up nginx on host with Let's Encrypt (Certbot)
 - [ ] Provision EC2 instance (t3.medium or t3.large)
 - [ ] Set up S3 bucket for file storage (covers, avatars, exports)
 - [ ] Configure IAM role on EC2 for S3 access (no credentials in app)
-- [ ] Set up Meilisearch (Docker Compose service)
 - [ ] Configure Secrets Manager for credentials
 - [ ] Set up Route 53 + ACM for domain
 
