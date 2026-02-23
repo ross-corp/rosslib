@@ -111,9 +111,10 @@ export default async function UserPage({
             </h2>
             <div className="flex gap-4">
               {shelves.map((shelf) => (
-                <div
+                <Link
                   key={shelf.id}
-                  className="flex-1 border border-stone-200 rounded p-4"
+                  href={`/${profile.username}/shelves/${shelf.slug}`}
+                  className="flex-1 border border-stone-200 rounded p-4 hover:border-stone-400 transition-colors"
                 >
                   <p className="text-sm font-medium text-stone-900">
                     {shelf.name}
@@ -121,7 +122,7 @@ export default async function UserPage({
                   <p className="text-xs text-stone-400 mt-1">
                     {shelf.item_count} {shelf.item_count === 1 ? "book" : "books"}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           </div>

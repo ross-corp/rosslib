@@ -3,6 +3,7 @@ package collections
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,10 +21,26 @@ func NewHandler(pool *pgxpool.Pool) *Handler {
 // ── types ─────────────────────────────────────────────────────────────────────
 
 type shelfBook struct {
-	BookID       string  `json:"book_id"`
-	OpenLibraryID string `json:"open_library_id"`
-	Title        string  `json:"title"`
-	CoverURL     *string `json:"cover_url"`
+	BookID        string  `json:"book_id"`
+	OpenLibraryID string  `json:"open_library_id"`
+	Title         string  `json:"title"`
+	CoverURL      *string `json:"cover_url"`
+}
+
+type shelfDetailBook struct {
+	BookID        string  `json:"book_id"`
+	OpenLibraryID string  `json:"open_library_id"`
+	Title         string  `json:"title"`
+	CoverURL      *string `json:"cover_url"`
+	AddedAt       string  `json:"added_at"`
+}
+
+type shelfDetailResponse struct {
+	ID             string            `json:"id"`
+	Name           string            `json:"name"`
+	Slug           string            `json:"slug"`
+	ExclusiveGroup string            `json:"exclusive_group"`
+	Books          []shelfDetailBook `json:"books"`
 }
 
 type shelfResponse struct {
@@ -259,6 +276,54 @@ func (h *Handler) AddBookToShelf(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// GetShelfBySlug - GET /users/:username/shelves/:slug
+// Public. Returns the shelf with its full book list.
+func (h *Handler) GetShelfBySlug(c *gin.Context) {
+	username := c.Param("username")
+	slug := c.Param("slug")
+
+	var shelf shelfDetailResponse
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT c.id, c.name, c.slug, COALESCE(c.exclusive_group, '')
+		 FROM collections c
+		 JOIN users u ON u.id = c.user_id
+		 WHERE u.username = $1 AND u.deleted_at IS NULL AND c.slug = $2`,
+		username, slug,
+	).Scan(&shelf.ID, &shelf.Name, &shelf.Slug, &shelf.ExclusiveGroup)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "shelf not found"})
+		return
+	}
+
+	rows, err := h.pool.Query(c.Request.Context(),
+		`SELECT b.id, b.open_library_id, b.title, b.cover_url, ci.added_at
+		 FROM collection_items ci
+		 JOIN books b ON b.id = ci.book_id
+		 WHERE ci.collection_id = $1
+		 ORDER BY ci.added_at DESC`,
+		shelf.ID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	shelf.Books = []shelfDetailBook{}
+	for rows.Next() {
+		var book shelfDetailBook
+		var addedAt time.Time
+		if err := rows.Scan(&book.BookID, &book.OpenLibraryID, &book.Title, &book.CoverURL, &addedAt); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		book.AddedAt = addedAt.Format(time.RFC3339)
+		shelf.Books = append(shelf.Books, book)
+	}
+
+	c.JSON(http.StatusOK, shelf)
 }
 
 // RemoveBookFromShelf - DELETE /shelves/:shelfId/books/:olId (authed)

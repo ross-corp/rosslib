@@ -53,6 +53,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 
 	collectionsHandler := collections.NewHandler(pool)
 	r.GET("/users/:username/shelves", collectionsHandler.GetUserShelves)
+	r.GET("/users/:username/shelves/:slug", collectionsHandler.GetShelfBySlug)
 
 	authed := r.Group("/")
 	authed.Use(middleware.Auth(secret))

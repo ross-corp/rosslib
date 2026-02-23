@@ -16,9 +16,9 @@ Once we're further along we'll move to GH projects. this is fine for now
 - [ ] Profile
   - [x] Public profile page at `/{username}` — display name, byline, member since.
   - [x] Edit profile page at `/settings` — set display name and byline.
-  - [x] Default shelves (Want to Read, Currently Reading, Read) shown on profile with item counts.
+  - [x] Default shelves (Want to Read, Currently Reading, Read) shown on profile with item counts; cards link to shelf pages.
+  - [x] Shelf pages at `/{username}/shelves/{slug}` — cover grid with title, owner can remove books inline.
   - [ ] Avatar upload.
-  - [ ] Full shelf pages (list of books in a shelf).
   - [ ] Recent activity (reviews, threads, list updates) on profile.
   - [ ] Stats: books read, reviews written, followers/following count.
   - [ ] Profiles can be set to private; followers must be approved.
@@ -50,7 +50,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] 3 default collections for all users: Want to Read, Currently Reading, Read — created on registration (or lazily on first `/me/shelves` call for existing users).
   - [x] `books` table — global catalog keyed by `open_library_id`; upserted when a user adds a book to a shelf.
   - [x] `collections` + `collection_items` tables with `is_exclusive` / `exclusive_group` for mutual exclusivity enforcement.
-  - [x] API: `GET /users/:username/shelves`, `GET /me/shelves`, `POST /shelves/:shelfId/books`, `DELETE /shelves/:shelfId/books/:olId`.
+  - [x] API: `GET /users/:username/shelves`, `GET /users/:username/shelves/:slug`, `GET /me/shelves`, `POST /shelves/:shelfId/books`, `DELETE /shelves/:shelfId/books/:olId`.
   - [ ] custom collections
     - [ ] Non-exclusive by default (a book can appear in multiple custom collections).
     - [ ] Example: "Favorites", "Recommended to me", "Books set in Japan".

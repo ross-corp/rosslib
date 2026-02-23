@@ -19,29 +19,6 @@
 
 ---
 
-### Book
-
-Global catalog. Not per-user.
-
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| title | varchar(500) | |
-| subtitle | varchar(500) | |
-| isbn | varchar(13) | nullable |
-| isbn13 | varchar(13) | nullable |
-| published_year | integer | |
-| publisher | varchar(255) | |
-| page_count | integer | |
-| language | varchar(10) | ISO 639-1 |
-| description | text | |
-| cover_url | text | S3 key |
-| open_library_id | varchar(50) | for sync |
-| created_at | timestamptz | |
-| updated_at | timestamptz | |
-
----
-
 ### Author
 
 | Column | Type | Notes |
@@ -75,6 +52,22 @@ Global catalog. Not per-user.
 
 ---
 
+### Book
+
+Global catalog. Not per-user. Records are upserted by `open_library_id` when a user first adds a book to any shelf.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| open_library_id | varchar(50) unique | used as the canonical identifier |
+| title | varchar(500) | |
+| cover_url | text | nullable; Open Library cover URL |
+| created_at | timestamptz | |
+
+> The full `Book` spec (subtitle, isbn, publisher, page_count, etc.) is planned but not yet in the schema — only the fields needed to display a book in a shelf are stored today.
+
+---
+
 ### Collection
 
 A named list owned by a user. Can be exclusive (like "Read" / "Want to Read") or non-exclusive (like "Favorites", "Space Books").
@@ -85,18 +78,16 @@ A named list owned by a user. Can be exclusive (like "Read" / "Want to Read") or
 | user_id | uuid FK → User | |
 | name | varchar(255) | |
 | slug | varchar(255) | unique per user |
-| description | text | |
-| is_exclusive | boolean | if true, a book can only appear in one collection of this type per user |
+| is_exclusive | boolean | default false |
 | exclusive_group | varchar(100) | nullable; collections in the same group enforce mutual exclusivity |
 | is_public | boolean | default true |
 | created_at | timestamptz | |
-| updated_at | timestamptz | |
 
-Default collections created on user registration:
+Default collections created on user registration (or lazily on first `/me/shelves` call):
 
-- "Read" (exclusive_group: "read_status")
-- "Want to Read" (exclusive_group: "read_status")
-- "Currently Reading" (exclusive_group: "read_status")
+- "Want to Read" (slug: `want-to-read`, exclusive_group: `read_status`)
+- "Currently Reading" (slug: `currently-reading`, exclusive_group: `read_status`)
+- "Read" (slug: `read`, exclusive_group: `read_status`)
 
 ---
 
@@ -108,12 +99,10 @@ Default collections created on user registration:
 | collection_id | uuid FK → Collection | |
 | book_id | uuid FK → Book | |
 | added_at | timestamptz | |
-| notes | text | user's private note on this item |
-| sort_order | integer | manual ordering |
 
 Unique constraint: `(collection_id, book_id)`
 
-Application enforces mutual exclusivity within an `exclusive_group` when adding items.
+Application enforces mutual exclusivity within an `exclusive_group` when adding items: adding a book to any shelf in the group removes it from all other shelves in that group for that user.
 
 ---
 
