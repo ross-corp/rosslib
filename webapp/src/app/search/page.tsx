@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Nav from "@/components/nav";
+import StarRating from "@/components/star-rating";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -11,6 +12,9 @@ type BookResult = {
   isbn: string[] | null;
   cover_url: string | null;
   edition_count: number;
+  average_rating: number | null;
+  rating_count: number;
+  already_read_count: number;
 };
 
 type BookSearchResponse = {
@@ -26,10 +30,12 @@ type UserResult = {
 
 // ── Data fetchers ─────────────────────────────────────────────────────────────
 
-async function searchBooks(q: string): Promise<BookSearchResponse> {
+async function searchBooks(q: string, sort: string): Promise<BookSearchResponse> {
   if (!q.trim()) return { total: 0, results: [] };
+  const params = new URLSearchParams({ q });
+  if (sort) params.set("sort", sort);
   const res = await fetch(
-    `${process.env.API_URL}/books/search?q=${encodeURIComponent(q)}`,
+    `${process.env.API_URL}/books/search?${params}`,
     { cache: "no-store" }
   );
   if (!res.ok) return { total: 0, results: [] };
@@ -48,21 +54,38 @@ async function searchUsers(q: string): Promise<UserResult[]> {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+const SORT_OPTIONS = [
+  { value: "", label: "Relevance" },
+  { value: "reads", label: "Most read" },
+  { value: "rating", label: "Highest rated" },
+] as const;
+
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; type?: string }>;
+  searchParams: Promise<{ q?: string; type?: string; sort?: string }>;
 }) {
-  const { q = "", type } = await searchParams;
+  const { q = "", type, sort = "" } = await searchParams;
   const activeTab = type === "people" ? "people" : "books";
 
   const [bookData, users] = await Promise.all([
-    activeTab === "books" ? searchBooks(q) : Promise.resolve({ total: 0, results: [] }),
+    activeTab === "books" ? searchBooks(q, sort) : Promise.resolve({ total: 0, results: [] }),
     activeTab === "people" ? searchUsers(q) : Promise.resolve([]),
   ]);
 
-  const tabLink = (tab: "books" | "people") =>
-    q ? `/search?q=${encodeURIComponent(q)}&type=${tab}` : `/search?type=${tab}`;
+  const tabLink = (tab: "books" | "people") => {
+    const p = new URLSearchParams({ type: tab });
+    if (q) p.set("q", q);
+    if (sort && tab === "books") p.set("sort", sort);
+    return `/search?${p}`;
+  };
+
+  const sortLink = (s: string) => {
+    const p = new URLSearchParams({ type: activeTab });
+    if (q) p.set("q", q);
+    if (s) p.set("sort", s);
+    return `/search?${p}`;
+  };
 
   return (
     <div className="min-h-screen">
@@ -78,6 +101,7 @@ export default async function SearchPage({
             className="flex-1 px-3 py-2 text-sm border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent"
           />
           <input type="hidden" name="type" value={activeTab} />
+          {sort && <input type="hidden" name="sort" value={sort} />}
         </form>
 
         {/* Tab selector */}
@@ -104,6 +128,26 @@ export default async function SearchPage({
           </Link>
         </div>
 
+        {/* Sort controls (books only) */}
+        {activeTab === "books" && q && (
+          <div className="flex items-center gap-2 mb-5">
+            <span className="text-xs text-stone-400">Sort by</span>
+            {SORT_OPTIONS.map((opt) => (
+              <Link
+                key={opt.value}
+                href={sortLink(opt.value)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  sort === opt.value
+                    ? "border-stone-900 text-stone-900 bg-stone-900 text-white"
+                    : "border-stone-300 text-stone-500 hover:border-stone-500 hover:text-stone-700"
+                }`}
+              >
+                {opt.label}
+              </Link>
+            ))}
+          </div>
+        )}
+
         {/* Result count */}
         {q && activeTab === "books" && (
           <p className="text-sm text-stone-400 mb-6">
@@ -123,34 +167,55 @@ export default async function SearchPage({
         {/* Book results */}
         {activeTab === "books" && bookData.results.length > 0 && (
           <ul className="divide-y divide-stone-100">
-            {bookData.results.map((book) => (
-              <li key={book.key} className="flex gap-4 py-4">
-                {book.cover_url ? (
-                  <img
-                    src={book.cover_url}
-                    alt={book.title}
-                    width={48}
-                    height={64}
-                    className="w-12 h-16 object-cover rounded shrink-0 bg-stone-100"
-                  />
-                ) : (
-                  <div className="w-12 h-16 bg-stone-100 rounded shrink-0" />
-                )}
-                <div className="flex flex-col justify-center gap-0.5 min-w-0">
-                  <span className="text-sm font-medium text-stone-900 truncate">
-                    {book.title}
-                  </span>
-                  {book.authors && book.authors.length > 0 && (
-                    <span className="text-xs text-stone-500">
-                      {book.authors.slice(0, 3).join(", ")}
-                    </span>
-                  )}
-                  {book.publish_year && (
-                    <span className="text-xs text-stone-400">{book.publish_year}</span>
-                  )}
-                </div>
-              </li>
-            ))}
+            {bookData.results.map((book) => {
+              const workId = book.key.replace("/works/", "");
+              return (
+                <li key={book.key}>
+                  <Link
+                    href={`/books/${workId}`}
+                    className="flex gap-4 py-4 hover:bg-stone-50 -mx-3 px-3 rounded transition-colors"
+                  >
+                    {book.cover_url ? (
+                      <img
+                        src={book.cover_url}
+                        alt={book.title}
+                        width={48}
+                        height={64}
+                        className="w-12 h-16 object-cover rounded shrink-0 bg-stone-100"
+                      />
+                    ) : (
+                      <div className="w-12 h-16 bg-stone-100 rounded shrink-0" />
+                    )}
+                    <div className="flex flex-col justify-center gap-0.5 min-w-0">
+                      <span className="text-sm font-medium text-stone-900 truncate">
+                        {book.title}
+                      </span>
+                      {book.authors && book.authors.length > 0 && (
+                        <span className="text-xs text-stone-500">
+                          {book.authors.slice(0, 3).join(", ")}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {book.publish_year && (
+                          <span className="text-xs text-stone-400">{book.publish_year}</span>
+                        )}
+                        {book.average_rating != null && (
+                          <StarRating
+                            rating={book.average_rating}
+                            className="text-xs"
+                          />
+                        )}
+                        {book.already_read_count > 0 && (
+                          <span className="text-xs text-stone-400">
+                            {book.already_read_count.toLocaleString()} reads
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
 

@@ -33,12 +33,15 @@ Open Library is the primary catalog API. It is free, requires no API key, and co
 **Cover images:**
 
 Cover images are served by Open Library at:
+
 ```
 https://covers.openlibrary.org/b/id/{cover_i}-{size}.jpg
 ```
+
 Sizes: `S` (small), `M` (medium), `L` (large). We use `M`.
 
 **Work page URL:**
+
 ```
 https://openlibrary.org{key}
 ```
@@ -52,6 +55,7 @@ GET /books/search?q=<title>
 ```
 
 Response shape:
+
 ```json
 {
   "total": 1234,
