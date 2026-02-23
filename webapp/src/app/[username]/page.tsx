@@ -15,6 +15,14 @@ type UserProfile = {
   is_following: boolean;
 };
 
+type UserShelf = {
+  id: string;
+  name: string;
+  slug: string;
+  exclusive_group: string;
+  item_count: number;
+};
+
 async function fetchProfile(
   username: string,
   token?: string
@@ -28,6 +36,14 @@ async function fetchProfile(
   return res.json();
 }
 
+async function fetchUserShelves(username: string): Promise<UserShelf[]> {
+  const res = await fetch(`${process.env.API_URL}/users/${username}/shelves`, {
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export default async function UserPage({
   params,
 }: {
@@ -35,7 +51,10 @@ export default async function UserPage({
 }) {
   const { username } = await params;
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
-  const profile = await fetchProfile(username, token ?? undefined);
+  const [profile, shelves] = await Promise.all([
+    fetchProfile(username, token ?? undefined),
+    fetchUserShelves(username),
+  ]);
 
   if (!profile) notFound();
 
@@ -84,6 +103,29 @@ export default async function UserPage({
 
           <p className="text-xs text-stone-400">Member since {memberSince}</p>
         </div>
+
+        {shelves.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
+              Shelves
+            </h2>
+            <div className="flex gap-4">
+              {shelves.map((shelf) => (
+                <div
+                  key={shelf.id}
+                  className="flex-1 border border-stone-200 rounded p-4"
+                >
+                  <p className="text-sm font-medium text-stone-900">
+                    {shelf.name}
+                  </p>
+                  <p className="text-xs text-stone-400 mt-1">
+                    {shelf.item_count} {shelf.item_count === 1 ? "book" : "books"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

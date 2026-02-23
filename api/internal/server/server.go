@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/auth"
 	"github.com/tristansaldanha/rosslib/api/internal/books"
+	"github.com/tristansaldanha/rosslib/api/internal/collections"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 	"github.com/tristansaldanha/rosslib/api/internal/users"
 )
@@ -50,11 +51,17 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	r.GET("/users", usersHandler.SearchUsers)
 	r.GET("/users/:username", middleware.OptionalAuth(secret), usersHandler.GetProfile)
 
+	collectionsHandler := collections.NewHandler(pool)
+	r.GET("/users/:username/shelves", collectionsHandler.GetUserShelves)
+
 	authed := r.Group("/")
 	authed.Use(middleware.Auth(secret))
 	authed.PATCH("/users/me", usersHandler.UpdateMe)
 	authed.POST("/users/:username/follow", usersHandler.Follow)
 	authed.DELETE("/users/:username/follow", usersHandler.Unfollow)
+	authed.GET("/me/shelves", collectionsHandler.GetMyShelves)
+	authed.POST("/shelves/:shelfId/books", collectionsHandler.AddBookToShelf)
+	authed.DELETE("/shelves/:shelfId/books/:olId", collectionsHandler.RemoveBookFromShelf)
 
 	return r
 }

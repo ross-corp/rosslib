@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Nav from "@/components/nav";
-import StarRating from "@/components/star-rating";
+import BookList from "@/components/book-list";
+import { type Shelf } from "@/components/shelf-picker";
+import { getToken, getUser } from "@/lib/auth";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -15,6 +17,14 @@ type BookResult = {
   average_rating: number | null;
   rating_count: number;
   already_read_count: number;
+};
+
+type MyShelfBook = {
+  open_library_id: string;
+};
+
+type MyShelf = Shelf & {
+  books: MyShelfBook[];
 };
 
 type BookSearchResponse = {
@@ -52,6 +62,15 @@ async function searchUsers(q: string): Promise<UserResult[]> {
   return res.json();
 }
 
+async function fetchMyShelves(token: string): Promise<MyShelf[]> {
+  const res = await fetch(`${process.env.API_URL}/me/shelves`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 const SORT_OPTIONS = [
@@ -68,10 +87,26 @@ export default async function SearchPage({
   const { q = "", type, sort = "" } = await searchParams;
   const activeTab = type === "people" ? "people" : "books";
 
-  const [bookData, users] = await Promise.all([
+  const [currentUser, token] = await Promise.all([getUser(), getToken()]);
+
+  const [bookData, users, myShelves] = await Promise.all([
     activeTab === "books" ? searchBooks(q, sort) : Promise.resolve({ total: 0, results: [] }),
     activeTab === "people" ? searchUsers(q) : Promise.resolve([]),
+    currentUser && token ? fetchMyShelves(token) : Promise.resolve(null),
   ]);
+
+  // Build a map of open_library_id -> shelfId for quick lookup
+  const bookShelfMap: Record<string, string> | null = myShelves
+    ? Object.fromEntries(
+        myShelves.flatMap((shelf) =>
+          shelf.books.map((b) => [b.open_library_id, shelf.id])
+        )
+      )
+    : null;
+
+  const shelves: Shelf[] | null = myShelves
+    ? myShelves.map(({ id, name, slug }) => ({ id, name, slug }))
+    : null;
 
   const tabLink = (tab: "books" | "people") => {
     const p = new URLSearchParams({ type: tab });
@@ -165,58 +200,12 @@ export default async function SearchPage({
         )}
 
         {/* Book results */}
-        {activeTab === "books" && bookData.results.length > 0 && (
-          <ul className="divide-y divide-stone-100">
-            {bookData.results.map((book) => {
-              const workId = book.key.replace("/works/", "");
-              return (
-                <li key={book.key}>
-                  <Link
-                    href={`/books/${workId}`}
-                    className="flex gap-4 py-4 hover:bg-stone-50 -mx-3 px-3 rounded transition-colors"
-                  >
-                    {book.cover_url ? (
-                      <img
-                        src={book.cover_url}
-                        alt={book.title}
-                        width={48}
-                        height={64}
-                        className="w-12 h-16 object-cover rounded shrink-0 bg-stone-100"
-                      />
-                    ) : (
-                      <div className="w-12 h-16 bg-stone-100 rounded shrink-0" />
-                    )}
-                    <div className="flex flex-col justify-center gap-0.5 min-w-0">
-                      <span className="text-sm font-medium text-stone-900 truncate">
-                        {book.title}
-                      </span>
-                      {book.authors && book.authors.length > 0 && (
-                        <span className="text-xs text-stone-500">
-                          {book.authors.slice(0, 3).join(", ")}
-                        </span>
-                      )}
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {book.publish_year && (
-                          <span className="text-xs text-stone-400">{book.publish_year}</span>
-                        )}
-                        {book.average_rating != null && (
-                          <StarRating
-                            rating={book.average_rating}
-                            className="text-xs"
-                          />
-                        )}
-                        {book.already_read_count > 0 && (
-                          <span className="text-xs text-stone-400">
-                            {book.already_read_count.toLocaleString()} reads
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+        {activeTab === "books" && (
+          <BookList
+            books={bookData.results}
+            shelves={shelves}
+            bookShelfMap={bookShelfMap}
+          />
         )}
 
         {/* People results */}

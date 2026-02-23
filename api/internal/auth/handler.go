@@ -59,8 +59,15 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
+	tx, err := h.pool.Begin(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer tx.Rollback(c.Request.Context()) //nolint:errcheck
+
 	var userID, username string
-	err = h.pool.QueryRow(c.Request.Context(),
+	err = tx.QueryRow(c.Request.Context(),
 		`INSERT INTO users (username, email, password_hash)
 		 VALUES ($1, $2, $3)
 		 RETURNING id, username`,
@@ -71,6 +78,28 @@ func (h *Handler) Register(c *gin.Context) {
 			c.JSON(http.StatusConflict, gin.H{"error": "email or username already taken"})
 			return
 		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	defaultShelves := []struct{ name, slug string }{
+		{"Want to Read", "want-to-read"},
+		{"Currently Reading", "currently-reading"},
+		{"Read", "read"},
+	}
+	for _, s := range defaultShelves {
+		_, err = tx.Exec(c.Request.Context(),
+			`INSERT INTO collections (user_id, name, slug, is_exclusive, exclusive_group)
+			 VALUES ($1, $2, $3, true, 'read_status')`,
+			userID, s.name, s.slug,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+	}
+
+	if err = tx.Commit(c.Request.Context()); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}

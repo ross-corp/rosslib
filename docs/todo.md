@@ -16,8 +16,9 @@ Once we're further along we'll move to GH projects. this is fine for now
 - [ ] Profile
   - [x] Public profile page at `/{username}` — display name, byline, member since.
   - [x] Edit profile page at `/settings` — set display name and byline.
+  - [x] Default shelves (Want to Read, Currently Reading, Read) shown on profile with item counts.
   - [ ] Avatar upload.
-  - [ ] Public collections (read, want to read, favorites, etc.) on profile.
+  - [ ] Full shelf pages (list of books in a shelf).
   - [ ] Recent activity (reviews, threads, list updates) on profile.
   - [ ] Stats: books read, reviews written, followers/following count.
   - [ ] Profiles can be set to private; followers must be approved.
@@ -30,6 +31,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] `/search` page — Books tab searches by title via Open Library API (up to 20 results with cover, authors, year). People tab searches users by username or display name.
   - [x] `/users` page — browse all users, alphabetical, paginated (20/page).
   - [x] Tab selector on `/search` to filter between Books and People.
+  - [x] "Add to shelf" picker on each book search result — logged-in users can add/move/remove books across their 3 default shelves inline.
   - [ ] Author tab in search.
   - [ ] Full-text book/author search via Meilisearch (will replace Open Library as primary search backend).
 
@@ -45,7 +47,10 @@ Once we're further along we'll move to GH projects. this is fine for now
 ## Data Model
 
 - [ ] Collections
-  - [ ] 3 default collections for all users: want to read, reading, read
+  - [x] 3 default collections for all users: Want to Read, Currently Reading, Read — created on registration (or lazily on first `/me/shelves` call for existing users).
+  - [x] `books` table — global catalog keyed by `open_library_id`; upserted when a user adds a book to a shelf.
+  - [x] `collections` + `collection_items` tables with `is_exclusive` / `exclusive_group` for mutual exclusivity enforcement.
+  - [x] API: `GET /users/:username/shelves`, `GET /me/shelves`, `POST /shelves/:shelfId/books`, `DELETE /shelves/:shelfId/books/:olId`.
   - [ ] custom collections
     - [ ] Non-exclusive by default (a book can appear in multiple custom collections).
     - [ ] Example: "Favorites", "Recommended to me", "Books set in Japan".
