@@ -93,6 +93,7 @@ A named list owned by a user. Can be exclusive (like "Read" / "Want to Read") or
 | updated_at | timestamptz | |
 
 Default collections created on user registration:
+
 - "Read" (exclusive_group: "read_status")
 - "Want to Read" (exclusive_group: "read_status")
 - "Currently Reading" (exclusive_group: "read_status")

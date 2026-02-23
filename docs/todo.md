@@ -2,9 +2,9 @@
 
 Backlog of all things we need #todo
 
----
+Once we're further along we'll move to GH projects. this is fine for now
 
-## WEBAPP
+## Webapp
 
 - [ ] User Accounts
   - [x] Registration & Login
@@ -41,9 +41,7 @@ Backlog of all things we need #todo
   - [ ] Follow authors, see new publications.
   - [ ] Follow works, see sequels / new discussions / links.
 
----
-
-## DATA MODEL
+## Data Model
 
 - [ ] Collections
   - [ ] 3 default collections for all users: want to read, reading, read
@@ -66,9 +64,7 @@ Backlog of all things we need #todo
     - [ ] Sub-labels are tags on `CollectionItem`, not separate collections.
     - [ ] Display as nested groupings on the collection page.
 
----
-
-## BOOK CATALOG + DB
+## Connection to Book DBs
 
 - [ ] Search
   - [ ] Full-text search by title, author, ISBN.
@@ -85,8 +81,6 @@ Backlog of all things we need #todo
 
 - [ ] Edition handling
 
----
-
 ## Reviews & Ratings
 
 - [ ] A user can rate a book 1–5 stars with half stars
@@ -94,8 +88,6 @@ Backlog of all things we need #todo
 - [ ] Review text is optional; can include a spoiler flag.
 - [ ] One review per user per book; can be edited or deleted.
 - [ ] Reviews are shown on book pages sorted by recency and follower relationships (reviews from people you follow shown first).
-
----
 
 ## Discussion Threads
 
@@ -107,11 +99,7 @@ Backlog of all things we need #todo
 - [ ] No upvotes at MVP; chronological sort only.
 - [ ] Author can delete their own thread or comments; soft delete.
 
----
-
 ## Community Links (Wiki)
-
-Users can submit directional links between books:
 
 - [ ] Link types: `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`.
 - [ ] Optional note explaining the connection.
@@ -119,25 +107,18 @@ Users can submit directional links between books:
 - [ ] Soft-deleted by moderators if spam or incorrect.
 - [ ] Future: edit queue similar to book metadata edits.
 
----
-
 ## Import / Export
 
-### Goodreads Import
-
-- [ ] Accept a Goodreads CSV export file.
-- [ ] Map Goodreads shelves to rosslib collections
-- [ ] Attempt to match books by ISBN, falling back to title + author fuzzy match.
-- [ ] Show a review screen before committing: matched / unmatched / ambiguous.
-- [ ] Import star ratings and review text where present.
-
-### CSV Export
-
-- [ ] Export any collection (or all collections) to CSV.
-- [ ] Columns: title, author, ISBN, date added, rating, review, collection name.
-- [ ] Generated server-side and made available via a pre-signed S3 URL.
-
----
+- [ ] Goodreads Import
+  - [ ] Accept a Goodreads CSV export file.
+  - [ ] Map Goodreads shelves to rosslib collections
+  - [ ] Attempt to match books by ISBN, falling back to title + author fuzzy match.
+  - [ ] Show a review screen before committing: matched / unmatched / ambiguous.
+  - [ ] Import star ratings and review text where present.
+- [ ]  CSV Export
+  - [ ] Export any collection (or all collections) to CSV.
+  - [ ] Columns: title, author, ISBN, date added, rating, review, collection name.
+  - [ ] Generated server-side and made available via a pre-signed S3 URL.
 
 ## Feed
 
@@ -145,5 +126,3 @@ Users can submit directional links between books:
 - [ ] Activity types surfaced: added to collection, wrote a review, started/finished a book, created a thread, submitted a link, followed a new user.
 - [ ] No algorithmic ranking at MVP; pure chronological.
 - [ ] Paginated (cursor-based).
-
----
