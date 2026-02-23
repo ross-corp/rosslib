@@ -20,7 +20,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] Shelf pages at `/{username}/shelves/{slug}` — cover grid with title, owner can remove books inline.
   - [ ] Avatar upload.
   - [ ] Recent activity (reviews, threads, list updates) on profile.
-  - [ ] Stats: books read, reviews written, followers/following count.
+  - [ ] Stats: books read (done), reviews written, followers/following count (done).
   - [ ] Profiles can be set to private; followers must be approved.
 - [ ] Objects
   - [ ] Work pages at /w/dune

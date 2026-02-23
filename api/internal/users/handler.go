@@ -32,6 +32,7 @@ type profileResponse struct {
 	IsFollowing    bool    `json:"is_following"`
 	FollowersCount int     `json:"followers_count"`
 	FollowingCount int     `json:"following_count"`
+	BooksRead      int     `json:"books_read"`
 }
 
 type searchResult struct {
@@ -131,10 +132,13 @@ func (h *Handler) GetProfile(c *gin.Context) {
 	err := h.pool.QueryRow(c.Request.Context(),
 		`SELECT u.id, u.username, u.display_name, u.bio, u.avatar_url, u.is_private, u.created_at,
 		        (SELECT COUNT(*) FROM follows WHERE followee_id = u.id) AS followers_count,
-		        (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count
+		        (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count,
+		        (SELECT COUNT(*) FROM collection_items ci
+		           JOIN collections c ON c.id = ci.collection_id
+		           WHERE c.user_id = u.id AND c.slug = 'read') AS books_read
 		 FROM users u WHERE u.username = $1 AND u.deleted_at IS NULL`,
 		username,
-	).Scan(&p.UserID, &p.Username, &p.DisplayName, &p.Bio, &p.AvatarURL, &p.IsPrivate, &memberSince, &p.FollowersCount, &p.FollowingCount)
+	).Scan(&p.UserID, &p.Username, &p.DisplayName, &p.Bio, &p.AvatarURL, &p.IsPrivate, &memberSince, &p.FollowersCount, &p.FollowingCount, &p.BooksRead)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
