@@ -15,6 +15,7 @@ type UserProfile = {
   is_following: boolean;
   followers_count: number;
   following_count: number;
+  friends_count: number;
   books_read: number;
 };
 
@@ -116,6 +117,10 @@ export default async function UserPage({
             <span className="text-sm text-stone-700">
               <span className="font-semibold">{profile.following_count}</span>{" "}
               <span className="text-stone-400">following</span>
+            </span>
+            <span className="text-sm text-stone-700">
+              <span className="font-semibold">{profile.friends_count}</span>{" "}
+              <span className="text-stone-400">friends</span>
             </span>
           </div>
           <p className="text-xs text-stone-400 mt-1">Member since {memberSince}</p>

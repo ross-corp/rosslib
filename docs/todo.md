@@ -40,7 +40,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] `follows` table with `(follower_id, followee_id)` PK and `status` field.
   - [ ] Private accounts require follow approval (status = 'pending').
   - [x] Followers / following counts on profile.
-  - [ ] "Friends" (mutual follows) surfaced in UI.
+  - [x] "Friends" (mutual follows) surfaced in UI — friends_count (mutual follows) returned from profile endpoint and shown on profile page.
   - [ ] Follow authors, see new publications.
   - [ ] Follow works, see sequels / new discussions / links.
 
