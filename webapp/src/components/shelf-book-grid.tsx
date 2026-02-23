@@ -9,6 +9,7 @@ type Book = {
   title: string;
   cover_url: string | null;
   added_at: string;
+  rating: number | null;
 };
 
 export default function ShelfBookGrid({
@@ -66,6 +67,18 @@ export default function ShelfBookGrid({
             >
               {book.title}
             </Link>
+            {book.rating != null && book.rating > 0 && (
+              <div className="flex gap-px mt-1" aria-label={`${book.rating} out of 5 stars`}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <span
+                    key={n}
+                    className={`text-[10px] leading-none ${n <= book.rating! ? "text-amber-500" : "text-stone-200"}`}
+                  >
+                    ★
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           {isOwner && (
             <button

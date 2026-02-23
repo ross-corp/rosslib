@@ -69,6 +69,7 @@ type shelfDetailBook struct {
 	Title         string  `json:"title"`
 	CoverURL      *string `json:"cover_url"`
 	AddedAt       string  `json:"added_at"`
+	Rating        *int    `json:"rating"`
 }
 
 type shelfDetailResponse struct {
@@ -334,7 +335,7 @@ func (h *Handler) GetShelfBySlug(c *gin.Context) {
 	}
 
 	rows, err := h.pool.Query(c.Request.Context(),
-		`SELECT b.id, b.open_library_id, b.title, b.cover_url, ci.added_at
+		`SELECT b.id, b.open_library_id, b.title, b.cover_url, ci.added_at, ci.rating
 		 FROM collection_items ci
 		 JOIN books b ON b.id = ci.book_id
 		 WHERE ci.collection_id = $1
@@ -351,7 +352,7 @@ func (h *Handler) GetShelfBySlug(c *gin.Context) {
 	for rows.Next() {
 		var book shelfDetailBook
 		var addedAt time.Time
-		if err := rows.Scan(&book.BookID, &book.OpenLibraryID, &book.Title, &book.CoverURL, &addedAt); err != nil {
+		if err := rows.Scan(&book.BookID, &book.OpenLibraryID, &book.Title, &book.CoverURL, &addedAt, &book.Rating); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			return
 		}

@@ -17,6 +17,7 @@ type ShelfDetail = {
     title: string;
     cover_url: string | null;
     added_at: string;
+    rating: number | null;
   }[];
 };
 
