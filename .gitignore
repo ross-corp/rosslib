@@ -1,2 +1,9 @@
 webapp/node_modules
 webapp/.next
+
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/*.tfvars
+infra/.terraform.lock.hcl

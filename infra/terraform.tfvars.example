@@ -1,0 +1,5 @@
+region         = "us-east-1"
+app_name       = "rosslib"
+instance_type  = "t3.medium"
+ssh_public_key = "ssh-ed25519 AAAA... your-key-here"
+domain         = "rosslib.com"
