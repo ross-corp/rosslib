@@ -4,6 +4,10 @@ Backlog of all things we need #todo
 
 Once we're further along we'll move to GH projects. this is fine for now
 
+## UNSORTED
+
+- [ ] map page lengths to my device
+
 ## Webapp
 
 - [ ] User Accounts
@@ -58,7 +62,7 @@ Once we're further along we'll move to GH projects. this is fine for now
     - [x] `DELETE /me/shelves/:id` — delete a custom collection (403 if `exclusive_group = 'read_status'`).
     - [x] Non-exclusive by default (a book can appear in multiple custom collections).
     - [x] `EnsureShelf` package-level helper: get-or-create by slug using `ON CONFLICT DO UPDATE SET name = collections.name RETURNING id` — used by the import pipeline.
-    - [ ] Show custom shelves on profile and on shelf pages.
+    - [x] Show custom shelves on profile and on shelf pages.
   - [ ] Computed collections
     - [ ] Union: books in list A or list B.
     - [ ] Intersection: books in both list A and list B.
