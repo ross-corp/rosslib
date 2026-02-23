@@ -20,7 +20,15 @@ type ShelfDetail = {
   }[];
 };
 
-// ── Data fetcher ──────────────────────────────────────────────────────────────
+type ShelfSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  exclusive_group: string;
+  item_count: number;
+};
+
+// ── Data fetchers ──────────────────────────────────────────────────────────────
 
 async function fetchShelf(
   username: string,
@@ -34,6 +42,14 @@ async function fetchShelf(
   return res.json();
 }
 
+async function fetchUserShelves(username: string): Promise<ShelfSummary[]> {
+  const res = await fetch(`${process.env.API_URL}/users/${username}/shelves`, {
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function ShelfPage({
@@ -42,9 +58,10 @@ export default async function ShelfPage({
   params: Promise<{ username: string; slug: string }>;
 }) {
   const { username, slug } = await params;
-  const [currentUser, shelf] = await Promise.all([
+  const [currentUser, shelf, allShelves] = await Promise.all([
     getUser(),
     fetchShelf(username, slug),
+    fetchUserShelves(username),
   ]);
 
   if (!shelf) notFound();
@@ -69,6 +86,25 @@ export default async function ShelfPage({
             {shelf.books.length} {shelf.books.length === 1 ? "book" : "books"}
           </span>
         </div>
+
+        {allShelves.length > 1 && (
+          <div className="flex flex-wrap gap-2 mb-8">
+            {allShelves.map((s) => (
+              <Link
+                key={s.id}
+                href={`/${username}/shelves/${s.slug}`}
+                className={`text-sm px-3 py-1 rounded border transition-colors ${
+                  s.slug === slug
+                    ? "border-stone-800 bg-stone-800 text-white"
+                    : "border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900"
+                }`}
+              >
+                {s.name}
+                <span className="ml-1.5 text-xs opacity-60">{s.item_count}</span>
+              </Link>
+            ))}
+          </div>
+        )}
 
         <ShelfBookGrid
           shelfId={shelf.id}

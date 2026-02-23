@@ -126,29 +126,60 @@ export default async function UserPage({
           <p className="text-xs text-stone-400 mt-1">Member since {memberSince}</p>
         </div>
 
-        {shelves.length > 0 && (
-          <div className="mt-10">
-            <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
-              Shelves
-            </h2>
-            <div className="flex gap-4">
-              {shelves.map((shelf) => (
-                <Link
-                  key={shelf.id}
-                  href={`/${profile.username}/shelves/${shelf.slug}`}
-                  className="flex-1 border border-stone-200 rounded p-4 hover:border-stone-400 transition-colors"
-                >
-                  <p className="text-sm font-medium text-stone-900">
-                    {shelf.name}
-                  </p>
-                  <p className="text-xs text-stone-400 mt-1">
-                    {shelf.item_count} {shelf.item_count === 1 ? "book" : "books"}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
+        {(() => {
+          const defaultShelves = shelves.filter(s => s.exclusive_group === "read_status");
+          const customShelves = shelves.filter(s => s.exclusive_group !== "read_status");
+          return (
+            <>
+              {defaultShelves.length > 0 && (
+                <div className="mt-10">
+                  <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
+                    Shelves
+                  </h2>
+                  <div className="flex gap-4">
+                    {defaultShelves.map((shelf) => (
+                      <Link
+                        key={shelf.id}
+                        href={`/${profile.username}/shelves/${shelf.slug}`}
+                        className="flex-1 border border-stone-200 rounded p-4 hover:border-stone-400 transition-colors"
+                      >
+                        <p className="text-sm font-medium text-stone-900">
+                          {shelf.name}
+                        </p>
+                        <p className="text-xs text-stone-400 mt-1">
+                          {shelf.item_count} {shelf.item_count === 1 ? "book" : "books"}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {customShelves.length > 0 && (
+                <div className="mt-8">
+                  <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
+                    Custom Shelves
+                  </h2>
+                  <div className="flex flex-wrap gap-3">
+                    {customShelves.map((shelf) => (
+                      <Link
+                        key={shelf.id}
+                        href={`/${profile.username}/shelves/${shelf.slug}`}
+                        className="border border-stone-200 rounded p-3 hover:border-stone-400 transition-colors min-w-32"
+                      >
+                        <p className="text-sm font-medium text-stone-900">
+                          {shelf.name}
+                        </p>
+                        <p className="text-xs text-stone-400 mt-1">
+                          {shelf.item_count} {shelf.item_count === 1 ? "book" : "books"}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </main>
     </div>
   );
