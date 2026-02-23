@@ -22,14 +22,16 @@ func NewHandler(pool *pgxpool.Pool) *Handler {
 // ── types ────────────────────────────────────────────────────────────────────
 
 type profileResponse struct {
-	UserID      string  `json:"user_id"`
-	Username    string  `json:"username"`
-	DisplayName *string `json:"display_name"`
-	Bio         *string `json:"bio"`
-	AvatarURL   *string `json:"avatar_url"`
-	IsPrivate   bool    `json:"is_private"`
-	MemberSince string  `json:"member_since"`
-	IsFollowing bool    `json:"is_following"`
+	UserID         string  `json:"user_id"`
+	Username       string  `json:"username"`
+	DisplayName    *string `json:"display_name"`
+	Bio            *string `json:"bio"`
+	AvatarURL      *string `json:"avatar_url"`
+	IsPrivate      bool    `json:"is_private"`
+	MemberSince    string  `json:"member_since"`
+	IsFollowing    bool    `json:"is_following"`
+	FollowersCount int     `json:"followers_count"`
+	FollowingCount int     `json:"following_count"`
 }
 
 type searchResult struct {
@@ -127,10 +129,12 @@ func (h *Handler) GetProfile(c *gin.Context) {
 	var memberSince time.Time
 
 	err := h.pool.QueryRow(c.Request.Context(),
-		`SELECT id, username, display_name, bio, avatar_url, is_private, created_at
-		 FROM users WHERE username = $1 AND deleted_at IS NULL`,
+		`SELECT u.id, u.username, u.display_name, u.bio, u.avatar_url, u.is_private, u.created_at,
+		        (SELECT COUNT(*) FROM follows WHERE followee_id = u.id) AS followers_count,
+		        (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count
+		 FROM users u WHERE u.username = $1 AND u.deleted_at IS NULL`,
 		username,
-	).Scan(&p.UserID, &p.Username, &p.DisplayName, &p.Bio, &p.AvatarURL, &p.IsPrivate, &memberSince)
+	).Scan(&p.UserID, &p.Username, &p.DisplayName, &p.Bio, &p.AvatarURL, &p.IsPrivate, &memberSince, &p.FollowersCount, &p.FollowingCount)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return

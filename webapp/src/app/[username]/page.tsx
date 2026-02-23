@@ -13,6 +13,8 @@ type UserProfile = {
   is_private: boolean;
   member_since: string;
   is_following: boolean;
+  followers_count: number;
+  following_count: number;
 };
 
 type UserShelf = {
@@ -101,7 +103,17 @@ export default async function UserPage({
             </p>
           )}
 
-          <p className="text-xs text-stone-400">Member since {memberSince}</p>
+          <div className="flex items-center gap-4 mt-1">
+            <span className="text-sm text-stone-700">
+              <span className="font-semibold">{profile.followers_count}</span>{" "}
+              <span className="text-stone-400">followers</span>
+            </span>
+            <span className="text-sm text-stone-700">
+              <span className="font-semibold">{profile.following_count}</span>{" "}
+              <span className="text-stone-400">following</span>
+            </span>
+          </div>
+          <p className="text-xs text-stone-400 mt-1">Member since {memberSince}</p>
         </div>
 
         {shelves.length > 0 && (
