@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/auth"
+	"github.com/tristansaldanha/rosslib/api/internal/books"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 	"github.com/tristansaldanha/rosslib/api/internal/users"
 )
@@ -40,6 +41,9 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	r.POST("/auth/login", authHandler.Login)
 
 	secret := []byte(jwtSecret)
+
+	booksHandler := books.NewHandler()
+	r.GET("/books/search", booksHandler.SearchBooks)
 
 	usersHandler := users.NewHandler(pool)
 	r.GET("/users", usersHandler.SearchUsers)

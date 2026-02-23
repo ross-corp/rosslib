@@ -17,7 +17,7 @@ export default async function Nav() {
           <input
             name="q"
             type="search"
-            placeholder="Search users..."
+            placeholder="Search books..."
             className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded bg-stone-50 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent"
           />
         </form>

@@ -27,10 +27,11 @@ Once we're further along we'll move to GH projects. this is fine for now
 
 - [ ] Search & Discovery
   - [x] Search bar in nav — submits GET to /search.
-  - [x] `/search` page — search users by username or display name (substring match, up to 20 results).
+  - [x] `/search` page — Books tab searches by title via Open Library API (up to 20 results with cover, authors, year). People tab searches users by username or display name.
   - [x] `/users` page — browse all users, alphabetical, paginated (20/page).
-  - [ ] Filter search by type: works, authors, users.
-  - [ ] Full-text book/author search via Meilisearch.
+  - [x] Tab selector on `/search` to filter between Books and People.
+  - [ ] Author tab in search.
+  - [ ] Full-text book/author search via Meilisearch (will replace Open Library as primary search backend).
 
 - [ ] Social
   - [x] Follow / unfollow users (asymmetric). Follow button on profile page; `is_following` returned from profile endpoint.
@@ -67,7 +68,9 @@ Once we're further along we'll move to GH projects. this is fine for now
 ## Connection to Book DBs
 
 - [ ] Search
-  - [ ] Full-text search by title, author, ISBN.
+  - [x] Book title search via Open Library API (`GET /books/search?q=<title>`). Returns title, authors, cover image, first publish year, ISBNs.
+  - [ ] Author search.
+  - [ ] ISBN-direct lookup (for Goodreads import matching).
   - [ ] Faceted filters: genre, published year range, language.
   - [ ] Results ranked by relevance, with popular books surfaced higher.
 - [ ] Book pages
