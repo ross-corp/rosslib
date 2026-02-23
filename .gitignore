@@ -7,3 +7,5 @@ infra/*.tfstate
 infra/*.tfstate.backup
 infra/*.tfvars
 infra/.terraform.lock.hcl
+
+assets/

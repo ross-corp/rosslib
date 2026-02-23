@@ -35,6 +35,9 @@ CREATE TABLE IF NOT EXISTS books (
 	open_library_id VARCHAR(50)  UNIQUE NOT NULL,
 	title           VARCHAR(500) NOT NULL,
 	cover_url       TEXT,
+	isbn13          VARCHAR(13),
+	authors         TEXT,
+	publication_year INT,
 	created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
@@ -55,8 +58,24 @@ CREATE TABLE IF NOT EXISTS collection_items (
 	collection_id UUID        NOT NULL REFERENCES collections(id),
 	book_id       UUID        NOT NULL REFERENCES books(id),
 	added_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	rating        SMALLINT,
+	review_text   TEXT,
+	spoiler       BOOLEAN     NOT NULL DEFAULT false,
+	date_read     TIMESTAMPTZ,
+	date_added    TIMESTAMPTZ,
 	UNIQUE(collection_id, book_id)
 );
+
+-- Idempotent column additions for existing deployments.
+ALTER TABLE books ADD COLUMN IF NOT EXISTS isbn13           VARCHAR(13);
+ALTER TABLE books ADD COLUMN IF NOT EXISTS authors          TEXT;
+ALTER TABLE books ADD COLUMN IF NOT EXISTS publication_year INT;
+
+ALTER TABLE collection_items ADD COLUMN IF NOT EXISTS rating      SMALLINT;
+ALTER TABLE collection_items ADD COLUMN IF NOT EXISTS review_text TEXT;
+ALTER TABLE collection_items ADD COLUMN IF NOT EXISTS spoiler     BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE collection_items ADD COLUMN IF NOT EXISTS date_read   TIMESTAMPTZ;
+ALTER TABLE collection_items ADD COLUMN IF NOT EXISTS date_added  TIMESTAMPTZ;
 `
 
 func Migrate(pool *pgxpool.Pool) error {

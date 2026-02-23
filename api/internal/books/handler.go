@@ -1,21 +1,26 @@
 package books
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Handler struct{}
+type Handler struct {
+	pool *pgxpool.Pool
+}
 
-func NewHandler() *Handler {
-	return &Handler{}
+func NewHandler(pool *pgxpool.Pool) *Handler {
+	return &Handler{pool: pool}
 }
 
 // ── Open Library API types ────────────────────────────────────────────────────
@@ -335,4 +340,135 @@ func (h *Handler) GetBook(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, detail)
+}
+
+// ── ISBN lookup ───────────────────────────────────────────────────────────────
+
+// LookupBookByISBN queries the Open Library search API for a single book by
+// ISBN, upserts it into the local books table (if a pool is supplied), and
+// returns the normalised BookResult. It is a package-level function so the
+// import handler can call it directly without going through HTTP.
+func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string) (*BookResult, error) {
+	// Strip everything that isn't a digit or trailing X (ISBN-10 check digit).
+	clean := strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' || r == 'X' || r == 'x' {
+			return r
+		}
+		return -1
+	}, isbn)
+	if clean == "" {
+		return nil, fmt.Errorf("invalid ISBN")
+	}
+
+	apiURL := fmt.Sprintf(
+		"%s?isbn=%s&fields=%s&limit=1",
+		olSearchURL,
+		url.QueryEscape(clean),
+		olSearchFields,
+	)
+
+	resp, err := http.Get(apiURL) //nolint:noctx
+	if err != nil {
+		return nil, fmt.Errorf("reach OL: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read OL response: %w", err)
+	}
+
+	var olResp olResponse
+	if err := json.Unmarshal(body, &olResp); err != nil {
+		return nil, fmt.Errorf("parse OL response: %w", err)
+	}
+	if len(olResp.Docs) == 0 {
+		return nil, nil // not found
+	}
+
+	doc := olResp.Docs[0]
+
+	result := &BookResult{
+		Key:              doc.Key,
+		Title:            doc.Title,
+		Authors:          doc.AuthorName,
+		PublishYear:      doc.FirstPublishYear,
+		EditionCount:     doc.EditionCount,
+		AverageRating:    doc.RatingsAverage,
+		RatingCount:      doc.RatingsCount,
+		AlreadyReadCount: doc.AlreadyReadCount,
+	}
+
+	if len(doc.ISBN) > 0 {
+		result.ISBN = doc.ISBN[:min(maxISBNs, len(doc.ISBN))]
+	}
+
+	var coverURL *string
+	if doc.CoverI != nil {
+		u := fmt.Sprintf(olCoverMedURL, *doc.CoverI)
+		coverURL = &u
+		result.CoverURL = coverURL
+	}
+
+	if pool == nil {
+		return result, nil
+	}
+
+	// Strip the "/works/" prefix — the DB stores bare OL IDs (e.g. "OL82592W").
+	bareID := strings.TrimPrefix(doc.Key, "/works/")
+
+	// Pick the best ISBN-13 to store (prefer the one we searched with if it's 13 digits).
+	var isbn13 *string
+	if len(clean) == 13 {
+		isbn13 = &clean
+	} else {
+		for _, i := range doc.ISBN {
+			if len(i) == 13 {
+				isbn13 = &i
+				break
+			}
+		}
+	}
+
+	authors := strings.Join(doc.AuthorName, ", ")
+
+	_, err = pool.Exec(ctx,
+		`INSERT INTO books (open_library_id, title, cover_url, isbn13, authors, publication_year)
+		 VALUES ($1, $2, $3, $4, $5, $6)
+		 ON CONFLICT (open_library_id) DO UPDATE
+		   SET title            = EXCLUDED.title,
+		       cover_url        = EXCLUDED.cover_url,
+		       isbn13           = COALESCE(books.isbn13, EXCLUDED.isbn13),
+		       authors          = COALESCE(books.authors, EXCLUDED.authors),
+		       publication_year = COALESCE(books.publication_year, EXCLUDED.publication_year)`,
+		bareID, doc.Title, coverURL, isbn13, authors, doc.FirstPublishYear,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("upsert book: %w", err)
+	}
+
+	return result, nil
+}
+
+// LookupBook handles the ISBN lookup HTTP endpoint.
+//
+// GET /books/lookup?isbn=<isbn>
+func (h *Handler) LookupBook(c *gin.Context) {
+	isbn := c.Query("isbn")
+	if isbn == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "query parameter 'isbn' is required"})
+		return
+	}
+
+	result, err := LookupBookByISBN(c.Request.Context(), h.pool, isbn)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to reach book service"})
+		return
+	}
+	if result == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "book not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }

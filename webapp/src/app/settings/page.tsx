@@ -35,7 +35,15 @@ export default async function SettingsPage() {
           <span className="text-stone-600">Settings</span>
         </div>
 
-        <h1 className="text-2xl font-bold text-stone-900 mb-8">Profile</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-bold text-stone-900">Profile</h1>
+          <Link
+            href="/settings/import"
+            className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
+          >
+            Import from Goodreads
+          </Link>
+        </div>
 
         <SettingsForm
           username={user.username}

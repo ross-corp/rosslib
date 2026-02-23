@@ -2,13 +2,49 @@ package collections
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 )
+
+var multiDash = regexp.MustCompile(`-{2,}`)
+
+// slugify converts a human-readable name into a URL slug.
+// "Science Fiction" → "science-fiction"
+func slugify(name string) string {
+	s := strings.ToLower(name)
+	var b strings.Builder
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		} else {
+			b.WriteRune('-')
+		}
+	}
+	return strings.Trim(multiDash.ReplaceAllString(b.String(), "-"), "-")
+}
+
+// EnsureShelf is a package-level helper used by the import process.
+// It inserts the collection if the slug doesn't exist yet, otherwise
+// returns the existing collection's ID — no error in either case.
+func EnsureShelf(ctx context.Context, pool *pgxpool.Pool, userID, name, slug string, isExclusive bool, exclusiveGroup string, isPublic bool) (string, error) {
+	var id string
+	err := pool.QueryRow(ctx,
+		`INSERT INTO collections (user_id, name, slug, is_exclusive, exclusive_group, is_public)
+		 VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6)
+		 ON CONFLICT (user_id, slug) DO UPDATE SET name = collections.name
+		 RETURNING id`,
+		userID, name, slug, isExclusive, exclusiveGroup, isPublic,
+	).Scan(&id)
+	return id, err
+}
 
 type Handler struct {
 	pool *pgxpool.Pool
@@ -351,6 +387,290 @@ func (h *Handler) RemoveBookFromShelf(c *gin.Context) {
 		shelfID, olID,
 	)
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// ── Custom shelf management ───────────────────────────────────────────────────
+
+// CreateShelf - POST /me/shelves (authed)
+// Creates a new custom collection. The slug is derived from the name.
+// Returns 409 if the user already has a shelf with that slug.
+func (h *Handler) CreateShelf(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+
+	var req struct {
+		Name           string `json:"name"            binding:"required,max=255"`
+		IsExclusive    bool   `json:"is_exclusive"`
+		ExclusiveGroup string `json:"exclusive_group" binding:"max=100"`
+		IsPublic       *bool  `json:"is_public"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	slug := slugify(req.Name)
+	if slug == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name produces an empty slug"})
+		return
+	}
+
+	isPublic := true
+	if req.IsPublic != nil {
+		isPublic = *req.IsPublic
+	}
+
+	var existing int
+	_ = h.pool.QueryRow(c.Request.Context(),
+		`SELECT COUNT(*) FROM collections WHERE user_id = $1 AND slug = $2`,
+		userID, slug,
+	).Scan(&existing)
+	if existing > 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "a shelf with that name already exists"})
+		return
+	}
+
+	var shelf shelfResponse
+	err := h.pool.QueryRow(c.Request.Context(),
+		`INSERT INTO collections (user_id, name, slug, is_exclusive, exclusive_group, is_public)
+		 VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6)
+		 RETURNING id, name, slug, COALESCE(exclusive_group, '')`,
+		userID, req.Name, slug, req.IsExclusive, req.ExclusiveGroup, isPublic,
+	).Scan(&shelf.ID, &shelf.Name, &shelf.Slug, &shelf.ExclusiveGroup)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, shelf)
+}
+
+// UpdateShelf - PATCH /me/shelves/:id (authed)
+// Allows renaming a shelf or toggling its visibility.
+func (h *Handler) UpdateShelf(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	shelfID := c.Param("id")
+
+	var req struct {
+		Name     *string `json:"name"      binding:"omitempty,max=255"`
+		IsPublic *bool   `json:"is_public"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.Name == nil && req.IsPublic == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "provide at least one of: name, is_public"})
+		return
+	}
+
+	var curName string
+	var curIsPublic bool
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT name, is_public FROM collections WHERE id = $1 AND user_id = $2`,
+		shelfID, userID,
+	).Scan(&curName, &curIsPublic)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "shelf not found"})
+		return
+	}
+
+	newName := curName
+	if req.Name != nil {
+		newName = *req.Name
+	}
+	newIsPublic := curIsPublic
+	if req.IsPublic != nil {
+		newIsPublic = *req.IsPublic
+	}
+
+	var shelf shelfResponse
+	err = h.pool.QueryRow(c.Request.Context(),
+		`UPDATE collections SET name = $1, is_public = $2
+		 WHERE id = $3
+		 RETURNING id, name, slug, COALESCE(exclusive_group, '')`,
+		newName, newIsPublic, shelfID,
+	).Scan(&shelf.ID, &shelf.Name, &shelf.Slug, &shelf.ExclusiveGroup)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, shelf)
+}
+
+// DeleteShelf - DELETE /me/shelves/:id (authed)
+// Deletes a custom collection and all its items.
+// The 3 default shelves (exclusive_group = 'read_status') cannot be deleted.
+func (h *Handler) DeleteShelf(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	shelfID := c.Param("id")
+
+	var exclusiveGroup string
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT COALESCE(exclusive_group, '') FROM collections WHERE id = $1 AND user_id = $2`,
+		shelfID, userID,
+	).Scan(&exclusiveGroup)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "shelf not found"})
+		return
+	}
+	if exclusiveGroup == "read_status" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "default shelves cannot be deleted"})
+		return
+	}
+
+	tx, err := h.pool.Begin(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer tx.Rollback(c.Request.Context()) //nolint:errcheck
+
+	_, err = tx.Exec(c.Request.Context(),
+		`DELETE FROM collection_items WHERE collection_id = $1`, shelfID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	_, err = tx.Exec(c.Request.Context(),
+		`DELETE FROM collections WHERE id = $1`, shelfID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	if err := tx.Commit(c.Request.Context()); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// ── Review / rating ───────────────────────────────────────────────────────────
+
+// UpdateBookInShelf - PATCH /shelves/:shelfId/books/:olId (authed)
+// Updates review metadata on a collection_item: rating, review_text, spoiler,
+// date_read. Only fields present in the JSON body are written; absent fields
+// are left unchanged. Send null to clear a field.
+//
+// Accepted fields:
+//   rating      int | null   (1–5; null clears it)
+//   review_text string | null
+//   spoiler     bool
+//   date_read   string | null  (RFC3339 or "YYYY-MM-DD"; null clears it)
+func (h *Handler) UpdateBookInShelf(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	shelfID := c.Param("shelfId")
+	olID := c.Param("olId")
+
+	// Decode to a raw map so we know which keys the caller actually sent.
+	var raw map[string]json.RawMessage
+	if err := c.ShouldBindJSON(&raw); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if len(raw) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no fields to update"})
+		return
+	}
+
+	// Verify the book is in this shelf and the shelf belongs to the user.
+	var itemID string
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT ci.id
+		 FROM collection_items ci
+		 JOIN books b       ON b.id  = ci.book_id
+		 JOIN collections c ON c.id  = ci.collection_id
+		 WHERE ci.collection_id = $1
+		   AND b.open_library_id = $2
+		   AND c.user_id         = $3`,
+		shelfID, olID, userID,
+	).Scan(&itemID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "book not found in shelf"})
+		return
+	}
+
+	setClauses := []string{}
+	args := []interface{}{}
+	idx := 1
+
+	if v, ok := raw["rating"]; ok {
+		var rating *int
+		if err := json.Unmarshal(v, &rating); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "rating must be an integer or null"})
+			return
+		}
+		if rating != nil && (*rating < 1 || *rating > 5) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "rating must be between 1 and 5"})
+			return
+		}
+		setClauses = append(setClauses, fmt.Sprintf("rating = $%d", idx))
+		args = append(args, rating)
+		idx++
+	}
+
+	if v, ok := raw["review_text"]; ok {
+		var text *string
+		if err := json.Unmarshal(v, &text); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "review_text must be a string or null"})
+			return
+		}
+		setClauses = append(setClauses, fmt.Sprintf("review_text = $%d", idx))
+		args = append(args, text)
+		idx++
+	}
+
+	if v, ok := raw["spoiler"]; ok {
+		var spoiler bool
+		if err := json.Unmarshal(v, &spoiler); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "spoiler must be a boolean"})
+			return
+		}
+		setClauses = append(setClauses, fmt.Sprintf("spoiler = $%d", idx))
+		args = append(args, spoiler)
+		idx++
+	}
+
+	if v, ok := raw["date_read"]; ok {
+		var dateStr *string
+		if err := json.Unmarshal(v, &dateStr); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "date_read must be a string or null"})
+			return
+		}
+		var dateVal interface{}
+		if dateStr != nil && *dateStr != "" {
+			t, err := time.Parse(time.RFC3339, *dateStr)
+			if err != nil {
+				t, err = time.Parse("2006-01-02", *dateStr)
+				if err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "date_read must be RFC3339 or YYYY-MM-DD"})
+					return
+				}
+			}
+			dateVal = t
+		}
+		setClauses = append(setClauses, fmt.Sprintf("date_read = $%d", idx))
+		args = append(args, dateVal)
+		idx++
+	}
+
+	if len(setClauses) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no recognised fields to update"})
+		return
+	}
+
+	args = append(args, itemID)
+	query := fmt.Sprintf(
+		"UPDATE collection_items SET %s WHERE id = $%d",
+		strings.Join(setClauses, ", "), idx,
+	)
+	if _, err := h.pool.Exec(c.Request.Context(), query, args...); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}

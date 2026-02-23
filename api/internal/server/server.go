@@ -10,6 +10,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/auth"
 	"github.com/tristansaldanha/rosslib/api/internal/books"
 	"github.com/tristansaldanha/rosslib/api/internal/collections"
+	"github.com/tristansaldanha/rosslib/api/internal/imports"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 	"github.com/tristansaldanha/rosslib/api/internal/users"
 )
@@ -43,8 +44,9 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 
 	secret := []byte(jwtSecret)
 
-	booksHandler := books.NewHandler()
+	booksHandler := books.NewHandler(pool)
 	r.GET("/books/search", booksHandler.SearchBooks)
+	r.GET("/books/lookup", booksHandler.LookupBook)
 	r.GET("/books/:workId", booksHandler.GetBook)
 
 	usersHandler := users.NewHandler(pool)
@@ -60,8 +62,16 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	authed.PATCH("/users/me", usersHandler.UpdateMe)
 	authed.POST("/users/:username/follow", usersHandler.Follow)
 	authed.DELETE("/users/:username/follow", usersHandler.Unfollow)
+	importsHandler := imports.NewHandler(pool)
+	authed.POST("/me/import/goodreads/preview", importsHandler.Preview)
+	authed.POST("/me/import/goodreads/commit", importsHandler.Commit)
+
 	authed.GET("/me/shelves", collectionsHandler.GetMyShelves)
+	authed.POST("/me/shelves", collectionsHandler.CreateShelf)
+	authed.PATCH("/me/shelves/:id", collectionsHandler.UpdateShelf)
+	authed.DELETE("/me/shelves/:id", collectionsHandler.DeleteShelf)
 	authed.POST("/shelves/:shelfId/books", collectionsHandler.AddBookToShelf)
+	authed.PATCH("/shelves/:shelfId/books/:olId", collectionsHandler.UpdateBookInShelf)
 	authed.DELETE("/shelves/:shelfId/books/:olId", collectionsHandler.RemoveBookFromShelf)
 
 	return r
