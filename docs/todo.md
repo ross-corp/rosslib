@@ -22,9 +22,6 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [ ] Recent activity (reviews, threads, list updates) on profile.
   - [ ] Stats: books read (done), reviews written (needs reviews feature), followers/following count (done).
   - [ ] Profiles can be set to private; followers must be approved.
-- [ ] Objects
-  - [ ] Work pages at /w/dune
-  - [ ] Author pages at /a/frank_herbert
 
 - [ ] Search & Discovery
   - [x] Search bar in nav — submits GET to /search.
@@ -53,16 +50,14 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] `books` table — global catalog keyed by `open_library_id`; upserted when a user adds a book to a shelf.
   - [x] `collections` + `collection_items` tables with `is_exclusive` / `exclusive_group` for mutual exclusivity enforcement.
   - [x] API: `GET /users/:username/shelves`, `GET /users/:username/shelves/:slug`, `GET /me/shelves`, `POST /shelves/:shelfId/books`, `DELETE /shelves/:shelfId/books/:olId`.
-  - [ ] Expand `books` table: add `isbn13 VARCHAR(13)`, `authors TEXT`, `publication_year INT` — needed for import matching and book pages.
-  - [ ] Expand `collection_items` table: add `rating SMALLINT` (0–5, 0 = unrated), `review_text TEXT`, `spoiler BOOLEAN DEFAULT false`, `date_read TIMESTAMPTZ`, `date_added TIMESTAMPTZ` — needed before import can store review/rating data.
-  - [ ] custom collections
-    - [ ] `POST /me/shelves` — create a custom collection (name, slug auto-derived, is_exclusive, exclusive_group, is_public).
-    - [ ] `PATCH /me/shelves/:id` — rename or change visibility of a custom collection.
-    - [ ] `DELETE /me/shelves/:id` — delete a custom collection (not allowed for the 3 defaults).
-    - [ ] Non-exclusive by default (a book can appear in multiple custom collections).
-    - [ ] Example: "Favorites", "Recommended to me", "Books set in Japan".
-    - [ ] Collections can be made private or public.
-    - [ ] Custom collections can also be marked exclusive and grouped if desired (e.g. a "Currently Reading" + "audiobook").
+  - [x] Expand `books` table: add `isbn13 VARCHAR(13)`, `authors TEXT`, `publication_year INT` — needed for import matching and book pages.
+  - [x] Expand `collection_items` table: add `rating SMALLINT` (0–5, 0 = unrated), `review_text TEXT`, `spoiler BOOLEAN DEFAULT false`, `date_read TIMESTAMPTZ`, `date_added TIMESTAMPTZ` — needed before import can store review/rating data.
+  - [x] custom collections
+    - [x] `POST /me/shelves` — create a custom collection (name, slug auto-derived, is_exclusive, exclusive_group, is_public). Returns 409 on slug conflict.
+    - [x] `PATCH /me/shelves/:id` — rename or change visibility of a custom collection.
+    - [x] `DELETE /me/shelves/:id` — delete a custom collection (403 if `exclusive_group = 'read_status'`).
+    - [x] Non-exclusive by default (a book can appear in multiple custom collections).
+    - [x] `EnsureShelf` package-level helper: get-or-create by slug using `ON CONFLICT DO UPDATE SET name = collections.name RETURNING id` — used by the import pipeline.
     - [ ] Show custom shelves on profile and on shelf pages.
   - [ ] Computed collections
     - [ ] Union: books in list A or list B.
@@ -83,7 +78,7 @@ Once we're further along we'll move to GH projects. this is fine for now
 - [ ] Search
   - [x] Book title search via Open Library API (`GET /books/search?q=<title>`). Returns title, authors, cover image, first publish year, ISBNs.
   - [ ] Author search.
-  - [ ] ISBN-direct lookup via Open Library `GET /api/books?bibkeys=ISBN:...` — `GET /books/by-isbn/:isbn` endpoint that upserts into the local `books` table and returns the book. Required for Goodreads import.
+  - [x] ISBN-direct lookup via Open Library — `GET /books/lookup?isbn=<isbn>` endpoint that searches OL by ISBN, upserts into the local `books` table (using bare OL ID e.g. `OL82592W`), and returns the book. Used as primary lookup during Goodreads import; falls back to title+author search when no ISBN match.
   - [ ] Faceted filters: genre, published year range, language.
   - [ ] Results ranked by relevance, with popular books surfaced higher.
 - [ ] Book pages
@@ -99,12 +94,12 @@ Once we're further along we'll move to GH projects. this is fine for now
 
 ## Reviews & Ratings
 
-- [ ] Rating and review text live on `collection_items` (one per user per book, since a book can only be on one exclusive shelf at a time). Fields: `rating`, `review_text`, `spoiler`, `date_read`.
+- [x] Rating and review text live on `collection_items` (one per user per book). Fields: `rating`, `review_text`, `spoiler`, `date_read`, `date_added`.
+- [x] `PATCH /shelves/:shelfId/books/:olId` — partial update of rating, review_text, spoiler, date_read. Uses `map[string]json.RawMessage` to distinguish absent fields from explicit nulls; dynamically builds SET clause.
 - [ ] A user can rate a book 1–5 stars (integers; half stars are a future enhancement).
 - [ ] A rating alone (no review text) is valid.
 - [ ] Review text is optional; can include a spoiler flag.
 - [ ] One review per user per book; can be edited or deleted.
-- [ ] `PATCH /shelves/:shelfId/books/:olId` — update rating, review_text, spoiler, date_read for a book in a shelf.
 - [ ] `GET /users/:username/reviews` — list all reviews by a user (for profile "Reviews" tab).
 - [ ] Reviews are shown on book pages sorted by recency and follower relationships (reviews from people you follow shown first).
 - [ ] Display star rating on shelf item cards (profile shelf pages).
@@ -129,26 +124,27 @@ Once we're further along we'll move to GH projects. this is fine for now
 
 ## Import / Export
 
-- [ ] Goodreads Import
-  - [ ] `POST /me/import/goodreads/preview` — accepts multipart CSV upload; returns JSON preview (no DB writes).
-    - [ ] Parse Goodreads CSV format: strip `=""...""` wrapper from ISBN fields; handle quoted multi-line review text.
-    - [ ] For each row: try ISBN13 lookup first, then fall back to title + author OL search.
-    - [ ] Categorise results as `matched` (single OL match), `ambiguous` (multiple candidates), `unmatched` (no match).
-    - [ ] Map `Exclusive Shelf` column: `read` → Read, `currently-reading` → Currently Reading, `to-read` → Want to Read; any other value (e.g. `owned-to-read`, `dnf`) → propose as new custom exclusive collection.
-    - [ ] Map `Bookshelves` column: each tag (e.g. `genre-science-fiction`, `2025`, `favorites`) → propose as new custom non-exclusive collection, reusing existing ones by slug if they already exist.
-    - [ ] Include per-row: title, author, isbn13, matched OL ID, target collections, rating, review snippet, date_read.
-  - [ ] `POST /me/import/goodreads/commit` — accepts the confirmed preview payload; writes to DB.
-    - [ ] Upsert books into `books` table (isbn13, authors, publication_year populated from OL data).
-    - [ ] Create any new custom collections (exclusive or non-exclusive) referenced by the import.
-    - [ ] Add books to collections; set `rating`, `review_text`, `spoiler`, `date_read`, `date_added` on `collection_items`.
-    - [ ] Skip any rows the user marked as skipped in the preview.
-    - [ ] Return a summary: N books imported, N skipped, N failed.
-  - [ ] Import UI at `/settings/import`:
-    - [ ] File picker for `.csv` upload.
-    - [ ] Calls preview endpoint; shows three groups: Matched, Ambiguous (needs user selection), Unmatched.
-    - [ ] User can remap or skip individual books in the ambiguous/unmatched groups.
-    - [ ] "Import N books" confirm button calls commit endpoint.
-    - [ ] Shows import summary on completion.
+- [x] Goodreads Import
+  - [x] `POST /me/import/goodreads/preview` — accepts multipart CSV upload; returns JSON preview (no DB writes). 5-worker goroutine pool for concurrent OL lookups (up to ~30s for large imports).
+    - [x] Parse Goodreads CSV format: strip `=""...""` Excel formula wrapper from ISBN fields; handle quoted multi-line review text.
+    - [x] For each row: try ISBN13 lookup first (`LookupBookByISBN` with nil pool = no DB write), then fall back to title + author OL search.
+    - [x] Categorise results as `matched` (single OL match), `ambiguous` (multiple candidates), `unmatched` (no match).
+    - [x] Map `Exclusive Shelf` column: `read` → Read, `currently-reading` → Currently Reading, `to-read` → Want to Read; any other value (e.g. `owned-to-read`, `dnf`) treated as a new custom exclusive shelf in the `read_status` group.
+    - [x] Map `Bookshelves` column: each tag → proposed as a non-exclusive custom shelf, reusing existing ones by slug via `EnsureShelf`.
+    - [x] Per-row payload includes: title, author, isbn13, matched OL ID, target shelf slugs, rating, review_text, date_read, date_added.
+  - [x] `POST /me/import/goodreads/commit` — accepts the confirmed preview payload; writes to DB sequentially.
+    - [x] Upserts books into `books` table (isbn13, authors, publication_year populated from OL data).
+    - [x] Creates any new custom shelves (exclusive or non-exclusive) via `EnsureShelf`.
+    - [x] Adds books to collections; sets `rating`, `review_text`, `spoiler`, `date_read`, `date_added` on `collection_items`. Removes book from other exclusive shelves in the same group.
+    - [x] Skips rows the user excluded in the preview.
+    - [x] Returns a summary: imported count, failed count, error list (null-safe in UI).
+  - [x] Import UI at `/settings/import` (`app/settings/import/page.tsx`):
+    - [x] File picker for `.csv` upload.
+    - [x] Calls preview endpoint; shows three groups: Matched (collapsed), Ambiguous (expanded, edition dropdown), Unmatched (info-only, no checkboxes).
+    - [x] User can choose an edition for ambiguous rows or uncheck matched rows to skip them.
+    - [x] "Import N books" confirm button calls commit endpoint.
+    - [x] Shows import summary (imported/failed counts, expandable error list) on completion.
+    - [x] Unmatched books saved to `localStorage` (`rosslib:import:unmatched`) after commit; shown as a persistent "Not found" panel on the idle screen with per-book search links and dismiss controls.
 - [ ]  CSV Export
   - [ ] Export any collection (or all collections) to CSV.
   - [ ] Columns: title, author, ISBN, date added, rating, review, collection name.

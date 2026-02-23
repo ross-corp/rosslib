@@ -89,13 +89,21 @@ Use case: supplement Open Library results with description and page count when d
 
 ### ISBN-based lookup
 
-For exact ISBN lookups (e.g. during Goodreads CSV import), prefer the Open Library Books API over search:
+For exact ISBN lookups (e.g. during Goodreads CSV import), we use the Open Library search API with an `isbn=` param:
 
 ```
-GET https://openlibrary.org/api/books?bibkeys=ISBN:<isbn>&format=json&jscmd=data
+GET https://openlibrary.org/search.json?isbn=<isbn>&fields=key,title,author_name,first_publish_year,cover_i&limit=1
 ```
 
-This returns a single authoritative record for a given ISBN with full metadata including publisher, number of pages, subjects, and identifiers.
+Our backend wraps this as:
+
+```
+GET /books/lookup?isbn=<isbn>
+```
+
+Returns the matched book (upserted into the local `books` table) or 404 if not found. The implementation strips non-digit characters from the ISBN before querying. OL IDs are stored as bare work IDs (`OL82592W`) without the `/works/` path prefix.
+
+The Goodreads import pipeline calls `LookupBookByISBN` with a nil pool during the preview phase (no DB writes) and with the real pool during commit.
 
 ---
 

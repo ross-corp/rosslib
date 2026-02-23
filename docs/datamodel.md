@@ -59,12 +59,15 @@ Global catalog. Not per-user. Records are upserted by `open_library_id` when a u
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
-| open_library_id | varchar(50) unique | used as the canonical identifier |
+| open_library_id | varchar(50) unique | bare OL work ID e.g. `OL82592W` (no `/works/` prefix) |
 | title | varchar(500) | |
 | cover_url | text | nullable; Open Library cover URL |
+| isbn13 | varchar(13) | nullable; populated from OL lookup or import |
+| authors | text | nullable; comma-separated author names |
+| publication_year | integer | nullable; first publish year from OL |
 | created_at | timestamptz | |
 
-> The full `Book` spec (subtitle, isbn, publisher, page_count, etc.) is planned but not yet in the schema — only the fields needed to display a book in a shelf are stored today.
+> Subtitle, publisher, page_count, and per-edition ISBNs are planned but not yet stored.
 
 ---
 
@@ -99,10 +102,17 @@ Default collections created on user registration (or lazily on first `/me/shelve
 | collection_id | uuid FK → Collection | |
 | book_id | uuid FK → Book | |
 | added_at | timestamptz | |
+| rating | smallint | nullable; 1–5 stars |
+| review_text | text | nullable |
+| spoiler | boolean | default false |
+| date_read | timestamptz | nullable; when the user finished the book |
+| date_added | timestamptz | nullable; original Goodreads date_added (preserves shelf history) |
 
 Unique constraint: `(collection_id, book_id)`
 
 Application enforces mutual exclusivity within an `exclusive_group` when adding items: adding a book to any shelf in the group removes it from all other shelves in that group for that user.
+
+Rating/review are updated via `PATCH /shelves/:shelfId/books/:olId`. Absent fields in the JSON body are ignored (not set to null); only explicitly provided fields are updated.
 
 ---
 
