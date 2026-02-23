@@ -39,7 +39,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] Follow / unfollow users (asymmetric). Follow button on profile page; `is_following` returned from profile endpoint.
   - [x] `follows` table with `(follower_id, followee_id)` PK and `status` field.
   - [ ] Private accounts require follow approval (status = 'pending').
-  - [ ] Followers / following counts on profile.
+  - [x] Followers / following counts on profile.
   - [ ] "Friends" (mutual follows) surfaced in UI.
   - [ ] Follow authors, see new publications.
   - [ ] Follow works, see sequels / new discussions / links.
