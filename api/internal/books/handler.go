@@ -473,10 +473,12 @@ func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string) (*Bo
 }
 
 // GetBookReviews returns all community reviews for a book from the local database.
+// If the caller is authenticated, reviews from followed users are sorted first.
 //
 // GET /books/:workId/reviews
 func (h *Handler) GetBookReviews(c *gin.Context) {
 	workID := c.Param("workId")
+	userID := c.GetString(middleware.UserIDKey) // empty if unauthenticated
 
 	type review struct {
 		Username    string  `json:"username"`
@@ -487,21 +489,40 @@ func (h *Handler) GetBookReviews(c *gin.Context) {
 		Spoiler     bool    `json:"spoiler"`
 		DateRead    *string `json:"date_read"`
 		DateAdded   string  `json:"date_added"`
+		IsFollowed  bool    `json:"is_followed"`
+	}
+
+	// Use a CTE to deduplicate (one review per user), then LEFT JOIN follows
+	// so reviews from people the caller follows appear first.
+	// When unauthenticated, $2 is the zero UUID and the LEFT JOIN never matches.
+	followerID := userID
+	if followerID == "" {
+		followerID = "00000000-0000-0000-0000-000000000000"
 	}
 
 	rows, err := h.pool.Query(c.Request.Context(),
-		`SELECT DISTINCT ON (u.id) u.username, u.display_name, u.avatar_url,
+		`WITH deduplicated AS (
+		    SELECT DISTINCT ON (u.id)
+		        u.id AS user_id, u.username, u.display_name, u.avatar_url,
 		        ci.rating, ci.review_text, ci.spoiler, ci.date_read, ci.date_added
-		 FROM collection_items ci
-		 JOIN books b       ON b.id  = ci.book_id
-		 JOIN collections c ON c.id  = ci.collection_id
-		 JOIN users u       ON u.id  = c.user_id
-		 WHERE b.open_library_id = $1
-		   AND u.deleted_at IS NULL
-		   AND ci.review_text IS NOT NULL
-		   AND ci.review_text != ''
-		 ORDER BY u.id, ci.date_added DESC`,
-		workID,
+		    FROM collection_items ci
+		    JOIN books b       ON b.id  = ci.book_id
+		    JOIN collections c ON c.id  = ci.collection_id
+		    JOIN users u       ON u.id  = c.user_id
+		    WHERE b.open_library_id = $1
+		      AND u.deleted_at IS NULL
+		      AND ci.review_text IS NOT NULL
+		      AND ci.review_text != ''
+		    ORDER BY u.id, ci.date_added DESC
+		 )
+		 SELECT d.username, d.display_name, d.avatar_url,
+		        d.rating, d.review_text, d.spoiler, d.date_read, d.date_added,
+		        (f.follower_id IS NOT NULL) AS is_followed
+		 FROM deduplicated d
+		 LEFT JOIN follows f ON f.follower_id = $2 AND f.followee_id = d.user_id
+		                    AND f.status = 'active'
+		 ORDER BY is_followed DESC, d.date_added DESC`,
+		workID, followerID,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
@@ -517,6 +538,7 @@ func (h *Handler) GetBookReviews(c *gin.Context) {
 		if err := rows.Scan(
 			&r.Username, &r.DisplayName, &r.AvatarURL,
 			&r.Rating, &r.ReviewText, &r.Spoiler, &dateRead, &dateAdded,
+			&r.IsFollowed,
 		); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			return

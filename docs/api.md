@@ -59,6 +59,28 @@ Looks up a single book by ISBN via Open Library. Upserts the result into the loc
 
 Returns a book from the local `books` table by its bare OL work ID (e.g. `OL82592W`). 404 if not in the local catalog yet.
 
+### `GET /books/:workId/reviews`  *(optional auth)*
+
+Returns all community reviews for a book. Each user appears at most once (most recent review).
+
+When a valid token is provided, reviews from users the caller follows are sorted first (`is_followed: true`), then all reviews are ordered by `date_added` descending.
+
+```json
+[
+  {
+    "username": "alice",
+    "display_name": "Alice",
+    "avatar_url": "https://...",
+    "rating": 4,
+    "review_text": "Loved it.",
+    "spoiler": false,
+    "date_read": "2025-06-15T00:00:00Z",
+    "date_added": "2025-06-20T14:32:10Z",
+    "is_followed": true
+  }
+]
+```
+
 ---
 
 ## Users

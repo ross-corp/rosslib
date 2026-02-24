@@ -111,7 +111,7 @@ Once we're further along we'll move to GH projects. this is fine for now
 - [x] Review text is optional; can include a spoiler flag.
 - [x] One review per user per book; can be edited or deleted.
 - [x] `GET /users/:username/reviews` — list all reviews by a user. Page at `/{username}/reviews` with cover, rating, spoiler-gated text, and date read.
-- [ ] Reviews are shown on book pages sorted by recency and follower relationships (reviews from people you follow shown first).
+- [x] Reviews are shown on book pages sorted by recency and follower relationships (reviews from people you follow shown first).
 - [x] Display star rating on shelf item cards (profile shelf pages).
 
 ## Discussion Threads

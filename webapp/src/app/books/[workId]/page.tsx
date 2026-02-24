@@ -29,6 +29,7 @@ type BookReview = {
   spoiler: boolean;
   date_read: string | null;
   date_added: string;
+  is_followed: boolean;
 };
 
 type MyBookStatus = {
@@ -56,8 +57,13 @@ async function fetchBook(workId: string): Promise<BookDetail | null> {
   return res.json();
 }
 
-async function fetchBookReviews(workId: string): Promise<BookReview[]> {
+async function fetchBookReviews(workId: string, token?: string): Promise<BookReview[]> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
   const res = await fetch(`${process.env.API_URL}/books/${workId}/reviews`, {
+    headers,
     cache: "no-store",
   });
   if (!res.ok) return [];
@@ -114,7 +120,7 @@ export default async function BookPage({
 
   const [book, reviews, myShelves, myStatus] = await Promise.all([
     fetchBook(workId),
-    fetchBookReviews(workId),
+    fetchBookReviews(workId, token ?? undefined),
     currentUser && token ? fetchMyShelves(token) : Promise.resolve(null),
     currentUser && token
       ? fetchMyBookStatus(token, workId)
@@ -251,12 +257,19 @@ export default async function BookPage({
 
                   <div className="flex-1 min-w-0">
                     {/* Reviewer */}
-                    <Link
-                      href={`/${review.username}`}
-                      className="text-sm font-medium text-stone-900 hover:underline"
-                    >
-                      {review.display_name ?? review.username}
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/${review.username}`}
+                        className="text-sm font-medium text-stone-900 hover:underline"
+                      >
+                        {review.display_name ?? review.username}
+                      </Link>
+                      {review.is_followed && (
+                        <span className="text-[10px] font-medium text-stone-400 border border-stone-200 rounded px-1.5 py-0.5 leading-none">
+                          Following
+                        </span>
+                      )}
+                    </div>
 
                     {/* Rating + date */}
                     <div className="flex items-center gap-3 mt-0.5">
