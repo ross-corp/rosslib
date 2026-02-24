@@ -538,6 +538,73 @@ func (h *Handler) UnsetBookTagValue(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
+// GetUserTagKeys - GET /users/:username/tag-keys
+// Public listing of a user's tag keys with values (respects privacy).
+// Excludes the built-in "status" key since status is shown separately.
+func (h *Handler) GetUserTagKeys(c *gin.Context) {
+	username := c.Param("username")
+	currentUserID := c.GetString(middleware.UserIDKey)
+
+	userID, _, canView := privacy.CanViewProfile(c.Request.Context(), h.pool, username, currentUserID)
+	if !canView {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+
+	keyRows, err := h.pool.Query(c.Request.Context(),
+		`SELECT id, name, slug, mode FROM tag_keys WHERE user_id = $1 AND slug != 'status' ORDER BY created_at`,
+		userID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer keyRows.Close()
+
+	keys := []tagKeyResponse{}
+	keyIDs := []string{}
+	idToIdx := map[string]int{}
+
+	for keyRows.Next() {
+		var k tagKeyResponse
+		if err := keyRows.Scan(&k.ID, &k.Name, &k.Slug, &k.Mode); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		k.Values = []tagValueResponse{}
+		idToIdx[k.ID] = len(keys)
+		keyIDs = append(keyIDs, k.ID)
+		keys = append(keys, k)
+	}
+	keyRows.Close()
+
+	if len(keyIDs) > 0 {
+		valRows, err := h.pool.Query(c.Request.Context(),
+			`SELECT id, tag_key_id, name, slug FROM tag_values WHERE tag_key_id = ANY($1) ORDER BY created_at`,
+			keyIDs,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		defer valRows.Close()
+
+		for valRows.Next() {
+			var v tagValueResponse
+			var keyID string
+			if err := valRows.Scan(&v.ID, &keyID, &v.Name, &v.Slug); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+				return
+			}
+			if idx, ok := idToIdx[keyID]; ok {
+				keys[idx].Values = append(keys[idx].Values, v)
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, keys)
+}
+
 // ── Label book listing ─────────────────────────────────────────────────────────
 
 type labelBook struct {

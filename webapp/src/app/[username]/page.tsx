@@ -62,6 +62,20 @@ type UserShelf = {
   books?: StatusBook[];
 };
 
+type TagValue = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+type TagKey = {
+  id: string;
+  name: string;
+  slug: string;
+  mode: string;
+  values: TagValue[];
+};
+
 async function fetchProfile(
   username: string,
   token?: string
@@ -89,6 +103,15 @@ async function fetchUserBooks(username: string): Promise<UserBooksResponse> {
 async function fetchUserShelves(username: string): Promise<UserShelf[]> {
   const res = await fetch(
     `${process.env.API_URL}/users/${username}/shelves?include_books=8`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchTagKeys(username: string): Promise<TagKey[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/users/${username}/tag-keys`,
     { cache: "no-store" }
   );
   if (!res.ok) return [];
@@ -128,11 +151,12 @@ export default async function UserPage({
   const isOwnProfile = currentUser?.user_id === profile.user_id;
   const isRestricted = profile.is_restricted && !isOwnProfile;
 
-  const [userBooks, shelves, recentActivity, recentReviews] = isRestricted
-    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, [] as UserShelf[], [] as ActivityItem[], [] as ReviewItem[]]
+  const [userBooks, shelves, tagKeys, recentActivity, recentReviews] = isRestricted
+    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, [] as UserShelf[], [] as TagKey[], [] as ActivityItem[], [] as ReviewItem[]]
     : await Promise.all([
         fetchUserBooks(username),
         fetchUserShelves(username),
+        fetchTagKeys(username),
         fetchRecentActivity(username),
         fetchRecentReviews(username),
       ]);
@@ -148,6 +172,14 @@ export default async function UserPage({
   const favorites = shelves.find(
     (s) => s.slug === "favorites" && s.collection_type === "tag"
   );
+
+  // Tag collections (custom shelves, excluding favorites which is shown separately)
+  const tagCollections = shelves.filter(
+    (s) => s.collection_type === "tag" && s.slug !== "favorites"
+  );
+
+  // Label keys with values (status key is excluded by the API)
+  const labelKeys = tagKeys.filter((k) => k.values.length > 0);
 
   return (
     <div className="min-h-screen">
@@ -305,6 +337,58 @@ export default async function UserPage({
                     Library
                   </h2>
                   <ShelfBrowser statuses={userBooks.statuses} username={username} />
+                </section>
+              )}
+
+              {/* Tags */}
+              {tagCollections.length > 0 && (
+                <section>
+                  <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">
+                    Tags
+                  </h2>
+                  <div className="flex flex-wrap gap-2">
+                    {tagCollections.map((tag) => (
+                      <Link
+                        key={tag.id}
+                        href={`/${username}/tags/${tag.slug}`}
+                        className="text-sm px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900 transition-colors"
+                      >
+                        {tag.name || tag.slug}
+                        <span className="ml-1.5 text-xs text-stone-400">
+                          {tag.item_count}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Labels */}
+              {labelKeys.length > 0 && (
+                <section>
+                  <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">
+                    Labels
+                  </h2>
+                  <div className="space-y-4">
+                    {labelKeys.map((key) => (
+                      <div key={key.id}>
+                        <h3 className="text-xs font-medium text-stone-400 mb-2">
+                          {key.name}
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {key.values.map((val) => (
+                            <Link
+                              key={val.id}
+                              href={`/${username}/labels/${key.slug}/${val.slug}`}
+                              className="text-sm px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900 transition-colors"
+                            >
+                              {val.name}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </section>
               )}
             </div>
