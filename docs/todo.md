@@ -26,7 +26,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] Library manager at `/{username}/shelves/{slug}` (owner only) — full-page layout with sidebar (shelves, custom, tags, labels), dense cover grid with multi-select checkboxes, and bulk action toolbar (Rate, Move to shelf, Labels, Remove). Non-owners see the original read-only grid.
   - [x] Label value navigation in library manager sidebar — clicking a label value fetches and displays all books with that key+value assignment (including nested sub-values) via `GET /users/:username/labels/:keySlug/*valuePath`. Nested values are indented in the sidebar by depth.
   - [x] Nested labels — label values can contain `/` to form a hierarchy (e.g. `genre: History/Engineering`). Viewing a parent label (`genre: History`) includes books tagged at any depth. Public label pages at `/{username}/labels/:keySlug/*valuePath` support breadcrumb navigation and sub-label drill-down, matching the nested tags page behaviour.
-  - [ ] Avatar upload.
+  - [x] Avatar upload — `POST /me/avatar` (multipart); stored in MinIO; URL written to `users.avatar_url`. Swap `MINIO_*` env vars for S3 in production.
   - [ ] Recent activity (reviews, threads, list updates) on profile.
   - [ ] Stats: books read (done), reviews written (needs reviews feature), followers/following count (done).
   - [ ] Profiles can be set to private; followers must be approved.
@@ -108,7 +108,7 @@ Once we're further along we'll move to GH projects. this is fine for now
 - [ ] A rating alone (no review text) is valid.
 - [ ] Review text is optional; can include a spoiler flag.
 - [ ] One review per user per book; can be edited or deleted.
-- [ ] `GET /users/:username/reviews` — list all reviews by a user (for profile "Reviews" tab).
+- [x] `GET /users/:username/reviews` — list all reviews by a user. Page at `/{username}/reviews` with cover, rating, spoiler-gated text, and date read.
 - [ ] Reviews are shown on book pages sorted by recency and follower relationships (reviews from people you follow shown first).
 - [x] Display star rating on shelf item cards (profile shelf pages).
 

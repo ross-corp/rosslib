@@ -253,6 +253,67 @@ func (h *Handler) Unfollow(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
+// GetUserReviews - GET /users/:username/reviews
+// Public. Returns all collection items for the user that have review text.
+func (h *Handler) GetUserReviews(c *gin.Context) {
+	username := c.Param("username")
+
+	rows, err := h.pool.Query(c.Request.Context(),
+		`SELECT b.id, b.open_library_id, b.title, b.cover_url, b.authors,
+		        ci.rating, ci.review_text, ci.spoiler, ci.date_read, ci.date_added
+		 FROM collection_items ci
+		 JOIN books b       ON b.id  = ci.book_id
+		 JOIN collections c ON c.id  = ci.collection_id
+		 JOIN users u       ON u.id  = c.user_id
+		 WHERE u.username = $1
+		   AND u.deleted_at IS NULL
+		   AND ci.review_text IS NOT NULL
+		   AND ci.review_text != ''
+		 ORDER BY ci.date_added DESC`,
+		username,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	type reviewItem struct {
+		BookID        string  `json:"book_id"`
+		OpenLibraryID string  `json:"open_library_id"`
+		Title         string  `json:"title"`
+		CoverURL      *string `json:"cover_url"`
+		Authors       *string `json:"authors"`
+		Rating        *int    `json:"rating"`
+		ReviewText    string  `json:"review_text"`
+		Spoiler       bool    `json:"spoiler"`
+		DateRead      *string `json:"date_read"`
+		DateAdded     string  `json:"date_added"`
+	}
+
+	reviews := []reviewItem{}
+	for rows.Next() {
+		var r reviewItem
+		var dateRead *time.Time
+		var dateAdded time.Time
+		if err := rows.Scan(
+			&r.BookID, &r.OpenLibraryID, &r.Title, &r.CoverURL, &r.Authors,
+			&r.Rating, &r.ReviewText, &r.Spoiler, &dateRead, &dateAdded,
+		); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		r.DateAdded = dateAdded.Format(time.RFC3339)
+		if dateRead != nil {
+			s := dateRead.Format(time.RFC3339)
+			r.DateRead = &s
+		}
+		reviews = append(reviews, r)
+	}
+
+	c.JSON(http.StatusOK, reviews)
+}
+
 func (h *Handler) UploadAvatar(c *gin.Context) {
 	if h.store == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "storage not configured"})

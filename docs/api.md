@@ -90,7 +90,44 @@ Returns a user profile. With a valid token, also returns `is_following` for the 
 
 ### `PATCH /users/me`  *(auth required)*
 
-Update own profile. Accepts any subset of `{ display_name, bio, avatar_url }`.
+Update own display name and byline. Accepts any subset of `{ display_name, bio }`.
+
+### `POST /me/avatar`  *(auth required)*
+
+Upload or replace the authenticated user's profile picture. Accepts a `multipart/form-data` body with an `avatar` field containing the image file (JPEG, PNG, GIF, or WebP; max 5 MB).
+
+Content-type is detected from the file's magic bytes — the `Content-Type` header on the file part is not trusted.
+
+```
+200 { "avatar_url": "http://localhost:9000/rosslib/avatars/<userId>.jpg" }
+400 { "error": "unsupported image type: ..." }
+400 { "error": "file too large (max 5 MB)" }
+```
+
+The returned URL is stored in `users.avatar_url` and returned on subsequent `GET /users/:username` calls. In production, point `MINIO_PUBLIC_URL` to the S3 bucket or CDN origin — the URL format is `{MINIO_PUBLIC_URL}/{MINIO_BUCKET}/avatars/{userId}.{ext}`.
+
+### `GET /users/:username/reviews`
+
+Returns all reviews (collection items with non-empty `review_text`) for a user, ordered by date added descending.
+
+```json
+[
+  {
+    "book_id": "...",
+    "open_library_id": "OL82592W",
+    "title": "The Great Gatsby",
+    "cover_url": "https://...",
+    "authors": "F. Scott Fitzgerald",
+    "rating": 4,
+    "review_text": "A timeless classic.",
+    "spoiler": false,
+    "date_read": "2024-06-01T00:00:00Z",
+    "date_added": "2024-06-02T00:00:00Z"
+  }
+]
+```
+
+`authors`, `cover_url`, `rating`, and `date_read` may be null.
 
 ### `POST /users/:username/follow`  *(auth required)*
 

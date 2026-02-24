@@ -123,6 +123,12 @@ export default async function UserPage({
               <span className="font-semibold">{profile.friends_count}</span>{" "}
               <span className="text-stone-400">friends</span>
             </span>
+            <Link
+              href={`/${profile.username}/reviews`}
+              className="text-sm text-stone-400 hover:text-stone-700 transition-colors"
+            >
+              reviews
+            </Link>
           </div>
           <p className="text-xs text-stone-400 mt-1">Member since {memberSince}</p>
         </div>
