@@ -144,6 +144,21 @@ CREATE TABLE IF NOT EXISTS thread_comments (
 
 CREATE INDEX IF NOT EXISTS idx_thread_comments_thread_id ON thread_comments (thread_id);
 
+CREATE TABLE IF NOT EXISTS activities (
+	id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	user_id         UUID         NOT NULL REFERENCES users(id),
+	activity_type   VARCHAR(50)  NOT NULL,
+	book_id         UUID         REFERENCES books(id),
+	target_user_id  UUID         REFERENCES users(id),
+	collection_id   UUID         REFERENCES collections(id),
+	thread_id       UUID         REFERENCES threads(id),
+	metadata        JSONB,
+	created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_activities_user_id    ON activities (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activities_created_at ON activities (created_at DESC);
+
 -- Migrate book_tag_values PK from (user_id, book_id, tag_key_id) to
 -- (user_id, book_id, tag_value_id) on deployments that have the old schema.
 -- The check prevents this from running on fresh installs or after it has

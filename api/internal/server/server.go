@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/auth"
 	"github.com/tristansaldanha/rosslib/api/internal/books"
 	"github.com/tristansaldanha/rosslib/api/internal/collections"
@@ -63,12 +64,16 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http
 	r.GET("/users/:username/shelves/:slug", collectionsHandler.GetShelfBySlug)
 	r.GET("/users/:username/tags/*path", collectionsHandler.GetTagBooks)
 
+	activityHandler := activity.NewHandler(pool)
+	r.GET("/users/:username/activity", activityHandler.GetUserActivity)
+
 	threadsHandler := threads.NewHandler(pool)
 	r.GET("/books/:workId/threads", threadsHandler.ListThreads)
 	r.GET("/threads/:threadId", threadsHandler.GetThread)
 
 	authed := r.Group("/")
 	authed.Use(middleware.Auth(secret))
+	authed.GET("/me/feed", activityHandler.GetFeed)
 	authed.PATCH("/users/me", usersHandler.UpdateMe)
 	authed.POST("/me/avatar", usersHandler.UploadAvatar)
 	authed.POST("/users/:username/follow", usersHandler.Follow)

@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 )
 
@@ -335,6 +336,14 @@ func (h *Handler) AddBookToShelf(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
+
+	// Look up shelf name for the activity metadata.
+	var shelfName string
+	_ = h.pool.QueryRow(c.Request.Context(),
+		`SELECT name FROM collections WHERE id = $1`, shelfID,
+	).Scan(&shelfName)
+	activity.Record(c.Request.Context(), h.pool, userID, "shelved", &bookID, nil, &shelfID, nil,
+		map[string]string{"shelf_name": shelfName})
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
@@ -823,6 +832,42 @@ func (h *Handler) UpdateBookInShelf(c *gin.Context) {
 	if _, err := h.pool.Exec(c.Request.Context(), query, args...); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
+	}
+
+	// Record activity for rating or review updates.
+	if _, hasRating := raw["rating"]; hasRating {
+		var bookID string
+		_ = h.pool.QueryRow(c.Request.Context(),
+			`SELECT b.id FROM books b WHERE b.open_library_id = $1`, olID,
+		).Scan(&bookID)
+		if bookID != "" {
+			meta := map[string]string{}
+			if v, ok := raw["rating"]; ok {
+				meta["rating"] = strings.Trim(string(v), "\"")
+			}
+			activity.Record(c.Request.Context(), h.pool, userID, "rated", &bookID, nil, &shelfID, nil, meta)
+		}
+	}
+	if _, hasReview := raw["review_text"]; hasReview {
+		var bookID string
+		_ = h.pool.QueryRow(c.Request.Context(),
+			`SELECT b.id FROM books b WHERE b.open_library_id = $1`, olID,
+		).Scan(&bookID)
+		if bookID != "" {
+			meta := map[string]string{}
+			var snippet string
+			var text *string
+			_ = json.Unmarshal(raw["review_text"], &text)
+			if text != nil && len(*text) > 100 {
+				snippet = (*text)[:100] + "..."
+			} else if text != nil {
+				snippet = *text
+			}
+			if snippet != "" {
+				meta["review_snippet"] = snippet
+			}
+			activity.Record(c.Request.Context(), h.pool, userID, "reviewed", &bookID, nil, &shelfID, nil, meta)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})

@@ -164,7 +164,9 @@ Once we're further along we'll move to GH projects. this is fine for now
 
 ## Feed
 
-- [ ] Chronological feed of activity from users you follow.
-- [ ] Activity types surfaced: added to collection, wrote a review, started/finished a book, created a thread, submitted a link, followed a new user.
-- [ ] No algorithmic ranking at MVP; pure chronological.
-- [ ] Paginated (cursor-based).
+- [x] Chronological feed of activity from users you follow.
+- [x] Activity types surfaced: added to collection, wrote a review, rated a book, created a thread, followed a new user.
+- [x] No algorithmic ranking at MVP; pure chronological.
+- [x] Paginated (cursor-based).
+- [ ] Activity type: submitted a link (requires community links feature).
+- [ ] Activity type: started/finished a book (requires tracking shelf transitions).

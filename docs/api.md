@@ -440,6 +440,54 @@ Accepts the confirmed preview payload and writes to the database. Returns `{ imp
 
 ---
 
+## Activity Feed
+
+### `GET /me/feed`  *(auth required)*
+
+Returns a chronological feed of activities from users the authenticated user follows. Cursor-based pagination.
+
+**Query parameters:**
+- `cursor` *(optional)* — RFC3339Nano timestamp from `next_cursor` to fetch the next page.
+
+```json
+{
+  "activities": [
+    {
+      "id": "...",
+      "type": "shelved",
+      "created_at": "2026-02-24T14:00:00.000000Z",
+      "user": {
+        "user_id": "...",
+        "username": "alice",
+        "display_name": "Alice",
+        "avatar_url": "https://..."
+      },
+      "book": {
+        "open_library_id": "OL82592W",
+        "title": "The Great Gatsby",
+        "cover_url": "https://..."
+      },
+      "shelf_name": "Read",
+      "rating": 4,
+      "review_snippet": "A timeless classic...",
+      "thread_title": null,
+      "target_user": null
+    }
+  ],
+  "next_cursor": "2026-02-24T13:00:00.000000Z"
+}
+```
+
+**Activity types:** `shelved`, `rated`, `reviewed`, `created_thread`, `followed_user`.
+
+Fields are conditional on type — `book` is null for `followed_user`, `target_user` is null for book-related activities, etc.
+
+### `GET /users/:username/activity`
+
+Returns recent activity for a specific user. Same response format as `/me/feed`. Cursor-based pagination.
+
+---
+
 ## Health
 
 ### `GET /health`

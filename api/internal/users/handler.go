@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 	"github.com/tristansaldanha/rosslib/api/internal/storage"
 )
@@ -229,6 +230,8 @@ func (h *Handler) Follow(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
+
+	activity.Record(c.Request.Context(), h.pool, followerID, "followed_user", nil, &followeeID, nil, nil, nil)
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

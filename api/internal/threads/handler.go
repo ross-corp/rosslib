@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 )
 
@@ -206,6 +207,9 @@ func (h *Handler) CreateThread(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
+
+	activity.Record(c.Request.Context(), h.pool, userID, "created_thread", &bookID, nil, nil, &threadID,
+		map[string]string{"thread_title": body.Title})
 
 	c.JSON(http.StatusCreated, gin.H{
 		"id":         threadID,

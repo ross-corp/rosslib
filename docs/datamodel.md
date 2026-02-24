@@ -179,6 +179,24 @@ Comments on a thread. Supports one level of nesting (replies to top-level commen
 
 Index: `thread_id` for listing comments by thread. Nesting constraint: if `parent_id` is set, the referenced comment must have `parent_id IS NULL` (enforced in application code).
 
+### `activities`
+
+Append-only event log for social feeds. Written fire-and-forget from handlers — failures never block the primary operation.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user_id | uuid FK → users | the actor |
+| activity_type | varchar(50) | `shelved`, `rated`, `reviewed`, `created_thread`, `followed_user` |
+| book_id | uuid FK → books | nullable |
+| target_user_id | uuid FK → users | nullable; for `followed_user` |
+| collection_id | uuid FK → collections | nullable; for `shelved` |
+| thread_id | uuid FK → threads | nullable; for `created_thread` |
+| metadata | jsonb | nullable; extra context (shelf_name, rating, review_snippet, thread_title) |
+| created_at | timestamptz | |
+
+Indexes: `(user_id, created_at DESC)`, `(created_at DESC)`.
+
 ---
 
 ## Relationships
@@ -190,6 +208,7 @@ users ──< tag_keys ──< tag_values
 users ──< book_tag_values >── tag_values >── tag_keys
 users ──< threads >── books
 users ──< thread_comments >── threads
+users ──< activities >── books, users, collections, threads
 ```
 
 ---
@@ -209,10 +228,6 @@ Standalone review table (as opposed to `review_text` on `collection_items`). The
 ### `links`
 
 Community-submitted book-to-book connections (sequel, prequel, similar, etc.).
-
-### `activity`
-
-Append-only event log for building social feeds.
 
 ### `book_stats`
 
