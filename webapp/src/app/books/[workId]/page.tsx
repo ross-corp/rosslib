@@ -4,6 +4,7 @@ import Nav from "@/components/nav";
 import StarRating from "@/components/star-rating";
 import ShelfPicker, { type Shelf } from "@/components/shelf-picker";
 import BookReviewEditor from "@/components/book-review-editor";
+import ThreadList from "@/components/thread-list";
 import { getUser, getToken } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -42,6 +43,20 @@ type MyBookStatus = {
   date_read: string | null;
 };
 
+type BookThread = {
+  id: string;
+  book_id: string;
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  title: string;
+  body: string;
+  spoiler: boolean;
+  created_at: string;
+  comment_count: number;
+};
+
 type MyShelf = Shelf & {
   exclusive_group: string;
   collection_type: string;
@@ -64,6 +79,14 @@ async function fetchBookReviews(workId: string, token?: string): Promise<BookRev
   }
   const res = await fetch(`${process.env.API_URL}/books/${workId}/reviews`, {
     headers,
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchThreads(workId: string): Promise<BookThread[]> {
+  const res = await fetch(`${process.env.API_URL}/books/${workId}/threads`, {
     cache: "no-store",
   });
   if (!res.ok) return [];
@@ -118,9 +141,10 @@ export default async function BookPage({
   const { workId } = await params;
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [book, reviews, myShelves, myStatus] = await Promise.all([
+  const [book, reviews, threads, myShelves, myStatus] = await Promise.all([
     fetchBook(workId),
     fetchBookReviews(workId, token ?? undefined),
+    fetchThreads(workId),
     currentUser && token ? fetchMyShelves(token) : Promise.resolve(null),
     currentUser && token
       ? fetchMyBookStatus(token, workId)
@@ -311,6 +335,15 @@ export default async function BookPage({
               ))}
             </div>
           )}
+        </section>
+
+        {/* ── Discussion threads ── */}
+        <section className="border-t border-stone-100 pt-8 mt-10">
+          <ThreadList
+            workId={workId}
+            initialThreads={threads}
+            isLoggedIn={!!currentUser}
+          />
         </section>
       </main>
     </div>

@@ -146,15 +146,50 @@ PK: `(user_id, book_id, tag_value_id)` — allows multiple rows per book per key
 
 Index: `(user_id, book_id, tag_key_id)` for efficient "all labels for this book" lookups.
 
+### `threads`
+
+Discussion threads on a book's page. Any logged-in user can create a thread.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| book_id | uuid FK → books | |
+| user_id | uuid FK → users | thread author |
+| title | varchar(500) | |
+| body | text | |
+| spoiler | boolean | default false |
+| created_at | timestamptz | |
+| deleted_at | timestamptz | soft delete |
+
+Index: `book_id` for listing threads by book.
+
+### `thread_comments`
+
+Comments on a thread. Supports one level of nesting (replies to top-level comments only).
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| thread_id | uuid FK → threads | |
+| user_id | uuid FK → users | comment author |
+| parent_id | uuid FK → thread_comments | nullable; if set, this is a reply |
+| body | text | |
+| created_at | timestamptz | |
+| deleted_at | timestamptz | soft delete |
+
+Index: `thread_id` for listing comments by thread. Nesting constraint: if `parent_id` is set, the referenced comment must have `parent_id IS NULL` (enforced in application code).
+
 ---
 
-## Relationships (implemented)
+## Relationships
 
 ```
 users ──< follows >── users
 users ──< collections ──< collection_items >── books
 users ──< tag_keys ──< tag_values
 users ──< book_tag_values >── tag_values >── tag_keys
+users ──< threads >── books
+users ──< thread_comments >── threads
 ```
 
 ---
@@ -170,10 +205,6 @@ Author records and the book↔author join table. Currently authors are stored as
 ### `reviews`
 
 Standalone review table (as opposed to `review_text` on `collection_items`). The current model keeps rating and review on the collection item, meaning a book can technically have different reviews on different shelves. The planned `reviews` table would enforce one review per user per book.
-
-### `threads` / `comments`
-
-Book discussion threads and replies (one level of nesting).
 
 ### `links`
 

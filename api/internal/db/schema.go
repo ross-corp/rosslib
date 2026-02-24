@@ -119,6 +119,31 @@ ALTER TABLE tag_keys ADD COLUMN IF NOT EXISTS mode VARCHAR(20) NOT NULL DEFAULT 
 -- Widen tag_values.slug to support nested paths like "history/engineering".
 ALTER TABLE tag_values ALTER COLUMN slug TYPE VARCHAR(255);
 
+CREATE TABLE IF NOT EXISTS threads (
+	id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	book_id     UUID         NOT NULL REFERENCES books(id),
+	user_id     UUID         NOT NULL REFERENCES users(id),
+	title       VARCHAR(500) NOT NULL,
+	body        TEXT         NOT NULL,
+	spoiler     BOOLEAN      NOT NULL DEFAULT false,
+	created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+	deleted_at  TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_threads_book_id ON threads (book_id);
+
+CREATE TABLE IF NOT EXISTS thread_comments (
+	id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+	thread_id   UUID        NOT NULL REFERENCES threads(id),
+	user_id     UUID        NOT NULL REFERENCES users(id),
+	parent_id   UUID        REFERENCES thread_comments(id),
+	body        TEXT        NOT NULL,
+	created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	deleted_at  TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_thread_comments_thread_id ON thread_comments (thread_id);
+
 -- Migrate book_tag_values PK from (user_id, book_id, tag_key_id) to
 -- (user_id, book_id, tag_value_id) on deployments that have the old schema.
 -- The check prevents this from running on fresh installs or after it has

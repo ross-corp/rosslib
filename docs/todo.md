@@ -116,13 +116,13 @@ Once we're further along we'll move to GH projects. this is fine for now
 
 ## Discussion Threads
 
-- [ ] Any user can open a thread on a book's page.
-- [ ] Thread has a title, body, and optional spoiler flag.
+- [x] Any user can open a thread on a book's page.
+- [x] Thread has a title, body, and optional spoiler flag.
 - [ ] Threads get reccommended for union if they're similar enough
   - [ ] link to similar comments if similarity score > some percentage
-- [ ] Threaded comments support one level of nesting (reply to a comment, not reply to a reply).
-- [ ] No upvotes at MVP; chronological sort only.
-- [ ] Author can delete their own thread or comments; soft delete.
+- [x] Threaded comments support one level of nesting (reply to a comment, not reply to a reply).
+- [x] No upvotes at MVP; chronological sort only.
+- [x] Author can delete their own thread or comments; soft delete.
 
 ## Community Links (Wiki)
 
