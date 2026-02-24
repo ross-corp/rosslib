@@ -3,6 +3,7 @@ import Link from "next/link";
 import Nav from "@/components/nav";
 import StarRating from "@/components/star-rating";
 import ShelfPicker, { type Shelf } from "@/components/shelf-picker";
+import BookReviewEditor from "@/components/book-review-editor";
 import { getUser, getToken } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -201,47 +202,20 @@ export default async function BookPage({
           </div>
         </div>
 
-        {/* ── User's own review ── */}
-        {myStatus && (myStatus.rating != null || myStatus.review_text) && (
+        {/* ── User's review (rate / write / edit / delete) ── */}
+        {myStatus && (
           <section className="mb-10 border-t border-stone-100 pt-8">
             <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
               Your review
             </h2>
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-stone-200 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-1">
-                  {myStatus.rating != null && (
-                    <span className="text-sm tracking-tight text-amber-500">
-                      {renderStars(myStatus.rating)}
-                    </span>
-                  )}
-                  {myStatus.date_read && (
-                    <span className="text-xs text-stone-400">
-                      Read {formatDate(myStatus.date_read)}
-                    </span>
-                  )}
-                </div>
-                {myStatus.review_text && (
-                  <div>
-                    {myStatus.spoiler ? (
-                      <details>
-                        <summary className="text-xs text-stone-400 cursor-pointer select-none hover:text-stone-600 transition-colors">
-                          Show review (contains spoilers)
-                        </summary>
-                        <p className="mt-2 text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">
-                          {myStatus.review_text}
-                        </p>
-                      </details>
-                    ) : (
-                      <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">
-                        {myStatus.review_text}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+            <BookReviewEditor
+              shelfId={myStatus.shelf_id}
+              openLibraryId={workId}
+              initialRating={myStatus.rating}
+              initialReviewText={myStatus.review_text}
+              initialSpoiler={myStatus.spoiler}
+              initialDateRead={myStatus.date_read}
+            />
           </section>
         )}
 

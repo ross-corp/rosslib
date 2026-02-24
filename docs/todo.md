@@ -106,10 +106,10 @@ Once we're further along we'll move to GH projects. this is fine for now
 
 - [x] Rating and review text live on `collection_items` (one per user per book). Fields: `rating`, `review_text`, `spoiler`, `date_read`, `date_added`.
 - [x] `PATCH /shelves/:shelfId/books/:olId` — partial update of rating, review_text, spoiler, date_read. Uses `map[string]json.RawMessage` to distinguish absent fields from explicit nulls; dynamically builds SET clause.
-- [ ] A user can rate a book 1–5 stars (integers; half stars are a future enhancement).
-- [ ] A rating alone (no review text) is valid.
-- [ ] Review text is optional; can include a spoiler flag.
-- [ ] One review per user per book; can be edited or deleted.
+- [x] A user can rate a book 1–5 stars (integers; half stars are a future enhancement).
+- [x] A rating alone (no review text) is valid.
+- [x] Review text is optional; can include a spoiler flag.
+- [x] One review per user per book; can be edited or deleted.
 - [x] `GET /users/:username/reviews` — list all reviews by a user. Page at `/{username}/reviews` with cover, rating, spoiler-gated text, and date read.
 - [ ] Reviews are shown on book pages sorted by recency and follower relationships (reviews from people you follow shown first).
 - [x] Display star rating on shelf item cards (profile shelf pages).
