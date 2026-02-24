@@ -49,6 +49,28 @@ terraform init && terraform apply
 # outputs: instance_ip, ssh_command, s3_bucket
 ```
 
+## Book Cover Images
+
+Cover images are sourced from Open Library's CDN (`covers.openlibrary.org`) and the URL is stored once in the `books.cover_url` column at the time the book is first added to the catalog.
+
+**Write path (book add/import):**
+
+1. A user adds a book or an import runs, triggering a lookup against the Open Library API.
+2. The Go API extracts the numeric cover ID from the OL search or work response.
+3. It constructs a CDN URL (`https://covers.openlibrary.org/b/id/{cover_id}-{size}.jpg`) and upserts it into `books.cover_url`. Medium (`-M`) is used for search results; Large (`-L`) for direct work lookups.
+4. Subsequent adds of the same book (same `open_library_id`) hit the `ON CONFLICT ... DO UPDATE` path and may overwrite the stored URL, but no new outbound request is made at read time.
+
+**Read path (shelf/profile page loads):**
+
+1. The API returns `cover_url` as part of the books JSON from collection queries — no outbound call to Open Library is made.
+2. The webapp renders the URL directly in a plain `<img src={cover_url}>` tag.
+3. The browser fetches the image directly from Open Library's CDN. Caching is entirely governed by OL's CDN cache headers — there is no proxy or server-side image cache on our end.
+
+**Current limitations / future work:**
+
+- No image proxy or optimization layer (no Next.js `<Image>` component, no self-hosted proxy). This means we have no control over cache headers, no resizing, and no AVIF/WebP conversion.
+- The S3 bucket noted in the components list above is provisioned for this purpose (cover images, avatars) but is not yet used for covers. A future improvement would be to download and re-host cover images in S3, eliminating the CDN dependency and enabling cache control.
+
 ## Local Dev
 
 ```bash

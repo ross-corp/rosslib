@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { TagKey } from "@/components/book-tag-picker";
+import { useState, ReactNode } from "react";
+import { TagKey, TagValue } from "@/components/book-tag-picker";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -28,6 +28,68 @@ type ShelfFilter = { kind: "shelf"; id: string; name: string; slug: string };
 type TagFilter = { kind: "tag"; slug: string; name: string };
 type LabelFilter = { kind: "label"; keySlug: string; keyName: string; valueSlug: string; valueName: string };
 type ActiveFilter = ShelfFilter | TagFilter | LabelFilter;
+
+type TagTreeNode = {
+  collection: ShelfSummary;
+  label: string;
+  children: TagTreeNode[];
+};
+
+type ValueTreeNode = {
+  value: TagValue;
+  label: string;
+  children: ValueTreeNode[];
+};
+
+// ── Tree builders ─────────────────────────────────────────────────────────────
+
+function buildTagTree(collections: ShelfSummary[]): TagTreeNode[] {
+  const sorted = [...collections].sort((a, b) => a.slug.localeCompare(b.slug));
+  const root: TagTreeNode[] = [];
+  const map = new Map<string, TagTreeNode>();
+  for (const col of sorted) {
+    const parts = col.slug.split("/");
+    const node: TagTreeNode = {
+      collection: col,
+      label: col.name || parts[parts.length - 1],
+      children: [],
+    };
+    map.set(col.slug, node);
+    if (parts.length === 1) {
+      root.push(node);
+    } else {
+      const parentSlug = parts.slice(0, -1).join("/");
+      const parent = map.get(parentSlug);
+      if (parent) parent.children.push(node);
+      else root.push(node);
+    }
+  }
+  return root;
+}
+
+function buildValueTree(values: TagValue[]): ValueTreeNode[] {
+  const sorted = [...values].sort((a, b) => a.slug.localeCompare(b.slug));
+  const root: ValueTreeNode[] = [];
+  const map = new Map<string, ValueTreeNode>();
+  for (const val of sorted) {
+    const parts = val.slug.split("/");
+    const node: ValueTreeNode = {
+      value: val,
+      label: parts[parts.length - 1],
+      children: [],
+    };
+    map.set(val.slug, node);
+    if (parts.length === 1) {
+      root.push(node);
+    } else {
+      const parentSlug = parts.slice(0, -1).join("/");
+      const parent = map.get(parentSlug);
+      if (parent) parent.children.push(node);
+      else root.push(node);
+    }
+  }
+  return root;
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -57,16 +119,23 @@ export default function LibraryManager({
   const [showMoveMenu, setShowMoveMenu] = useState(false);
   const [showRateMenu, setShowRateMenu] = useState(false);
   const [showLabelsMenu, setShowLabelsMenu] = useState(false);
+  const [showTagsMenu, setShowTagsMenu] = useState(false);
+  const [localShelves, setLocalShelves] = useState(allShelves);
 
   // ── Navigation ───────────────────────────────────────────────────────────────
+
+  function closeMenus() {
+    setShowMoveMenu(false);
+    setShowRateMenu(false);
+    setShowLabelsMenu(false);
+    setShowTagsMenu(false);
+  }
 
   async function navigateToShelf(shelf: ShelfSummary) {
     if (filter.kind === "shelf" && filter.id === shelf.id) return;
     setLoading(true);
     setSelectedIds(new Set());
-    setShowMoveMenu(false);
-    setShowRateMenu(false);
-    setShowLabelsMenu(false);
+    closeMenus();
     const res = await fetch(`/api/users/${username}/shelves/${shelf.slug}`);
     setLoading(false);
     if (res.ok) {
@@ -80,9 +149,7 @@ export default function LibraryManager({
     if (filter.kind === "tag" && filter.slug === slug) return;
     setLoading(true);
     setSelectedIds(new Set());
-    setShowMoveMenu(false);
-    setShowRateMenu(false);
-    setShowLabelsMenu(false);
+    closeMenus();
     const res = await fetch(`/api/users/${username}/tags/${slug}`);
     setLoading(false);
     if (res.ok) {
@@ -96,9 +163,7 @@ export default function LibraryManager({
     if (filter.kind === "label" && filter.keySlug === keySlug && filter.valueSlug === valueSlug) return;
     setLoading(true);
     setSelectedIds(new Set());
-    setShowMoveMenu(false);
-    setShowRateMenu(false);
-    setShowLabelsMenu(false);
+    closeMenus();
     const res = await fetch(`/api/users/${username}/labels/${keySlug}/${valueSlug}`);
     setLoading(false);
     if (res.ok) {
@@ -119,7 +184,7 @@ export default function LibraryManager({
     });
   }
 
-  // ── Bulk actions (shelf view only) ───────────────────────────────────────────
+  // ── Bulk actions ─────────────────────────────────────────────────────────────
 
   async function massRemove() {
     if (filter.kind !== "shelf") return;
@@ -156,7 +221,6 @@ export default function LibraryManager({
         })
       )
     );
-    // Refresh current shelf (books in exclusive groups will have moved away)
     const res = await fetch(`/api/users/${username}/shelves/${filter.slug}`);
     if (res.ok) {
       const data = await res.json();
@@ -187,7 +251,7 @@ export default function LibraryManager({
     setBulkWorking(false);
   }
 
-  async function massSetTag(keyId: string, valueId: string) {
+  async function massSetLabel(keyId: string, valueId: string) {
     setBulkWorking(true);
     const targets = books.filter((b) => selectedIds.has(b.book_id));
     await Promise.all(
@@ -202,7 +266,7 @@ export default function LibraryManager({
     setBulkWorking(false);
   }
 
-  async function massClearTag(keyId: string) {
+  async function massClearLabel(keyId: string) {
     setBulkWorking(true);
     const targets = books.filter((b) => selectedIds.has(b.book_id));
     await Promise.all(
@@ -215,22 +279,72 @@ export default function LibraryManager({
     setBulkWorking(false);
   }
 
+  async function massAddTag(tagCollection: ShelfSummary) {
+    setBulkWorking(true);
+    setShowTagsMenu(false);
+    const targets = books.filter((b) => selectedIds.has(b.book_id));
+    await Promise.all(
+      targets.map((b) =>
+        fetch(`/api/shelves/${tagCollection.id}/books`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            open_library_id: b.open_library_id,
+            title: b.title,
+            cover_url: b.cover_url,
+          }),
+        })
+      )
+    );
+    setBulkWorking(false);
+  }
+
+  async function deleteShelf(shelf: ShelfSummary) {
+    if (!confirm(`Delete "${shelf.name}"? This cannot be undone.`)) return;
+    const res = await fetch(`/api/me/shelves/${shelf.id}`, { method: "DELETE" });
+    if (!res.ok) return;
+    const updated = localShelves.filter((s) => s.id !== shelf.id);
+    setLocalShelves(updated);
+    const isViewingDeleted =
+      (filter.kind === "shelf" && filter.id === shelf.id) ||
+      (filter.kind === "tag" && filter.slug === shelf.slug);
+    if (isViewingDeleted) {
+      const fallback = updated.find((s) => s.exclusive_group === "read_status");
+      if (fallback) navigateToShelf(fallback);
+    }
+  }
+
+  async function massRemoveTag(tagCollection: ShelfSummary) {
+    setBulkWorking(true);
+    setShowTagsMenu(false);
+    const targets = books.filter((b) => selectedIds.has(b.book_id));
+    await Promise.all(
+      targets.map((b) =>
+        fetch(`/api/shelves/${tagCollection.id}/books/${b.open_library_id}`, {
+          method: "DELETE",
+        })
+      )
+    );
+    setBulkWorking(false);
+  }
+
   // ── Derived ───────────────────────────────────────────────────────────────────
 
   const selectedCount = selectedIds.size;
   const isShelfView = filter.kind === "shelf";
 
-  const defaultShelves = allShelves.filter(
+  const defaultShelves = localShelves.filter(
     (s) => s.exclusive_group === "read_status"
   );
-  const customShelves = allShelves.filter(
+  const customShelves = localShelves.filter(
     (s) =>
       s.exclusive_group !== "read_status" && s.collection_type === "shelf"
   );
-  const tagCollections = allShelves.filter((s) => s.collection_type === "tag");
+  const tagCollections = localShelves.filter((s) => s.collection_type === "tag");
+  const tagTree = buildTagTree(tagCollections);
 
   const moveTargets = isShelfView
-    ? allShelves.filter(
+    ? localShelves.filter(
         (s) =>
           s.collection_type !== "tag" &&
           !(filter.kind === "shelf" && s.id === filter.id)
@@ -240,7 +354,7 @@ export default function LibraryManager({
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-1 min-h-0 overflow-hidden">
+    <div className="flex flex-1 min-h-0 overflow-hidden max-w-7xl mx-auto w-full">
       {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
       <aside className="w-48 shrink-0 border-r border-stone-200 overflow-y-auto py-3 flex flex-col gap-5">
         {/* Default shelves */}
@@ -272,6 +386,7 @@ export default function LibraryManager({
                 count={s.item_count}
                 active={filter.kind === "shelf" && filter.id === s.id}
                 onClick={() => navigateToShelf(s)}
+                onDelete={() => deleteShelf(s)}
               />
             ))}
           </div>
@@ -279,57 +394,32 @@ export default function LibraryManager({
 
         {/* Path-based tag collections */}
         {tagCollections.length > 0 && (
-          <div>
-            <p className="px-4 mb-1 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
-              Tags
-            </p>
-            {tagCollections.map((t) => {
-              const label = t.name || t.slug.split("/").pop() || t.slug;
-              return (
-                <SidebarItem
-                  key={t.id}
-                  label={label}
-                  count={t.item_count}
-                  active={filter.kind === "tag" && filter.slug === t.slug}
-                  onClick={() => navigateToTag(t.slug, label)}
-                />
-              );
-            })}
-          </div>
+          <SidebarSection label="Tags" count={tagTree.length}>
+            {tagTree.map((node) => (
+              <TagTreeItem
+                key={node.collection.id}
+                node={node}
+                depth={0}
+                filter={filter}
+                onNavigate={navigateToTag}
+                onDelete={deleteShelf}
+              />
+            ))}
+          </SidebarSection>
         )}
 
         {/* Key-value labels */}
         {tagKeys.length > 0 && (
-          <div>
-            <p className="px-4 mb-1 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
-              Labels
-            </p>
+          <SidebarSection label="Labels" count={tagKeys.length}>
             {tagKeys.map((key) => (
-              <div key={key.id}>
-                <p className="px-4 py-1 text-xs text-stone-500">{key.name}</p>
-                {key.values.map((val) => {
-                  const depth = (val.slug.match(/\//g) ?? []).length;
-                  const displayName = val.name.split("/").pop() ?? val.name;
-                  return (
-                    <button
-                      key={val.id}
-                      onClick={() => navigateToLabel(key.slug, key.name, val.slug, val.name)}
-                      style={{ paddingLeft: `${1.75 + depth * 0.75}rem` }}
-                      className={`w-full text-left pr-4 py-1 text-xs transition-colors ${
-                        filter.kind === "label" &&
-                        filter.keySlug === key.slug &&
-                        filter.valueSlug === val.slug
-                          ? "bg-stone-100 text-stone-900 font-medium"
-                          : "text-stone-400 hover:bg-stone-50 hover:text-stone-900"
-                      }`}
-                    >
-                      {displayName}
-                    </button>
-                  );
-                })}
-              </div>
+              <LabelKeyItem
+                key={key.id}
+                tagKey={key}
+                filter={filter}
+                onNavigate={navigateToLabel}
+              />
             ))}
-          </div>
+          </SidebarSection>
         )}
       </aside>
 
@@ -350,6 +440,8 @@ export default function LibraryManager({
                     onClick={() => {
                       setShowRateMenu((v) => !v);
                       setShowMoveMenu(false);
+                      setShowLabelsMenu(false);
+                      setShowTagsMenu(false);
                     }}
                     disabled={bulkWorking}
                     className="text-xs px-3 py-1.5 rounded border border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-800 disabled:opacity-50 transition-colors"
@@ -378,6 +470,8 @@ export default function LibraryManager({
                       onClick={() => {
                         setShowMoveMenu((v) => !v);
                         setShowRateMenu(false);
+                        setShowLabelsMenu(false);
+                        setShowTagsMenu(false);
                       }}
                       disabled={bulkWorking}
                       className="text-xs px-3 py-1.5 rounded border border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-800 disabled:opacity-50 transition-colors"
@@ -411,7 +505,49 @@ export default function LibraryManager({
               </>
             )}
 
-            {/* Labels — available in both shelf and tag views */}
+            {/* Tags — available in all views */}
+            {tagCollections.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowTagsMenu((v) => !v);
+                    setShowRateMenu(false);
+                    setShowMoveMenu(false);
+                    setShowLabelsMenu(false);
+                  }}
+                  disabled={bulkWorking}
+                  className="text-xs px-3 py-1.5 rounded border border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-800 disabled:opacity-50 transition-colors"
+                >
+                  Tags
+                </button>
+                {showTagsMenu && (
+                  <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-stone-200 rounded shadow-md w-56 max-h-80 overflow-y-auto">
+                    {tagCollections.map((t) => {
+                      const label = t.name || t.slug.split("/").pop() || t.slug;
+                      return (
+                        <div key={t.id} className="border-b border-stone-100 last:border-0 flex items-center">
+                          <button
+                            onClick={() => massAddTag(t)}
+                            className="flex-1 text-left px-3 py-2 text-xs text-stone-700 hover:bg-stone-50 transition-colors truncate"
+                          >
+                            {label}
+                          </button>
+                          <button
+                            onClick={() => massRemoveTag(t)}
+                            title="Remove from tag"
+                            className="px-2.5 py-2 text-sm text-stone-300 hover:text-red-400 transition-colors shrink-0 leading-none"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Labels — available in all views */}
             {tagKeys.length > 0 && (
               <div className="relative">
                 <button
@@ -419,6 +555,7 @@ export default function LibraryManager({
                     setShowLabelsMenu((v) => !v);
                     setShowRateMenu(false);
                     setShowMoveMenu(false);
+                    setShowTagsMenu(false);
                   }}
                   disabled={bulkWorking}
                   className="text-xs px-3 py-1.5 rounded border border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-800 disabled:opacity-50 transition-colors"
@@ -434,7 +571,7 @@ export default function LibraryManager({
                             {key.name}
                           </span>
                           <button
-                            onClick={() => massClearTag(key.id)}
+                            onClick={() => massClearLabel(key.id)}
                             className="text-[10px] text-stone-300 hover:text-red-400 transition-colors shrink-0"
                           >
                             clear
@@ -444,7 +581,7 @@ export default function LibraryManager({
                           {key.values.map((val) => (
                             <button
                               key={val.id}
-                              onClick={() => massSetTag(key.id, val.id)}
+                              onClick={() => massSetLabel(key.id, val.id)}
                               className="w-full text-left px-3 py-1.5 text-xs text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors"
                             >
                               {val.name}
@@ -587,30 +724,260 @@ export default function LibraryManager({
   );
 }
 
-// ── Sidebar item ──────────────────────────────────────────────────────────────
+// ── Sidebar components ─────────────────────────────────────────────────────────
 
 function SidebarItem({
   label,
   count,
   active,
   onClick,
+  onDelete,
 }: {
   label: string;
   count: number;
   active: boolean;
   onClick: () => void;
+  onDelete?: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left px-4 py-1.5 text-sm flex items-center justify-between transition-colors ${
-        active
-          ? "bg-stone-100 text-stone-900 font-medium"
-          : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
-      }`}
-    >
-      <span className="truncate">{label}</span>
-      <span className="text-xs text-stone-400 ml-2 shrink-0">{count}</span>
-    </button>
+    <div className="group flex items-center">
+      <button
+        onClick={onClick}
+        className={`flex-1 text-left px-4 py-1.5 text-sm flex items-center justify-between transition-colors ${
+          active
+            ? "bg-stone-100 text-stone-900 font-medium"
+            : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
+        }`}
+      >
+        <span className="truncate">{label}</span>
+        <span className="text-xs text-stone-400 ml-2 shrink-0">{count}</span>
+      </button>
+      {onDelete && (
+        <button
+          onClick={onDelete}
+          title="Delete"
+          className="opacity-0 group-hover:opacity-100 pr-3 text-stone-300 hover:text-red-400 transition-all leading-none shrink-0"
+        >
+          ×
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SidebarSection({
+  label,
+  count,
+  children,
+}: {
+  label: string;
+  count: number;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-1 px-4 mb-0.5 text-[10px] font-semibold text-stone-400 uppercase tracking-wider hover:text-stone-600 transition-colors"
+      >
+        <span
+          className={`text-[13px] leading-none transition-transform inline-block ${
+            open ? "rotate-90" : ""
+          }`}
+        >
+          ›
+        </span>
+        <span className="ml-0.5">{label}</span>
+        <span className="ml-auto font-normal normal-case text-stone-300">{count}</span>
+      </button>
+      {open && <div className="mb-1">{children}</div>}
+    </div>
+  );
+}
+
+function TagTreeItem({
+  node,
+  depth,
+  filter,
+  onNavigate,
+  onDelete,
+}: {
+  node: TagTreeNode;
+  depth: number;
+  filter: ActiveFilter;
+  onNavigate: (slug: string, name: string) => void;
+  onDelete?: (collection: ShelfSummary) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const hasChildren = node.children.length > 0;
+  const isActive = filter.kind === "tag" && filter.slug === node.collection.slug;
+  const pl = `${0.75 + depth * 0.75}rem`;
+
+  return (
+    <div>
+      <div className="group flex items-center" style={{ paddingLeft: pl }}>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          tabIndex={hasChildren ? 0 : -1}
+          className={`w-4 h-full flex items-center justify-center text-stone-300 hover:text-stone-500 shrink-0 transition-transform ${
+            open ? "rotate-90" : ""
+          } ${!hasChildren ? "invisible pointer-events-none" : ""}`}
+        >
+          <span className="text-[12px] leading-none">›</span>
+        </button>
+        <button
+          onClick={() => onNavigate(node.collection.slug, node.label)}
+          className={`flex-1 flex items-center justify-between py-1 text-xs transition-colors ${
+            isActive
+              ? "text-stone-900 font-medium"
+              : "text-stone-500 hover:text-stone-900"
+          }`}
+        >
+          <span className="truncate">{node.label}</span>
+          <span className="text-[11px] text-stone-300 ml-2 shrink-0">
+            {hasChildren ? node.children.length : node.collection.item_count}
+          </span>
+        </button>
+        {onDelete && (
+          <button
+            onClick={() => onDelete(node.collection)}
+            title="Delete"
+            className="opacity-0 group-hover:opacity-100 pr-3 text-stone-300 hover:text-red-400 transition-all leading-none shrink-0 text-sm"
+          >
+            ×
+          </button>
+        )}
+      </div>
+      {open &&
+        hasChildren &&
+        node.children.map((child) => (
+          <TagTreeItem
+            key={child.collection.id}
+            node={child}
+            depth={depth + 1}
+            filter={filter}
+            onNavigate={onNavigate}
+            onDelete={onDelete}
+          />
+        ))}
+    </div>
+  );
+}
+
+function LabelKeyItem({
+  tagKey,
+  filter,
+  onNavigate,
+}: {
+  tagKey: TagKey;
+  filter: ActiveFilter;
+  onNavigate: (keySlug: string, keyName: string, valueSlug: string, valueName: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const valueTree = buildValueTree(tagKey.values);
+  const hasValues = valueTree.length > 0;
+
+  return (
+    <div>
+      <div className="flex items-center pl-3">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          tabIndex={hasValues ? 0 : -1}
+          className={`w-4 h-full flex items-center justify-center text-stone-300 hover:text-stone-500 shrink-0 transition-transform ${
+            open ? "rotate-90" : ""
+          } ${!hasValues ? "invisible pointer-events-none" : ""}`}
+        >
+          <span className="text-[12px] leading-none">›</span>
+        </button>
+        <span className="flex-1 flex items-center justify-between pr-3 py-1 text-xs text-stone-500">
+          <span className="truncate">{tagKey.name}</span>
+          {hasValues && (
+            <span className="text-[11px] text-stone-300 ml-2 shrink-0">
+              {valueTree.length}
+            </span>
+          )}
+        </span>
+      </div>
+      {open &&
+        hasValues &&
+        valueTree.map((node) => (
+          <ValueTreeItem
+            key={node.value.id}
+            node={node}
+            depth={1}
+            tagKey={tagKey}
+            filter={filter}
+            onNavigate={onNavigate}
+          />
+        ))}
+    </div>
+  );
+}
+
+function ValueTreeItem({
+  node,
+  depth,
+  tagKey,
+  filter,
+  onNavigate,
+}: {
+  node: ValueTreeNode;
+  depth: number;
+  tagKey: TagKey;
+  filter: ActiveFilter;
+  onNavigate: (keySlug: string, keyName: string, valueSlug: string, valueName: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const hasChildren = node.children.length > 0;
+  const isActive =
+    filter.kind === "label" &&
+    filter.keySlug === tagKey.slug &&
+    filter.valueSlug === node.value.slug;
+  const pl = `${0.75 + depth * 0.75}rem`;
+
+  return (
+    <div>
+      <div className="flex items-center" style={{ paddingLeft: pl }}>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          tabIndex={hasChildren ? 0 : -1}
+          className={`w-4 h-full flex items-center justify-center text-stone-300 hover:text-stone-500 shrink-0 transition-transform ${
+            open ? "rotate-90" : ""
+          } ${!hasChildren ? "invisible pointer-events-none" : ""}`}
+        >
+          <span className="text-[12px] leading-none">›</span>
+        </button>
+        <button
+          onClick={() =>
+            onNavigate(tagKey.slug, tagKey.name, node.value.slug, node.value.name)
+          }
+          className={`flex-1 flex items-center justify-between pr-3 py-1 text-xs transition-colors ${
+            isActive
+              ? "text-stone-900 font-medium"
+              : "text-stone-400 hover:text-stone-900"
+          }`}
+        >
+          <span className="truncate">{node.label}</span>
+          {hasChildren && (
+            <span className="text-[11px] text-stone-300 ml-2 shrink-0">
+              {node.children.length}
+            </span>
+          )}
+        </button>
+      </div>
+      {open &&
+        hasChildren &&
+        node.children.map((child) => (
+          <ValueTreeItem
+            key={child.value.id}
+            node={child}
+            depth={depth + 1}
+            tagKey={tagKey}
+            filter={filter}
+            onNavigate={onNavigate}
+          />
+        ))}
+    </div>
   );
 }

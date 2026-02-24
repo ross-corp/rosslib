@@ -1,6 +1,7 @@
 package tags
 
 import (
+	"context"
 	"net/http"
 	"regexp"
 	"sort"
@@ -76,9 +77,59 @@ type bookTagResponse struct {
 
 // ── Tag key management ─────────────────────────────────────────────────────────
 
+// ensureDefaultStatusLabel creates a "Status" tag key with the five standard
+// read-status values for any user who has no tag keys yet. Idempotent.
+func (h *Handler) ensureDefaultStatusLabel(ctx context.Context, userID string) error {
+	var count int
+	if err := h.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM tag_keys WHERE user_id = $1`,
+		userID,
+	).Scan(&count); err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
+	var keyID string
+	if err := h.pool.QueryRow(ctx,
+		`INSERT INTO tag_keys (user_id, name, slug, mode)
+		 VALUES ($1, 'Status', 'status', 'select_one')
+		 ON CONFLICT (user_id, slug) DO UPDATE SET name = tag_keys.name
+		 RETURNING id`,
+		userID,
+	).Scan(&keyID); err != nil {
+		return err
+	}
+
+	defaults := []struct{ name, slug string }{
+		{"Want to Read", "want-to-read"},
+		{"Owned to Read", "owned-to-read"},
+		{"Currently Reading", "currently-reading"},
+		{"Finished", "finished"},
+		{"DNF", "dnf"},
+	}
+	for _, v := range defaults {
+		if _, err := h.pool.Exec(ctx,
+			`INSERT INTO tag_values (tag_key_id, name, slug)
+			 VALUES ($1, $2, $3)
+			 ON CONFLICT DO NOTHING`,
+			keyID, v.name, v.slug,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ListTagKeys - GET /me/tag-keys
 func (h *Handler) ListTagKeys(c *gin.Context) {
 	userID := c.GetString(middleware.UserIDKey)
+
+	if err := h.ensureDefaultStatusLabel(c.Request.Context(), userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
 
 	keyRows, err := h.pool.Query(c.Request.Context(),
 		`SELECT id, name, slug, mode FROM tag_keys WHERE user_id = $1 ORDER BY created_at`,
