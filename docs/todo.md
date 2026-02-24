@@ -105,7 +105,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [ ] Publisher, year, page count (not exposed by Open Library work API; requires edition lookup).
   - [x] Read count / want-to-read count from local DB — shown on book page.
   - [ ] Community links to related works.
-- [ ] Author page
+- [x] Author page — `/authors/:authorKey` fetches from Open Library (`/authors/{key}.json` + `/authors/{key}/works.json`); displays bio, dates, photo, external links, and a grid of works with covers linking to book pages. Author search results now link to author pages.
 - [ ] Genre pages
 
 - [ ] Edition handling

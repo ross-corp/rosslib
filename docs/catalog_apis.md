@@ -132,6 +132,46 @@ Response shape:
 
 `birth_date`, `death_date`, `top_work`, `top_subjects`, and `photo_url` can be `null`.
 
+### Author Detail
+
+**Endpoint:** `GET https://openlibrary.org/authors/{key}.json`
+
+Returns full author metadata including biography, dates, photos, and external links.
+
+**Author Works Endpoint:** `GET https://openlibrary.org/authors/{key}/works.json?limit=20`
+
+Returns a paginated list of the author's works with `entries` array and `size` (total count).
+
+Our backend wraps these as:
+
+```
+GET /authors/:authorKey
+```
+
+Response shape:
+
+```json
+{
+  "key": "OL26320A",
+  "name": "J.R.R. Tolkien",
+  "bio": "John Ronald Reuel Tolkien...",
+  "birth_date": "3 January 1892",
+  "death_date": "2 September 1973",
+  "photo_url": "https://covers.openlibrary.org/a/olid/OL26320A-L.jpg",
+  "links": [{ "title": "Wikipedia", "url": "https://en.wikipedia.org/wiki/J._R._R._Tolkien" }],
+  "work_count": 392,
+  "works": [
+    {
+      "key": "OL82592W",
+      "title": "The Hobbit",
+      "cover_url": "https://covers.openlibrary.org/b/id/8406786-M.jpg"
+    }
+  ]
+}
+```
+
+`bio`, `birth_date`, `death_date`, `photo_url`, `links`, and `works` can be `null`.
+
 ---
 
 ## Planned additions

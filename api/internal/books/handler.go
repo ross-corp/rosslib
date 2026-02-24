@@ -599,8 +599,10 @@ type AuthorResult struct {
 }
 
 const (
-	olAuthorSearchURL = "https://openlibrary.org/search/authors.json"
-	olAuthorPhotoURL  = "https://covers.openlibrary.org/a/olid/%s-M.jpg"
+	olAuthorSearchURL  = "https://openlibrary.org/search/authors.json"
+	olAuthorPhotoURL   = "https://covers.openlibrary.org/a/olid/%s-M.jpg"
+	olAuthorPhotoLgURL = "https://covers.openlibrary.org/a/olid/%s-L.jpg"
+	olAuthorWorksURL   = "https://openlibrary.org/authors/%s/works.json"
 )
 
 // SearchAuthors proxies an author query to the Open Library Author Search API.
@@ -667,4 +669,175 @@ func (h *Handler) SearchAuthors(c *gin.Context) {
 		"total":   olResp.NumFound,
 		"results": results,
 	})
+}
+
+// ── Author detail ─────────────────────────────────────────────────────────────
+
+// olAuthorDetail is the raw shape from /authors/{key}.json.
+type olAuthorDetail struct {
+	Name      string          `json:"name"`
+	Bio       json.RawMessage `json:"bio"`
+	BirthDate *string         `json:"birth_date"`
+	DeathDate *string         `json:"death_date"`
+	Photos    []int           `json:"photos"`
+	Links     []olAuthorLink  `json:"links"`
+}
+
+type olAuthorLink struct {
+	Title string `json:"title"`
+	URL   string `json:"url"`
+}
+
+type olAuthorWorksEntry struct {
+	Key    string `json:"key"`
+	Title  string `json:"title"`
+	Covers []int  `json:"covers"`
+}
+
+type olAuthorWorksResponse struct {
+	Entries []olAuthorWorksEntry `json:"entries"`
+	Size    int                  `json:"size"`
+}
+
+// AuthorDetail is the full detail shape returned to clients.
+type AuthorDetail struct {
+	Key       string       `json:"key"`
+	Name      string       `json:"name"`
+	Bio       *string      `json:"bio"`
+	BirthDate *string      `json:"birth_date"`
+	DeathDate *string      `json:"death_date"`
+	PhotoURL  *string      `json:"photo_url"`
+	Links     []AuthorLink `json:"links"`
+	WorkCount int          `json:"work_count"`
+	Works     []AuthorWork `json:"works"`
+}
+
+type AuthorLink struct {
+	Title string `json:"title"`
+	URL   string `json:"url"`
+}
+
+type AuthorWork struct {
+	Key      string  `json:"key"`
+	Title    string  `json:"title"`
+	CoverURL *string `json:"cover_url"`
+}
+
+// GetAuthor fetches author details and a sample of works from Open Library.
+//
+// GET /authors/:authorKey
+func (h *Handler) GetAuthor(c *gin.Context) {
+	authorKey := c.Param("authorKey")
+	if authorKey == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "authorKey is required"})
+		return
+	}
+
+	authorURL := fmt.Sprintf("%s/authors/%s.json", olBaseURL, authorKey)
+	worksURL := fmt.Sprintf(olAuthorWorksURL+"?limit=%d", authorKey, searchLimit)
+
+	// Fetch author and works concurrently.
+	type authorResult struct {
+		author olAuthorDetail
+		err    error
+	}
+	type worksResult struct {
+		works olAuthorWorksResponse
+		err   error
+	}
+
+	authorCh := make(chan authorResult, 1)
+	worksCh := make(chan worksResult, 1)
+
+	go func() {
+		resp, err := http.Get(authorURL) //nolint:noctx
+		if err != nil {
+			authorCh <- authorResult{err: err}
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusNotFound {
+			authorCh <- authorResult{err: fmt.Errorf("not found")}
+			return
+		}
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			authorCh <- authorResult{err: err}
+			return
+		}
+		var a olAuthorDetail
+		authorCh <- authorResult{author: a, err: json.Unmarshal(body, &a)}
+	}()
+
+	go func() {
+		resp, err := http.Get(worksURL) //nolint:noctx
+		if err != nil {
+			worksCh <- worksResult{}
+			return
+		}
+		defer resp.Body.Close()
+		body, _ := io.ReadAll(resp.Body)
+		var w olAuthorWorksResponse
+		_ = json.Unmarshal(body, &w)
+		worksCh <- worksResult{works: w}
+	}()
+
+	ar := <-authorCh
+	if ar.err != nil {
+		if ar.err.Error() == "not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "author not found"})
+		} else {
+			c.JSON(http.StatusBadGateway, gin.H{"error": "failed to reach author service"})
+		}
+		return
+	}
+	raw := ar.author
+	wr := <-worksCh
+
+	detail := AuthorDetail{
+		Key:       authorKey,
+		Name:      raw.Name,
+		BirthDate: raw.BirthDate,
+		DeathDate: raw.DeathDate,
+		WorkCount: wr.works.Size,
+	}
+
+	// Parse bio (can be a plain string or {"type":..., "value":...}).
+	if len(raw.Bio) > 0 {
+		var bio string
+		if err := json.Unmarshal(raw.Bio, &bio); err == nil {
+			detail.Bio = &bio
+		} else {
+			var obj olDescription
+			if err := json.Unmarshal(raw.Bio, &obj); err == nil && obj.Value != "" {
+				detail.Bio = &obj.Value
+			}
+		}
+	}
+
+	// Photo URL: always construct from the author key (OL may not have photo data
+	// in the photos array even when a photo exists via OLID).
+	photoURL := fmt.Sprintf(olAuthorPhotoLgURL, authorKey)
+	detail.PhotoURL = &photoURL
+
+	// Links.
+	for _, l := range raw.Links {
+		detail.Links = append(detail.Links, AuthorLink{Title: l.Title, URL: l.URL})
+	}
+
+	// Works.
+	for _, entry := range wr.works.Entries {
+		bareKey := strings.TrimPrefix(entry.Key, "/works/")
+		w := AuthorWork{
+			Key:   bareKey,
+			Title: entry.Title,
+		}
+		if len(entry.Covers) > 0 && entry.Covers[0] > 0 {
+			coverURL := fmt.Sprintf(olCoverMedURL, entry.Covers[0])
+			w.CoverURL = &coverURL
+		}
+		detail.Works = append(detail.Works, w)
+	}
+
+	c.JSON(http.StatusOK, detail)
 }

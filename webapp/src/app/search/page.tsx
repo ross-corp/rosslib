@@ -261,7 +261,7 @@ export default async function SearchPage({
             {authorData.results.map((author) => (
               <li key={author.key}>
                 <Link
-                  href={`/search?type=books&q=${encodeURIComponent(author.name)}`}
+                  href={`/authors/${author.key}`}
                   className="flex items-start gap-3 py-4 hover:bg-stone-50 -mx-3 px-3 rounded transition-colors"
                 >
                   <div className="w-10 h-10 rounded-full bg-stone-100 flex-shrink-0 flex items-center justify-center text-sm font-medium text-stone-500">
