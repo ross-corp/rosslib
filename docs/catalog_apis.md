@@ -46,7 +46,36 @@ Sizes: `S` (small), `M` (medium), `L` (large). We use `M`.
 https://openlibrary.org{key}
 ```
 
-### rosslib API route
+### Author Search
+
+**Endpoint:** `GET https://openlibrary.org/search/authors.json`
+
+| Param  | Description                       |
+|--------|-----------------------------------|
+| `q`    | Author name query (URL-encoded)   |
+| `limit`| Max results (we use 20)           |
+
+**Fields returned per author:**
+
+| Field          | Description                                  |
+|----------------|----------------------------------------------|
+| `key`          | Author key, e.g. `OL26320A`                 |
+| `name`         | Author display name                          |
+| `birth_date`   | Birth date string (nullable)                 |
+| `death_date`   | Death date string (nullable)                 |
+| `top_work`     | Title of most popular work                   |
+| `work_count`   | Number of works attributed                   |
+| `top_subjects` | Array of most common subjects                |
+
+**Author photo images:**
+
+```
+https://covers.openlibrary.org/a/olid/{key}-{size}.jpg
+```
+
+Sizes: `S`, `M`, `L`. Availability is inconsistent — many authors have no photo.
+
+### rosslib API routes
 
 Our backend proxies the title search:
 
@@ -74,6 +103,34 @@ Response shape:
 ```
 
 `authors`, `isbn`, and `cover_url` can be `null` if Open Library does not have that data for a given work.
+
+Author search:
+
+```
+GET /authors/search?q=<name>
+```
+
+Response shape:
+
+```json
+{
+  "total": 41,
+  "results": [
+    {
+      "key": "OL26320A",
+      "name": "J.R.R. Tolkien",
+      "birth_date": "3 January 1892",
+      "death_date": "2 September 1973",
+      "top_work": "The Hobbit",
+      "work_count": 392,
+      "top_subjects": ["Fiction", "Fantasy", "Juvenile fiction"],
+      "photo_url": "https://covers.openlibrary.org/a/olid/OL26320A-M.jpg"
+    }
+  ]
+}
+```
+
+`birth_date`, `death_date`, `top_work`, `top_subjects`, and `photo_url` can be `null`.
 
 ---
 

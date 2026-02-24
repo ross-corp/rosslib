@@ -83,6 +83,34 @@ When a valid token is provided, reviews from users the caller follows are sorted
 
 ---
 
+## Authors
+
+### `GET /authors/search?q=<name>`
+
+Proxies to Open Library's author search API. Returns up to 20 results.
+
+```json
+{
+  "total": 41,
+  "results": [
+    {
+      "key": "OL26320A",
+      "name": "J.R.R. Tolkien",
+      "birth_date": "3 January 1892",
+      "death_date": "2 September 1973",
+      "top_work": "The Hobbit",
+      "work_count": 392,
+      "top_subjects": ["Fiction", "Fantasy", "Juvenile fiction"],
+      "photo_url": "https://covers.openlibrary.org/a/olid/OL26320A-M.jpg"
+    }
+  ]
+}
+```
+
+`birth_date`, `death_date`, `top_work`, `top_subjects`, and `photo_url` may be null.
+
+---
+
 ## Users
 
 ### `GET /users?q=<query>&page=<n>`

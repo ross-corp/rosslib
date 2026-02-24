@@ -568,3 +568,103 @@ func (h *Handler) LookupBook(c *gin.Context) {
 
 	c.JSON(http.StatusOK, result)
 }
+
+// ── Author search ─────────────────────────────────────────────────────────────
+
+type olAuthorDoc struct {
+	Key           string   `json:"key"`
+	Name          string   `json:"name"`
+	BirthDate     *string  `json:"birth_date"`
+	DeathDate     *string  `json:"death_date"`
+	TopWork       *string  `json:"top_work"`
+	WorkCount     int      `json:"work_count"`
+	TopSubjects   []string `json:"top_subjects"`
+}
+
+type olAuthorSearchResponse struct {
+	NumFound int           `json:"numFound"`
+	Docs     []olAuthorDoc `json:"docs"`
+}
+
+// AuthorResult is the normalized shape for author search results.
+type AuthorResult struct {
+	Key         string   `json:"key"`
+	Name        string   `json:"name"`
+	BirthDate   *string  `json:"birth_date"`
+	DeathDate   *string  `json:"death_date"`
+	TopWork     *string  `json:"top_work"`
+	WorkCount   int      `json:"work_count"`
+	TopSubjects []string `json:"top_subjects"`
+	PhotoURL    *string  `json:"photo_url"`
+}
+
+const (
+	olAuthorSearchURL = "https://openlibrary.org/search/authors.json"
+	olAuthorPhotoURL  = "https://covers.openlibrary.org/a/olid/%s-M.jpg"
+)
+
+// SearchAuthors proxies an author query to the Open Library Author Search API.
+//
+// GET /authors/search?q=<name>
+func (h *Handler) SearchAuthors(c *gin.Context) {
+	q := c.Query("q")
+	if q == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "query parameter 'q' is required"})
+		return
+	}
+
+	apiURL := fmt.Sprintf(
+		"%s?q=%s&limit=%d",
+		olAuthorSearchURL,
+		url.QueryEscape(q),
+		searchLimit,
+	)
+
+	resp, err := http.Get(apiURL) //nolint:noctx // intentional: inherits server timeout
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to reach author search service"})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	var olResp olAuthorSearchResponse
+	if err := json.Unmarshal(body, &olResp); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	results := make([]AuthorResult, 0, len(olResp.Docs))
+	for _, doc := range olResp.Docs {
+		a := AuthorResult{
+			Key:       doc.Key,
+			Name:      doc.Name,
+			BirthDate: doc.BirthDate,
+			DeathDate: doc.DeathDate,
+			TopWork:   doc.TopWork,
+			WorkCount: doc.WorkCount,
+		}
+
+		if len(doc.TopSubjects) > 0 {
+			limit := min(5, len(doc.TopSubjects))
+			a.TopSubjects = doc.TopSubjects[:limit]
+		}
+
+		if doc.Key != "" {
+			photoURL := fmt.Sprintf(olAuthorPhotoURL, doc.Key)
+			a.PhotoURL = &photoURL
+		}
+
+		results = append(results, a)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"total":   olResp.NumFound,
+		"results": results,
+	})
+}

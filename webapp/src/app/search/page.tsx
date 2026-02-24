@@ -30,6 +30,22 @@ type UserResult = {
   display_name: string | null;
 };
 
+type AuthorResult = {
+  key: string;
+  name: string;
+  birth_date: string | null;
+  death_date: string | null;
+  top_work: string | null;
+  work_count: number;
+  top_subjects: string[] | null;
+  photo_url: string | null;
+};
+
+type AuthorSearchResponse = {
+  total: number;
+  results: AuthorResult[];
+};
+
 type TagKey = {
   id: string;
   name: string;
@@ -59,6 +75,16 @@ async function searchUsers(q: string): Promise<UserResult[]> {
     { cache: "no-store" }
   );
   if (!res.ok) return [];
+  return res.json();
+}
+
+async function searchAuthors(q: string): Promise<AuthorSearchResponse> {
+  if (!q.trim()) return { total: 0, results: [] };
+  const res = await fetch(
+    `${process.env.API_URL}/authors/search?q=${encodeURIComponent(q)}`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return { total: 0, results: [] };
   return res.json();
 }
 
@@ -94,13 +120,14 @@ export default async function SearchPage({
   searchParams: Promise<{ q?: string; type?: string; sort?: string }>;
 }) {
   const { q = "", type, sort = "" } = await searchParams;
-  const activeTab = type === "people" ? "people" : "books";
+  const activeTab = type === "authors" ? "authors" : type === "people" ? "people" : "books";
 
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [bookData, users, tagKeys, statusMap] = await Promise.all([
+  const [bookData, users, authorData, tagKeys, statusMap] = await Promise.all([
     activeTab === "books" ? searchBooks(q, sort) : Promise.resolve({ total: 0, results: [] }),
     activeTab === "people" ? searchUsers(q) : Promise.resolve([]),
+    activeTab === "authors" ? searchAuthors(q) : Promise.resolve({ total: 0, results: [] }),
     currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
     currentUser && token ? fetchStatusMap(token) : Promise.resolve(null),
   ]);
@@ -110,7 +137,7 @@ export default async function SearchPage({
   const statusKeyId: string | null = statusKey?.id ?? null;
   const bookStatusMap: Record<string, string> | null = statusMap;
 
-  const tabLink = (tab: "books" | "people") => {
+  const tabLink = (tab: "books" | "people" | "authors") => {
     const p = new URLSearchParams({ type: tab });
     if (q) p.set("q", q);
     if (sort && tab === "books") p.set("sort", sort);
@@ -133,7 +160,7 @@ export default async function SearchPage({
             name="q"
             type="search"
             defaultValue={q}
-            placeholder={activeTab === "books" ? "Search by title..." : "Search by name..."}
+            placeholder={activeTab === "books" ? "Search by title..." : activeTab === "authors" ? "Search by author name..." : "Search by name..."}
             autoFocus
             className="flex-1 px-3 py-2 text-sm border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent"
           />
@@ -152,6 +179,16 @@ export default async function SearchPage({
             }`}
           >
             Books
+          </Link>
+          <Link
+            href={tabLink("authors")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === "authors"
+                ? "border-stone-900 text-stone-900"
+                : "border-transparent text-stone-400 hover:text-stone-700"
+            }`}
+          >
+            Authors
           </Link>
           <Link
             href={tabLink("people")}
@@ -193,6 +230,13 @@ export default async function SearchPage({
               : `${bookData.total.toLocaleString()} result${bookData.total === 1 ? "" : "s"} for "${q}"`}
           </p>
         )}
+        {q && activeTab === "authors" && (
+          <p className="text-sm text-stone-400 mb-6">
+            {authorData.results.length === 0
+              ? `No authors found for "${q}"`
+              : `${authorData.total.toLocaleString()} result${authorData.total === 1 ? "" : "s"} for "${q}"`}
+          </p>
+        )}
         {q && activeTab === "people" && (
           <p className="text-sm text-stone-400 mb-6">
             {users.length === 0
@@ -209,6 +253,47 @@ export default async function SearchPage({
             statusKeyId={statusKeyId}
             bookStatusMap={bookStatusMap}
           />
+        )}
+
+        {/* Author results */}
+        {activeTab === "authors" && authorData.results.length > 0 && (
+          <ul className="divide-y divide-stone-100 max-w-2xl">
+            {authorData.results.map((author) => (
+              <li key={author.key}>
+                <Link
+                  href={`/search?type=books&q=${encodeURIComponent(author.name)}`}
+                  className="flex items-start gap-3 py-4 hover:bg-stone-50 -mx-3 px-3 rounded transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-full bg-stone-100 flex-shrink-0 flex items-center justify-center text-sm font-medium text-stone-500">
+                    {author.name.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-stone-900">
+                      {author.name}
+                    </span>
+                    {(author.birth_date || author.death_date) && (
+                      <span className="text-xs text-stone-400 ml-2">
+                        {author.birth_date ?? "?"}
+                        {" \u2013 "}
+                        {author.death_date ?? ""}
+                      </span>
+                    )}
+                    {author.top_work && (
+                      <p className="text-xs text-stone-500 mt-0.5 truncate">
+                        Best known for <span className="italic">{author.top_work}</span>
+                      </p>
+                    )}
+                    <p className="text-xs text-stone-400 mt-0.5">
+                      {author.work_count} work{author.work_count === 1 ? "" : "s"}
+                      {author.top_subjects && author.top_subjects.length > 0 && (
+                        <span> &middot; {author.top_subjects.slice(0, 3).join(", ")}</span>
+                      )}
+                    </p>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
 
         {/* People results */}
