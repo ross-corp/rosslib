@@ -309,7 +309,23 @@ func (h *Handler) AddBookToShelf(c *gin.Context) {
 		return
 	}
 
+	// Before removing from exclusive group, check what shelf the book is currently on
+	// so we can detect started/finished transitions.
+	var prevShelfSlug *string
 	if exclusiveGroup != "" {
+		var slug string
+		lookupErr := h.pool.QueryRow(c.Request.Context(),
+			`SELECT col.slug FROM collection_items ci
+			 JOIN collections col ON col.id = ci.collection_id
+			 WHERE col.user_id = $1
+			   AND col.exclusive_group = $2
+			   AND ci.book_id = $3`,
+			userID, exclusiveGroup, bookID,
+		).Scan(&slug)
+		if lookupErr == nil {
+			prevShelfSlug = &slug
+		}
+
 		_, err = h.pool.Exec(c.Request.Context(),
 			`DELETE FROM collection_items ci
 			 USING collections col
@@ -337,12 +353,23 @@ func (h *Handler) AddBookToShelf(c *gin.Context) {
 		return
 	}
 
-	// Look up shelf name for the activity metadata.
-	var shelfName string
+	// Look up the target shelf's slug and name for activity recording.
+	var shelfName, shelfSlug string
 	_ = h.pool.QueryRow(c.Request.Context(),
-		`SELECT name FROM collections WHERE id = $1`, shelfID,
-	).Scan(&shelfName)
-	activity.Record(c.Request.Context(), h.pool, userID, "shelved", &bookID, nil, &shelfID, nil,
+		`SELECT name, slug FROM collections WHERE id = $1`, shelfID,
+	).Scan(&shelfName, &shelfSlug)
+
+	// Determine activity type based on shelf transition.
+	activityType := "shelved"
+	if exclusiveGroup == "read_status" && (prevShelfSlug == nil || *prevShelfSlug != shelfSlug) {
+		switch shelfSlug {
+		case "currently-reading":
+			activityType = "started_book"
+		case "read":
+			activityType = "finished_book"
+		}
+	}
+	activity.Record(c.Request.Context(), h.pool, userID, activityType, &bookID, nil, &shelfID, nil,
 		map[string]string{"shelf_name": shelfName})
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})

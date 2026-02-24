@@ -129,6 +129,34 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
           )}
         </>
       );
+    case "started_book":
+      return (
+        <>
+          started reading{" "}
+          {item.book && (
+            <Link
+              href={`/books/${item.book.open_library_id}`}
+              className="font-medium text-stone-900 hover:underline"
+            >
+              {item.book.title}
+            </Link>
+          )}
+        </>
+      );
+    case "finished_book":
+      return (
+        <>
+          finished{" "}
+          {item.book && (
+            <Link
+              href={`/books/${item.book.open_library_id}`}
+              className="font-medium text-stone-900 hover:underline"
+            >
+              {item.book.title}
+            </Link>
+          )}
+        </>
+      );
     case "followed_user":
       return (
         <>

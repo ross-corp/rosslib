@@ -169,4 +169,4 @@ Once we're further along we'll move to GH projects. this is fine for now
 - [x] No algorithmic ranking at MVP; pure chronological.
 - [x] Paginated (cursor-based).
 - [ ] Activity type: submitted a link (requires community links feature).
-- [ ] Activity type: started/finished a book (requires tracking shelf transitions).
+- [x] Activity type: started/finished a book (requires tracking shelf transitions).
