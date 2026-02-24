@@ -4,7 +4,6 @@ import { useState } from "react";
 import StarRatingInput from "@/components/star-rating-input";
 
 type Props = {
-  shelfId: string;
   openLibraryId: string;
   initialRating: number | null;
   initialReviewText: string | null;
@@ -13,7 +12,6 @@ type Props = {
 };
 
 export default function BookReviewEditor({
-  shelfId,
   openLibraryId,
   initialRating,
   initialReviewText,
@@ -45,7 +43,7 @@ export default function BookReviewEditor({
     setMessage(null);
 
     const res = await fetch(
-      `/api/shelves/${shelfId}/books/${openLibraryId}`,
+      `/api/me/books/${openLibraryId}`,
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -98,7 +96,7 @@ export default function BookReviewEditor({
     setMessage(null);
 
     const res = await fetch(
-      `/api/shelves/${shelfId}/books/${openLibraryId}`,
+      `/api/me/books/${openLibraryId}`,
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

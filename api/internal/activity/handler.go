@@ -81,7 +81,7 @@ func (h *Handler) GetFeed(c *gin.Context) {
 		       u.id, u.username, u.display_name, u.avatar_url,
 		       b.open_library_id, b.title, b.cover_url,
 		       tu.id, tu.username, tu.display_name, tu.avatar_url,
-		       col.name,
+		       COALESCE(a.metadata->>'status_name', col.name),
 		       a.metadata
 		FROM activities a
 		JOIN users u ON u.id = a.user_id
@@ -211,7 +211,7 @@ func (h *Handler) GetUserActivity(c *gin.Context) {
 		       u.id, u.username, u.display_name, u.avatar_url,
 		       b.open_library_id, b.title, b.cover_url,
 		       tu.id, tu.username, tu.display_name, tu.avatar_url,
-		       col.name,
+		       COALESCE(a.metadata->>'status_name', col.name),
 		       a.metadata
 		FROM activities a
 		JOIN users u ON u.id = a.user_id

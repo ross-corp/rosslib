@@ -29,7 +29,7 @@ export default function ShelfBookGrid({
 
   async function removeBook(olId: string) {
     setRemoving(olId);
-    const res = await fetch(`/api/shelves/${shelfId}/books/${olId}`, {
+    const res = await fetch(`/api/me/books/${olId}`, {
       method: "DELETE",
     });
     setRemoving(null);

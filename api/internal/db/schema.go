@@ -177,6 +177,97 @@ BEGIN
     ALTER TABLE book_tag_values ADD PRIMARY KEY (user_id, book_id, tag_value_id);
   END IF;
 END $$;
+
+-- ── user_books: canonical user-book relationship ─────────────────────────────
+
+CREATE TABLE IF NOT EXISTS user_books (
+	id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+	user_id    UUID        NOT NULL REFERENCES users(id),
+	book_id    UUID        NOT NULL REFERENCES books(id),
+	rating     SMALLINT,
+	review_text TEXT,
+	spoiler    BOOLEAN     NOT NULL DEFAULT false,
+	date_read  TIMESTAMPTZ,
+	date_added TIMESTAMPTZ DEFAULT NOW(),
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	UNIQUE(user_id, book_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_books_user_id ON user_books (user_id, date_added DESC);
+
+-- ── Data migration: copy read_status shelf books → user_books + status labels ─
+
+DO $$
+DECLARE
+  v_user_id   UUID;
+  v_key_id    UUID;
+  v_value_id  UUID;
+  v_book_id   UUID;
+  v_slug      TEXT;
+  v_status_slug TEXT;
+  rec         RECORD;
+BEGIN
+  -- For each user that has books in read_status shelves but no user_books rows
+  FOR v_user_id IN
+    SELECT DISTINCT c.user_id
+    FROM collection_items ci
+    JOIN collections c ON c.id = ci.collection_id
+    WHERE c.exclusive_group = 'read_status'
+      AND NOT EXISTS (SELECT 1 FROM user_books ub WHERE ub.user_id = c.user_id)
+  LOOP
+    -- Ensure Status tag key exists for this user
+    SELECT tk.id INTO v_key_id
+    FROM tag_keys tk
+    WHERE tk.user_id = v_user_id AND tk.slug = 'status';
+
+    IF v_key_id IS NULL THEN
+      INSERT INTO tag_keys (user_id, name, slug, mode)
+      VALUES (v_user_id, 'Status', 'status', 'select_one')
+      ON CONFLICT (user_id, slug) DO UPDATE SET name = tag_keys.name
+      RETURNING id INTO v_key_id;
+
+      INSERT INTO tag_values (tag_key_id, name, slug) VALUES (v_key_id, 'Want to Read', 'want-to-read') ON CONFLICT DO NOTHING;
+      INSERT INTO tag_values (tag_key_id, name, slug) VALUES (v_key_id, 'Owned to Read', 'owned-to-read') ON CONFLICT DO NOTHING;
+      INSERT INTO tag_values (tag_key_id, name, slug) VALUES (v_key_id, 'Currently Reading', 'currently-reading') ON CONFLICT DO NOTHING;
+      INSERT INTO tag_values (tag_key_id, name, slug) VALUES (v_key_id, 'Finished', 'finished') ON CONFLICT DO NOTHING;
+      INSERT INTO tag_values (tag_key_id, name, slug) VALUES (v_key_id, 'DNF', 'dnf') ON CONFLICT DO NOTHING;
+    END IF;
+
+    -- Copy each book from read_status shelves into user_books + set status label
+    FOR rec IN
+      SELECT ci.book_id, ci.rating, ci.review_text, ci.spoiler, ci.date_read, ci.date_added, ci.added_at, c.slug AS shelf_slug
+      FROM collection_items ci
+      JOIN collections c ON c.id = ci.collection_id
+      WHERE c.user_id = v_user_id AND c.exclusive_group = 'read_status'
+    LOOP
+      -- Insert user_books row
+      INSERT INTO user_books (user_id, book_id, rating, review_text, spoiler, date_read, date_added)
+      VALUES (v_user_id, rec.book_id, rec.rating, rec.review_text, rec.spoiler, rec.date_read, COALESCE(rec.date_added, rec.added_at))
+      ON CONFLICT (user_id, book_id) DO NOTHING;
+
+      -- Map shelf slug to status label slug
+      v_status_slug := CASE rec.shelf_slug
+        WHEN 'read' THEN 'finished'
+        WHEN 'currently-reading' THEN 'currently-reading'
+        WHEN 'want-to-read' THEN 'want-to-read'
+        WHEN 'owned-to-read' THEN 'owned-to-read'
+        WHEN 'dnf' THEN 'dnf'
+        ELSE rec.shelf_slug
+      END;
+
+      -- Look up the tag value ID
+      SELECT tv.id INTO v_value_id
+      FROM tag_values tv
+      WHERE tv.tag_key_id = v_key_id AND tv.slug = v_status_slug;
+
+      IF v_value_id IS NOT NULL THEN
+        INSERT INTO book_tag_values (user_id, book_id, tag_key_id, tag_value_id)
+        VALUES (v_user_id, rec.book_id, v_key_id, v_value_id)
+        ON CONFLICT DO NOTHING;
+      END IF;
+    END LOOP;
+  END LOOP;
+END $$;
 `
 
 func Migrate(pool *pgxpool.Pool) error {

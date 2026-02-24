@@ -15,8 +15,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/books"
-	"github.com/tristansaldanha/rosslib/api/internal/collections"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/tags"
 )
 
 type Handler struct {
@@ -91,16 +91,11 @@ type CommitRow struct {
 
 // ── Shelf name constants ──────────────────────────────────────────────────────
 
-// defaultShelfMap maps Goodreads exclusive shelf values to our slug names.
+// defaultShelfMap maps Goodreads exclusive shelf values to our status label slugs.
 var defaultShelfMap = map[string]string{
-	"read":              "read",
+	"read":              "finished",
 	"currently-reading": "currently-reading",
 	"to-read":           "want-to-read",
-}
-
-// readStatusSlugs are the slugs that belong to the exclusive "read_status" group.
-var readStatusSlugs = map[string]bool{
-	"read": true, "currently-reading": true, "want-to-read": true,
 }
 
 // slugDisplayNames maps common Goodreads slugs to human-readable names.
@@ -414,17 +409,10 @@ func (h *Handler) Commit(c *gin.Context) {
 		return
 	}
 
-	// Ensure the 3 default shelves exist for this user.
-	defaults := []struct{ name, slug string }{
-		{"Want to Read", "want-to-read"},
-		{"Currently Reading", "currently-reading"},
-		{"Read", "read"},
-	}
-	for _, s := range defaults {
-		if _, err := collections.EnsureShelf(c.Request.Context(), h.pool, userID, s.name, s.slug, true, "read_status", true, "shelf"); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
-			return
-		}
+	// Ensure Status label key exists for this user.
+	if err := tags.EnsureStatusLabel(c.Request.Context(), h.pool, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
 	}
 
 	imported, failed := 0, 0
@@ -473,43 +461,7 @@ func commitRow(ctx context.Context, pool *pgxpool.Pool, userID string, row Commi
 		return fmt.Errorf("upsert book: %w", err)
 	}
 
-	// Determine exclusive group membership.
-	excGroup := ""
-	if readStatusSlugs[row.ExclusiveShelf] {
-		excGroup = "read_status"
-	}
-	// Non-default exclusive shelves (e.g. "dnf", "owned-to-read") also get
-	// read_status so they participate in the same mutual-exclusivity constraint.
-	if !readStatusSlugs[row.ExclusiveShelf] && row.ExclusiveShelf != "" {
-		excGroup = "read_status"
-	}
-
-	exclusiveShelfID, err := collections.EnsureShelf(
-		ctx, pool, userID,
-		slugToName(row.ExclusiveShelf), row.ExclusiveShelf,
-		true, excGroup, true, "shelf",
-	)
-	if err != nil {
-		return fmt.Errorf("ensure exclusive shelf %q: %w", row.ExclusiveShelf, err)
-	}
-
-	// Remove book from any other shelf in the same exclusive group first.
-	if excGroup != "" {
-		if _, err := pool.Exec(ctx,
-			`DELETE FROM collection_items ci
-			 USING collections col
-			 WHERE ci.collection_id = col.id
-			   AND col.user_id        = $1
-			   AND col.exclusive_group = $2
-			   AND ci.book_id          = $3
-			   AND ci.collection_id   != $4`,
-			userID, excGroup, bookID, exclusiveShelfID,
-		); err != nil {
-			return fmt.Errorf("remove from other exclusive shelves: %w", err)
-		}
-	}
-
-	// Parse date_added; fall back to now so added_at is set correctly.
+	// Parse date_added; fall back to now.
 	addedAt := time.Now()
 	if row.DateAdded != nil && *row.DateAdded != "" {
 		if t, err := time.Parse("2006-01-02", *row.DateAdded); err == nil {
@@ -524,38 +476,59 @@ func commitRow(ctx context.Context, pool *pgxpool.Pool, userID string, row Commi
 		}
 	}
 
-	// Insert (or update) the item on the exclusive shelf with all metadata.
+	// Insert (or update) user_books row with all metadata.
 	if _, err := pool.Exec(ctx,
-		`INSERT INTO collection_items
-		   (collection_id, book_id, added_at, rating, review_text, spoiler, date_read, date_added)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		 ON CONFLICT (collection_id, book_id) DO UPDATE
-		   SET rating      = COALESCE(EXCLUDED.rating,      collection_items.rating),
-		       review_text = COALESCE(EXCLUDED.review_text, collection_items.review_text),
+		`INSERT INTO user_books
+		   (user_id, book_id, rating, review_text, spoiler, date_read, date_added)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)
+		 ON CONFLICT (user_id, book_id) DO UPDATE
+		   SET rating      = COALESCE(EXCLUDED.rating,      user_books.rating),
+		       review_text = COALESCE(EXCLUDED.review_text, user_books.review_text),
 		       spoiler     = EXCLUDED.spoiler,
-		       date_read   = COALESCE(EXCLUDED.date_read,   collection_items.date_read),
+		       date_read   = COALESCE(EXCLUDED.date_read,   user_books.date_read),
 		       date_added  = EXCLUDED.date_added`,
-		exclusiveShelfID, bookID, addedAt,
+		userID, bookID,
 		row.Rating, row.ReviewText, row.Spoiler, dateReadArg, addedAt,
 	); err != nil {
-		return fmt.Errorf("add to exclusive shelf: %w", err)
+		return fmt.Errorf("add to user_books: %w", err)
 	}
 
-	// Add to custom non-exclusive shelves.
-	for _, slug := range row.CustomShelves {
-		if slug == "" {
-			continue
+	// Set Status label for this book.
+	statusSlug := row.ExclusiveShelf
+	if statusSlug != "" {
+		// Look up the user's Status key and the matching value.
+		var keyID string
+		if err := pool.QueryRow(ctx,
+			`SELECT id FROM tag_keys WHERE user_id = $1 AND slug = 'status'`,
+			userID,
+		).Scan(&keyID); err != nil {
+			return fmt.Errorf("find status key: %w", err)
 		}
-		shelfID, err := collections.EnsureShelf(ctx, pool, userID, slugToName(slug), slug, false, "", true, "tag")
-		if err != nil {
-			continue // non-fatal; best-effort
+
+		var valueID string
+		if err := pool.QueryRow(ctx,
+			`SELECT id FROM tag_values WHERE tag_key_id = $1 AND slug = $2`,
+			keyID, statusSlug,
+		).Scan(&valueID); err != nil {
+			// If value doesn't exist, skip status assignment (non-fatal).
+			return nil //nolint:nilerr
 		}
+
+		// Remove any existing status value (select_one).
 		pool.Exec(ctx, //nolint:errcheck
-			`INSERT INTO collection_items (collection_id, book_id, added_at)
-			 VALUES ($1, $2, $3)
-			 ON CONFLICT DO NOTHING`,
-			shelfID, bookID, addedAt,
+			`DELETE FROM book_tag_values WHERE user_id = $1 AND book_id = $2 AND tag_key_id = $3`,
+			userID, bookID, keyID,
 		)
+
+		// Set the status label.
+		if _, err := pool.Exec(ctx,
+			`INSERT INTO book_tag_values (user_id, book_id, tag_key_id, tag_value_id)
+			 VALUES ($1, $2, $3, $4)
+			 ON CONFLICT DO NOTHING`,
+			userID, bookID, keyID, valueID,
+		); err != nil {
+			return fmt.Errorf("set status label: %w", err)
+		}
 	}
 
 	return nil

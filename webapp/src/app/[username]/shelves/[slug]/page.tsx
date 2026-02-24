@@ -23,6 +23,18 @@ type ShelfDetail = {
   }[];
 };
 
+type StatusBooksResponse = {
+  books: {
+    book_id: string;
+    open_library_id: string;
+    title: string;
+    cover_url: string | null;
+    authors: string | null;
+    rating: number | null;
+    added_at: string;
+  }[];
+};
+
 // ── Data fetchers ──────────────────────────────────────────────────────────────
 
 async function fetchShelf(
@@ -31,6 +43,18 @@ async function fetchShelf(
 ): Promise<ShelfDetail | null> {
   const res = await fetch(
     `${process.env.API_URL}/users/${username}/shelves/${slug}`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return null;
+  return res.json();
+}
+
+async function fetchStatusBooks(
+  username: string,
+  slug: string
+): Promise<StatusBooksResponse | null> {
+  const res = await fetch(
+    `${process.env.API_URL}/users/${username}/books?status=${slug}`,
     { cache: "no-store" }
   );
   if (!res.ok) return null;
@@ -54,6 +78,15 @@ async function fetchTagKeys(token: string): Promise<TagKey[]> {
   return res.json();
 }
 
+// Status slugs that should be fetched from the books endpoint instead of shelves
+const STATUS_SLUGS = new Set([
+  "want-to-read",
+  "owned-to-read",
+  "currently-reading",
+  "finished",
+  "dnf",
+]);
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function ShelfPage({
@@ -65,24 +98,46 @@ export default async function ShelfPage({
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
   const isOwner = currentUser?.username === username;
 
-  const [shelf, allShelves, tagKeys] = await Promise.all([
-    fetchShelf(username, slug),
+  const isStatusSlug = STATUS_SLUGS.has(slug);
+
+  const [shelf, statusBooks, allShelves, tagKeys] = await Promise.all([
+    isStatusSlug ? Promise.resolve(null) : fetchShelf(username, slug),
+    isStatusSlug ? fetchStatusBooks(username, slug) : Promise.resolve(null),
     fetchUserShelves(username),
     isOwner && token ? fetchTagKeys(token) : Promise.resolve([] as TagKey[]),
   ]);
 
-  if (!shelf) notFound();
+  // Build books array from either source
+  const books = statusBooks?.books?.map((b) => ({
+    book_id: b.book_id,
+    open_library_id: b.open_library_id,
+    title: b.title,
+    cover_url: b.cover_url,
+    added_at: b.added_at,
+    rating: b.rating,
+  })) ?? shelf?.books ?? [];
+
+  const displayName = isStatusSlug
+    ? slug.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+    : shelf?.name ?? slug;
+
+  if (!isStatusSlug && !shelf) notFound();
 
   // ── Owner view: full library manager layout ────────────────────────────────
 
   if (isOwner) {
+    // For status slugs, synthesize a shelf-like object for LibraryManager
+    const initialShelf = shelf
+      ? { id: shelf.id, name: shelf.name, slug: shelf.slug }
+      : { id: `status-${slug}`, name: displayName, slug };
+
     return (
       <div className="h-screen flex flex-col overflow-hidden">
         <Nav />
         <LibraryManager
           username={username}
-          initialBooks={shelf.books}
-          initialShelf={{ id: shelf.id, name: shelf.name, slug: shelf.slug }}
+          initialBooks={books}
+          initialShelf={initialShelf}
           allShelves={allShelves}
           tagKeys={tagKeys}
         />
@@ -104,13 +159,13 @@ export default async function ShelfPage({
             {username}
           </Link>
           <span>/</span>
-          <span className="text-stone-600">{shelf.name}</span>
+          <span className="text-stone-600">{displayName}</span>
         </nav>
 
         <div className="flex items-baseline gap-3 mb-8">
-          <h1 className="text-2xl font-bold text-stone-900">{shelf.name}</h1>
+          <h1 className="text-2xl font-bold text-stone-900">{displayName}</h1>
           <span className="text-sm text-stone-400">
-            {shelf.books.length} {shelf.books.length === 1 ? "book" : "books"}
+            {books.length} {books.length === 1 ? "book" : "books"}
           </span>
         </div>
 
@@ -138,8 +193,8 @@ export default async function ShelfPage({
         )}
 
         <ShelfBookGrid
-          shelfId={shelf.id}
-          initialBooks={shelf.books}
+          shelfId={shelf?.id ?? `status-${slug}`}
+          initialBooks={books}
           isOwner={false}
           tagKeys={[]}
         />

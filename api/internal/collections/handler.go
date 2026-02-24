@@ -995,21 +995,23 @@ func (h *Handler) UpdateBookInShelf(c *gin.Context) {
 // Review, Date Added, Date Read.
 func (h *Handler) ExportCSV(c *gin.Context) {
 	userID := c.GetString(middleware.UserIDKey)
-	shelfFilter := c.Query("shelf")
+	statusFilter := c.Query("status")
 
-	query := `SELECT c.name, b.title, b.authors, b.isbn13,
-	                  ci.rating, ci.review_text, ci.date_added, ci.date_read
-	           FROM collection_items ci
-	           JOIN books b ON b.id = ci.book_id
-	           JOIN collections c ON c.id = ci.collection_id
-	           WHERE c.user_id = $1`
+	query := `SELECT COALESCE(tv.name, 'Unstatused'), b.title, b.authors, b.isbn13,
+	                  ub.rating, ub.review_text, ub.date_added, ub.date_read
+	           FROM user_books ub
+	           JOIN books b ON b.id = ub.book_id
+	           LEFT JOIN tag_keys tk ON tk.user_id = ub.user_id AND tk.slug = 'status'
+	           LEFT JOIN book_tag_values btv ON btv.user_id = ub.user_id AND btv.book_id = ub.book_id AND btv.tag_key_id = tk.id
+	           LEFT JOIN tag_values tv ON tv.id = btv.tag_value_id
+	           WHERE ub.user_id = $1`
 	args := []interface{}{userID}
 
-	if shelfFilter != "" {
-		query += ` AND c.id = $2`
-		args = append(args, shelfFilter)
+	if statusFilter != "" {
+		query += ` AND tv.slug = $2`
+		args = append(args, statusFilter)
 	}
-	query += ` ORDER BY c.name, ci.added_at DESC`
+	query += ` ORDER BY tv.name, ub.date_added DESC`
 
 	rows, err := h.pool.Query(c.Request.Context(), query, args...)
 	if err != nil {
@@ -1022,11 +1024,11 @@ func (h *Handler) ExportCSV(c *gin.Context) {
 	c.Header("Content-Disposition", `attachment; filename="rosslib-export.csv"`)
 
 	w := csv.NewWriter(c.Writer)
-	w.Write([]string{"Title", "Author", "ISBN13", "Collection", "Rating", "Review", "Date Added", "Date Read"})
+	w.Write([]string{"Title", "Author", "ISBN13", "Status", "Rating", "Review", "Date Added", "Date Read"})
 
 	for rows.Next() {
 		var (
-			collName   string
+			statusName string
 			title      string
 			authors    *string
 			isbn13     *string
@@ -1035,7 +1037,7 @@ func (h *Handler) ExportCSV(c *gin.Context) {
 			dateAdded  *time.Time
 			dateRead   *time.Time
 		)
-		if err := rows.Scan(&collName, &title, &authors, &isbn13, &rating, &reviewText, &dateAdded, &dateRead); err != nil {
+		if err := rows.Scan(&statusName, &title, &authors, &isbn13, &rating, &reviewText, &dateAdded, &dateRead); err != nil {
 			break
 		}
 
@@ -1043,7 +1045,7 @@ func (h *Handler) ExportCSV(c *gin.Context) {
 			title,
 			derefStr(authors),
 			derefStr(isbn13),
-			collName,
+			statusName,
 			formatRating(rating),
 			derefStr(reviewText),
 			formatDate(dateAdded),

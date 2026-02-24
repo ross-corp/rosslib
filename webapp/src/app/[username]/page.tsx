@@ -11,13 +11,25 @@ import RecentReviews from "@/components/recent-reviews";
 import type { ReviewItem } from "@/components/recent-reviews";
 import ShelfBrowser from "@/components/shelf-browser";
 
-type ShelfBook = {
+type StatusBook = {
   book_id: string;
   open_library_id: string;
   title: string;
   cover_url: string | null;
-  added_at: string;
   rating: number | null;
+  added_at: string;
+};
+
+type StatusGroup = {
+  name: string;
+  slug: string;
+  count: number;
+  books: StatusBook[];
+};
+
+type UserBooksResponse = {
+  statuses: StatusGroup[];
+  unstatused_count: number;
 };
 
 type UserProfile = {
@@ -47,7 +59,7 @@ type UserShelf = {
   exclusive_group: string;
   collection_type: string;
   item_count: number;
-  books?: ShelfBook[];
+  books?: StatusBook[];
 };
 
 async function fetchProfile(
@@ -62,6 +74,15 @@ async function fetchProfile(
     headers,
   });
   if (!res.ok) return null;
+  return res.json();
+}
+
+async function fetchUserBooks(username: string): Promise<UserBooksResponse> {
+  const res = await fetch(
+    `${process.env.API_URL}/users/${username}/books?limit=8`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return { statuses: [], unstatused_count: 0 };
   return res.json();
 }
 
@@ -107,9 +128,10 @@ export default async function UserPage({
   const isOwnProfile = currentUser?.user_id === profile.user_id;
   const isRestricted = profile.is_restricted && !isOwnProfile;
 
-  const [shelves, recentActivity, recentReviews] = isRestricted
-    ? [[] as UserShelf[], [] as ActivityItem[], [] as ReviewItem[]]
+  const [userBooks, shelves, recentActivity, recentReviews] = isRestricted
+    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, [] as UserShelf[], [] as ActivityItem[], [] as ReviewItem[]]
     : await Promise.all([
+        fetchUserBooks(username),
         fetchUserShelves(username),
         fetchRecentActivity(username),
         fetchRecentReviews(username),
@@ -120,13 +142,12 @@ export default async function UserPage({
     { month: "long", year: "numeric" }
   );
 
-  const currentlyReading = shelves.find(
+  const currentlyReadingStatus = userBooks.statuses.find(
     (s) => s.slug === "currently-reading"
   );
   const favorites = shelves.find(
     (s) => s.slug === "favorites" && s.collection_type === "tag"
   );
-  const allShelves = shelves.filter((s) => s.collection_type === "shelf");
 
   return (
     <div className="min-h-screen">
@@ -218,19 +239,18 @@ export default async function UserPage({
             {/* Main content — 2/3 */}
             <div className="lg:col-span-2 space-y-10">
               {/* Currently Reading */}
-              {currentlyReading &&
-                currentlyReading.books &&
-                currentlyReading.books.length > 0 && (
+              {currentlyReadingStatus &&
+                currentlyReadingStatus.books.length > 0 && (
                   <section>
                     <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">
                       Currently Reading
                     </h2>
                     <BookCoverRow
-                      books={currentlyReading.books}
+                      books={currentlyReadingStatus.books}
                       size="lg"
                       seeAllHref={
-                        currentlyReading.item_count >
-                        currentlyReading.books.length
+                        currentlyReadingStatus.count >
+                        currentlyReadingStatus.books.length
                           ? `/${username}/shelves/currently-reading`
                           : undefined
                       }
@@ -278,13 +298,13 @@ export default async function UserPage({
                 </section>
               )}
 
-              {/* Shelf Browser */}
-              {allShelves.length > 0 && (
+              {/* Status Browser (replaces ShelfBrowser) */}
+              {userBooks.statuses.length > 0 && (
                 <section>
                   <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">
-                    Shelves
+                    Library
                   </h2>
-                  <ShelfBrowser shelves={allShelves} username={username} />
+                  <ShelfBrowser statuses={userBooks.statuses} username={username} />
                 </section>
               )}
             </div>

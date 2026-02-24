@@ -3,36 +3,33 @@
 import { useState } from "react";
 import Link from "next/link";
 
-type ShelfBook = {
+type StatusBook = {
   book_id: string;
   open_library_id: string;
   title: string;
   cover_url: string | null;
-  added_at: string;
   rating: number | null;
+  added_at: string;
 };
 
-type Shelf = {
-  id: string;
+type StatusGroup = {
   name: string;
   slug: string;
-  exclusive_group: string;
-  collection_type: string;
-  item_count: number;
-  books?: ShelfBook[];
+  count: number;
+  books: StatusBook[];
 };
 
 export default function ShelfBrowser({
-  shelves,
+  statuses,
   username,
 }: {
-  shelves: Shelf[];
+  statuses: StatusGroup[];
   username: string;
 }) {
-  const [activeSlug, setActiveSlug] = useState(shelves[0]?.slug ?? "");
-  const [bookCache, setBookCache] = useState<Record<string, ShelfBook[]>>(() => {
-    const initial: Record<string, ShelfBook[]> = {};
-    for (const s of shelves) {
+  const [activeSlug, setActiveSlug] = useState(statuses[0]?.slug ?? "");
+  const [bookCache, setBookCache] = useState<Record<string, StatusBook[]>>(() => {
+    const initial: Record<string, StatusBook[]> = {};
+    for (const s of statuses) {
       if (s.books && s.books.length > 0) {
         initial[s.slug] = s.books;
       }
@@ -41,17 +38,17 @@ export default function ShelfBrowser({
   });
   const [loading, setLoading] = useState(false);
 
-  if (shelves.length === 0) return null;
+  if (statuses.length === 0) return null;
 
-  const activeShelf = shelves.find((s) => s.slug === activeSlug) ?? shelves[0];
-  const books = bookCache[activeShelf.slug] ?? [];
+  const activeStatus = statuses.find((s) => s.slug === activeSlug) ?? statuses[0];
+  const books = bookCache[activeStatus.slug] ?? [];
 
-  async function loadShelf(slug: string) {
+  async function loadStatus(slug: string) {
     setActiveSlug(slug);
     if (bookCache[slug]) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/users/${username}/shelves/${slug}`);
+      const res = await fetch(`/api/users/${username}/books?status=${slug}`);
       if (res.ok) {
         const data = await res.json();
         setBookCache((prev) => ({ ...prev, [slug]: data.books ?? [] }));
@@ -64,18 +61,18 @@ export default function ShelfBrowser({
   return (
     <div>
       <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
-        {shelves.map((shelf) => (
+        {statuses.map((status) => (
           <button
-            key={shelf.id}
-            onClick={() => loadShelf(shelf.slug)}
+            key={status.slug}
+            onClick={() => loadStatus(status.slug)}
             className={`shrink-0 text-sm px-3 py-1.5 rounded-full border transition-colors ${
-              activeShelf.slug === shelf.slug
+              activeStatus.slug === status.slug
                 ? "border-stone-900 bg-stone-900 text-white"
                 : "border-stone-200 text-stone-600 hover:border-stone-400"
             }`}
           >
-            {shelf.name}
-            <span className="ml-1.5 text-xs opacity-60">{shelf.item_count}</span>
+            {status.name}
+            <span className="ml-1.5 text-xs opacity-60">{status.count}</span>
           </button>
         ))}
       </div>
@@ -87,7 +84,7 @@ export default function ShelfBrowser({
           </div>
         ) : books.length === 0 ? (
           <p className="text-sm text-stone-400 py-8 text-center">
-            No books in this shelf yet.
+            No books with this status yet.
           </p>
         ) : (
           <>
@@ -117,12 +114,12 @@ export default function ShelfBrowser({
                 </Link>
               ))}
             </div>
-            {activeShelf.item_count > books.length && (
+            {activeStatus.count > books.length && (
               <Link
-                href={`/${username}/shelves/${activeShelf.slug}`}
+                href={`/${username}/shelves/${activeStatus.slug}`}
                 className="block text-center text-xs text-stone-400 hover:text-stone-700 transition-colors pt-3"
               >
-                View all {activeShelf.item_count} books &rarr;
+                View all {activeStatus.count} books &rarr;
               </Link>
             )}
           </>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Nav from "@/components/nav";
 import BookList from "@/components/book-list";
-import { type Shelf } from "@/components/shelf-picker";
+import { type StatusValue } from "@/components/shelf-picker";
 import { getToken, getUser } from "@/lib/auth";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -19,14 +19,6 @@ type BookResult = {
   already_read_count: number;
 };
 
-type MyShelfBook = {
-  open_library_id: string;
-};
-
-type MyShelf = Shelf & {
-  books: MyShelfBook[];
-};
-
 type BookSearchResponse = {
   total: number;
   results: BookResult[];
@@ -36,6 +28,14 @@ type UserResult = {
   user_id: string;
   username: string;
   display_name: string | null;
+};
+
+type TagKey = {
+  id: string;
+  name: string;
+  slug: string;
+  mode: string;
+  values: StatusValue[];
 };
 
 // ── Data fetchers ─────────────────────────────────────────────────────────────
@@ -62,12 +62,21 @@ async function searchUsers(q: string): Promise<UserResult[]> {
   return res.json();
 }
 
-async function fetchMyShelves(token: string): Promise<MyShelf[]> {
-  const res = await fetch(`${process.env.API_URL}/me/shelves`, {
+async function fetchTagKeys(token: string): Promise<TagKey[]> {
+  const res = await fetch(`${process.env.API_URL}/me/tag-keys`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
   });
   if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchStatusMap(token: string): Promise<Record<string, string>> {
+  const res = await fetch(`${process.env.API_URL}/me/books/status-map`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return {};
   return res.json();
 }
 
@@ -89,24 +98,17 @@ export default async function SearchPage({
 
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [bookData, users, myShelves] = await Promise.all([
+  const [bookData, users, tagKeys, statusMap] = await Promise.all([
     activeTab === "books" ? searchBooks(q, sort) : Promise.resolve({ total: 0, results: [] }),
     activeTab === "people" ? searchUsers(q) : Promise.resolve([]),
-    currentUser && token ? fetchMyShelves(token) : Promise.resolve(null),
+    currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
+    currentUser && token ? fetchStatusMap(token) : Promise.resolve(null),
   ]);
 
-  // Build a map of open_library_id -> shelfId for quick lookup
-  const bookShelfMap: Record<string, string> | null = myShelves
-    ? Object.fromEntries(
-        myShelves.flatMap((shelf) =>
-          shelf.books.map((b) => [b.open_library_id, shelf.id])
-        )
-      )
-    : null;
-
-  const shelves: Shelf[] | null = myShelves
-    ? myShelves.map(({ id, name, slug }) => ({ id, name, slug }))
-    : null;
+  const statusKey = tagKeys?.find((k) => k.slug === "status") ?? null;
+  const statusValues: StatusValue[] | null = statusKey ? statusKey.values : null;
+  const statusKeyId: string | null = statusKey?.id ?? null;
+  const bookStatusMap: Record<string, string> | null = statusMap;
 
   const tabLink = (tab: "books" | "people") => {
     const p = new URLSearchParams({ type: tab });
@@ -203,8 +205,9 @@ export default async function SearchPage({
         {activeTab === "books" && (
           <BookList
             books={bookData.results}
-            shelves={shelves}
-            bookShelfMap={bookShelfMap}
+            statusValues={statusValues}
+            statusKeyId={statusKeyId}
+            bookStatusMap={bookStatusMap}
           />
         )}
 

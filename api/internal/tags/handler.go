@@ -79,21 +79,28 @@ type bookTagResponse struct {
 // ── Tag key management ─────────────────────────────────────────────────────────
 
 // ensureDefaultStatusLabel creates a "Status" tag key with the five standard
-// read-status values for any user who has no tag keys yet. Idempotent.
+// read-status values for any user who doesn't have one yet. Idempotent.
 func (h *Handler) ensureDefaultStatusLabel(ctx context.Context, userID string) error {
-	var count int
-	if err := h.pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM tag_keys WHERE user_id = $1`,
+	return EnsureStatusLabel(ctx, h.pool, userID)
+}
+
+// EnsureStatusLabel is the exported version so other packages (imports, userbooks)
+// can call it directly. Creates a "Status" tag key with the five standard
+// read-status values if the user doesn't have one. Idempotent.
+func EnsureStatusLabel(ctx context.Context, pool *pgxpool.Pool, userID string) error {
+	var exists bool
+	if err := pool.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM tag_keys WHERE user_id = $1 AND slug = 'status')`,
 		userID,
-	).Scan(&count); err != nil {
+	).Scan(&exists); err != nil {
 		return err
 	}
-	if count > 0 {
+	if exists {
 		return nil
 	}
 
 	var keyID string
-	if err := h.pool.QueryRow(ctx,
+	if err := pool.QueryRow(ctx,
 		`INSERT INTO tag_keys (user_id, name, slug, mode)
 		 VALUES ($1, 'Status', 'status', 'select_one')
 		 ON CONFLICT (user_id, slug) DO UPDATE SET name = tag_keys.name
@@ -111,7 +118,7 @@ func (h *Handler) ensureDefaultStatusLabel(ctx context.Context, userID string) e
 		{"DNF", "dnf"},
 	}
 	for _, v := range defaults {
-		if _, err := h.pool.Exec(ctx,
+		if _, err := pool.Exec(ctx,
 			`INSERT INTO tag_values (tag_key_id, name, slug)
 			 VALUES ($1, $2, $3)
 			 ON CONFLICT DO NOTHING`,
@@ -444,6 +451,20 @@ func (h *Handler) SetBookTag(c *gin.Context) {
 		return
 	}
 
+	// When setting the Status key, auto-create user_books row if missing.
+	var keySlug string
+	_ = h.pool.QueryRow(c.Request.Context(),
+		`SELECT slug FROM tag_keys WHERE id = $1`, keyID,
+	).Scan(&keySlug)
+	if keySlug == "status" {
+		h.pool.Exec(c.Request.Context(), //nolint:errcheck
+			`INSERT INTO user_books (user_id, book_id)
+			 VALUES ($1, $2)
+			 ON CONFLICT (user_id, book_id) DO NOTHING`,
+			userID, bookID,
+		)
+	}
+
 	// For select_one, remove any existing value for this key before inserting.
 	if mode == "select_one" {
 		if _, err := h.pool.Exec(c.Request.Context(),
@@ -599,11 +620,10 @@ func (h *Handler) GetLabelBooks(c *gin.Context) {
 		 FROM (
 		   SELECT DISTINCT ON (b.id)
 		          b.id, b.open_library_id, b.title, b.cover_url, btv.created_at AS added_at,
-		          (SELECT ci.rating
-		           FROM collection_items ci
-		           JOIN collections col ON col.id = ci.collection_id
-		           WHERE ci.book_id = b.id AND col.user_id = $1 AND ci.rating IS NOT NULL
-		           ORDER BY ci.added_at DESC LIMIT 1) AS rating
+		          (SELECT ub.rating
+		           FROM user_books ub
+		           WHERE ub.book_id = b.id AND ub.user_id = $1 AND ub.rating IS NOT NULL
+		           LIMIT 1) AS rating
 		   FROM book_tag_values btv
 		   JOIN tag_values tv ON tv.id = btv.tag_value_id
 		   JOIN books b ON b.id = btv.book_id

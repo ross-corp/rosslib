@@ -3,7 +3,6 @@ package books
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,7 +13,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 )
@@ -345,16 +343,18 @@ func (h *Handler) GetBook(c *gin.Context) {
 		detail.CoverURL = &coverURL
 	}
 
-	// Query local DB for read and want-to-read counts.
+	// Query local DB for read and want-to-read counts from user_books + status labels.
 	if h.pool != nil {
 		_ = h.pool.QueryRow(c.Request.Context(),
 			`SELECT
-			    COUNT(*) FILTER (WHERE c.slug = 'read')          AS reads_count,
-			    COUNT(*) FILTER (WHERE c.slug = 'want-to-read')  AS want_count
-			 FROM collection_items ci
-			 JOIN books b        ON b.id  = ci.book_id
-			 JOIN collections c  ON c.id  = ci.collection_id
-			 JOIN users u        ON u.id  = c.user_id
+			    COUNT(*) FILTER (WHERE tv.slug = 'finished')      AS reads_count,
+			    COUNT(*) FILTER (WHERE tv.slug = 'want-to-read')  AS want_count
+			 FROM user_books ub
+			 JOIN books b ON b.id = ub.book_id
+			 JOIN users u ON u.id = ub.user_id
+			 JOIN tag_keys tk ON tk.user_id = ub.user_id AND tk.slug = 'status'
+			 JOIN book_tag_values btv ON btv.user_id = ub.user_id AND btv.book_id = ub.book_id AND btv.tag_key_id = tk.id
+			 JOIN tag_values tv ON tv.id = btv.tag_value_id
 			 WHERE b.open_library_id = $1
 			   AND u.deleted_at IS NULL`,
 			workID,
@@ -501,27 +501,19 @@ func (h *Handler) GetBookReviews(c *gin.Context) {
 	}
 
 	rows, err := h.pool.Query(c.Request.Context(),
-		`WITH deduplicated AS (
-		    SELECT DISTINCT ON (u.id)
-		        u.id AS user_id, u.username, u.display_name, u.avatar_url,
-		        ci.rating, ci.review_text, ci.spoiler, ci.date_read, ci.date_added
-		    FROM collection_items ci
-		    JOIN books b       ON b.id  = ci.book_id
-		    JOIN collections c ON c.id  = ci.collection_id
-		    JOIN users u       ON u.id  = c.user_id
-		    WHERE b.open_library_id = $1
-		      AND u.deleted_at IS NULL
-		      AND ci.review_text IS NOT NULL
-		      AND ci.review_text != ''
-		    ORDER BY u.id, ci.date_added DESC
-		 )
-		 SELECT d.username, d.display_name, d.avatar_url,
-		        d.rating, d.review_text, d.spoiler, d.date_read, d.date_added,
+		`SELECT u.username, u.display_name, u.avatar_url,
+		        ub.rating, ub.review_text, ub.spoiler, ub.date_read, ub.date_added,
 		        (f.follower_id IS NOT NULL) AS is_followed
-		 FROM deduplicated d
-		 LEFT JOIN follows f ON f.follower_id = $2 AND f.followee_id = d.user_id
+		 FROM user_books ub
+		 JOIN books b ON b.id = ub.book_id
+		 JOIN users u ON u.id = ub.user_id
+		 LEFT JOIN follows f ON f.follower_id = $2 AND f.followee_id = u.id
 		                    AND f.status = 'active'
-		 ORDER BY is_followed DESC, d.date_added DESC`,
+		 WHERE b.open_library_id = $1
+		   AND u.deleted_at IS NULL
+		   AND ub.review_text IS NOT NULL
+		   AND ub.review_text != ''
+		 ORDER BY is_followed DESC, ub.date_added DESC`,
 		workID, followerID,
 	)
 	if err != nil {
@@ -552,56 +544,6 @@ func (h *Handler) GetBookReviews(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, reviews)
-}
-
-// GetMyBookStatus returns the current user's shelf placement and review for a book.
-//
-// GET /me/books/:olId/status  (requires auth)
-func (h *Handler) GetMyBookStatus(c *gin.Context) {
-	userID := c.GetString(middleware.UserIDKey)
-	olID := c.Param("olId")
-
-	type status struct {
-		ShelfID    string  `json:"shelf_id"`
-		ShelfName  string  `json:"shelf_name"`
-		ShelfSlug  string  `json:"shelf_slug"`
-		Rating     *int    `json:"rating"`
-		ReviewText *string `json:"review_text"`
-		Spoiler    bool    `json:"spoiler"`
-		DateRead   *string `json:"date_read"`
-	}
-
-	var s status
-	var dateRead *time.Time
-
-	err := h.pool.QueryRow(c.Request.Context(),
-		`SELECT c.id, c.name, c.slug,
-		        ci.rating, ci.review_text, ci.spoiler, ci.date_read
-		 FROM collection_items ci
-		 JOIN collections c ON c.id = ci.collection_id
-		 JOIN books b        ON b.id = ci.book_id
-		 WHERE c.user_id = $1
-		   AND b.open_library_id = $2
-		 ORDER BY (c.exclusive_group = 'read_status') DESC, ci.date_added DESC
-		 LIMIT 1`,
-		userID, olID,
-	).Scan(&s.ShelfID, &s.ShelfName, &s.ShelfSlug,
-		&s.Rating, &s.ReviewText, &s.Spoiler, &dateRead)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			c.JSON(http.StatusNotFound, nil)
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
-		return
-	}
-
-	if dateRead != nil {
-		ds := dateRead.Format(time.RFC3339)
-		s.DateRead = &ds
-	}
-
-	c.JSON(http.StatusOK, s)
 }
 
 // LookupBook handles the ISBN lookup HTTP endpoint.

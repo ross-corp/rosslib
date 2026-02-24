@@ -17,6 +17,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/storage"
 	"github.com/tristansaldanha/rosslib/api/internal/tags"
 	"github.com/tristansaldanha/rosslib/api/internal/threads"
+	"github.com/tristansaldanha/rosslib/api/internal/userbooks"
 	"github.com/tristansaldanha/rosslib/api/internal/users"
 )
 
@@ -65,6 +66,9 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http
 	r.GET("/users/:username/shelves/:slug", middleware.OptionalAuth(secret), collectionsHandler.GetShelfBySlug)
 	r.GET("/users/:username/tags/*path", middleware.OptionalAuth(secret), collectionsHandler.GetTagBooks)
 
+	userbooksHandler := userbooks.NewHandler(pool)
+	r.GET("/users/:username/books", middleware.OptionalAuth(secret), userbooksHandler.GetUserBooks)
+
 	activityHandler := activity.NewHandler(pool)
 	r.GET("/users/:username/activity", middleware.OptionalAuth(secret), activityHandler.GetUserActivity)
 
@@ -102,7 +106,11 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http
 	authed.DELETE("/me/tag-keys/:keyId", tagsHandler.DeleteTagKey)
 	authed.POST("/me/tag-keys/:keyId/values", tagsHandler.CreateTagValue)
 	authed.DELETE("/me/tag-keys/:keyId/values/:valueId", tagsHandler.DeleteTagValue)
-	authed.GET("/me/books/:olId/status", booksHandler.GetMyBookStatus)
+	authed.POST("/me/books", userbooksHandler.AddBook)
+	authed.GET("/me/books/status-map", userbooksHandler.GetStatusMap)
+	authed.GET("/me/books/:olId/status", userbooksHandler.GetMyBookStatus)
+	authed.PATCH("/me/books/:olId", userbooksHandler.UpdateBook)
+	authed.DELETE("/me/books/:olId", userbooksHandler.RemoveBook)
 	authed.GET("/me/books/:olId/tags", tagsHandler.GetBookTags)
 	authed.PUT("/me/books/:olId/tags/:keyId", tagsHandler.SetBookTag)
 	authed.DELETE("/me/books/:olId/tags/:keyId", tagsHandler.UnsetBookTag)

@@ -147,21 +147,22 @@ func (h *Handler) GetProfile(c *gin.Context) {
 		        (SELECT COUNT(*) FROM follows f1
 		           JOIN follows f2 ON f1.follower_id = f2.followee_id AND f1.followee_id = f2.follower_id
 		           WHERE f1.follower_id = u.id AND f1.status = 'active' AND f2.status = 'active') AS friends_count,
-		        (SELECT COUNT(*) FROM collection_items ci
-		           JOIN collections c ON c.id = ci.collection_id
-		           WHERE c.user_id = u.id AND c.slug = 'read') AS books_read,
-		        (SELECT COUNT(*) FROM collection_items ci
-		           JOIN collections c ON c.id = ci.collection_id
-		           WHERE c.user_id = u.id
-		             AND ci.review_text IS NOT NULL
-		             AND ci.review_text != '') AS reviews_count,
-		        (SELECT COUNT(*) FROM collection_items ci
-		           JOIN collections c ON c.id = ci.collection_id
-		           WHERE c.user_id = u.id AND c.slug = 'read'
-		             AND ci.date_read >= date_trunc('year', CURRENT_DATE)) AS books_this_year,
-		        (SELECT AVG(ci.rating)::double precision FROM collection_items ci
-		           JOIN collections c ON c.id = ci.collection_id
-		           WHERE c.user_id = u.id AND ci.rating IS NOT NULL) AS average_rating
+		        (SELECT COUNT(*) FROM book_tag_values btv
+		           JOIN tag_keys tk ON tk.id = btv.tag_key_id
+		           JOIN tag_values tv ON tv.id = btv.tag_value_id
+		           WHERE btv.user_id = u.id AND tk.slug = 'status' AND tv.slug = 'finished') AS books_read,
+		        (SELECT COUNT(*) FROM user_books ub
+		           WHERE ub.user_id = u.id
+		             AND ub.review_text IS NOT NULL
+		             AND ub.review_text != '') AS reviews_count,
+		        (SELECT COUNT(*) FROM book_tag_values btv
+		           JOIN tag_keys tk ON tk.id = btv.tag_key_id
+		           JOIN tag_values tv ON tv.id = btv.tag_value_id
+		           JOIN user_books ub ON ub.user_id = btv.user_id AND ub.book_id = btv.book_id
+		           WHERE btv.user_id = u.id AND tk.slug = 'status' AND tv.slug = 'finished'
+		             AND ub.date_read >= date_trunc('year', CURRENT_DATE)) AS books_this_year,
+		        (SELECT AVG(ub.rating)::double precision FROM user_books ub
+		           WHERE ub.user_id = u.id AND ub.rating IS NOT NULL) AS average_rating
 		 FROM users u WHERE u.username = $1 AND u.deleted_at IS NULL`,
 		username,
 	).Scan(&p.UserID, &p.Username, &p.DisplayName, &p.Bio, &p.AvatarURL, &p.IsPrivate, &p.IsGhost, &memberSince, &p.FollowersCount, &p.FollowingCount, &p.FriendsCount, &p.BooksRead, &p.ReviewsCount, &p.BooksThisYear, &p.AverageRating)
@@ -412,16 +413,15 @@ func (h *Handler) GetUserReviews(c *gin.Context) {
 	}
 
 	query := `SELECT b.id, b.open_library_id, b.title, b.cover_url, b.authors,
-		        ci.rating, ci.review_text, ci.spoiler, ci.date_read, ci.date_added
-		 FROM collection_items ci
-		 JOIN books b       ON b.id  = ci.book_id
-		 JOIN collections c ON c.id  = ci.collection_id
-		 JOIN users u       ON u.id  = c.user_id
+		        ub.rating, ub.review_text, ub.spoiler, ub.date_read, ub.date_added
+		 FROM user_books ub
+		 JOIN books b  ON b.id  = ub.book_id
+		 JOIN users u  ON u.id  = ub.user_id
 		 WHERE u.username = $1
 		   AND u.deleted_at IS NULL
-		   AND ci.review_text IS NOT NULL
-		   AND ci.review_text != ''
-		 ORDER BY ci.date_added DESC`
+		   AND ub.review_text IS NOT NULL
+		   AND ub.review_text != ''
+		 ORDER BY ub.date_added DESC`
 	args := []interface{}{username}
 
 	if limitStr := c.Query("limit"); limitStr != "" {

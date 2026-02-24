@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import StarRating from "@/components/star-rating";
-import ShelfPicker, { type Shelf } from "@/components/shelf-picker";
+import StatusPicker, { type StatusValue } from "@/components/shelf-picker";
 
 type BookResult = {
   key: string;
@@ -17,12 +17,14 @@ type BookResult = {
 
 export default function BookList({
   books,
-  shelves,
-  bookShelfMap,
+  statusValues,
+  statusKeyId,
+  bookStatusMap,
 }: {
   books: BookResult[];
-  shelves: Shelf[] | null;
-  bookShelfMap: Record<string, string> | null;
+  statusValues: StatusValue[] | null;
+  statusKeyId: string | null;
+  bookStatusMap: Record<string, string> | null;
 }) {
   if (books.length === 0) return null;
 
@@ -76,13 +78,14 @@ export default function BookList({
                 </div>
               </div>
             </Link>
-            {shelves && (
-              <ShelfPicker
+            {statusValues && statusKeyId && (
+              <StatusPicker
                 openLibraryId={workId}
                 title={book.title}
                 coverUrl={book.cover_url}
-                shelves={shelves}
-                initialShelfId={bookShelfMap?.[workId] ?? null}
+                statusValues={statusValues}
+                statusKeyId={statusKeyId}
+                currentStatusValueId={bookStatusMap?.[workId] ?? null}
               />
             )}
           </li>

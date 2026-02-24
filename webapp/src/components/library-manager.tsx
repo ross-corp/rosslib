@@ -24,10 +24,11 @@ export type ShelfSummary = {
   collection_type: string;
 };
 
-type ShelfFilter = { kind: "shelf"; id: string; name: string; slug: string };
+type StatusFilter = { kind: "status"; slug: string; name: string };
+type AllBooksFilter = { kind: "all" };
 type TagFilter = { kind: "tag"; slug: string; name: string };
 type LabelFilter = { kind: "label"; keySlug: string; keyName: string; valueSlug: string; valueName: string };
-type ActiveFilter = ShelfFilter | TagFilter | LabelFilter;
+type ActiveFilter = StatusFilter | AllBooksFilter | TagFilter | LabelFilter;
 
 type TagTreeNode = {
   collection: ShelfSummary;
@@ -108,15 +109,14 @@ export default function LibraryManager({
 }) {
   const [books, setBooks] = useState(initialBooks);
   const [filter, setFilter] = useState<ActiveFilter>({
-    kind: "shelf",
-    id: initialShelf.id,
-    name: initialShelf.name,
+    kind: "status",
     slug: initialShelf.slug,
+    name: initialShelf.name,
   });
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
-  const [showMoveMenu, setShowMoveMenu] = useState(false);
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showRateMenu, setShowRateMenu] = useState(false);
   const [showLabelsMenu, setShowLabelsMenu] = useState(false);
   const [showTagsMenu, setShowTagsMenu] = useState(false);
@@ -124,24 +124,48 @@ export default function LibraryManager({
 
   // ── Navigation ───────────────────────────────────────────────────────────────
 
+  // Extract status key from tagKeys
+  const statusKey = tagKeys.find((k) => k.slug === "status") ?? null;
+  const statusValues = statusKey?.values ?? [];
+  const statusKeyId = statusKey?.id ?? null;
+  const nonStatusTagKeys = tagKeys.filter((k) => k.slug !== "status");
+
   function closeMenus() {
-    setShowMoveMenu(false);
+    setShowStatusMenu(false);
     setShowRateMenu(false);
     setShowLabelsMenu(false);
     setShowTagsMenu(false);
   }
 
-  async function navigateToShelf(shelf: ShelfSummary) {
-    if (filter.kind === "shelf" && filter.id === shelf.id) return;
+  async function navigateToStatus(slug: string, name: string) {
+    if (filter.kind === "status" && filter.slug === slug) return;
     setLoading(true);
     setSelectedIds(new Set());
     closeMenus();
-    const res = await fetch(`/api/users/${username}/shelves/${shelf.slug}`);
+    const res = await fetch(`/api/users/${username}/books?status=${slug}`);
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
       setBooks(data.books ?? []);
-      setFilter({ kind: "shelf", id: shelf.id, name: shelf.name, slug: shelf.slug });
+      setFilter({ kind: "status", slug, name });
+    }
+  }
+
+  async function navigateToAllBooks() {
+    if (filter.kind === "all") return;
+    setLoading(true);
+    setSelectedIds(new Set());
+    closeMenus();
+    const res = await fetch(`/api/users/${username}/books`);
+    setLoading(false);
+    if (res.ok) {
+      const data = await res.json();
+      // Flatten all statuses into a single book list
+      const allBooks: Book[] = (data.statuses ?? []).flatMap(
+        (s: { books: Book[] }) => s.books ?? []
+      );
+      setBooks(allBooks);
+      setFilter({ kind: "all" });
     }
   }
 
@@ -187,13 +211,11 @@ export default function LibraryManager({
   // ── Bulk actions ─────────────────────────────────────────────────────────────
 
   async function massRemove() {
-    if (filter.kind !== "shelf") return;
-    const shelfId = filter.id;
     setBulkWorking(true);
     const targets = books.filter((b) => selectedIds.has(b.book_id));
     await Promise.all(
       targets.map((b) =>
-        fetch(`/api/shelves/${shelfId}/books/${b.open_library_id}`, {
+        fetch(`/api/me/books/${b.open_library_id}`, {
           method: "DELETE",
         })
       )
@@ -203,42 +225,35 @@ export default function LibraryManager({
     setBulkWorking(false);
   }
 
-  async function massMoveToShelf(target: ShelfSummary) {
-    if (filter.kind !== "shelf") return;
+  async function massChangeStatus(value: { id: string; name: string; slug: string }) {
+    if (!statusKeyId) return;
     setBulkWorking(true);
-    setShowMoveMenu(false);
+    setShowStatusMenu(false);
     const targets = books.filter((b) => selectedIds.has(b.book_id));
     await Promise.all(
       targets.map((b) =>
-        fetch(`/api/shelves/${target.id}/books`, {
-          method: "POST",
+        fetch(`/api/me/books/${b.open_library_id}/tags/${statusKeyId}`, {
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            open_library_id: b.open_library_id,
-            title: b.title,
-            cover_url: b.cover_url,
-          }),
+          body: JSON.stringify({ value_id: value.id }),
         })
       )
     );
-    const res = await fetch(`/api/users/${username}/shelves/${filter.slug}`);
-    if (res.ok) {
-      const data = await res.json();
-      setBooks(data.books ?? []);
+    // If viewing a specific status, remove moved books from view
+    if (filter.kind === "status" && filter.slug !== value.slug) {
+      setBooks((prev) => prev.filter((b) => !selectedIds.has(b.book_id)));
     }
     setSelectedIds(new Set());
     setBulkWorking(false);
   }
 
   async function massRate(rating: number) {
-    if (filter.kind !== "shelf") return;
-    const shelfId = filter.id;
     setBulkWorking(true);
     setShowRateMenu(false);
     const targets = books.filter((b) => selectedIds.has(b.book_id));
     await Promise.all(
       targets.map((b) =>
-        fetch(`/api/shelves/${shelfId}/books/${b.open_library_id}`, {
+        fetch(`/api/me/books/${b.open_library_id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ rating }),
@@ -306,11 +321,9 @@ export default function LibraryManager({
     const updated = localShelves.filter((s) => s.id !== shelf.id);
     setLocalShelves(updated);
     const isViewingDeleted =
-      (filter.kind === "shelf" && filter.id === shelf.id) ||
-      (filter.kind === "tag" && filter.slug === shelf.slug);
+      filter.kind === "tag" && filter.slug === shelf.slug;
     if (isViewingDeleted) {
-      const fallback = updated.find((s) => s.exclusive_group === "read_status");
-      if (fallback) navigateToShelf(fallback);
+      navigateToAllBooks();
     }
   }
 
@@ -331,25 +344,14 @@ export default function LibraryManager({
   // ── Derived ───────────────────────────────────────────────────────────────────
 
   const selectedCount = selectedIds.size;
-  const isShelfView = filter.kind === "shelf";
 
-  const defaultShelves = localShelves.filter(
-    (s) => s.exclusive_group === "read_status"
-  );
-  const customShelves = localShelves.filter(
-    (s) =>
-      s.exclusive_group !== "read_status" && s.collection_type === "shelf"
-  );
   const tagCollections = localShelves.filter((s) => s.collection_type === "tag");
   const tagTree = buildTagTree(tagCollections);
 
-  const moveTargets = isShelfView
-    ? localShelves.filter(
-        (s) =>
-          s.collection_type !== "tag" &&
-          !(filter.kind === "shelf" && s.id === filter.id)
-      )
-    : [];
+  // Status values to show in "Change status" menu (exclude current if viewing a status)
+  const changeStatusTargets = statusValues.filter(
+    (v) => !(filter.kind === "status" && filter.slug === v.slug)
+  );
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -357,36 +359,29 @@ export default function LibraryManager({
     <div className="flex flex-1 min-h-0 overflow-hidden max-w-7xl mx-auto w-full">
       {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
       <aside className="w-48 shrink-0 border-r border-stone-200 overflow-y-auto py-3 flex flex-col gap-5">
-        {/* Default shelves */}
+        {/* All Books */}
         <div>
-          <p className="px-4 mb-1 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
-            Shelves
-          </p>
-          {defaultShelves.map((s) => (
-            <SidebarItem
-              key={s.id}
-              label={s.name}
-              count={s.item_count}
-              active={filter.kind === "shelf" && filter.id === s.id}
-              onClick={() => navigateToShelf(s)}
-            />
-          ))}
+          <SidebarItem
+            label="All Books"
+            count={0}
+            active={filter.kind === "all"}
+            onClick={() => navigateToAllBooks()}
+          />
         </div>
 
-        {/* Custom shelves */}
-        {customShelves.length > 0 && (
+        {/* Status values */}
+        {statusValues.length > 0 && (
           <div>
             <p className="px-4 mb-1 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
-              Custom
+              Status
             </p>
-            {customShelves.map((s) => (
+            {statusValues.map((v) => (
               <SidebarItem
-                key={s.id}
-                label={s.name}
-                count={s.item_count}
-                active={filter.kind === "shelf" && filter.id === s.id}
-                onClick={() => navigateToShelf(s)}
-                onDelete={() => deleteShelf(s)}
+                key={v.id}
+                label={v.name}
+                count={0}
+                active={filter.kind === "status" && filter.slug === v.slug}
+                onClick={() => navigateToStatus(v.slug, v.name)}
               />
             ))}
           </div>
@@ -408,10 +403,10 @@ export default function LibraryManager({
           </SidebarSection>
         )}
 
-        {/* Key-value labels */}
-        {tagKeys.length > 0 && (
-          <SidebarSection label="Labels" count={tagKeys.length}>
-            {tagKeys.map((key) => (
+        {/* Key-value labels (excluding Status, which is shown above) */}
+        {nonStatusTagKeys.length > 0 && (
+          <SidebarSection label="Labels" count={nonStatusTagKeys.length}>
+            {nonStatusTagKeys.map((key) => (
               <LabelKeyItem
                 key={key.id}
                 tagKey={key}
@@ -432,78 +427,74 @@ export default function LibraryManager({
               {selectedCount} {selectedCount === 1 ? "book" : "books"} selected
             </span>
 
-            {isShelfView && (
-              <>
-                {/* Rate dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => {
-                      setShowRateMenu((v) => !v);
-                      setShowMoveMenu(false);
-                      setShowLabelsMenu(false);
-                      setShowTagsMenu(false);
-                    }}
-                    disabled={bulkWorking}
-                    className="text-xs px-3 py-1.5 rounded border border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-800 disabled:opacity-50 transition-colors"
-                  >
-                    Rate
-                  </button>
-                  {showRateMenu && (
-                    <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-stone-200 rounded shadow-md flex gap-0.5 p-1.5">
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <button
-                          key={n}
-                          onClick={() => massRate(n)}
-                          className="text-xl text-stone-300 hover:text-amber-500 transition-colors px-1"
-                        >
-                          ★
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Move to shelf dropdown */}
-                {moveTargets.length > 0 && (
-                  <div className="relative">
+            {/* Rate dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowRateMenu((v) => !v);
+                  setShowStatusMenu(false);
+                  setShowLabelsMenu(false);
+                  setShowTagsMenu(false);
+                }}
+                disabled={bulkWorking}
+                className="text-xs px-3 py-1.5 rounded border border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-800 disabled:opacity-50 transition-colors"
+              >
+                Rate
+              </button>
+              {showRateMenu && (
+                <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-stone-200 rounded shadow-md flex gap-0.5 p-1.5">
+                  {[1, 2, 3, 4, 5].map((n) => (
                     <button
-                      onClick={() => {
-                        setShowMoveMenu((v) => !v);
-                        setShowRateMenu(false);
-                        setShowLabelsMenu(false);
-                        setShowTagsMenu(false);
-                      }}
-                      disabled={bulkWorking}
-                      className="text-xs px-3 py-1.5 rounded border border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-800 disabled:opacity-50 transition-colors"
+                      key={n}
+                      onClick={() => massRate(n)}
+                      className="text-xl text-stone-300 hover:text-amber-500 transition-colors px-1"
                     >
-                      Move to shelf
+                      ★
                     </button>
-                    {showMoveMenu && (
-                      <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-stone-200 rounded shadow-md min-w-[160px]">
-                        {moveTargets.map((s) => (
-                          <button
-                            key={s.id}
-                            onClick={() => massMoveToShelf(s)}
-                            className="w-full text-left px-3 py-2 text-xs text-stone-700 hover:bg-stone-50 transition-colors"
-                          >
-                            {s.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Change status dropdown */}
+            {changeStatusTargets.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowStatusMenu((v) => !v);
+                    setShowRateMenu(false);
+                    setShowLabelsMenu(false);
+                    setShowTagsMenu(false);
+                  }}
+                  disabled={bulkWorking}
+                  className="text-xs px-3 py-1.5 rounded border border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-800 disabled:opacity-50 transition-colors"
+                >
+                  Change status
+                </button>
+                {showStatusMenu && (
+                  <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-stone-200 rounded shadow-md min-w-[160px]">
+                    {changeStatusTargets.map((v) => (
+                      <button
+                        key={v.id}
+                        onClick={() => massChangeStatus(v)}
+                        className="w-full text-left px-3 py-2 text-xs text-stone-700 hover:bg-stone-50 transition-colors"
+                      >
+                        {v.name}
+                      </button>
+                    ))}
                   </div>
                 )}
-
-                {/* Remove */}
-                <button
-                  onClick={massRemove}
-                  disabled={bulkWorking}
-                  className="text-xs px-3 py-1.5 rounded border border-red-200 text-red-500 hover:border-red-400 hover:text-red-700 disabled:opacity-50 transition-colors"
-                >
-                  {bulkWorking ? "Working..." : "Remove"}
-                </button>
-              </>
+              </div>
             )}
+
+            {/* Remove */}
+            <button
+              onClick={massRemove}
+              disabled={bulkWorking}
+              className="text-xs px-3 py-1.5 rounded border border-red-200 text-red-500 hover:border-red-400 hover:text-red-700 disabled:opacity-50 transition-colors"
+            >
+              {bulkWorking ? "Working..." : "Remove"}
+            </button>
 
             {/* Tags — available in all views */}
             {tagCollections.length > 0 && (
@@ -512,7 +503,7 @@ export default function LibraryManager({
                   onClick={() => {
                     setShowTagsMenu((v) => !v);
                     setShowRateMenu(false);
-                    setShowMoveMenu(false);
+                    setShowStatusMenu(false);
                     setShowLabelsMenu(false);
                   }}
                   disabled={bulkWorking}
@@ -548,13 +539,13 @@ export default function LibraryManager({
             )}
 
             {/* Labels — available in all views */}
-            {tagKeys.length > 0 && (
+            {nonStatusTagKeys.length > 0 && (
               <div className="relative">
                 <button
                   onClick={() => {
                     setShowLabelsMenu((v) => !v);
                     setShowRateMenu(false);
-                    setShowMoveMenu(false);
+                    setShowStatusMenu(false);
                     setShowTagsMenu(false);
                   }}
                   disabled={bulkWorking}
@@ -620,7 +611,9 @@ export default function LibraryManager({
             <span className="text-sm font-semibold text-stone-800">
               {filter.kind === "label"
                 ? `${filter.keyName}: ${filter.valueName}`
-                : filter.name}
+                : filter.kind === "all"
+                  ? "All Books"
+                  : filter.name}
             </span>
             <span className="text-xs text-stone-400">
               {books.length} {books.length === 1 ? "book" : "books"}

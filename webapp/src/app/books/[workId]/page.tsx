@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/nav";
 import StarRating from "@/components/star-rating";
-import ShelfPicker, { type Shelf } from "@/components/shelf-picker";
+import StatusPicker, { type StatusValue } from "@/components/shelf-picker";
 import BookReviewEditor from "@/components/book-review-editor";
 import ThreadList from "@/components/thread-list";
 import { getUser, getToken } from "@/lib/auth";
@@ -34,9 +34,9 @@ type BookReview = {
 };
 
 type MyBookStatus = {
-  shelf_id: string;
-  shelf_name: string;
-  shelf_slug: string;
+  status_value_id: string | null;
+  status_name: string | null;
+  status_slug: string | null;
   rating: number | null;
   review_text: string | null;
   spoiler: boolean;
@@ -57,9 +57,12 @@ type BookThread = {
   comment_count: number;
 };
 
-type MyShelf = Shelf & {
-  exclusive_group: string;
-  collection_type: string;
+type TagKey = {
+  id: string;
+  name: string;
+  slug: string;
+  mode: string;
+  values: StatusValue[];
 };
 
 // ── Data fetchers ───────────────────────────────────────────────────────────────
@@ -93,8 +96,8 @@ async function fetchThreads(workId: string): Promise<BookThread[]> {
   return res.json();
 }
 
-async function fetchMyShelves(token: string): Promise<MyShelf[]> {
-  const res = await fetch(`${process.env.API_URL}/me/shelves`, {
+async function fetchTagKeys(token: string): Promise<TagKey[]> {
+  const res = await fetch(`${process.env.API_URL}/me/tag-keys`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
   });
@@ -118,7 +121,7 @@ async function fetchMyBookStatus(
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function renderStars(rating: number): string {
-  return Array.from({ length: 5 }, (_, i) => (i < rating ? "★" : "☆")).join(
+  return Array.from({ length: 5 }, (_, i) => (i < rating ? "\u2605" : "\u2606")).join(
     ""
   );
 }
@@ -141,11 +144,11 @@ export default async function BookPage({
   const { workId } = await params;
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [book, reviews, threads, myShelves, myStatus] = await Promise.all([
+  const [book, reviews, threads, tagKeys, myStatus] = await Promise.all([
     fetchBook(workId),
     fetchBookReviews(workId, token ?? undefined),
     fetchThreads(workId),
-    currentUser && token ? fetchMyShelves(token) : Promise.resolve(null),
+    currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
     currentUser && token
       ? fetchMyBookStatus(token, workId)
       : Promise.resolve(null),
@@ -153,9 +156,10 @@ export default async function BookPage({
 
   if (!book) notFound();
 
-  const shelves: Shelf[] | null = myShelves
-    ? myShelves.map(({ id, name, slug }) => ({ id, name, slug }))
-    : null;
+  // Extract the Status key and its values for the StatusPicker
+  const statusKey = tagKeys?.find((k) => k.slug === "status") ?? null;
+  const statusValues: StatusValue[] = statusKey?.values ?? [];
+  const statusKeyId = statusKey?.id ?? null;
 
   return (
     <div className="min-h-screen">
@@ -211,15 +215,16 @@ export default async function BookPage({
               </div>
             )}
 
-            {/* Shelf picker */}
-            {shelves && (
+            {/* Status picker */}
+            {statusValues.length > 0 && statusKeyId && (
               <div className="mb-4">
-                <ShelfPicker
+                <StatusPicker
                   openLibraryId={workId}
                   title={book.title}
                   coverUrl={book.cover_url}
-                  shelves={shelves}
-                  initialShelfId={myStatus?.shelf_id ?? null}
+                  statusValues={statusValues}
+                  statusKeyId={statusKeyId}
+                  currentStatusValueId={myStatus?.status_value_id ?? null}
                 />
               </div>
             )}
@@ -239,7 +244,6 @@ export default async function BookPage({
               Your review
             </h2>
             <BookReviewEditor
-              shelfId={myStatus.shelf_id}
               openLibraryId={workId}
               initialRating={myStatus.rating}
               initialReviewText={myStatus.review_text}

@@ -2,26 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export type Shelf = {
+export type StatusValue = {
   id: string;
   name: string;
   slug: string;
 };
 
-export default function ShelfPicker({
+export default function StatusPicker({
   openLibraryId,
   title,
   coverUrl,
-  shelves,
-  initialShelfId,
+  statusValues,
+  statusKeyId,
+  currentStatusValueId,
 }: {
   openLibraryId: string;
   title: string;
   coverUrl: string | null;
-  shelves: Shelf[];
-  initialShelfId: string | null;
+  statusValues: StatusValue[];
+  statusKeyId: string;
+  currentStatusValueId: string | null;
 }) {
-  const [currentShelfId, setCurrentShelfId] = useState(initialShelfId);
+  const [activeValueId, setActiveValueId] = useState(currentStatusValueId);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -37,39 +39,50 @@ export default function ShelfPicker({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  const currentShelf = shelves.find((s) => s.id === currentShelfId) ?? null;
+  const currentValue = statusValues.find((v) => v.id === activeValueId) ?? null;
 
-  async function selectShelf(shelf: Shelf) {
+  async function selectStatus(value: StatusValue) {
     setOpen(false);
-    if (shelf.id === currentShelfId) return;
+    if (value.id === activeValueId) return;
     setLoading(true);
 
-    const res = await fetch(`/api/shelves/${shelf.id}/books`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        open_library_id: openLibraryId,
-        title,
-        cover_url: coverUrl,
-      }),
+    if (!activeValueId) {
+      // Book not in library yet — add it with status
+      const res = await fetch("/api/me/books", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          open_library_id: openLibraryId,
+          title,
+          cover_url: coverUrl,
+          status_value_id: value.id,
+        }),
+      });
+      setLoading(false);
+      if (res.ok) setActiveValueId(value.id);
+    } else {
+      // Change status via tag endpoint
+      const res = await fetch(`/api/me/books/${openLibraryId}/tags/${statusKeyId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value_id: value.id }),
+      });
+      setLoading(false);
+      if (res.ok) setActiveValueId(value.id);
+    }
+  }
+
+  async function removeFromLibrary() {
+    if (!activeValueId) return;
+    setOpen(false);
+    setLoading(true);
+
+    const res = await fetch(`/api/me/books/${openLibraryId}`, {
+      method: "DELETE",
     });
 
     setLoading(false);
-    if (res.ok) setCurrentShelfId(shelf.id);
-  }
-
-  async function removeFromShelf() {
-    if (!currentShelfId) return;
-    setOpen(false);
-    setLoading(true);
-
-    const res = await fetch(
-      `/api/shelves/${currentShelfId}/books/${openLibraryId}`,
-      { method: "DELETE" }
-    );
-
-    setLoading(false);
-    if (res.ok) setCurrentShelfId(null);
+    if (res.ok) setActiveValueId(null);
   }
 
   return (
@@ -78,35 +91,35 @@ export default function ShelfPicker({
         onClick={() => setOpen(!open)}
         disabled={loading}
         className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 whitespace-nowrap ${
-          currentShelf
+          currentValue
             ? "border-stone-900 bg-stone-900 text-white hover:bg-stone-700"
             : "border-stone-300 text-stone-500 hover:border-stone-500 hover:text-stone-700"
         }`}
       >
-        {loading ? "..." : currentShelf ? currentShelf.name : "Add to shelf"}
+        {loading ? "..." : currentValue ? currentValue.name : "Add to library"}
       </button>
 
       {open && (
         <div className="absolute right-0 top-full mt-1 z-10 bg-white border border-stone-200 rounded shadow-sm min-w-[160px]">
-          {shelves.map((shelf) => (
+          {statusValues.map((value) => (
             <button
-              key={shelf.id}
-              onClick={() => selectShelf(shelf)}
+              key={value.id}
+              onClick={() => selectStatus(value)}
               className={`w-full text-left px-3 py-2 text-xs transition-colors hover:bg-stone-50 ${
-                shelf.id === currentShelfId
+                value.id === activeValueId
                   ? "text-stone-900 font-medium"
                   : "text-stone-600"
               }`}
             >
-              {shelf.id === currentShelfId ? "✓ " : ""}
-              {shelf.name}
+              {value.id === activeValueId ? "\u2713 " : ""}
+              {value.name}
             </button>
           ))}
-          {currentShelfId && (
+          {activeValueId && (
             <>
               <div className="border-t border-stone-100 mx-2" />
               <button
-                onClick={removeFromShelf}
+                onClick={removeFromLibrary}
                 className="w-full text-left px-3 py-2 text-xs text-stone-400 hover:text-stone-600 hover:bg-stone-50 transition-colors"
               >
                 Remove
