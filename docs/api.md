@@ -391,6 +391,19 @@ Returns 404 if the key doesn't exist for this user, or if no values (exact or ne
 
 ---
 
+## Export
+
+### `GET /me/export/csv`  *(auth required)*
+
+Exports the authenticated user's library as a CSV download. Returns `Content-Type: text/csv` with a `Content-Disposition: attachment` header.
+
+**Query parameters:**
+- `shelf` *(optional)* — collection ID to export a single shelf. Omit to export all shelves.
+
+**CSV columns:** Title, Author, ISBN13, Collection, Rating, Review, Date Added, Date Read.
+
+---
+
 ## Import
 
 ### `POST /me/import/goodreads/preview`  *(auth required)*

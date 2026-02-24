@@ -72,6 +72,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http
 	authed.POST("/me/import/goodreads/preview", importsHandler.Preview)
 	authed.POST("/me/import/goodreads/commit", importsHandler.Commit)
 
+	authed.GET("/me/export/csv", collectionsHandler.ExportCSV)
 	authed.GET("/me/shelves", collectionsHandler.GetMyShelves)
 	authed.POST("/me/shelves", collectionsHandler.CreateShelf)
 	authed.PATCH("/me/shelves/:id", collectionsHandler.UpdateShelf)

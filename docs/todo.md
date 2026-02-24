@@ -155,10 +155,11 @@ Once we're further along we'll move to GH projects. this is fine for now
     - [x] "Import N books" confirm button calls commit endpoint.
     - [x] Shows import summary (imported/failed counts, expandable error list) on completion.
     - [x] Unmatched books saved to `localStorage` (`rosslib:import:unmatched`) after commit; shown as a persistent "Not found" panel on the idle screen with per-book search links and dismiss controls.
-- [ ]  CSV Export
-  - [ ] Export any collection (or all collections) to CSV.
-  - [ ] Columns: title, author, ISBN, date added, rating, review, collection name.
-  - [ ] Generated server-side and made available via a pre-signed S3 URL.
+- [x]  CSV Export
+  - [x] Export any collection (or all collections) to CSV.
+  - [x] Columns: title, author, ISBN13, date added, date read, rating, review, collection name.
+  - [x] `GET /me/export/csv` — streams CSV with optional `?shelf=<id>` filter. Served as direct download (Content-Disposition attachment).
+  - [x] Export UI at `/settings/export` — shelf selector dropdown and download button.
 - [ ] kindle integration
 
 ## Feed

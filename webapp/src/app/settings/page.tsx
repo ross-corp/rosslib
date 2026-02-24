@@ -51,6 +51,12 @@ export default async function SettingsPage() {
             >
               Import from Goodreads
             </Link>
+            <Link
+              href="/settings/export"
+              className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
+            >
+              Export to CSV
+            </Link>
           </div>
         </div>
 

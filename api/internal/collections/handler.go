@@ -2,6 +2,7 @@ package collections
 
 import (
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -825,4 +826,93 @@ func (h *Handler) UpdateBookInShelf(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// ── Export ─────────────────────────────────────────────────────────────────────
+
+// ExportCSV - GET /me/export/csv (authed)
+// Exports the user's library as a CSV file. Optionally filter to a single shelf
+// with ?shelf=<id>. Columns: Title, Author, ISBN13, Collection, Rating,
+// Review, Date Added, Date Read.
+func (h *Handler) ExportCSV(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	shelfFilter := c.Query("shelf")
+
+	query := `SELECT c.name, b.title, b.authors, b.isbn13,
+	                  ci.rating, ci.review_text, ci.date_added, ci.date_read
+	           FROM collection_items ci
+	           JOIN books b ON b.id = ci.book_id
+	           JOIN collections c ON c.id = ci.collection_id
+	           WHERE c.user_id = $1`
+	args := []interface{}{userID}
+
+	if shelfFilter != "" {
+		query += ` AND c.id = $2`
+		args = append(args, shelfFilter)
+	}
+	query += ` ORDER BY c.name, ci.added_at DESC`
+
+	rows, err := h.pool.Query(c.Request.Context(), query, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", `attachment; filename="rosslib-export.csv"`)
+
+	w := csv.NewWriter(c.Writer)
+	w.Write([]string{"Title", "Author", "ISBN13", "Collection", "Rating", "Review", "Date Added", "Date Read"})
+
+	for rows.Next() {
+		var (
+			collName   string
+			title      string
+			authors    *string
+			isbn13     *string
+			rating     *int
+			reviewText *string
+			dateAdded  *time.Time
+			dateRead   *time.Time
+		)
+		if err := rows.Scan(&collName, &title, &authors, &isbn13, &rating, &reviewText, &dateAdded, &dateRead); err != nil {
+			break
+		}
+
+		record := []string{
+			title,
+			derefStr(authors),
+			derefStr(isbn13),
+			collName,
+			formatRating(rating),
+			derefStr(reviewText),
+			formatDate(dateAdded),
+			formatDate(dateRead),
+		}
+		w.Write(record)
+	}
+
+	w.Flush()
+}
+
+func derefStr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+func formatRating(r *int) string {
+	if r == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d", *r)
+}
+
+func formatDate(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.Format("2006-01-02")
 }
