@@ -8,15 +8,18 @@ export default function SettingsForm({
   initialDisplayName,
   initialBio,
   initialAvatarUrl,
+  initialIsPrivate,
 }: {
   username: string;
   initialDisplayName: string;
   initialBio: string;
   initialAvatarUrl: string | null;
+  initialIsPrivate: boolean;
 }) {
   const router = useRouter();
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [bio, setBio] = useState(initialBio);
+  const [isPrivate, setIsPrivate] = useState(initialIsPrivate);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -66,7 +69,7 @@ export default function SettingsForm({
     const res = await fetch("/api/users/me", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ display_name: displayName, bio }),
+      body: JSON.stringify({ display_name: displayName, bio, is_private: isPrivate }),
     });
 
     setLoading(false);
@@ -172,6 +175,23 @@ export default function SettingsForm({
             rows={3}
             className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm resize-none"
           />
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isPrivate}
+              onChange={(e) => setIsPrivate(e.target.checked)}
+              className="rounded border-stone-300 text-stone-900 focus:ring-stone-900"
+            />
+            <span className="text-sm text-stone-700">
+              Private account
+            </span>
+          </label>
+          <p className="text-xs text-stone-400 mt-1 ml-6">
+            Only approved followers can see your books and activity
+          </p>
         </div>
 
         <div className="flex items-center gap-3 pt-1">

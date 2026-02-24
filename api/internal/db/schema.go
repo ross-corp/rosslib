@@ -116,6 +116,8 @@ ALTER TABLE collections ADD COLUMN IF NOT EXISTS collection_type VARCHAR(20) NOT
 
 ALTER TABLE tag_keys ADD COLUMN IF NOT EXISTS mode VARCHAR(20) NOT NULL DEFAULT 'select_one';
 
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_ghost BOOLEAN NOT NULL DEFAULT false;
+
 -- Widen tag_values.slug to support nested paths like "history/engineering".
 ALTER TABLE tag_values ALTER COLUMN slug TYPE VARCHAR(255);
 

@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/nav";
+import { getUser } from "@/lib/auth";
 
 const features = [
   {
@@ -19,7 +21,9 @@ const features = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const user = await getUser();
+  if (user) redirect("/feed");
   return (
     <div className="min-h-screen">
       <Nav />

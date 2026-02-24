@@ -1,0 +1,56 @@
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import Nav from "@/components/nav";
+import GhostControls from "./ghost-controls";
+import { getUser, getToken } from "@/lib/auth";
+
+type GhostStatus = {
+  username: string;
+  display_name: string;
+  user_id: string;
+  books_read: number;
+  currently_reading: number;
+  want_to_read: number;
+  following_count: number;
+  followers_count: number;
+};
+
+async function fetchGhostStatus(token: string): Promise<GhostStatus[]> {
+  const res = await fetch(`${process.env.API_URL}/admin/ghosts/status`, {
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export default async function GhostActivityPage() {
+  const user = await getUser();
+  if (!user) redirect("/login");
+
+  const token = await getToken();
+  const ghosts = await fetchGhostStatus(token!);
+
+  return (
+    <div className="min-h-screen">
+      <Nav />
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+        <div className="mb-8 flex items-center gap-2 text-sm text-stone-400">
+          <Link href={`/${user.username}`} className="hover:text-stone-700 transition-colors">
+            {user.username}
+          </Link>
+          <span>/</span>
+          <Link href="/settings" className="hover:text-stone-700 transition-colors">
+            Settings
+          </Link>
+          <span>/</span>
+          <span className="text-stone-600">Ghost activity</span>
+        </div>
+
+        <h1 className="text-2xl font-bold text-stone-900 mb-8">Ghost activity</h1>
+
+        <GhostControls initialGhosts={ghosts} />
+      </main>
+    </div>
+  );
+}

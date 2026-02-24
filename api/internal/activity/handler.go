@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/privacy"
 )
 
 type Handler struct {
@@ -189,6 +190,14 @@ func (h *Handler) GetFeed(c *gin.Context) {
 
 func (h *Handler) GetUserActivity(c *gin.Context) {
 	username := c.Param("username")
+	currentUserID := c.GetString(middleware.UserIDKey)
+
+	_, _, canView := privacy.CanViewProfile(c.Request.Context(), h.pool, username, currentUserID)
+	if !canView {
+		c.JSON(http.StatusOK, feedResponse{Activities: []activityItem{}})
+		return
+	}
+
 	cursor := c.Query("cursor")
 	limit := 30
 	if l := c.Query("limit"); l != "" {

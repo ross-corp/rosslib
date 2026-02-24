@@ -11,6 +11,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/auth"
 	"github.com/tristansaldanha/rosslib/api/internal/books"
 	"github.com/tristansaldanha/rosslib/api/internal/collections"
+	"github.com/tristansaldanha/rosslib/api/internal/ghosts"
 	"github.com/tristansaldanha/rosslib/api/internal/imports"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 	"github.com/tristansaldanha/rosslib/api/internal/storage"
@@ -57,15 +58,15 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http
 	usersHandler := users.NewHandler(pool, store)
 	r.GET("/users", usersHandler.SearchUsers)
 	r.GET("/users/:username", middleware.OptionalAuth(secret), usersHandler.GetProfile)
-	r.GET("/users/:username/reviews", usersHandler.GetUserReviews)
+	r.GET("/users/:username/reviews", middleware.OptionalAuth(secret), usersHandler.GetUserReviews)
 
 	collectionsHandler := collections.NewHandler(pool)
-	r.GET("/users/:username/shelves", collectionsHandler.GetUserShelves)
-	r.GET("/users/:username/shelves/:slug", collectionsHandler.GetShelfBySlug)
-	r.GET("/users/:username/tags/*path", collectionsHandler.GetTagBooks)
+	r.GET("/users/:username/shelves", middleware.OptionalAuth(secret), collectionsHandler.GetUserShelves)
+	r.GET("/users/:username/shelves/:slug", middleware.OptionalAuth(secret), collectionsHandler.GetShelfBySlug)
+	r.GET("/users/:username/tags/*path", middleware.OptionalAuth(secret), collectionsHandler.GetTagBooks)
 
 	activityHandler := activity.NewHandler(pool)
-	r.GET("/users/:username/activity", activityHandler.GetUserActivity)
+	r.GET("/users/:username/activity", middleware.OptionalAuth(secret), activityHandler.GetUserActivity)
 
 	threadsHandler := threads.NewHandler(pool)
 	r.GET("/books/:workId/threads", threadsHandler.ListThreads)
@@ -78,6 +79,9 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http
 	authed.POST("/me/avatar", usersHandler.UploadAvatar)
 	authed.POST("/users/:username/follow", usersHandler.Follow)
 	authed.DELETE("/users/:username/follow", usersHandler.Unfollow)
+	authed.GET("/me/follow-requests", usersHandler.GetFollowRequests)
+	authed.POST("/me/follow-requests/:userId/accept", usersHandler.AcceptFollowRequest)
+	authed.DELETE("/me/follow-requests/:userId/reject", usersHandler.RejectFollowRequest)
 	importsHandler := imports.NewHandler(pool)
 	authed.POST("/me/import/goodreads/preview", importsHandler.Preview)
 	authed.POST("/me/import/goodreads/commit", importsHandler.Commit)
@@ -92,7 +96,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http
 	authed.DELETE("/shelves/:shelfId/books/:olId", collectionsHandler.RemoveBookFromShelf)
 
 	tagsHandler := tags.NewHandler(pool)
-	r.GET("/users/:username/labels/:keySlug/*valuePath", tagsHandler.GetLabelBooks)
+	r.GET("/users/:username/labels/:keySlug/*valuePath", middleware.OptionalAuth(secret), tagsHandler.GetLabelBooks)
 	authed.GET("/me/tag-keys", tagsHandler.ListTagKeys)
 	authed.POST("/me/tag-keys", tagsHandler.CreateTagKey)
 	authed.DELETE("/me/tag-keys/:keyId", tagsHandler.DeleteTagKey)
@@ -108,6 +112,11 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http
 	authed.DELETE("/threads/:threadId", threadsHandler.DeleteThread)
 	authed.POST("/threads/:threadId/comments", threadsHandler.CreateComment)
 	authed.DELETE("/threads/:threadId/comments/:commentId", threadsHandler.DeleteComment)
+
+	ghostsHandler := ghosts.NewHandler(pool)
+	authed.POST("/admin/ghosts/seed", ghostsHandler.Seed)
+	authed.POST("/admin/ghosts/simulate", ghostsHandler.Simulate)
+	authed.GET("/admin/ghosts/status", ghostsHandler.Status)
 
 	return r
 }

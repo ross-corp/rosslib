@@ -53,7 +53,7 @@ services:
     build:
       context: ./api
     ports:
-      - "8080:8080"
+      - "8100:8080"
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-rosslib}:${POSTGRES_PASSWORD:-rosslib}@postgres:5432/${POSTGRES_DB:-rosslib}?sslmode=disable
       REDIS_URL: redis://redis:6379
@@ -79,7 +79,7 @@ services:
     build:
       context: ./webapp
     ports:
-      - "3000:3000"
+      - "3100:3000"
     environment:
       API_URL: http://api:8080
       NEXT_PUBLIC_API_URL: http://localhost:8080

@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/privacy"
 )
 
 var multiDash = regexp.MustCompile(`-{2,}`)
@@ -536,11 +537,18 @@ type labelBooksResponse struct {
 	Books     []labelBook `json:"books"`
 }
 
-// GetLabelBooks - GET /users/:username/labels/:keySlug/*valuePath (public)
-// Returns all books for a user that have the given key+value label assigned.
-// Nested labels: "history" also returns books tagged "history/engineering" etc.
+// GetLabelBooks - GET /users/:username/labels/:keySlug/*valuePath
+// Public, but gated for private profiles.
 func (h *Handler) GetLabelBooks(c *gin.Context) {
 	username := c.Param("username")
+	currentUserID := c.GetString(middleware.UserIDKey)
+
+	_, _, canView := privacy.CanViewProfile(c.Request.Context(), h.pool, username, currentUserID)
+	if !canView {
+		c.JSON(http.StatusNotFound, gin.H{"error": "label not found"})
+		return
+	}
+
 	keySlug := c.Param("keySlug")
 	// Gin wildcard params include a leading "/"
 	valuePath := strings.TrimPrefix(c.Param("valuePath"), "/")
