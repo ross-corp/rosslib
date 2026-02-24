@@ -26,7 +26,8 @@ export type ShelfSummary = {
 
 type ShelfFilter = { kind: "shelf"; id: string; name: string; slug: string };
 type TagFilter = { kind: "tag"; slug: string; name: string };
-type ActiveFilter = ShelfFilter | TagFilter;
+type LabelFilter = { kind: "label"; keySlug: string; keyName: string; valueSlug: string; valueName: string };
+type ActiveFilter = ShelfFilter | TagFilter | LabelFilter;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -88,6 +89,22 @@ export default function LibraryManager({
       const data = await res.json();
       setBooks(data.books ?? []);
       setFilter({ kind: "tag", slug, name });
+    }
+  }
+
+  async function navigateToLabel(keySlug: string, keyName: string, valueSlug: string, valueName: string) {
+    if (filter.kind === "label" && filter.keySlug === keySlug && filter.valueSlug === valueSlug) return;
+    setLoading(true);
+    setSelectedIds(new Set());
+    setShowMoveMenu(false);
+    setShowRateMenu(false);
+    setShowLabelsMenu(false);
+    const res = await fetch(`/api/users/${username}/labels/${keySlug}/${valueSlug}`);
+    setLoading(false);
+    if (res.ok) {
+      const data = await res.json();
+      setBooks(data.books ?? []);
+      setFilter({ kind: "label", keySlug, keyName, valueSlug, valueName });
     }
   }
 
@@ -281,7 +298,7 @@ export default function LibraryManager({
           </div>
         )}
 
-        {/* Key-value labels (display only) */}
+        {/* Key-value labels */}
         {tagKeys.length > 0 && (
           <div>
             <p className="px-4 mb-1 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
@@ -291,12 +308,19 @@ export default function LibraryManager({
               <div key={key.id}>
                 <p className="px-4 py-1 text-xs text-stone-500">{key.name}</p>
                 {key.values.map((val) => (
-                  <div
+                  <button
                     key={val.id}
-                    className="pl-7 pr-4 py-1 text-xs text-stone-400"
+                    onClick={() => navigateToLabel(key.slug, key.name, val.slug, val.name)}
+                    className={`w-full text-left pl-7 pr-4 py-1 text-xs transition-colors ${
+                      filter.kind === "label" &&
+                      filter.keySlug === key.slug &&
+                      filter.valueSlug === val.slug
+                        ? "bg-stone-100 text-stone-900 font-medium"
+                        : "text-stone-400 hover:bg-stone-50 hover:text-stone-900"
+                    }`}
                   >
                     {val.name}
-                  </div>
+                  </button>
                 ))}
               </div>
             ))}
@@ -452,7 +476,9 @@ export default function LibraryManager({
         ) : (
           <div className="border-b border-stone-200 px-5 py-2.5 flex items-center gap-3 shrink-0">
             <span className="text-sm font-semibold text-stone-800">
-              {filter.kind === "shelf" ? filter.name : filter.name}
+              {filter.kind === "label"
+                ? `${filter.keyName}: ${filter.valueName}`
+                : filter.name}
             </span>
             <span className="text-xs text-stone-400">
               {books.length} {books.length === 1 ? "book" : "books"}

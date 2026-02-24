@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -447,4 +448,91 @@ func (h *Handler) UnsetBookTagValue(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// ── Label book listing ─────────────────────────────────────────────────────────
+
+type labelBook struct {
+	BookID        string  `json:"book_id"`
+	OpenLibraryID string  `json:"open_library_id"`
+	Title         string  `json:"title"`
+	CoverURL      *string `json:"cover_url"`
+	AddedAt       string  `json:"added_at"`
+	Rating        *int    `json:"rating"`
+}
+
+type labelBooksResponse struct {
+	KeySlug   string      `json:"key_slug"`
+	KeyName   string      `json:"key_name"`
+	ValueSlug string      `json:"value_slug"`
+	ValueName string      `json:"value_name"`
+	Books     []labelBook `json:"books"`
+}
+
+// GetLabelBooks - GET /users/:username/labels/:keySlug/:valueSlug (public)
+// Returns all books for a user that have the given key+value label assigned.
+func (h *Handler) GetLabelBooks(c *gin.Context) {
+	username := c.Param("username")
+	keySlug := c.Param("keySlug")
+	valueSlug := c.Param("valueSlug")
+
+	// Verify key+value exist for this user and get display names + user ID.
+	var userID, keyName, valueName string
+	if err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT u.id, tk.name, tv.name
+		 FROM tag_keys tk
+		 JOIN tag_values tv ON tv.tag_key_id = tk.id
+		 JOIN users u ON u.id = tk.user_id
+		 WHERE u.username = $1
+		   AND u.deleted_at IS NULL
+		   AND tk.slug = $2
+		   AND tv.slug = $3`,
+		username, keySlug, valueSlug,
+	).Scan(&userID, &keyName, &valueName); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "label not found"})
+		return
+	}
+
+	rows, err := h.pool.Query(c.Request.Context(),
+		`SELECT b.id, b.open_library_id, b.title, b.cover_url, btv.created_at,
+		        (SELECT ci.rating
+		         FROM collection_items ci
+		         JOIN collections col ON col.id = ci.collection_id
+		         WHERE ci.book_id = b.id AND col.user_id = $1 AND ci.rating IS NOT NULL
+		         ORDER BY ci.added_at DESC LIMIT 1) AS rating
+		 FROM book_tag_values btv
+		 JOIN tag_keys tk ON tk.id = btv.tag_key_id
+		 JOIN tag_values tv ON tv.id = btv.tag_value_id
+		 JOIN books b ON b.id = btv.book_id
+		 WHERE btv.user_id = $1
+		   AND tk.slug = $2
+		   AND tv.slug = $3
+		 ORDER BY btv.created_at DESC`,
+		userID, keySlug, valueSlug,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	books := []labelBook{}
+	for rows.Next() {
+		var book labelBook
+		var addedAt time.Time
+		if err := rows.Scan(&book.BookID, &book.OpenLibraryID, &book.Title, &book.CoverURL, &addedAt, &book.Rating); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		book.AddedAt = addedAt.Format(time.RFC3339)
+		books = append(books, book)
+	}
+
+	c.JSON(http.StatusOK, labelBooksResponse{
+		KeySlug:   keySlug,
+		KeyName:   keyName,
+		ValueSlug: valueSlug,
+		ValueName: valueName,
+		Books:     books,
+	})
 }

@@ -24,6 +24,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] Default shelves (Want to Read, Currently Reading, Read) shown on profile with item counts; cards link to shelf pages.
   - [x] Shelf pages at `/{username}/shelves/{slug}` — cover grid with title, owner can remove books inline.
   - [x] Library manager at `/{username}/shelves/{slug}` (owner only) — full-page layout with sidebar (shelves, custom, tags, labels), dense cover grid with multi-select checkboxes, and bulk action toolbar (Rate, Move to shelf, Labels, Remove). Non-owners see the original read-only grid.
+  - [x] Label value navigation in library manager sidebar — clicking a label value (e.g. "Format: Audiobook") fetches and displays all books with that key+value assignment via `GET /users/:username/labels/:keySlug/:valueSlug`.
   - [ ] Avatar upload.
   - [ ] Recent activity (reviews, threads, list updates) on profile.
   - [ ] Stats: books read (done), reviews written (needs reviews feature), followers/following count (done).
@@ -55,7 +56,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] 3 default collections for all users: Want to Read, Currently Reading, Read — created on registration (or lazily on first `/me/shelves` call for existing users).
   - [x] `books` table — global catalog keyed by `open_library_id`; upserted when a user adds a book to a shelf.
   - [x] `collections` + `collection_items` tables with `is_exclusive` / `exclusive_group` for mutual exclusivity enforcement.
-  - [x] API: `GET /users/:username/shelves`, `GET /users/:username/shelves/:slug`, `GET /me/shelves`, `POST /shelves/:shelfId/books`, `DELETE /shelves/:shelfId/books/:olId`.
+  - [x] API: `GET /users/:username/shelves`, `GET /users/:username/shelves/:slug`, `GET /me/shelves`, `POST /shelves/:shelfId/books`, `DELETE /shelves/:shelfId/books/:olId`, `GET /users/:username/labels/:keySlug/:valueSlug`.
   - [x] Expand `books` table: add `isbn13 VARCHAR(13)`, `authors TEXT`, `publication_year INT` — needed for import matching and book pages.
   - [x] Expand `collection_items` table: add `rating SMALLINT` (0–5, 0 = unrated), `review_text TEXT`, `spoiler BOOLEAN DEFAULT false`, `date_read TIMESTAMPTZ`, `date_added TIMESTAMPTZ` — needed before import can store review/rating data.
   - [x] custom collections
