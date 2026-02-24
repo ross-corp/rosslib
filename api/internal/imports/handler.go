@@ -16,15 +16,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/books"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/search"
 	"github.com/tristansaldanha/rosslib/api/internal/tags"
 )
 
 type Handler struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	search *search.Client
 }
 
-func NewHandler(pool *pgxpool.Pool) *Handler {
-	return &Handler{pool: pool}
+func NewHandler(pool *pgxpool.Pool, searchClient *search.Client) *Handler {
+	return &Handler{pool: pool, search: searchClient}
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -419,7 +421,7 @@ func (h *Handler) Commit(c *gin.Context) {
 	var errs []string
 
 	for _, row := range req.Rows {
-		if err := commitRow(c.Request.Context(), h.pool, userID, row); err != nil {
+		if err := commitRow(c.Request.Context(), h.pool, h.search, userID, row); err != nil {
 			failed++
 			errs = append(errs, fmt.Sprintf("row %d (%q): %v", row.RowID, row.Title, err))
 		} else {
@@ -434,7 +436,7 @@ func (h *Handler) Commit(c *gin.Context) {
 	})
 }
 
-func commitRow(ctx context.Context, pool *pgxpool.Pool, userID string, row CommitRow) error {
+func commitRow(ctx context.Context, pool *pgxpool.Pool, searchClient *search.Client, userID string, row CommitRow) error {
 	// Upsert book into the global catalog.
 	var isbn13, publicationYear interface{}
 	if row.ISBN13 != nil && *row.ISBN13 != "" {
@@ -459,6 +461,31 @@ func commitRow(ctx context.Context, pool *pgxpool.Pool, userID string, row Commi
 	).Scan(&bookID)
 	if err != nil {
 		return fmt.Errorf("upsert book: %w", err)
+	}
+
+	// Index into Meilisearch (fire-and-forget).
+	if searchClient != nil {
+		cv := ""
+		if row.CoverURL != nil {
+			cv = *row.CoverURL
+		}
+		i13 := ""
+		if row.ISBN13 != nil {
+			i13 = *row.ISBN13
+		}
+		py := 0
+		if row.PublicationYear != nil {
+			py = *row.PublicationYear
+		}
+		go searchClient.IndexBook(search.BookDocument{
+			ID:              bookID,
+			OpenLibraryID:   row.OLId,
+			Title:           row.Title,
+			Authors:         row.Authors,
+			ISBN13:          i13,
+			PublicationYear: py,
+			CoverURL:        cv,
+		})
 	}
 
 	// Parse date_added; fall back to now.

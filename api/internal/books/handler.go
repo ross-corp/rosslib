@@ -15,14 +15,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/search"
 )
 
 type Handler struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	search *search.Client
 }
 
-func NewHandler(pool *pgxpool.Pool) *Handler {
-	return &Handler{pool: pool}
+func NewHandler(pool *pgxpool.Pool, searchClient *search.Client) *Handler {
+	return &Handler{pool: pool, search: searchClient}
 }
 
 // ── Open Library API types ────────────────────────────────────────────────────
@@ -119,8 +121,8 @@ const (
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
-// SearchBooks proxies a title query to the Open Library Search API and returns
-// a normalized list of matching books.
+// SearchBooks searches both Meilisearch (local catalog) and Open Library,
+// returning local matches first followed by external results.
 //
 // GET /books/search?q=<title>[&sort=reads|rating]
 func (h *Handler) SearchBooks(c *gin.Context) {
@@ -131,58 +133,127 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 	}
 	sortBy := c.Query("sort") // "reads", "rating", or "" (relevance)
 
-	apiURL := fmt.Sprintf(
-		"%s?title=%s&fields=%s&limit=%d",
-		olSearchURL,
-		url.QueryEscape(q),
-		olSearchFields,
-		searchLimit,
-	)
-
-	resp, err := http.Get(apiURL) //nolint:noctx // intentional: inherits server timeout
-	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to reach book search service"})
-		return
+	// Run Meilisearch and Open Library searches concurrently.
+	type meiliResult struct {
+		docs []search.BookDocument
+		err  error
 	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
-		return
+	type olResult struct {
+		resp olResponse
+		err  error
 	}
 
-	var olResp olResponse
-	if err := json.Unmarshal(body, &olResp); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
-		return
-	}
+	meiliCh := make(chan meiliResult, 1)
+	olCh := make(chan olResult, 1)
 
-	results := make([]BookResult, 0, len(olResp.Docs))
-	for _, doc := range olResp.Docs {
-		b := BookResult{
-			Key:              doc.Key,
-			Title:            doc.Title,
-			Authors:          doc.AuthorName,
-			PublishYear:      doc.FirstPublishYear,
-			EditionCount:     doc.EditionCount,
-			AverageRating:    doc.RatingsAverage,
-			RatingCount:      doc.RatingsCount,
-			AlreadyReadCount: doc.AlreadyReadCount,
+	// Meilisearch search (local catalog).
+	go func() {
+		if h.search == nil {
+			meiliCh <- meiliResult{}
+			return
 		}
+		docs, err := h.search.SearchBooks(q, searchLimit)
+		meiliCh <- meiliResult{docs: docs, err: err}
+	}()
 
-		if len(doc.ISBN) > 0 {
-			b.ISBN = doc.ISBN[:min(maxISBNs, len(doc.ISBN))]
+	// Open Library search (external discovery).
+	go func() {
+		apiURL := fmt.Sprintf(
+			"%s?title=%s&fields=%s&limit=%d",
+			olSearchURL,
+			url.QueryEscape(q),
+			olSearchFields,
+			searchLimit,
+		)
+		resp, err := http.Get(apiURL) //nolint:noctx // intentional: inherits server timeout
+		if err != nil {
+			olCh <- olResult{err: err}
+			return
 		}
-
-		if doc.CoverI != nil {
-			coverURL := fmt.Sprintf(olCoverMedURL, *doc.CoverI)
-			b.CoverURL = &coverURL
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			olCh <- olResult{err: err}
+			return
 		}
+		var parsed olResponse
+		olCh <- olResult{resp: parsed, err: json.Unmarshal(body, &parsed)}
+	}()
 
-		results = append(results, b)
+	mr := <-meiliCh
+	or := <-olCh
+
+	// Build a set of OL IDs from local results to deduplicate.
+	seen := map[string]bool{}
+	results := make([]BookResult, 0, searchLimit)
+
+	// Add local (Meilisearch) results first.
+	if mr.err == nil {
+		for _, doc := range mr.docs {
+			olKey := "/works/" + doc.OpenLibraryID
+			seen[olKey] = true
+
+			var coverURL *string
+			if doc.CoverURL != "" {
+				coverURL = &doc.CoverURL
+			}
+			var pubYear *int
+			if doc.PublicationYear > 0 {
+				y := doc.PublicationYear
+				pubYear = &y
+			}
+			var authors []string
+			if doc.Authors != "" {
+				authors = strings.Split(doc.Authors, ", ")
+			}
+			var isbn []string
+			if doc.ISBN13 != "" {
+				isbn = []string{doc.ISBN13}
+			}
+
+			results = append(results, BookResult{
+				Key:         olKey,
+				Title:       doc.Title,
+				Authors:     authors,
+				PublishYear: pubYear,
+				ISBN:        isbn,
+				CoverURL:    coverURL,
+			})
+		}
 	}
 
+	// Append Open Library results that aren't already in local results.
+	if or.err == nil {
+		for _, doc := range or.resp.Docs {
+			if seen[doc.Key] {
+				continue
+			}
+			if len(results) >= searchLimit {
+				break
+			}
+
+			b := BookResult{
+				Key:              doc.Key,
+				Title:            doc.Title,
+				Authors:          doc.AuthorName,
+				PublishYear:      doc.FirstPublishYear,
+				EditionCount:     doc.EditionCount,
+				AverageRating:    doc.RatingsAverage,
+				RatingCount:      doc.RatingsCount,
+				AlreadyReadCount: doc.AlreadyReadCount,
+			}
+			if len(doc.ISBN) > 0 {
+				b.ISBN = doc.ISBN[:min(maxISBNs, len(doc.ISBN))]
+			}
+			if doc.CoverI != nil {
+				coverURL := fmt.Sprintf(olCoverMedURL, *doc.CoverI)
+				b.CoverURL = &coverURL
+			}
+			results = append(results, b)
+		}
+	}
+
+	// Apply sort if requested.
 	switch sortBy {
 	case "reads":
 		sort.Slice(results, func(i, j int) bool {
@@ -202,8 +273,13 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 		})
 	}
 
+	total := len(results)
+	if or.err == nil && or.resp.NumFound > total {
+		total = or.resp.NumFound
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"total":   olResp.NumFound,
+		"total":   total,
 		"results": results,
 	})
 }
@@ -370,7 +446,8 @@ func (h *Handler) GetBook(c *gin.Context) {
 // ISBN, upserts it into the local books table (if a pool is supplied), and
 // returns the normalised BookResult. It is a package-level function so the
 // import handler can call it directly without going through HTTP.
-func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string) (*BookResult, error) {
+// An optional search.Client can be passed to index the book in Meilisearch.
+func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string, searchClients ...*search.Client) (*BookResult, error) {
 	// Strip everything that isn't a digit or trailing X (ISBN-10 check digit).
 	clean := strings.Map(func(r rune) rune {
 		if r >= '0' && r <= '9' || r == 'X' || r == 'x' {
@@ -454,7 +531,8 @@ func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string) (*Bo
 
 	authors := strings.Join(doc.AuthorName, ", ")
 
-	_, err = pool.Exec(ctx,
+	var bookID string
+	err = pool.QueryRow(ctx,
 		`INSERT INTO books (open_library_id, title, cover_url, isbn13, authors, publication_year)
 		 VALUES ($1, $2, $3, $4, $5, $6)
 		 ON CONFLICT (open_library_id) DO UPDATE
@@ -462,11 +540,37 @@ func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string) (*Bo
 		       cover_url        = EXCLUDED.cover_url,
 		       isbn13           = COALESCE(books.isbn13, EXCLUDED.isbn13),
 		       authors          = COALESCE(books.authors, EXCLUDED.authors),
-		       publication_year = COALESCE(books.publication_year, EXCLUDED.publication_year)`,
+		       publication_year = COALESCE(books.publication_year, EXCLUDED.publication_year)
+		 RETURNING id`,
 		bareID, doc.Title, coverURL, isbn13, authors, doc.FirstPublishYear,
-	)
+	).Scan(&bookID)
 	if err != nil {
 		return nil, fmt.Errorf("upsert book: %w", err)
+	}
+
+	// Index into Meilisearch if a client was provided.
+	if len(searchClients) > 0 && searchClients[0] != nil {
+		cv := ""
+		if coverURL != nil {
+			cv = *coverURL
+		}
+		i13 := ""
+		if isbn13 != nil {
+			i13 = *isbn13
+		}
+		py := 0
+		if doc.FirstPublishYear != nil {
+			py = *doc.FirstPublishYear
+		}
+		go searchClients[0].IndexBook(search.BookDocument{
+			ID:              bookID,
+			OpenLibraryID:   bareID,
+			Title:           doc.Title,
+			Authors:         authors,
+			ISBN13:          i13,
+			PublicationYear: py,
+			CoverURL:        cv,
+		})
 	}
 
 	return result, nil
@@ -556,7 +660,7 @@ func (h *Handler) LookupBook(c *gin.Context) {
 		return
 	}
 
-	result, err := LookupBookByISBN(c.Request.Context(), h.pool, isbn)
+	result, err := LookupBookByISBN(c.Request.Context(), h.pool, isbn, h.search)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to reach book service"})
 		return

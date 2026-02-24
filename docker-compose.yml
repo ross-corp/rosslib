@@ -64,6 +64,8 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_BUCKET: ${MINIO_BUCKET:-rosslib}
       MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000}
+      MEILI_URL: http://meilisearch:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKey}
     volumes:
       - ./api:/app
       - gomodcache:/root/go/pkg/mod
@@ -73,6 +75,8 @@ services:
       redis:
         condition: service_healthy
       minio:
+        condition: service_started
+      meilisearch:
         condition: service_started
 
   webapp:

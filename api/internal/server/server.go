@@ -14,6 +14,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/ghosts"
 	"github.com/tristansaldanha/rosslib/api/internal/imports"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/search"
 	"github.com/tristansaldanha/rosslib/api/internal/storage"
 	"github.com/tristansaldanha/rosslib/api/internal/tags"
 	"github.com/tristansaldanha/rosslib/api/internal/threads"
@@ -21,7 +22,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/users"
 )
 
-func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http.Handler {
+func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, searchClient *search.Client) http.Handler {
 	r := gin.Default()
 
 	r.GET("/health", func(c *gin.Context) {
@@ -50,7 +51,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http
 
 	secret := []byte(jwtSecret)
 
-	booksHandler := books.NewHandler(pool)
+	booksHandler := books.NewHandler(pool, searchClient)
 	r.GET("/books/search", booksHandler.SearchBooks)
 	r.GET("/books/lookup", booksHandler.LookupBook)
 	r.GET("/authors/search", booksHandler.SearchAuthors)
@@ -68,7 +69,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http
 	r.GET("/users/:username/shelves/:slug", middleware.OptionalAuth(secret), collectionsHandler.GetShelfBySlug)
 	r.GET("/users/:username/tags/*path", middleware.OptionalAuth(secret), collectionsHandler.GetTagBooks)
 
-	userbooksHandler := userbooks.NewHandler(pool)
+	userbooksHandler := userbooks.NewHandler(pool, searchClient)
 	r.GET("/users/:username/books", middleware.OptionalAuth(secret), userbooksHandler.GetUserBooks)
 
 	activityHandler := activity.NewHandler(pool)
@@ -88,7 +89,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http
 	authed.GET("/me/follow-requests", usersHandler.GetFollowRequests)
 	authed.POST("/me/follow-requests/:userId/accept", usersHandler.AcceptFollowRequest)
 	authed.DELETE("/me/follow-requests/:userId/reject", usersHandler.RejectFollowRequest)
-	importsHandler := imports.NewHandler(pool)
+	importsHandler := imports.NewHandler(pool, searchClient)
 	authed.POST("/me/import/goodreads/preview", importsHandler.Preview)
 	authed.POST("/me/import/goodreads/commit", importsHandler.Commit)
 

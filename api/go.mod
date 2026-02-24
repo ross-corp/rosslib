@@ -1,16 +1,18 @@
 module github.com/tristansaldanha/rosslib/api
 
-go 1.25
+go 1.24.0
 
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jackc/pgx/v5 v5.7.1
+	github.com/meilisearch/meilisearch-go v0.36.1
 	github.com/minio/minio-go/v7 v7.0.98
 	golang.org/x/crypto v0.46.0
 )
 
 require (
+	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect

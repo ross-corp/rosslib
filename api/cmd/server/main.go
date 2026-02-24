@@ -11,6 +11,7 @@ import (
 
 	"github.com/tristansaldanha/rosslib/api/internal/config"
 	"github.com/tristansaldanha/rosslib/api/internal/db"
+	"github.com/tristansaldanha/rosslib/api/internal/search"
 	"github.com/tristansaldanha/rosslib/api/internal/server"
 	"github.com/tristansaldanha/rosslib/api/internal/storage"
 )
@@ -43,7 +44,19 @@ func main() {
 		log.Printf("warning: could not configure storage bucket: %v", err)
 	}
 
-	router := server.NewRouter(pool, cfg.JWTSecret, store)
+	searchClient, err := search.NewClient(cfg.MeiliURL, cfg.MeiliMasterKey)
+	if err != nil {
+		log.Printf("warning: meilisearch unavailable: %v", err)
+	}
+	if searchClient != nil {
+		go func() {
+			if err := searchClient.SyncBooks(context.Background(), pool); err != nil {
+				log.Printf("warning: meilisearch sync failed: %v", err)
+			}
+		}()
+	}
+
+	router := server.NewRouter(pool, cfg.JWTSecret, store, searchClient)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,

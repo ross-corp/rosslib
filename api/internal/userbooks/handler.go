@@ -16,15 +16,17 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 	"github.com/tristansaldanha/rosslib/api/internal/privacy"
+	"github.com/tristansaldanha/rosslib/api/internal/search"
 	"github.com/tristansaldanha/rosslib/api/internal/tags"
 )
 
 type Handler struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	search *search.Client
 }
 
-func NewHandler(pool *pgxpool.Pool) *Handler {
-	return &Handler{pool: pool}
+func NewHandler(pool *pgxpool.Pool, searchClient *search.Client) *Handler {
+	return &Handler{pool: pool, search: searchClient}
 }
 
 // ── AddBook — POST /me/books ─────────────────────────────────────────────────
@@ -56,6 +58,20 @@ func (h *Handler) AddBook(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
+	}
+
+	// Index into Meilisearch (fire-and-forget).
+	if h.search != nil {
+		coverURL := ""
+		if req.CoverURL != nil {
+			coverURL = *req.CoverURL
+		}
+		go h.search.IndexBook(search.BookDocument{
+			ID:            bookID,
+			OpenLibraryID: req.OpenLibraryID,
+			Title:         req.Title,
+			CoverURL:      coverURL,
+		})
 	}
 
 	// Insert user_books row.

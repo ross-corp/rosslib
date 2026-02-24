@@ -55,7 +55,8 @@ npx tsc --noEmit  # typecheck
 Each package follows a handler pattern — `NewHandler(pool)` returns a struct with methods registered as Gin route handlers. The `pool` is a `pgxpool.Pool` (pgx v5) passed through from `main`.
 
 - `auth/` — registration, login, JWT issuance (30-day `httpOnly` cookie named `token`)
-- `books/` — Open Library search/lookup proxy; upserts into local `books` table
+- `books/` — book search (Meilisearch + Open Library hybrid), lookup proxy; upserts into local `books` table
+- `search/` — Meilisearch client wrapper; indexes books on startup and upsert
 - `collections/` — shelves CRUD; enforces mutual exclusivity within `exclusive_group`
 - `imports/` — Goodreads CSV import (preview + commit); 5-worker goroutine pool for OL lookups
 - `users/` — profile, follow/unfollow, user search
@@ -94,9 +95,10 @@ Defined in `.env` (copy from `.env.example`):
 |---|---|
 | `POSTGRES_USER/PASSWORD/DB` | PostgreSQL credentials |
 | `MEILI_MASTER_KEY` | Meilisearch master key |
+| `MEILI_URL` | Meilisearch endpoint (default `http://localhost:7700`) |
 | `JWT_SECRET` | Signs JWTs |
 
-The API reads `DATABASE_URL`, `REDIS_URL`, `PORT`, and `JWT_SECRET` from environment. The webapp reads `API_URL` (server-side) and `NEXT_PUBLIC_API_URL` (browser-side).
+The API reads `DATABASE_URL`, `REDIS_URL`, `PORT`, `JWT_SECRET`, `MEILI_URL`, and `MEILI_MASTER_KEY` from environment. The webapp reads `API_URL` (server-side) and `NEXT_PUBLIC_API_URL` (browser-side).
 
 ## CI/CD
 

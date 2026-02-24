@@ -6,7 +6,7 @@
 - **Go API** (Gin) — REST/JSON, single binary on :8080
 - **PostgreSQL** — primary datastore, named Docker volume
 - **Redis** — session/token storage, feed cache, rate limiting
-- **Meilisearch** — book/author full-text search, named Docker volume
+- **Meilisearch** — book full-text search, named Docker volume. The Go API indexes all books at startup and on upsert. `/books/search` queries Meilisearch (local results) and Open Library (discovery) concurrently.
 - **MinIO** — S3-compatible object store for avatars and file uploads; runs in Docker locally. In production, swap for AWS S3 (change `MINIO_ENDPOINT`, `MINIO_PUBLIC_URL`, and credentials — no code changes required).
 - **nginx** — TLS termination, reverse proxy (runs on host, not in Docker)
 

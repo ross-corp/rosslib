@@ -44,7 +44,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] Tab selector on `/search` to filter between Books and People.
   - [x] StatusPicker on each book search result — logged-in users can add books to library with a status, change status, or remove inline.
   - [x] Author tab in search — searches Open Library's author search API; results show name, dates, top work, work count, and subjects. Clicking an author searches their books.
-  - [ ] Full-text book/author search via Meilisearch (will replace Open Library as primary search backend).
+  - [x] Full-text book search via Meilisearch — local catalog is indexed into Meilisearch on startup and on book upsert. `/books/search` queries both Meilisearch (local results first) and Open Library (discovery) concurrently, deduplicating by OL work ID.
 
 - [ ] Social
   - [x] Follow / unfollow users (asymmetric). Follow button on profile page; `is_following` returned from profile endpoint.

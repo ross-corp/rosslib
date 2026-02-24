@@ -28,9 +28,9 @@ Sets the `token` cookie on success.
 
 ## Books
 
-### `GET /books/search?q=<title>`
+### `GET /books/search?q=<title>[&sort=reads|rating]`
 
-Proxies to Open Library search. Returns up to 20 results.
+Searches both Meilisearch (local catalog) and Open Library concurrently. Local matches appear first, followed by external results deduplicated by work ID. Returns up to 20 results.
 
 ```json
 {
