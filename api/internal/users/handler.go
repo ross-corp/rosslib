@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/privacy"
 	"github.com/tristansaldanha/rosslib/api/internal/storage"
 )
 
@@ -25,19 +26,24 @@ func NewHandler(pool *pgxpool.Pool, store *storage.Client) *Handler {
 // ── types ────────────────────────────────────────────────────────────────────
 
 type profileResponse struct {
-	UserID         string  `json:"user_id"`
-	Username       string  `json:"username"`
-	DisplayName    *string `json:"display_name"`
-	Bio            *string `json:"bio"`
-	AvatarURL      *string `json:"avatar_url"`
-	IsPrivate      bool    `json:"is_private"`
-	MemberSince    string  `json:"member_since"`
-	IsFollowing    bool    `json:"is_following"`
-	FollowersCount int     `json:"followers_count"`
-	FollowingCount int     `json:"following_count"`
-	FriendsCount   int     `json:"friends_count"`
-	BooksRead      int     `json:"books_read"`
-	ReviewsCount   int     `json:"reviews_count"`
+	UserID         string   `json:"user_id"`
+	Username       string   `json:"username"`
+	DisplayName    *string  `json:"display_name"`
+	Bio            *string  `json:"bio"`
+	AvatarURL      *string  `json:"avatar_url"`
+	IsPrivate      bool     `json:"is_private"`
+	MemberSince    string   `json:"member_since"`
+	IsFollowing    bool     `json:"is_following"`
+	FollowStatus   string   `json:"follow_status"`
+	FollowersCount int      `json:"followers_count"`
+	FollowingCount int      `json:"following_count"`
+	FriendsCount   int      `json:"friends_count"`
+	BooksRead      int      `json:"books_read"`
+	ReviewsCount   int      `json:"reviews_count"`
+	BooksThisYear  int      `json:"books_this_year"`
+	AverageRating  *float64 `json:"average_rating"`
+	IsGhost        bool     `json:"is_ghost"`
+	IsRestricted   bool     `json:"is_restricted"`
 }
 
 type searchResult struct {
@@ -135,12 +141,12 @@ func (h *Handler) GetProfile(c *gin.Context) {
 	var memberSince time.Time
 
 	err := h.pool.QueryRow(c.Request.Context(),
-		`SELECT u.id, u.username, u.display_name, u.bio, u.avatar_url, u.is_private, u.created_at,
-		        (SELECT COUNT(*) FROM follows WHERE followee_id = u.id) AS followers_count,
-		        (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count,
+		`SELECT u.id, u.username, u.display_name, u.bio, u.avatar_url, u.is_private, u.is_ghost, u.created_at,
+		        (SELECT COUNT(*) FROM follows WHERE followee_id = u.id AND status = 'active') AS followers_count,
+		        (SELECT COUNT(*) FROM follows WHERE follower_id = u.id AND status = 'active') AS following_count,
 		        (SELECT COUNT(*) FROM follows f1
 		           JOIN follows f2 ON f1.follower_id = f2.followee_id AND f1.followee_id = f2.follower_id
-		           WHERE f1.follower_id = u.id) AS friends_count,
+		           WHERE f1.follower_id = u.id AND f1.status = 'active' AND f2.status = 'active') AS friends_count,
 		        (SELECT COUNT(*) FROM collection_items ci
 		           JOIN collections c ON c.id = ci.collection_id
 		           WHERE c.user_id = u.id AND c.slug = 'read') AS books_read,
@@ -148,24 +154,45 @@ func (h *Handler) GetProfile(c *gin.Context) {
 		           JOIN collections c ON c.id = ci.collection_id
 		           WHERE c.user_id = u.id
 		             AND ci.review_text IS NOT NULL
-		             AND ci.review_text != '') AS reviews_count
+		             AND ci.review_text != '') AS reviews_count,
+		        (SELECT COUNT(*) FROM collection_items ci
+		           JOIN collections c ON c.id = ci.collection_id
+		           WHERE c.user_id = u.id AND c.slug = 'read'
+		             AND ci.date_read >= date_trunc('year', CURRENT_DATE)) AS books_this_year,
+		        (SELECT AVG(ci.rating)::double precision FROM collection_items ci
+		           JOIN collections c ON c.id = ci.collection_id
+		           WHERE c.user_id = u.id AND ci.rating IS NOT NULL) AS average_rating
 		 FROM users u WHERE u.username = $1 AND u.deleted_at IS NULL`,
 		username,
-	).Scan(&p.UserID, &p.Username, &p.DisplayName, &p.Bio, &p.AvatarURL, &p.IsPrivate, &memberSince, &p.FollowersCount, &p.FollowingCount, &p.FriendsCount, &p.BooksRead, &p.ReviewsCount)
+	).Scan(&p.UserID, &p.Username, &p.DisplayName, &p.Bio, &p.AvatarURL, &p.IsPrivate, &p.IsGhost, &memberSince, &p.FollowersCount, &p.FollowingCount, &p.FriendsCount, &p.BooksRead, &p.ReviewsCount, &p.BooksThisYear, &p.AverageRating)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
 	}
 
 	p.MemberSince = memberSince.Format(time.RFC3339)
+	p.FollowStatus = "none"
 
 	if currentUserID != "" && currentUserID != p.UserID {
-		var isFollowing bool
-		_ = h.pool.QueryRow(c.Request.Context(),
-			`SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND followee_id = $2)`,
+		var status string
+		err := h.pool.QueryRow(c.Request.Context(),
+			`SELECT status FROM follows WHERE follower_id = $1 AND followee_id = $2`,
 			currentUserID, p.UserID,
-		).Scan(&isFollowing)
-		p.IsFollowing = isFollowing
+		).Scan(&status)
+		if err == nil {
+			p.FollowStatus = status
+			p.IsFollowing = status == "active"
+		}
+	}
+
+	// If the profile is private and the viewer is not the owner and not an active follower,
+	// zero out content stats and mark as restricted.
+	if p.IsPrivate && currentUserID != p.UserID && p.FollowStatus != "active" {
+		p.BooksRead = 0
+		p.ReviewsCount = 0
+		p.BooksThisYear = 0
+		p.AverageRating = nil
+		p.IsRestricted = true
 	}
 
 	c.JSON(http.StatusOK, p)
@@ -177,6 +204,7 @@ func (h *Handler) UpdateMe(c *gin.Context) {
 	var req struct {
 		DisplayName string `json:"display_name"`
 		Bio         string `json:"bio"`
+		IsPrivate   *bool  `json:"is_private"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -191,13 +219,24 @@ func (h *Handler) UpdateMe(c *gin.Context) {
 		bio = &v
 	}
 
-	_, err := h.pool.Exec(c.Request.Context(),
-		`UPDATE users SET display_name = $1, bio = $2 WHERE id = $3`,
-		displayName, bio, userID,
-	)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
-		return
+	if req.IsPrivate != nil {
+		_, err := h.pool.Exec(c.Request.Context(),
+			`UPDATE users SET display_name = $1, bio = $2, is_private = $3 WHERE id = $4`,
+			displayName, bio, *req.IsPrivate, userID,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+	} else {
+		_, err := h.pool.Exec(c.Request.Context(),
+			`UPDATE users SET display_name = $1, bio = $2 WHERE id = $3`,
+			displayName, bio, userID,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})
@@ -208,10 +247,11 @@ func (h *Handler) Follow(c *gin.Context) {
 	username := c.Param("username")
 
 	var followeeID string
+	var isPrivate bool
 	err := h.pool.QueryRow(c.Request.Context(),
-		`SELECT id FROM users WHERE username = $1 AND deleted_at IS NULL`,
+		`SELECT id, is_private FROM users WHERE username = $1 AND deleted_at IS NULL`,
 		username,
-	).Scan(&followeeID)
+	).Scan(&followeeID, &isPrivate)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
@@ -222,18 +262,26 @@ func (h *Handler) Follow(c *gin.Context) {
 		return
 	}
 
+	status := "active"
+	if isPrivate {
+		status = "pending"
+	}
+
 	_, err = h.pool.Exec(c.Request.Context(),
-		`INSERT INTO follows (follower_id, followee_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-		followerID, followeeID,
+		`INSERT INTO follows (follower_id, followee_id, status) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+		followerID, followeeID, status,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
 
-	activity.Record(c.Request.Context(), h.pool, followerID, "followed_user", nil, &followeeID, nil, nil, nil)
+	// Only record activity for active follows, not pending requests
+	if status == "active" {
+		activity.Record(c.Request.Context(), h.pool, followerID, "followed_user", nil, &followeeID, nil, nil, nil)
+	}
 
-	c.JSON(http.StatusOK, gin.H{"ok": true})
+	c.JSON(http.StatusOK, gin.H{"ok": true, "status": status})
 }
 
 func (h *Handler) Unfollow(c *gin.Context) {
@@ -262,13 +310,108 @@ func (h *Handler) Unfollow(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
-// GetUserReviews - GET /users/:username/reviews
-// Public. Returns all collection items for the user that have review text.
-func (h *Handler) GetUserReviews(c *gin.Context) {
-	username := c.Param("username")
+// ── Follow request management ─────────────────────────────────────────────────
+
+type followRequestUser struct {
+	UserID      string  `json:"user_id"`
+	Username    string  `json:"username"`
+	DisplayName *string `json:"display_name"`
+	AvatarURL   *string `json:"avatar_url"`
+	CreatedAt   string  `json:"created_at"`
+}
+
+// GetFollowRequests - GET /me/follow-requests (authed)
+// Lists pending follow requests for the current user.
+func (h *Handler) GetFollowRequests(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
 
 	rows, err := h.pool.Query(c.Request.Context(),
-		`SELECT b.id, b.open_library_id, b.title, b.cover_url, b.authors,
+		`SELECT u.id, u.username, u.display_name, u.avatar_url, f.created_at
+		 FROM follows f
+		 JOIN users u ON u.id = f.follower_id
+		 WHERE f.followee_id = $1 AND f.status = 'pending' AND u.deleted_at IS NULL
+		 ORDER BY f.created_at DESC`,
+		userID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	requests := []followRequestUser{}
+	for rows.Next() {
+		var r followRequestUser
+		var createdAt time.Time
+		if err := rows.Scan(&r.UserID, &r.Username, &r.DisplayName, &r.AvatarURL, &createdAt); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		r.CreatedAt = createdAt.Format(time.RFC3339)
+		requests = append(requests, r)
+	}
+
+	c.JSON(http.StatusOK, requests)
+}
+
+// AcceptFollowRequest - POST /me/follow-requests/:userId/accept (authed)
+func (h *Handler) AcceptFollowRequest(c *gin.Context) {
+	currentUserID := c.GetString(middleware.UserIDKey)
+	followerID := c.Param("userId")
+
+	result, err := h.pool.Exec(c.Request.Context(),
+		`UPDATE follows SET status = 'active' WHERE follower_id = $1 AND followee_id = $2 AND status = 'pending'`,
+		followerID, currentUserID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	if result.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "follow request not found"})
+		return
+	}
+
+	// Record the followed_user activity now that the follow is accepted
+	activity.Record(c.Request.Context(), h.pool, followerID, "followed_user", nil, &currentUserID, nil, nil, nil)
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// RejectFollowRequest - DELETE /me/follow-requests/:userId/reject (authed)
+func (h *Handler) RejectFollowRequest(c *gin.Context) {
+	currentUserID := c.GetString(middleware.UserIDKey)
+	followerID := c.Param("userId")
+
+	result, err := h.pool.Exec(c.Request.Context(),
+		`DELETE FROM follows WHERE follower_id = $1 AND followee_id = $2 AND status = 'pending'`,
+		followerID, currentUserID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	if result.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "follow request not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// GetUserReviews - GET /users/:username/reviews
+// Public, but gated for private profiles. Returns all collection items for the user that have review text.
+func (h *Handler) GetUserReviews(c *gin.Context) {
+	username := c.Param("username")
+	currentUserID := c.GetString(middleware.UserIDKey)
+
+	_, _, canView := privacy.CanViewProfile(c.Request.Context(), h.pool, username, currentUserID)
+	if !canView {
+		c.JSON(http.StatusOK, []struct{}{})
+		return
+	}
+
+	query := `SELECT b.id, b.open_library_id, b.title, b.cover_url, b.authors,
 		        ci.rating, ci.review_text, ci.spoiler, ci.date_read, ci.date_added
 		 FROM collection_items ci
 		 JOIN books b       ON b.id  = ci.book_id
@@ -278,9 +421,17 @@ func (h *Handler) GetUserReviews(c *gin.Context) {
 		   AND u.deleted_at IS NULL
 		   AND ci.review_text IS NOT NULL
 		   AND ci.review_text != ''
-		 ORDER BY ci.date_added DESC`,
-		username,
-	)
+		 ORDER BY ci.date_added DESC`
+	args := []interface{}{username}
+
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if limit, err := strconv.Atoi(limitStr); err == nil && limit >= 1 && limit <= 100 {
+			query += " LIMIT $2"
+			args = append(args, limit)
+		}
+	}
+
+	rows, err := h.pool.Query(c.Request.Context(), query, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return

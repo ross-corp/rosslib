@@ -29,7 +29,7 @@ Asymmetric social graph.
 |---|---|---|
 | follower_id | uuid FK → users | |
 | followee_id | uuid FK → users | |
-| status | varchar(20) | `'active'` or `'pending'` (private accounts not yet enforced) |
+| status | varchar(20) | `'active'` or `'pending'`; private accounts create follows with `'pending'` status requiring approval |
 | created_at | timestamptz | |
 
 PK: `(follower_id, followee_id)`
@@ -76,6 +76,12 @@ Unique constraint: `(user_id, slug)`
 | Read | `read` | `read_status` |
 
 All three have `is_exclusive = true`. Adding a book to any of them removes it from the other two for that user.
+
+**Default tag** — created idempotently (via `ensureDefaultFavorites`) when shelves are listed:
+
+| name | slug | collection_type | is_exclusive |
+|---|---|---|---|
+| Favorites | `favorites` | `tag` | false |
 
 **collection_type values:**
 - `'shelf'` — a bookshelf (default or custom). Shown in the shelf sidebar and profile shelf cards.

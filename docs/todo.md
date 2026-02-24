@@ -29,7 +29,13 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] Avatar upload — `POST /me/avatar` (multipart); stored in MinIO; URL written to `users.avatar_url`. Swap `MINIO_*` env vars for S3 in production.
   - [x] Recent activity (reviews, threads, list updates) on profile.
   - [x] Stats: books read, reviews written, followers/following count shown on profile.
-  - [ ] Profiles can be set to private; followers must be approved.
+  - [x] Profiles can be set to private; followers must be approved.
+  - [x] Two-column profile redesign — main content (2/3) + activity sidebar (1/3) on desktop; single column on mobile.
+  - [x] Currently Reading spotlight with large cover row on profile.
+  - [x] Default "Favorites" tag auto-created for every user (idempotent), shown as cover row on profile.
+  - [x] Reading stats section on profile: books this year, average rating, total read, reviews count.
+  - [x] Recent reviews section on profile with cover, rating, spoiler-gated snippet.
+  - [x] Tabbed shelf browser on profile — click shelf tabs to browse books inline without navigating away.
 
 - [ ] Search & Discovery
   - [x] Search bar in nav — submits GET to /search.
@@ -43,7 +49,7 @@ Once we're further along we'll move to GH projects. this is fine for now
 - [ ] Social
   - [x] Follow / unfollow users (asymmetric). Follow button on profile page; `is_following` returned from profile endpoint.
   - [x] `follows` table with `(follower_id, followee_id)` PK and `status` field.
-  - [ ] Private accounts require follow approval (status = 'pending').
+  - [x] Private accounts require follow approval (status = 'pending').
   - [x] Followers / following counts on profile.
   - [x] "Friends" (mutual follows) surfaced in UI — friends_count (mutual follows) returned from profile endpoint and shown on profile page.
   - [ ] Follow authors, see new publications.
@@ -57,7 +63,9 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] 3 default collections for all users: Want to Read, Currently Reading, Read — created on registration (or lazily on first `/me/shelves` call for existing users).
   - [x] `books` table — global catalog keyed by `open_library_id`; upserted when a user adds a book to a shelf.
   - [x] `collections` + `collection_items` tables with `is_exclusive` / `exclusive_group` for mutual exclusivity enforcement.
-  - [x] API: `GET /users/:username/shelves`, `GET /users/:username/shelves/:slug`, `GET /me/shelves`, `POST /shelves/:shelfId/books`, `DELETE /shelves/:shelfId/books/:olId`, `GET /users/:username/labels/:keySlug/:valueSlug`.
+  - [x] API: `GET /users/:username/shelves` (supports `?include_books=N`), `GET /users/:username/shelves/:slug` (supports `?limit=N`), `GET /me/shelves`, `POST /shelves/:shelfId/books`, `DELETE /shelves/:shelfId/books/:olId`, `GET /users/:username/labels/:keySlug/:valueSlug`.
+  - [x] `GET /users/:username/reviews` supports `?limit=N` for preview on profile page.
+  - [x] `GET /users/:username` returns `books_this_year` and `average_rating` in profile response.
   - [x] Expand `books` table: add `isbn13 VARCHAR(13)`, `authors TEXT`, `publication_year INT` — needed for import matching and book pages.
   - [x] Expand `collection_items` table: add `rating SMALLINT` (0–5, 0 = unrated), `review_text TEXT`, `spoiler BOOLEAN DEFAULT false`, `date_read TIMESTAMPTZ`, `date_added TIMESTAMPTZ` — needed before import can store review/rating data.
   - [x] custom collections

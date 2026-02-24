@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/privacy"
 )
 
 var multiDash = regexp.MustCompile(`-{2,}`)
@@ -104,12 +106,13 @@ type shelfDetailResponse struct {
 }
 
 type shelfResponse struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Slug           string `json:"slug"`
-	ExclusiveGroup string `json:"exclusive_group"`
-	CollectionType string `json:"collection_type"`
-	ItemCount      int    `json:"item_count"`
+	ID             string            `json:"id"`
+	Name           string            `json:"name"`
+	Slug           string            `json:"slug"`
+	ExclusiveGroup string            `json:"exclusive_group"`
+	CollectionType string            `json:"collection_type"`
+	ItemCount      int               `json:"item_count"`
+	Books          []shelfDetailBook `json:"books,omitempty"`
 }
 
 type myShelfResponse struct {
@@ -124,9 +127,21 @@ type myShelfResponse struct {
 // ── handlers ──────────────────────────────────────────────────────────────────
 
 // GetUserShelves - GET /users/:username/shelves
-// Public. Returns shelf metadata with item counts.
+// Public, but gated for private profiles.
+// Optional ?include_books=N query param to include the first N books per shelf.
 func (h *Handler) GetUserShelves(c *gin.Context) {
 	username := c.Param("username")
+	currentUserID := c.GetString(middleware.UserIDKey)
+
+	userID, _, canView := privacy.CanViewProfile(c.Request.Context(), h.pool, username, currentUserID)
+	if !canView {
+		c.JSON(http.StatusOK, []shelfResponse{})
+		return
+	}
+
+	if userID != "" {
+		h.ensureDefaultFavorites(c.Request.Context(), userID)
+	}
 
 	rows, err := h.pool.Query(c.Request.Context(),
 		`SELECT c.id, c.name, c.slug, COALESCE(c.exclusive_group, ''), c.collection_type, COUNT(ci.id) AS item_count
@@ -145,13 +160,52 @@ func (h *Handler) GetUserShelves(c *gin.Context) {
 	defer rows.Close()
 
 	shelves := []shelfResponse{}
+	shelfIDs := []string{}
+	idToIdx := map[string]int{}
 	for rows.Next() {
 		var s shelfResponse
 		if err := rows.Scan(&s.ID, &s.Name, &s.Slug, &s.ExclusiveGroup, &s.CollectionType, &s.ItemCount); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			return
 		}
+		idToIdx[s.ID] = len(shelves)
 		shelves = append(shelves, s)
+		shelfIDs = append(shelfIDs, s.ID)
+	}
+	rows.Close()
+
+	// If include_books param is set, fetch preview books per shelf
+	if ibStr := c.Query("include_books"); ibStr != "" && len(shelfIDs) > 0 {
+		limit, err := strconv.Atoi(ibStr)
+		if err == nil && limit >= 1 && limit <= 200 {
+			bookRows, err := h.pool.Query(c.Request.Context(),
+				`SELECT collection_id, book_id, open_library_id, title, cover_url, added_at, rating FROM (
+					SELECT ci.collection_id, b.id AS book_id, b.open_library_id, b.title, b.cover_url, ci.added_at, ci.rating,
+					       ROW_NUMBER() OVER (PARTITION BY ci.collection_id ORDER BY ci.added_at DESC) AS rn
+					FROM collection_items ci JOIN books b ON b.id = ci.book_id
+					WHERE ci.collection_id = ANY($1)
+				) sub WHERE sub.rn <= $2`,
+				shelfIDs, limit,
+			)
+			if err == nil {
+				defer bookRows.Close()
+				for bookRows.Next() {
+					var collID string
+					var book shelfDetailBook
+					var addedAt time.Time
+					if err := bookRows.Scan(&collID, &book.BookID, &book.OpenLibraryID, &book.Title, &book.CoverURL, &addedAt, &book.Rating); err != nil {
+						break
+					}
+					book.AddedAt = addedAt.Format(time.RFC3339)
+					if idx, ok := idToIdx[collID]; ok {
+						if shelves[idx].Books == nil {
+							shelves[idx].Books = []shelfDetailBook{}
+						}
+						shelves[idx].Books = append(shelves[idx].Books, book)
+					}
+				}
+			}
+		}
 	}
 
 	c.JSON(http.StatusOK, shelves)
@@ -194,6 +248,16 @@ func (h *Handler) ensureDefaultShelves(ctx context.Context, userID string) error
 	return tx.Commit(ctx)
 }
 
+// ensureDefaultFavorites creates the "Favorites" default tag for a user if it doesn't exist.
+func (h *Handler) ensureDefaultFavorites(ctx context.Context, userID string) {
+	_, _ = h.pool.Exec(ctx,
+		`INSERT INTO collections (user_id, name, slug, is_exclusive, collection_type)
+		 VALUES ($1, 'Favorites', 'favorites', false, 'tag')
+		 ON CONFLICT (user_id, slug) DO NOTHING`,
+		userID,
+	)
+}
+
 // GetMyShelves - GET /me/shelves (authed)
 // Returns the current user's shelves with full book lists (OL IDs included).
 func (h *Handler) GetMyShelves(c *gin.Context) {
@@ -203,6 +267,7 @@ func (h *Handler) GetMyShelves(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
+	h.ensureDefaultFavorites(c.Request.Context(), userID)
 
 	shelfRows, err := h.pool.Query(c.Request.Context(),
 		`SELECT id, name, slug, COALESCE(exclusive_group, ''), collection_type
@@ -376,10 +441,17 @@ func (h *Handler) AddBookToShelf(c *gin.Context) {
 }
 
 // GetShelfBySlug - GET /users/:username/shelves/:slug
-// Public. Returns the shelf with its full book list.
+// Public, but gated for private profiles.
 func (h *Handler) GetShelfBySlug(c *gin.Context) {
 	username := c.Param("username")
 	slug := c.Param("slug")
+	currentUserID := c.GetString(middleware.UserIDKey)
+
+	_, _, canView := privacy.CanViewProfile(c.Request.Context(), h.pool, username, currentUserID)
+	if !canView {
+		c.JSON(http.StatusNotFound, gin.H{"error": "shelf not found"})
+		return
+	}
 
 	var shelf shelfDetailResponse
 	err := h.pool.QueryRow(c.Request.Context(),
@@ -394,14 +466,21 @@ func (h *Handler) GetShelfBySlug(c *gin.Context) {
 		return
 	}
 
-	rows, err := h.pool.Query(c.Request.Context(),
-		`SELECT b.id, b.open_library_id, b.title, b.cover_url, ci.added_at, ci.rating
+	query := `SELECT b.id, b.open_library_id, b.title, b.cover_url, ci.added_at, ci.rating
 		 FROM collection_items ci
 		 JOIN books b ON b.id = ci.book_id
 		 WHERE ci.collection_id = $1
-		 ORDER BY ci.added_at DESC`,
-		shelf.ID,
-	)
+		 ORDER BY ci.added_at DESC`
+	args := []interface{}{shelf.ID}
+
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if limit, err := strconv.Atoi(limitStr); err == nil && limit >= 1 && limit <= 200 {
+			query += " LIMIT $2"
+			args = append(args, limit)
+		}
+	}
+
+	rows, err := h.pool.Query(c.Request.Context(), query, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
@@ -434,6 +513,14 @@ type tagBooksResponse struct {
 
 func (h *Handler) GetTagBooks(c *gin.Context) {
 	username := c.Param("username")
+	currentUserID := c.GetString(middleware.UserIDKey)
+
+	_, _, canView := privacy.CanViewProfile(c.Request.Context(), h.pool, username, currentUserID)
+	if !canView {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tag not found"})
+		return
+	}
+
 	// Gin wildcard params include a leading slash: "/sci-fi" or "/sci-fi/moon"
 	rawPath := strings.TrimPrefix(c.Param("path"), "/")
 	if rawPath == "" {
