@@ -17,6 +17,7 @@ type UserProfile = {
   following_count: number;
   friends_count: number;
   books_read: number;
+  reviews_count: number;
 };
 
 type UserShelf = {
@@ -111,6 +112,13 @@ export default async function UserPage({
               <span className="font-semibold">{profile.books_read}</span>{" "}
               <span className="text-stone-400">books read</span>
             </span>
+            <Link
+              href={`/${profile.username}/reviews`}
+              className="text-sm text-stone-700 hover:text-stone-900 transition-colors"
+            >
+              <span className="font-semibold">{profile.reviews_count}</span>{" "}
+              <span className="text-stone-400">reviews</span>
+            </Link>
             <span className="text-sm text-stone-700">
               <span className="font-semibold">{profile.followers_count}</span>{" "}
               <span className="text-stone-400">followers</span>
@@ -123,12 +131,6 @@ export default async function UserPage({
               <span className="font-semibold">{profile.friends_count}</span>{" "}
               <span className="text-stone-400">friends</span>
             </span>
-            <Link
-              href={`/${profile.username}/reviews`}
-              className="text-sm text-stone-400 hover:text-stone-700 transition-colors"
-            >
-              reviews
-            </Link>
           </div>
           <p className="text-xs text-stone-400 mt-1">Member since {memberSince}</p>
         </div>

@@ -95,13 +95,15 @@ type BookResult struct {
 
 // BookDetail is the full book detail shape returned to clients.
 type BookDetail struct {
-	Key           string   `json:"key"`
-	Title         string   `json:"title"`
-	Authors       []string `json:"authors"`
-	Description   *string  `json:"description"`
-	CoverURL      *string  `json:"cover_url"`
-	AverageRating *float64 `json:"average_rating"`
-	RatingCount   int      `json:"rating_count"`
+	Key               string   `json:"key"`
+	Title             string   `json:"title"`
+	Authors           []string `json:"authors"`
+	Description       *string  `json:"description"`
+	CoverURL          *string  `json:"cover_url"`
+	AverageRating     *float64 `json:"average_rating"`
+	RatingCount       int      `json:"rating_count"`
+	LocalReadsCount   int      `json:"local_reads_count"`
+	LocalWantToRead   int      `json:"local_want_to_read_count"`
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -341,6 +343,22 @@ func (h *Handler) GetBook(c *gin.Context) {
 	if len(work.Covers) > 0 && work.Covers[0] > 0 {
 		coverURL := fmt.Sprintf(olCoverURL, work.Covers[0])
 		detail.CoverURL = &coverURL
+	}
+
+	// Query local DB for read and want-to-read counts.
+	if h.pool != nil {
+		_ = h.pool.QueryRow(c.Request.Context(),
+			`SELECT
+			    COUNT(*) FILTER (WHERE c.slug = 'read')          AS reads_count,
+			    COUNT(*) FILTER (WHERE c.slug = 'want-to-read')  AS want_count
+			 FROM collection_items ci
+			 JOIN books b        ON b.id  = ci.book_id
+			 JOIN collections c  ON c.id  = ci.collection_id
+			 JOIN users u        ON u.id  = c.user_id
+			 WHERE b.open_library_id = $1
+			   AND u.deleted_at IS NULL`,
+			workID,
+		).Scan(&detail.LocalReadsCount, &detail.LocalWantToRead)
 	}
 
 	c.JSON(http.StatusOK, detail)

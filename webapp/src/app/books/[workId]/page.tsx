@@ -15,6 +15,8 @@ type BookDetail = {
   cover_url: string | null;
   average_rating: number | null;
   rating_count: number;
+  local_reads_count: number;
+  local_want_to_read_count: number;
 };
 
 type BookReview = {
@@ -158,6 +160,23 @@ export default async function BookPage({
                   rating={book.average_rating}
                   count={book.rating_count}
                 />
+              </div>
+            )}
+
+            {(book.local_reads_count > 0 || book.local_want_to_read_count > 0) && (
+              <div className="flex items-center gap-3 mb-3 text-xs text-stone-400">
+                {book.local_reads_count > 0 && (
+                  <span>
+                    <span className="font-medium text-stone-600">{book.local_reads_count}</span>{" "}
+                    {book.local_reads_count === 1 ? "reader" : "readers"}
+                  </span>
+                )}
+                {book.local_want_to_read_count > 0 && (
+                  <span>
+                    <span className="font-medium text-stone-600">{book.local_want_to_read_count}</span>{" "}
+                    want to read
+                  </span>
+                )}
               </div>
             )}
 

@@ -36,6 +36,7 @@ type profileResponse struct {
 	FollowingCount int     `json:"following_count"`
 	FriendsCount   int     `json:"friends_count"`
 	BooksRead      int     `json:"books_read"`
+	ReviewsCount   int     `json:"reviews_count"`
 }
 
 type searchResult struct {
@@ -141,10 +142,15 @@ func (h *Handler) GetProfile(c *gin.Context) {
 		           WHERE f1.follower_id = u.id) AS friends_count,
 		        (SELECT COUNT(*) FROM collection_items ci
 		           JOIN collections c ON c.id = ci.collection_id
-		           WHERE c.user_id = u.id AND c.slug = 'read') AS books_read
+		           WHERE c.user_id = u.id AND c.slug = 'read') AS books_read,
+		        (SELECT COUNT(*) FROM collection_items ci
+		           JOIN collections c ON c.id = ci.collection_id
+		           WHERE c.user_id = u.id
+		             AND ci.review_text IS NOT NULL
+		             AND ci.review_text != '') AS reviews_count
 		 FROM users u WHERE u.username = $1 AND u.deleted_at IS NULL`,
 		username,
-	).Scan(&p.UserID, &p.Username, &p.DisplayName, &p.Bio, &p.AvatarURL, &p.IsPrivate, &memberSince, &p.FollowersCount, &p.FollowingCount, &p.FriendsCount, &p.BooksRead)
+	).Scan(&p.UserID, &p.Username, &p.DisplayName, &p.Bio, &p.AvatarURL, &p.IsPrivate, &memberSince, &p.FollowersCount, &p.FollowingCount, &p.FriendsCount, &p.BooksRead, &p.ReviewsCount)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
