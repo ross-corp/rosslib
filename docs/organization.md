@@ -109,6 +109,24 @@ When assigning a label on a book, you can also type a new value directly in the 
 
 ---
 
+## UI surfaces
+
+### Per-book: `BookTagPicker`
+
+`components/book-tag-picker.tsx` — a dropdown attached to each book card in the owner's shelf/grid views. Lazily loads the book's current assignments on first open. Supports toggling predefined values and typing a free-form value.
+
+### Bulk: library manager toolbar
+
+`components/library-manager.tsx` — when the owner selects multiple books in the library manager, the top toolbar shows a **Labels** dropdown. Clicking a value calls `PUT /api/me/books/:olId/tags/:keyId` for every selected book in parallel. Each key in the panel also has a **clear** button that calls `DELETE /api/me/books/:olId/tags/:keyId` across all selected books.
+
+The bulk Labels action works in both shelf-filtered and tag-filtered views (unlike Move/Remove which require knowing the current shelf ID).
+
+### Tag management: settings
+
+`app/settings/tags/page.tsx` — create/delete label categories, set their mode, add/remove predefined values.
+
+---
+
 ## Implementation notes
 
 ### Tags (collections)

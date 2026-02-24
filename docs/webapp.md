@@ -1,0 +1,186 @@
+# Webapp Architecture
+
+The webapp is a Next.js 15 app using the App Router. It runs on `:3000` and proxies all Go API calls through its own route handlers so the browser never talks directly to `:8080`.
+
+---
+
+## Key conventions
+
+### Proxy pattern
+
+Every client-side API call goes through a Next.js route handler in `webapp/src/app/api/`. These handlers:
+
+1. Pull the `token` cookie from the request
+2. Forward it to the Go API as `Authorization: Bearer <token>`
+3. Return the response as-is
+
+```
+Browser → POST /api/shelves/:id/books
+       → Next.js handler (adds auth header)
+       → Go API POST /shelves/:id/books
+```
+
+This keeps auth cookies httpOnly and the Go API URL server-side only.
+
+When adding a new Go API call that client components need to make, add a corresponding Next.js route handler. Match the path structure of the Go API where possible.
+
+### Server vs client components
+
+Server components (no `"use client"`) handle data fetching and pass data as props:
+
+```tsx
+// Server component — fetches data at request time
+export default async function ShelfPage({ params }) {
+  const shelf = await fetchShelf(username, slug);   // direct fetch to Go API
+  return <LibraryManager initialBooks={shelf.books} ... />;
+}
+```
+
+Client components (`"use client"`) handle interaction, state, and browser API calls:
+
+```tsx
+"use client";
+// Receives initial data from server, manages local state, calls /api/* routes
+export default function LibraryManager({ initialBooks, ... }) {
+  const [books, setBooks] = useState(initialBooks);
+  // ...
+}
+```
+
+Server components call `${process.env.API_URL}` directly (server-side env var). Client components call `/api/...` proxy routes (relative URL, works in browser).
+
+### Auth helpers
+
+`webapp/src/lib/auth.ts` exports two server-side helpers:
+
+- `getUser()` — decodes the JWT cookie and returns `{ user_id, username }` or null
+- `getToken()` — returns the raw JWT string or null
+
+These are only usable in server components and route handlers (they use `next/headers`).
+
+---
+
+## Page structure
+
+```
+webapp/src/app/
+├── layout.tsx                      root layout (Nav is NOT here — included per-page)
+├── page.tsx                        home / landing
+├── login/page.tsx
+├── register/page.tsx
+├── search/page.tsx                 book + user search
+├── users/page.tsx                  browse all users
+├── books/[workId]/page.tsx         single book page
+├── settings/
+│   ├── page.tsx                    profile settings
+│   ├── import/page.tsx             Goodreads CSV import
+│   └── tags/page.tsx               label category management
+├── [username]/
+│   ├── page.tsx                    public profile
+│   ├── shelves/[slug]/page.tsx     shelf page (owner gets library manager)
+│   └── tags/[...path]/page.tsx     tag browsing page
+└── api/                            Next.js proxy route handlers
+    ├── auth/login/route.ts
+    ├── auth/register/route.ts
+    ├── auth/logout/route.ts
+    ├── users/me/route.ts
+    ├── users/[username]/follow/route.ts
+    ├── me/shelves/route.ts
+    ├── me/tag-keys/route.ts
+    ├── me/tag-keys/[keyId]/route.ts
+    ├── me/tag-keys/[keyId]/values/route.ts
+    ├── me/tag-keys/[keyId]/values/[valueId]/route.ts
+    ├── me/books/[olId]/tags/route.ts
+    ├── me/books/[olId]/tags/[keyId]/route.ts
+    ├── me/books/[olId]/tags/[keyId]/values/[valueId]/route.ts
+    ├── me/import/goodreads/preview/route.ts
+    ├── me/import/goodreads/commit/route.ts
+    ├── shelves/[shelfId]/books/route.ts
+    ├── shelves/[shelfId]/books/[olId]/route.ts    ← GET, PATCH, DELETE
+    └── users/[username]/
+        ├── tags/[...path]/route.ts
+        └── shelves/[slug]/route.ts                ← GET (for client-side shelf switching)
+```
+
+---
+
+## Key components
+
+### `Nav` (`components/nav.tsx`)
+
+Top navigation bar. Statically imported by each page — not in the root layout.
+
+### `LibraryManager` (`components/library-manager.tsx`)
+
+Full-page library manager rendered for shelf owners. Replaces the simple shelf grid on `[username]/shelves/[slug]` when `isOwner` is true.
+
+Layout: `h-screen flex flex-col overflow-hidden` on the page, then inside LibraryManager:
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Nav                                                  │
+├──────────┬──────────────────────────────────────────┤
+│          │ top bar (shelf name / bulk action toolbar)│
+│ sidebar  ├──────────────────────────────────────────┤
+│          │                                          │
+│ Shelves  │   book cover grid (scrollable)           │
+│ Custom   │                                          │
+│ Tags     │                                          │
+│ Labels   │                                          │
+│          │                                          │
+└──────────┴──────────────────────────────────────────┘
+```
+
+**Sidebar** — clicking a shelf fetches its books client-side via `GET /api/users/:username/shelves/:slug`. Clicking a tag collection fetches via `GET /api/users/:username/tags/:path`. Label categories (key/value) are displayed but not filterable.
+
+**Top bar** — shows the current shelf name and book count when nothing is selected. Transforms into the bulk action toolbar when one or more books are checked:
+- Rate — sets rating on all selected books via `PATCH /api/shelves/:shelfId/books/:olId`
+- Move to shelf — moves via `POST /api/shelves/:targetId/books`, then refreshes the current shelf
+- Labels — applies or clears a label value across all selected books via `PUT/DELETE /api/me/books/:olId/tags/:keyId`
+- Remove — removes from current shelf via `DELETE /api/shelves/:shelfId/books/:olId`
+
+Rate, Move, and Remove require a shelf context (disabled in tag-filtered views). Labels work in both shelf and tag views since they only need the `open_library_id`.
+
+**Book grid** — cover images with a checkbox in the top-left. Checkboxes are invisible until hover or until at least one book is selected (at which point all checkboxes become visible). When books are selected, clicking a cover toggles selection instead of navigating to the book page.
+
+### `ShelfBookGrid` (`components/shelf-book-grid.tsx`)
+
+Simpler read-only-ish grid used on non-owner shelf views and the tag browsing page. Supports individual book removal (owner only) and the per-book `BookTagPicker`.
+
+### `BookTagPicker` (`components/book-tag-picker.tsx`)
+
+Dropdown for managing label assignments on a single book. Lazily loads current assignments on first open. Supports toggling predefined values and adding free-form values.
+
+### `ShelfPicker` (`components/shelf-picker.tsx`)
+
+Dropdown for adding/moving/removing a single book from shelves. Used on search results and book pages.
+
+### `StarRating` (`components/star-rating.tsx`)
+
+Read-only star display used on shelf book cards.
+
+---
+
+## Adding a new page
+
+1. Create `webapp/src/app/<path>/page.tsx`
+2. If it needs auth: call `getUser()` and `getToken()` at the top of the server component
+3. Fetch data server-side using `${process.env.API_URL}` with the token header if needed
+4. Pass data to a client component for any interactive parts
+5. Add any needed proxy routes under `webapp/src/app/api/`
+
+## Adding a new API call from the client
+
+1. Add a route handler in `webapp/src/app/api/` that extracts the `token` cookie and proxies to the Go API
+2. Call the `/api/...` path from the client component using `fetch`
+3. Match the Go API's HTTP method(s) — export named functions `GET`, `POST`, `PATCH`, `DELETE` etc. from the route handler
+
+---
+
+## Environment variables
+
+| Variable | Where used | Purpose |
+|---|---|---|
+| `API_URL` | Server-side only | Go API base URL (e.g. `http://localhost:8080`) |
+| `NEXT_PUBLIC_API_URL` | Client-side | Not currently used; reserved |
+| `JWT_SECRET` | Go API only | Signs/verifies JWTs |

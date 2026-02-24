@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/nav";
 import ShelfBookGrid from "@/components/shelf-book-grid";
+import LibraryManager, { ShelfSummary } from "@/components/library-manager";
 import { getUser, getToken } from "@/lib/auth";
 import { TagKey } from "@/components/book-tag-picker";
 
@@ -20,14 +21,6 @@ type ShelfDetail = {
     added_at: string;
     rating: number | null;
   }[];
-};
-
-type ShelfSummary = {
-  id: string;
-  name: string;
-  slug: string;
-  exclusive_group: string;
-  item_count: number;
 };
 
 // ── Data fetchers ──────────────────────────────────────────────────────────────
@@ -80,12 +73,34 @@ export default async function ShelfPage({
 
   if (!shelf) notFound();
 
+  // ── Owner view: full library manager layout ────────────────────────────────
+
+  if (isOwner) {
+    return (
+      <div className="h-screen flex flex-col overflow-hidden">
+        <Nav />
+        <LibraryManager
+          username={username}
+          initialBooks={shelf.books}
+          initialShelf={{ id: shelf.id, name: shelf.name, slug: shelf.slug }}
+          allShelves={allShelves}
+          tagKeys={tagKeys}
+        />
+      </div>
+    );
+  }
+
+  // ── Visitor view: classic layout ───────────────────────────────────────────
+
   return (
     <div className="min-h-screen">
       <Nav />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
         <nav className="flex items-center gap-2 text-xs text-stone-400 mb-8">
-          <Link href={`/${username}`} className="hover:text-stone-700 transition-colors">
+          <Link
+            href={`/${username}`}
+            className="hover:text-stone-700 transition-colors"
+          >
             {username}
           </Link>
           <span>/</span>
@@ -101,28 +116,32 @@ export default async function ShelfPage({
 
         {allShelves.length > 1 && (
           <div className="flex flex-wrap gap-2 mb-8">
-            {allShelves.map((s) => (
-              <Link
-                key={s.id}
-                href={`/${username}/shelves/${s.slug}`}
-                className={`text-sm px-3 py-1 rounded border transition-colors ${
-                  s.slug === slug
-                    ? "border-stone-800 bg-stone-800 text-white"
-                    : "border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900"
-                }`}
-              >
-                {s.name}
-                <span className="ml-1.5 text-xs opacity-60">{s.item_count}</span>
-              </Link>
-            ))}
+            {allShelves
+              .filter((s) => s.collection_type !== "tag")
+              .map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/${username}/shelves/${s.slug}`}
+                  className={`text-sm px-3 py-1 rounded border transition-colors ${
+                    s.slug === slug
+                      ? "border-stone-800 bg-stone-800 text-white"
+                      : "border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900"
+                  }`}
+                >
+                  {s.name}
+                  <span className="ml-1.5 text-xs opacity-60">
+                    {s.item_count}
+                  </span>
+                </Link>
+              ))}
           </div>
         )}
 
         <ShelfBookGrid
           shelfId={shelf.id}
           initialBooks={shelf.books}
-          isOwner={isOwner}
-          tagKeys={tagKeys}
+          isOwner={false}
+          tagKeys={[]}
         />
       </main>
     </div>

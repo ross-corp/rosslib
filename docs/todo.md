@@ -23,6 +23,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] Edit profile page at `/settings` — set display name and byline.
   - [x] Default shelves (Want to Read, Currently Reading, Read) shown on profile with item counts; cards link to shelf pages.
   - [x] Shelf pages at `/{username}/shelves/{slug}` — cover grid with title, owner can remove books inline.
+  - [x] Library manager at `/{username}/shelves/{slug}` (owner only) — full-page layout with sidebar (shelves, custom, tags, labels), dense cover grid with multi-select checkboxes, and bulk action toolbar (Rate, Move to shelf, Labels, Remove). Non-owners see the original read-only grid.
   - [ ] Avatar upload.
   - [ ] Recent activity (reviews, threads, list updates) on profile.
   - [ ] Stats: books read (done), reviews written (needs reviews feature), followers/following count (done).
