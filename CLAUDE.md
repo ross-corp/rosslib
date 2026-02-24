@@ -9,13 +9,13 @@ Rosslib is a Goodreads alternative. It has two services:
 - `api/` — Go REST API (Gin framework) on `:8080`
 - `webapp/` — Next.js 15 frontend on `:3000`
 
-Backing services: PostgreSQL, Redis, Meilisearch. Managed infrastructure on a single AWS EC2 instance via Terraform (`infra/`).
+Backing services: PostgreSQL, Redis, Meilisearch, MinIO (S3-compatible object store). Managed infrastructure on a single AWS EC2 instance via Terraform (`infra/`).
 
 ## Local Dev
 
 ```bash
 cp .env.example .env
-docker compose up          # starts postgres, redis, meilisearch
+docker compose up          # starts postgres, redis, meilisearch, minio
 cd api && go run .         # Go API on :8080 (or use `air` for hot reload)
 cd webapp && npm run dev   # Next.js on :3000
 ```

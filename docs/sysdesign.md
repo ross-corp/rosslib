@@ -7,7 +7,7 @@
 - **PostgreSQL** — primary datastore, named Docker volume
 - **Redis** — session/token storage, feed cache, rate limiting
 - **Meilisearch** — book/author full-text search, named Docker volume
-- **S3** — cover images, avatars, CSV exports (managed; no self-hosting)
+- **MinIO** — S3-compatible object store for avatars and file uploads; runs in Docker locally. In production, swap for AWS S3 (change `MINIO_ENDPOINT`, `MINIO_PUBLIC_URL`, and credentials — no code changes required).
 - **nginx** — TLS termination, reverse proxy (runs on host, not in Docker)
 
 ## Deployment
@@ -20,11 +20,12 @@ App services run via `docker-compose.prod.yml`. Images pulled from GHCR. nginx r
 EC2 host
 ├── nginx (host)              TLS, reverse proxy → :3000 / :8080
 └── docker-compose.prod.yml
-    ├── webapp    :3000
-    ├── api       :8080
-    ├── postgres  :5432  (named volume)
-    ├── redis     :6379
-    └── meilisearch :7700 (named volume)
+    ├── webapp      :3000
+    ├── api         :8080
+    ├── postgres    :5432  (named volume)
+    ├── redis       :6379
+    ├── meilisearch :7700  (named volume)
+    └── minio       :9000  (named volume) — swap for S3 in prod
 ```
 
 DNS via Route 53. TLS via Let's Encrypt/Certbot.
@@ -69,17 +70,19 @@ Cover images are sourced from Open Library's CDN (`covers.openlibrary.org`) and 
 **Current limitations / future work:**
 
 - No image proxy or optimization layer (no Next.js `<Image>` component, no self-hosted proxy). This means we have no control over cache headers, no resizing, and no AVIF/WebP conversion.
-- The S3 bucket noted in the components list above is provisioned for this purpose (cover images, avatars) but is not yet used for covers. A future improvement would be to download and re-host cover images in S3, eliminating the CDN dependency and enabling cache control.
+- Cover images are still served from Open Library's CDN and are not stored in MinIO. A future improvement would be to download and re-host cover images in MinIO/S3, eliminating the CDN dependency and enabling cache control.
 
 ## Local Dev
 
 ```bash
-docker compose up          # starts postgres, redis, meilisearch
+docker compose up          # starts postgres, redis, meilisearch, minio
 cd api && go run .         # Go API on :8080
 cd webapp && npm run dev   # Next.js on :3000
 ```
 
 Copy `.env.example` → `.env` before starting.
+
+MinIO runs on `:9000` (S3 API) and `:9001` (web console, login: `minioadmin`/`minioadmin`). The Go API creates the `rosslib` bucket and sets the avatars public-read policy on startup. Avatar URLs are served directly from `http://localhost:9000`.
 
 ## CI/CD
 
