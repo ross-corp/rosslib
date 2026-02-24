@@ -87,7 +87,30 @@ All three have `is_exclusive = true`. Adding a book to any of them removes it fr
 - `'shelf'` — a bookshelf (default or custom). Shown in the shelf sidebar and profile shelf cards.
 - `'tag'` — a path-based tag. Slug may contain `/` for hierarchy (e.g. `scifi/dystopian`). Shown as tag chips on the profile page. See `docs/organization.md`.
 
-### `collection_items`
+### `user_books`
+
+Per-user book ownership. Replaces `collection_items` for user-book metadata (rating, review, dates). Status is tracked via `book_tag_values` (the Status label key), not via shelf placement.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user_id | uuid FK → users | |
+| book_id | uuid FK → books | |
+| rating | smallint | nullable; 1–5 |
+| review_text | text | nullable |
+| spoiler | boolean | default false |
+| date_read | timestamptz | nullable; when the user finished the book |
+| date_added | timestamptz | default now(); original add date (preserves Goodreads history on import) |
+| created_at | timestamptz | |
+
+Unique constraint: `(user_id, book_id)`
+Index: `(user_id, date_added DESC)`
+
+Rating and review are updated via `PATCH /me/books/:olId`. Absent fields in the PATCH body are ignored — only explicitly provided fields are updated.
+
+### `collection_items` (legacy)
+
+Still used for tag collections (Favorites, custom tags). Old read_status shelf data was migrated to `user_books` + status labels at startup.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -98,12 +121,10 @@ All three have `is_exclusive = true`. Adding a book to any of them removes it fr
 | rating | smallint | nullable; 1–5 |
 | review_text | text | nullable |
 | spoiler | boolean | default false |
-| date_read | timestamptz | nullable; when the user finished the book |
-| date_added | timestamptz | nullable; original add date (preserves Goodreads history on import) |
+| date_read | timestamptz | nullable |
+| date_added | timestamptz | nullable |
 
 Unique constraint: `(collection_id, book_id)`
-
-Rating and review are updated via `PATCH /shelves/:shelfId/books/:olId`. Absent fields in the PATCH body are ignored — only explicitly provided fields are updated.
 
 ### `tag_keys`
 
@@ -209,9 +230,10 @@ Indexes: `(user_id, created_at DESC)`, `(created_at DESC)`.
 
 ```
 users ──< follows >── users
-users ──< collections ──< collection_items >── books
+users ──< user_books >── books
+users ──< collections ──< collection_items >── books  (tag collections)
 users ──< tag_keys ──< tag_values
-users ──< book_tag_values >── tag_values >── tag_keys
+users ──< book_tag_values >── tag_values >── tag_keys  (includes Status labels)
 users ──< threads >── books
 users ──< thread_comments >── threads
 users ──< activities >── books, users, collections, threads
@@ -229,7 +251,7 @@ Author records and the book↔author join table. Currently authors are stored as
 
 ### `reviews`
 
-Standalone review table (as opposed to `review_text` on `collection_items`). The current model keeps rating and review on the collection item, meaning a book can technically have different reviews on different shelves. The planned `reviews` table would enforce one review per user per book.
+Standalone review table. The current model keeps rating and review on `user_books` (one per user per book), which already enforces uniqueness. A dedicated reviews table may be useful if reviews gain features like upvotes, replies, or rich formatting.
 
 ### `links`
 

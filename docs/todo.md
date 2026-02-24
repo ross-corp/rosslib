@@ -21,9 +21,9 @@ Once we're further along we'll move to GH projects. this is fine for now
 - [ ] Profile
   - [x] Public profile page at `/{username}` — display name, byline, member since.
   - [x] Edit profile page at `/settings` — set display name and byline.
-  - [x] Default shelves (Want to Read, Currently Reading, Read) shown on profile with item counts; cards link to shelf pages.
-  - [x] Shelf pages at `/{username}/shelves/{slug}` — cover grid with title, owner can remove books inline.
-  - [x] Library manager at `/{username}/shelves/{slug}` (owner only) — full-page layout with sidebar (shelves, custom, tags, labels), dense cover grid with multi-select checkboxes, and bulk action toolbar (Rate, Move to shelf, Labels, Remove). Non-owners see the original read-only grid.
+  - [x] Status labels (Want to Read, Owned to Read, Currently Reading, Finished, DNF) shown on profile; `user_books` table tracks user-book relationships (rating, review, dates), status tracked via label system (`book_tag_values`).
+  - [x] Shelf pages at `/{username}/shelves/{slug}` — cover grid with title, owner can remove books inline. Status slugs fetch from `user_books`; tag slugs use existing shelf behavior.
+  - [x] Library manager at `/{username}/shelves/{slug}` (owner only) — full-page layout with sidebar (status values, tags, labels), dense cover grid with multi-select checkboxes, and bulk action toolbar (Rate, Change status, Labels, Tags, Remove). Non-owners see the original read-only grid.
   - [x] Label value navigation in library manager sidebar — clicking a label value fetches and displays all books with that key+value assignment (including nested sub-values) via `GET /users/:username/labels/:keySlug/*valuePath`. Nested values are indented in the sidebar by depth.
   - [x] Nested labels — label values can contain `/` to form a hierarchy (e.g. `genre: History/Engineering`). Viewing a parent label (`genre: History`) includes books tagged at any depth. Public label pages at `/{username}/labels/:keySlug/*valuePath` support breadcrumb navigation and sub-label drill-down, matching the nested tags page behaviour.
   - [x] Avatar upload — `POST /me/avatar` (multipart); stored in MinIO; URL written to `users.avatar_url`. Swap `MINIO_*` env vars for S3 in production.
@@ -42,7 +42,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] `/search` page — Books tab searches by title via Open Library API (up to 20 results with cover, authors, year). People tab searches users by username or display name.
   - [x] `/users` page — browse all users, alphabetical, paginated (20/page).
   - [x] Tab selector on `/search` to filter between Books and People.
-  - [x] "Add to shelf" picker on each book search result — logged-in users can add/move/remove books across their 3 default shelves inline.
+  - [x] StatusPicker on each book search result — logged-in users can add books to library with a status, change status, or remove inline.
   - [ ] Author tab in search.
   - [ ] Full-text book/author search via Meilisearch (will replace Open Library as primary search backend).
 
@@ -60,14 +60,14 @@ Once we're further along we'll move to GH projects. this is fine for now
 ## Data Model
 
 - [ ] Collections
-  - [x] 3 default collections for all users: Want to Read, Currently Reading, Read — created on registration (or lazily on first `/me/shelves` call for existing users).
-  - [x] `books` table — global catalog keyed by `open_library_id`; upserted when a user adds a book to a shelf.
-  - [x] `collections` + `collection_items` tables with `is_exclusive` / `exclusive_group` for mutual exclusivity enforcement.
-  - [x] API: `GET /users/:username/shelves` (supports `?include_books=N`), `GET /users/:username/shelves/:slug` (supports `?limit=N`), `GET /me/shelves`, `POST /shelves/:shelfId/books`, `DELETE /shelves/:shelfId/books/:olId`, `GET /users/:username/labels/:keySlug/:valueSlug`.
+  - [x] `user_books` table — per-user book ownership with rating, review_text, spoiler, date_read, date_added. Replaces `collection_items` for user-book metadata.
+  - [x] Status tracked via label system (`tag_keys` where slug='status', `book_tag_values`) — select_one key with values: Want to Read, Owned to Read, Currently Reading, Finished, DNF.
+  - [x] `books` table — global catalog keyed by `open_library_id`; upserted when a user adds a book.
+  - [x] `collections` + `collection_items` tables retained for tag collections (Favorites, custom tags). Old read_status shelves migrated to user_books + status labels.
+  - [x] API: `POST /me/books`, `PATCH /me/books/:olId`, `DELETE /me/books/:olId`, `GET /me/books/:olId/status`, `GET /me/books/status-map`, `GET /users/:username/books` (with `?status=slug` filter).
   - [x] `GET /users/:username/reviews` supports `?limit=N` for preview on profile page.
-  - [x] `GET /users/:username` returns `books_this_year` and `average_rating` in profile response.
+  - [x] `GET /users/:username` returns `books_this_year` and `average_rating` in profile response (stats from `user_books` + `book_tag_values`).
   - [x] Expand `books` table: add `isbn13 VARCHAR(13)`, `authors TEXT`, `publication_year INT` — needed for import matching and book pages.
-  - [x] Expand `collection_items` table: add `rating SMALLINT` (0–5, 0 = unrated), `review_text TEXT`, `spoiler BOOLEAN DEFAULT false`, `date_read TIMESTAMPTZ`, `date_added TIMESTAMPTZ` — needed before import can store review/rating data.
   - [x] custom collections
     - [x] `POST /me/shelves` — create a custom collection (name, slug auto-derived, is_exclusive, exclusive_group, is_public). Returns 409 on slug conflict.
     - [x] `PATCH /me/shelves/:id` — rename or change visibility of a custom collection.
@@ -100,7 +100,7 @@ Once we're further along we'll move to GH projects. this is fine for now
 - [ ] Book pages
   - [x] Metadata: title, author(s), cover, description (from Open Library).
   - [x] Aggregate stats: average rating (from Open Library).
-  - [x] User's own status — shelf placement, rating, review shown on book page; shelf picker to add/move the book.
+  - [x] User's own status — status label, rating, review shown on book page; StatusPicker to add/change status.
   - [x] Community reviews — `GET /books/:workId/reviews` returns all user reviews from the local DB; shown on book page with spoiler gating.
   - [ ] Publisher, year, page count (not exposed by Open Library work API; requires edition lookup).
   - [x] Read count / want-to-read count from local DB — shown on book page.
@@ -112,8 +112,8 @@ Once we're further along we'll move to GH projects. this is fine for now
 
 ## Reviews & Ratings
 
-- [x] Rating and review text live on `collection_items` (one per user per book). Fields: `rating`, `review_text`, `spoiler`, `date_read`, `date_added`.
-- [x] `PATCH /shelves/:shelfId/books/:olId` — partial update of rating, review_text, spoiler, date_read. Uses `map[string]json.RawMessage` to distinguish absent fields from explicit nulls; dynamically builds SET clause.
+- [x] Rating and review text live on `user_books` (one per user per book). Fields: `rating`, `review_text`, `spoiler`, `date_read`, `date_added`.
+- [x] `PATCH /me/books/:olId` — partial update of rating, review_text, spoiler, date_read. Uses `map[string]json.RawMessage` to distinguish absent fields from explicit nulls; dynamically builds SET clause.
 - [x] A user can rate a book 1–5 stars (integers; half stars are a future enhancement).
 - [x] A rating alone (no review text) is valid.
 - [x] Review text is optional; can include a spoiler flag.
@@ -147,13 +147,12 @@ Once we're further along we'll move to GH projects. this is fine for now
     - [x] Parse Goodreads CSV format: strip `=""...""` Excel formula wrapper from ISBN fields; handle quoted multi-line review text.
     - [x] For each row: try ISBN13 lookup first (`LookupBookByISBN` with nil pool = no DB write), then fall back to title + author OL search.
     - [x] Categorise results as `matched` (single OL match), `ambiguous` (multiple candidates), `unmatched` (no match).
-    - [x] Map `Exclusive Shelf` column: `read` → Read, `currently-reading` → Currently Reading, `to-read` → Want to Read; any other value (e.g. `owned-to-read`, `dnf`) treated as a new custom exclusive shelf in the `read_status` group.
+    - [x] Map `Exclusive Shelf` column: `read` → Finished, `currently-reading` → Currently Reading, `to-read` → Want to Read, `dnf` → DNF, `owned-to-read` → Owned to Read.
     - [x] Map `Bookshelves` column: each tag → proposed as a non-exclusive custom shelf, reusing existing ones by slug via `EnsureShelf`.
     - [x] Per-row payload includes: title, author, isbn13, matched OL ID, target shelf slugs, rating, review_text, date_read, date_added.
   - [x] `POST /me/import/goodreads/commit` — accepts the confirmed preview payload; writes to DB sequentially.
     - [x] Upserts books into `books` table (isbn13, authors, publication_year populated from OL data).
-    - [x] Creates any new custom shelves (exclusive or non-exclusive) via `EnsureShelf`.
-    - [x] Adds books to collections; sets `rating`, `review_text`, `spoiler`, `date_read`, `date_added` on `collection_items`. Removes book from other exclusive shelves in the same group.
+    - [x] Writes `user_books` rows + sets Status labels via `book_tag_values`. Ensures Status tag key exists via `tags.EnsureStatusLabel`.
     - [x] Skips rows the user excluded in the preview.
     - [x] Returns a summary: imported count, failed count, error list (null-safe in UI).
   - [x] Import UI at `/settings/import` (`app/settings/import/page.tsx`):
