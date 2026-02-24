@@ -268,6 +268,30 @@ BEGIN
     END LOOP;
   END LOOP;
 END $$;
+
+-- ── Backfill: create user_books rows for books that have Status labels but
+--    were never in a read_status shelf (e.g. set directly via the label UI).
+
+INSERT INTO user_books (user_id, book_id, rating, review_text, spoiler, date_read, date_added)
+SELECT DISTINCT ON (btv.user_id, btv.book_id)
+       btv.user_id,
+       btv.book_id,
+       ci.rating,
+       ci.review_text,
+       COALESCE(ci.spoiler, false),
+       ci.date_read,
+       COALESCE(ci.date_added, ci.added_at, NOW())
+FROM book_tag_values btv
+JOIN tag_keys tk ON tk.id = btv.tag_key_id AND tk.slug = 'status'
+LEFT JOIN collection_items ci
+       ON ci.book_id = btv.book_id
+      AND ci.collection_id IN (SELECT id FROM collections WHERE user_id = btv.user_id)
+WHERE NOT EXISTS (
+  SELECT 1 FROM user_books ub
+  WHERE ub.user_id = btv.user_id AND ub.book_id = btv.book_id
+)
+ORDER BY btv.user_id, btv.book_id, ci.rating DESC NULLS LAST
+ON CONFLICT (user_id, book_id) DO NOTHING;
 `
 
 func Migrate(pool *pgxpool.Pool) error {
