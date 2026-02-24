@@ -3,6 +3,7 @@ package tags
 import (
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -24,6 +25,20 @@ func slugify(name string) string {
 		}
 	}
 	return strings.Trim(multiDash.ReplaceAllString(b.String(), "-"), "-")
+}
+
+// slugifyValue is like slugify but preserves "/" as a path separator,
+// enabling nested label values like "history/engineering".
+func slugifyValue(name string) string {
+	parts := strings.Split(name, "/")
+	segs := make([]string, 0, len(parts))
+	for _, p := range parts {
+		s := slugify(strings.TrimSpace(p))
+		if s != "" {
+			segs = append(segs, s)
+		}
+	}
+	return strings.Join(segs, "/")
 }
 
 type Handler struct {
@@ -210,7 +225,7 @@ func (h *Handler) CreateTagValue(c *gin.Context) {
 		return
 	}
 
-	slug := slugify(req.Name)
+	slug := slugifyValue(req.Name)
 	if slug == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "name produces an empty slug"})
 		return
@@ -340,7 +355,7 @@ func (h *Handler) SetBookTag(c *gin.Context) {
 	// Resolve value ID — either by the provided ID or by find-or-create from name.
 	valueID := req.ValueID
 	if valueID == "" {
-		slug := slugify(req.ValueName)
+		slug := slugifyValue(req.ValueName)
 		if slug == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "value_name produces an empty slug"})
 			return
@@ -466,49 +481,80 @@ type labelBooksResponse struct {
 	KeyName   string      `json:"key_name"`
 	ValueSlug string      `json:"value_slug"`
 	ValueName string      `json:"value_name"`
+	SubLabels []string    `json:"sub_labels"`
 	Books     []labelBook `json:"books"`
 }
 
-// GetLabelBooks - GET /users/:username/labels/:keySlug/:valueSlug (public)
+// GetLabelBooks - GET /users/:username/labels/:keySlug/*valuePath (public)
 // Returns all books for a user that have the given key+value label assigned.
+// Nested labels: "history" also returns books tagged "history/engineering" etc.
 func (h *Handler) GetLabelBooks(c *gin.Context) {
 	username := c.Param("username")
 	keySlug := c.Param("keySlug")
-	valueSlug := c.Param("valueSlug")
+	// Gin wildcard params include a leading "/"
+	valuePath := strings.TrimPrefix(c.Param("valuePath"), "/")
+	if valuePath == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "value path required"})
+		return
+	}
 
-	// Verify key+value exist for this user and get display names + user ID.
-	var userID, keyName, valueName string
+	// Verify key exists for this user and get user ID + key ID + key name.
+	var userID, keyID, keyName string
 	if err := h.pool.QueryRow(c.Request.Context(),
-		`SELECT u.id, tk.name, tv.name
+		`SELECT u.id, tk.id, tk.name
 		 FROM tag_keys tk
-		 JOIN tag_values tv ON tv.tag_key_id = tk.id
 		 JOIN users u ON u.id = tk.user_id
-		 WHERE u.username = $1
-		   AND u.deleted_at IS NULL
-		   AND tk.slug = $2
-		   AND tv.slug = $3`,
-		username, keySlug, valueSlug,
-	).Scan(&userID, &keyName, &valueName); err != nil {
+		 WHERE u.username = $1 AND u.deleted_at IS NULL AND tk.slug = $2`,
+		username, keySlug,
+	).Scan(&userID, &keyID, &keyName); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "label not found"})
 		return
 	}
 
+	likePattern := valuePath + "/%"
+
+	// Verify at least one value exists for this path (exact or sub-value).
+	var valueCount int
+	if err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT COUNT(*) FROM tag_values
+		 WHERE tag_key_id = $1 AND (slug = $2 OR slug LIKE $3)`,
+		keyID, valuePath, likePattern,
+	).Scan(&valueCount); err != nil || valueCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "label not found"})
+		return
+	}
+
+	// Display name: exact value if exists, otherwise last path segment.
+	var valueName string
+	if err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT name FROM tag_values WHERE tag_key_id = $1 AND slug = $2`,
+		keyID, valuePath,
+	).Scan(&valueName); err != nil {
+		parts := strings.Split(valuePath, "/")
+		valueName = parts[len(parts)-1]
+	}
+
+	// Fetch books, deduplicating in case a book has both a parent and child value.
 	rows, err := h.pool.Query(c.Request.Context(),
-		`SELECT b.id, b.open_library_id, b.title, b.cover_url, btv.created_at,
-		        (SELECT ci.rating
-		         FROM collection_items ci
-		         JOIN collections col ON col.id = ci.collection_id
-		         WHERE ci.book_id = b.id AND col.user_id = $1 AND ci.rating IS NOT NULL
-		         ORDER BY ci.added_at DESC LIMIT 1) AS rating
-		 FROM book_tag_values btv
-		 JOIN tag_keys tk ON tk.id = btv.tag_key_id
-		 JOIN tag_values tv ON tv.id = btv.tag_value_id
-		 JOIN books b ON b.id = btv.book_id
-		 WHERE btv.user_id = $1
-		   AND tk.slug = $2
-		   AND tv.slug = $3
-		 ORDER BY btv.created_at DESC`,
-		userID, keySlug, valueSlug,
+		`SELECT sub.id, sub.open_library_id, sub.title, sub.cover_url, sub.added_at, sub.rating
+		 FROM (
+		   SELECT DISTINCT ON (b.id)
+		          b.id, b.open_library_id, b.title, b.cover_url, btv.created_at AS added_at,
+		          (SELECT ci.rating
+		           FROM collection_items ci
+		           JOIN collections col ON col.id = ci.collection_id
+		           WHERE ci.book_id = b.id AND col.user_id = $1 AND ci.rating IS NOT NULL
+		           ORDER BY ci.added_at DESC LIMIT 1) AS rating
+		   FROM book_tag_values btv
+		   JOIN tag_values tv ON tv.id = btv.tag_value_id
+		   JOIN books b ON b.id = btv.book_id
+		   WHERE btv.user_id = $1
+		     AND btv.tag_key_id = $2
+		     AND (tv.slug = $3 OR tv.slug LIKE $4)
+		   ORDER BY b.id, btv.created_at DESC
+		 ) sub
+		 ORDER BY sub.added_at DESC`,
+		userID, keyID, valuePath, likePattern,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
@@ -528,11 +574,40 @@ func (h *Handler) GetLabelBooks(c *gin.Context) {
 		books = append(books, book)
 	}
 
+	// Derive direct sub-labels (one level deeper than valuePath).
+	subRows, err := h.pool.Query(c.Request.Context(),
+		`SELECT slug FROM tag_values WHERE tag_key_id = $1 AND slug LIKE $2`,
+		keyID, likePattern,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer subRows.Close()
+
+	seen := make(map[string]bool)
+	subLabels := []string{}
+	for subRows.Next() {
+		var slug string
+		if err := subRows.Scan(&slug); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		rest := strings.TrimPrefix(slug, valuePath+"/")
+		childSlug := valuePath + "/" + strings.SplitN(rest, "/", 2)[0]
+		if !seen[childSlug] {
+			seen[childSlug] = true
+			subLabels = append(subLabels, childSlug)
+		}
+	}
+	sort.Strings(subLabels)
+
 	c.JSON(http.StatusOK, labelBooksResponse{
 		KeySlug:   keySlug,
 		KeyName:   keyName,
-		ValueSlug: valueSlug,
+		ValueSlug: valuePath,
 		ValueName: valueName,
+		SubLabels: subLabels,
 		Books:     books,
 	})
 }

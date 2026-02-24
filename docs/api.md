@@ -236,7 +236,7 @@ Tags are created via `POST /me/shelves` with `collection_type: "tag"`.
 
 ## Labels (key/value)
 
-Labels are structured key/value annotations on books. See `docs/organization.md` for full semantics.
+Labels are structured key/value annotations on books. Values can be nested using `/` (e.g. `history/engineering`). See `docs/organization.md` for full semantics.
 
 ### `GET /me/tag-keys`  *(auth required)*
 
@@ -278,6 +278,8 @@ Add a predefined value to a label category.
 { "name": "mom" }
 ```
 
+`name` may contain `/` to create a nested value (e.g. `"History/Engineering"` → slug `history/engineering`). Each segment is slugified individually.
+
 ### `DELETE /me/tag-keys/:keyId/values/:valueId`  *(auth required)*
 
 Remove a predefined value (and all book assignments of that value).
@@ -318,6 +320,37 @@ Remove all label assignments for a given key from a book.
 ### `DELETE /me/books/:olId/tags/:keyId/values/:valueId`  *(auth required)*
 
 Remove a single value assignment (for `select_multiple` keys).
+
+### `GET /users/:username/labels/:keySlug/*valuePath`  *(public)*
+
+Returns all books for a user that have the given key+value label. Nested: querying `history` also returns books tagged `history/engineering`, `history/science/ancient`, etc.
+
+```
+GET /users/alice/labels/genre/history             → books tagged genre:history or genre:history/*
+GET /users/alice/labels/genre/history/engineering → books tagged genre:history/engineering or deeper
+```
+
+```json
+{
+  "key_slug": "genre",
+  "key_name": "Genre",
+  "value_slug": "history",
+  "value_name": "History",
+  "sub_labels": ["history/engineering", "history/science"],
+  "books": [
+    {
+      "book_id": "...",
+      "open_library_id": "OL82592W",
+      "title": "The Great Gatsby",
+      "cover_url": "https://...",
+      "added_at": "2024-01-01T00:00:00Z",
+      "rating": 4
+    }
+  ]
+}
+```
+
+Returns 404 if the key doesn't exist for this user, or if no values (exact or nested) match the path.
 
 ---
 

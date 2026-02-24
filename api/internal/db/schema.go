@@ -116,6 +116,9 @@ ALTER TABLE collections ADD COLUMN IF NOT EXISTS collection_type VARCHAR(20) NOT
 
 ALTER TABLE tag_keys ADD COLUMN IF NOT EXISTS mode VARCHAR(20) NOT NULL DEFAULT 'select_one';
 
+-- Widen tag_values.slug to support nested paths like "history/engineering".
+ALTER TABLE tag_values ALTER COLUMN slug TYPE VARCHAR(255);
+
 -- Migrate book_tag_values PK from (user_id, book_id, tag_key_id) to
 -- (user_id, book_id, tag_value_id) on deployments that have the old schema.
 -- The check prevents this from running on fresh installs or after it has

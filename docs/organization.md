@@ -1,17 +1,21 @@
 # Organization
 
-Rosslib has three distinct primitives for organizing books: **tags**, **nested tags**, and **labels**. They share the same underlying collection infrastructure but have different semantics and display behaviour.
+Rosslib has two distinct primitives for organizing books: **tags** and **labels**. Tags are standalone. labels are keys, and books can be given labels for that key. Both tags and labels support nesting.
+
+- Tags
+- Labels
+- Nested Tags & Labels
 
 ---
 
 ## Tags
 
-A tag is a flat label applied to a book.
+A tag is a flat label applied to a book. These work like any other tagging system.
 
 ```
 #favorites
 #action
-#want-to-lend
+#want-to-read
 ```
 
 Tags are non-exclusive collections with `collection_type = 'tag'`. A book can have any number of tags. Tags are displayed as chips on profile pages and can be browsed at `/{username}/tags/{slug}`.
@@ -20,81 +24,57 @@ Tags are non-exclusive collections with `collection_type = 'tag'`. A book can ha
 
 ## Nested Tags
 
-Tags can form a hierarchy using `/` as a path separator in the slug.
+Tags can be nested to form subcategories.
 
-```
-#scifi
-#scifi/dystopian
-#scifi/dystopian/post-nuclear-war
-```
-
-**Inheritance is inferred, not stored.** A book explicitly tagged `#scifi/dystopian/post-nuclear-war` is also implicitly reachable via:
-
-- `#scifi` — all books under the scifi subtree
-- `#scifi/dystopian` — all books under the dystopian subtree
-
-But **not** via `#post-nuclear-war`, because that slug doesn't exist as an ancestor in the path.
-
-When browsing `/{username}/tags/scifi`, the result set is all books tagged with any slug that starts with `scifi/` (or equals `scifi` exactly). This is a slug-prefix query, not a separate relationship in the database.
-
-**Creating nested tags:** the tag name may include `/` separators. Each segment is independently slugified and rejoined.
-
-```
-"Science Fiction/Dystopian" → slug: "science-fiction/dystopian"
-```
+Tags can form a hierarchy using `/` as a separator in the slug. Items tagged with nested tags are also "tagged" with their parent tags. A book can be tagged with `#scifi/dystopian`, which means it's also tagged with `#scifi`. A book tagged with `#scifi/dystopian/post-nuclear-war` is tagged with both of its parent tags. However, that book would NOT be reachable with the tag `#post-nuclear-war`.
 
 ---
 
 ## Labels
 
-A label is a **key/value pair** attached to a book. The user defines the key and its allowed values upfront; each book is then assigned zero or one (select-one) or zero or more (select-multiple) values for each key.
+Labels are like tags, but... with a label. This is useful if you want to name a field across many books. A user can define a key, and books can be given a label for that key.
 
-Labels live in two tables:
+Labels can be exclusive (one label allowed per book) or non-exclusive (multiple labels can be selected per book).
 
-- `tag_keys` — the category (e.g. "Gifted from", "Read in"). Owned per-user.
-- `tag_values` — the predefined options for a key (e.g. "mom", "dad"). Owned per-key.
-- `book_tag_values` — which value(s) a user has assigned to a given book for a given key.
+Exclusive labels:
 
-### Select-one
+- "Klara and the Sun"
+  - gifted_from: "ella"
+  - #scifi/robots
+- "20,000 Leagues Under the Sea"
+  - gifted_from: "mom"
+  - #scifi
 
-Exactly one value may be assigned per key per book. Assigning a new value replaces the previous one.
+Non-exclusive labels are great for overlapping categories:
 
-```
-gifted_from: "mom"
-gifted_from: "dad"    ← replaces "mom"
-```
-
-Defined as:
-
-```
-key: "Gifted from"   mode: select_one
-values: ["mom", "dad", "kaitlyn", "liam"]
-```
-
-A book gets one entry: `gifted_from: "kaitlyn"`.
-
-### Select-multiple
-
-Any number of values may be assigned per key per book. Values are toggled independently.
-
-```
-read_in: ["high school", "college", "2023"]
-```
-
-Defined as:
-
-```
-key: "Read in"   mode: select_multiple
-values: ["middle school", "high school", "college", "2019", "2020", "2021", "2022", "2023", "2024"]
-```
-
-A book can simultaneously have `read_in: "high school"` and `read_in: "2023"`.
-
-### Free-form values
-
-When assigning a label on a book, you can also type a new value directly in the picker. This creates the value in the predefined list for that key and assigns it to the book in one step. The new value then appears as an option for all future books.
+- "The Grapes of Wrath"
+  - read_in: ["Middle school", "2012"]
+- "The Great Gatsby"
+  - read_in: ["High School", "2015"]
+- "The Reluctant Fundamentalist"
+  - read_in: ["High school", "2013", "College", "2019", "Postgrad", "2022"]
 
 ---
+
+## Nested Labels
+
+Label values can be nested using `/` as a path separator, exactly like nested tags.
+
+A book labeled `genre: History/Engineering` is also reachable at `genre: History`. A book labeled `genre: History/Engineering/Ancient` is reachable at both `genre: History/Engineering` and `genre: History`.
+
+```
+genre: History                   ← matches all books below
+genre: History/Engineering       ← matches books at this level and below
+genre: History/Engineering/Ancient
+```
+
+The nesting is implicit — you only store the most specific value. Parent paths work automatically via a `LIKE` query on value slugs. Sub-labels are returned in the API response so UIs can render drill-down navigation.
+
+---
+
+## Putting it all together
+
+These tools give you lots of options for organizing and querying your books.
 
 ## Comparison
 
@@ -102,7 +82,7 @@ When assigning a label on a book, you can also type a new value directly in the 
 |---|---|---|
 | Structure | Flat or hierarchical | Key/value |
 | Cardinality | Any number per book | One key → one value (select-one) or many values (select-multiple) |
-| Query by ancestor | Yes — `#scifi` matches `#scifi/dystopian` | No — label lookup is exact key+value |
+| Query by ancestor | Yes — `#scifi` matches `#scifi/dystopian` | Yes — `genre:history` matches `genre:history/engineering` |
 | Visible on profile | Yes, as chips | Not currently (on book cards only) |
 | Predefined options | No — any slug is valid | Yes — values are defined on the key; free-form extends the list |
 | Use case | Genre browsing, mood, theme | Provenance, reading period, personal metadata |
@@ -143,6 +123,9 @@ The bulk Labels action works in both shelf-filtered and tag-filtered views (unli
 - For select_one: existing value for `(user_id, book_id, tag_key_id)` is deleted before inserting.
 - For select_multiple: values are inserted individually; each is removed individually.
 - Free-form assignment uses `INSERT ... ON CONFLICT DO UPDATE` on `tag_values` to find-or-create the value, then proceeds with the normal assignment flow.
+- `tag_values.slug` may contain `/` for nested values (e.g. `history/engineering`). Each segment is slugified independently via `slugifyValue()`. The column is `VARCHAR(255)`.
+- `GET /users/:username/labels/:keySlug/*valuePath` queries with `slug = valuePath OR slug LIKE valuePath || '/%'` so parent paths include all descendants.
+- The response includes `sub_labels: string[]` — the direct child value paths, derived the same way as `sub_tags` for nested tags.
 
 ### API surface
 
@@ -159,11 +142,13 @@ POST /me/shelves  { type: "tag", name: "scifi/dystopian" }
 GET    /me/tag-keys
 POST   /me/tag-keys                              { name, mode }
 DELETE /me/tag-keys/:keyId
-POST   /me/tag-keys/:keyId/values               { name }
+POST   /me/tag-keys/:keyId/values               { name }          (name may contain "/" for nesting)
 DELETE /me/tag-keys/:keyId/values/:valueId
 
 GET    /me/books/:olId/tags
 PUT    /me/books/:olId/tags/:keyId              { value_id } or { value_name }
 DELETE /me/books/:olId/tags/:keyId              (clears all values for this key)
 DELETE /me/books/:olId/tags/:keyId/values/:valueId   (removes one value; select_multiple)
+
+GET    /users/:username/labels/:keySlug/*valuePath   (public; includes sub-values)
 ```

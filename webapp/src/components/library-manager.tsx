@@ -307,21 +307,26 @@ export default function LibraryManager({
             {tagKeys.map((key) => (
               <div key={key.id}>
                 <p className="px-4 py-1 text-xs text-stone-500">{key.name}</p>
-                {key.values.map((val) => (
-                  <button
-                    key={val.id}
-                    onClick={() => navigateToLabel(key.slug, key.name, val.slug, val.name)}
-                    className={`w-full text-left pl-7 pr-4 py-1 text-xs transition-colors ${
-                      filter.kind === "label" &&
-                      filter.keySlug === key.slug &&
-                      filter.valueSlug === val.slug
-                        ? "bg-stone-100 text-stone-900 font-medium"
-                        : "text-stone-400 hover:bg-stone-50 hover:text-stone-900"
-                    }`}
-                  >
-                    {val.name}
-                  </button>
-                ))}
+                {key.values.map((val) => {
+                  const depth = (val.slug.match(/\//g) ?? []).length;
+                  const displayName = val.name.split("/").pop() ?? val.name;
+                  return (
+                    <button
+                      key={val.id}
+                      onClick={() => navigateToLabel(key.slug, key.name, val.slug, val.name)}
+                      style={{ paddingLeft: `${1.75 + depth * 0.75}rem` }}
+                      className={`w-full text-left pr-4 py-1 text-xs transition-colors ${
+                        filter.kind === "label" &&
+                        filter.keySlug === key.slug &&
+                        filter.valueSlug === val.slug
+                          ? "bg-stone-100 text-stone-900 font-medium"
+                          : "text-stone-400 hover:bg-stone-50 hover:text-stone-900"
+                      }`}
+                    >
+                      {displayName}
+                    </button>
+                  );
+                })}
               </div>
             ))}
           </div>

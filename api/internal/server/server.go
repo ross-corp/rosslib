@@ -77,7 +77,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	authed.DELETE("/shelves/:shelfId/books/:olId", collectionsHandler.RemoveBookFromShelf)
 
 	tagsHandler := tags.NewHandler(pool)
-	r.GET("/users/:username/labels/:keySlug/:valueSlug", tagsHandler.GetLabelBooks)
+	r.GET("/users/:username/labels/:keySlug/*valuePath", tagsHandler.GetLabelBooks)
 	authed.GET("/me/tag-keys", tagsHandler.ListTagKeys)
 	authed.POST("/me/tag-keys", tagsHandler.CreateTagKey)
 	authed.DELETE("/me/tag-keys/:keyId", tagsHandler.DeleteTagKey)

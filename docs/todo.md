@@ -24,7 +24,8 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] Default shelves (Want to Read, Currently Reading, Read) shown on profile with item counts; cards link to shelf pages.
   - [x] Shelf pages at `/{username}/shelves/{slug}` — cover grid with title, owner can remove books inline.
   - [x] Library manager at `/{username}/shelves/{slug}` (owner only) — full-page layout with sidebar (shelves, custom, tags, labels), dense cover grid with multi-select checkboxes, and bulk action toolbar (Rate, Move to shelf, Labels, Remove). Non-owners see the original read-only grid.
-  - [x] Label value navigation in library manager sidebar — clicking a label value (e.g. "Format: Audiobook") fetches and displays all books with that key+value assignment via `GET /users/:username/labels/:keySlug/:valueSlug`.
+  - [x] Label value navigation in library manager sidebar — clicking a label value fetches and displays all books with that key+value assignment (including nested sub-values) via `GET /users/:username/labels/:keySlug/*valuePath`. Nested values are indented in the sidebar by depth.
+  - [x] Nested labels — label values can contain `/` to form a hierarchy (e.g. `genre: History/Engineering`). Viewing a parent label (`genre: History`) includes books tagged at any depth. Public label pages at `/{username}/labels/:keySlug/*valuePath` support breadcrumb navigation and sub-label drill-down, matching the nested tags page behaviour.
   - [ ] Avatar upload.
   - [ ] Recent activity (reviews, threads, list updates) on profile.
   - [ ] Stats: books read (done), reviews written (needs reviews feature), followers/following count (done).

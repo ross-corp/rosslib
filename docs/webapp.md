@@ -78,7 +78,8 @@ webapp/src/app/
 ├── [username]/
 │   ├── page.tsx                    public profile
 │   ├── shelves/[slug]/page.tsx     shelf page (owner gets library manager)
-│   └── tags/[...path]/page.tsx     tag browsing page
+│   ├── tags/[...path]/page.tsx     tag browsing page
+│   └── labels/[keySlug]/[...valuePath]/page.tsx   label browsing page (nested)
 └── api/                            Next.js proxy route handlers
     ├── auth/login/route.ts
     ├── auth/register/route.ts
@@ -99,6 +100,7 @@ webapp/src/app/
     ├── shelves/[shelfId]/books/[olId]/route.ts    ← GET, PATCH, DELETE
     └── users/[username]/
         ├── tags/[...path]/route.ts
+        ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
         └── shelves/[slug]/route.ts                ← GET (for client-side shelf switching)
 ```
 
@@ -131,7 +133,7 @@ Layout: `h-screen flex flex-col overflow-hidden` on the page, then inside Librar
 └──────────┴──────────────────────────────────────────┘
 ```
 
-**Sidebar** — clicking a shelf fetches its books client-side via `GET /api/users/:username/shelves/:slug`. Clicking a tag collection fetches via `GET /api/users/:username/tags/:path`. Label categories (key/value) are displayed but not filterable.
+**Sidebar** — clicking a shelf fetches its books client-side via `GET /api/users/:username/shelves/:slug`. Clicking a tag collection fetches via `GET /api/users/:username/tags/:path`. Clicking a label value fetches via `GET /api/users/:username/labels/:keySlug/*valuePath` (includes sub-values). Nested label values are indented by depth in the sidebar, showing only the last path segment as the display name.
 
 **Top bar** — shows the current shelf name and book count when nothing is selected. Transforms into the bulk action toolbar when one or more books are checked:
 - Rate — sets rating on all selected books via `PATCH /api/shelves/:shelfId/books/:olId`

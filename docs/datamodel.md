@@ -116,17 +116,19 @@ Unique: `(user_id, slug)`
 
 ### `tag_values`
 
-Predefined options for a label category. E.g. "mom", "dad", "Kaitlyn".
+Predefined options for a label category. E.g. "mom", "dad", "History/Engineering".
 
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
 | tag_key_id | uuid FK → tag_keys (cascade) | |
 | name | varchar(100) | |
-| slug | varchar(100) | |
+| slug | varchar(255) | Widened to support nested paths like `history/engineering` |
 | created_at | timestamptz | |
 
 Unique: `(tag_key_id, slug)`. New values can be created inline when assigning a label to a book — the `PUT /me/books/:olId/tags/:keyId` endpoint accepts `{ value_name }` to find-or-create.
+
+Slugs may contain `/` to express nesting (e.g. `history/engineering`). Each segment is individually slugified; the separator is preserved. Querying a parent path (`history`) also returns books tagged with any descendant (`history/engineering`, `history/science/ancient`, etc.).
 
 ### `book_tag_values`
 
