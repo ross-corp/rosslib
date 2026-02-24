@@ -7,6 +7,7 @@ Once we're further along we'll move to GH projects. this is fine for now
 ## UNSORTED
 
 - [ ] map page lengths to my device
+- [ ] bookshelf picture scan
 
 ## Webapp
 
@@ -106,7 +107,7 @@ Once we're further along we'll move to GH projects. this is fine for now
 - [ ] One review per user per book; can be edited or deleted.
 - [ ] `GET /users/:username/reviews` — list all reviews by a user (for profile "Reviews" tab).
 - [ ] Reviews are shown on book pages sorted by recency and follower relationships (reviews from people you follow shown first).
-- [ ] Display star rating on shelf item cards (profile shelf pages).
+- [x] Display star rating on shelf item cards (profile shelf pages).
 
 ## Discussion Threads
 

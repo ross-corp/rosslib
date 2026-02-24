@@ -31,17 +31,37 @@ func slugify(name string) string {
 	return strings.Trim(multiDash.ReplaceAllString(b.String(), "-"), "-")
 }
 
+// tagSlugify converts a tag path into a slug-safe path, preserving "/" separators.
+// "Science Fiction/Moon Landing" → "science-fiction/moon-landing"
+func tagSlugify(path string) string {
+	segments := strings.Split(path, "/")
+	for i, seg := range segments {
+		segments[i] = slugify(seg)
+	}
+	// Remove empty segments
+	out := make([]string, 0, len(segments))
+	for _, seg := range segments {
+		if seg != "" {
+			out = append(out, seg)
+		}
+	}
+	return strings.Join(out, "/")
+}
+
 // EnsureShelf is a package-level helper used by the import process.
 // It inserts the collection if the slug doesn't exist yet, otherwise
 // returns the existing collection's ID — no error in either case.
-func EnsureShelf(ctx context.Context, pool *pgxpool.Pool, userID, name, slug string, isExclusive bool, exclusiveGroup string, isPublic bool) (string, error) {
+func EnsureShelf(ctx context.Context, pool *pgxpool.Pool, userID, name, slug string, isExclusive bool, exclusiveGroup string, isPublic bool, collectionType string) (string, error) {
+	if collectionType == "" {
+		collectionType = "shelf"
+	}
 	var id string
 	err := pool.QueryRow(ctx,
-		`INSERT INTO collections (user_id, name, slug, is_exclusive, exclusive_group, is_public)
-		 VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6)
+		`INSERT INTO collections (user_id, name, slug, is_exclusive, exclusive_group, is_public, collection_type)
+		 VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6, $7)
 		 ON CONFLICT (user_id, slug) DO UPDATE SET name = collections.name
 		 RETURNING id`,
-		userID, name, slug, isExclusive, exclusiveGroup, isPublic,
+		userID, name, slug, isExclusive, exclusiveGroup, isPublic, collectionType,
 	).Scan(&id)
 	return id, err
 }
@@ -77,6 +97,7 @@ type shelfDetailResponse struct {
 	Name           string            `json:"name"`
 	Slug           string            `json:"slug"`
 	ExclusiveGroup string            `json:"exclusive_group"`
+	CollectionType string            `json:"collection_type"`
 	Books          []shelfDetailBook `json:"books"`
 }
 
@@ -85,6 +106,7 @@ type shelfResponse struct {
 	Name           string `json:"name"`
 	Slug           string `json:"slug"`
 	ExclusiveGroup string `json:"exclusive_group"`
+	CollectionType string `json:"collection_type"`
 	ItemCount      int    `json:"item_count"`
 }
 
@@ -93,6 +115,7 @@ type myShelfResponse struct {
 	Name           string      `json:"name"`
 	Slug           string      `json:"slug"`
 	ExclusiveGroup string      `json:"exclusive_group"`
+	CollectionType string      `json:"collection_type"`
 	Books          []shelfBook `json:"books"`
 }
 
@@ -104,12 +127,12 @@ func (h *Handler) GetUserShelves(c *gin.Context) {
 	username := c.Param("username")
 
 	rows, err := h.pool.Query(c.Request.Context(),
-		`SELECT c.id, c.name, c.slug, COALESCE(c.exclusive_group, ''), COUNT(ci.id) AS item_count
+		`SELECT c.id, c.name, c.slug, COALESCE(c.exclusive_group, ''), c.collection_type, COUNT(ci.id) AS item_count
 		 FROM collections c
 		 JOIN users u ON u.id = c.user_id
 		 LEFT JOIN collection_items ci ON ci.collection_id = c.id
 		 WHERE u.username = $1 AND u.deleted_at IS NULL
-		 GROUP BY c.id, c.name, c.slug, c.exclusive_group
+		 GROUP BY c.id, c.name, c.slug, c.exclusive_group, c.collection_type
 		 ORDER BY c.created_at`,
 		username,
 	)
@@ -122,7 +145,7 @@ func (h *Handler) GetUserShelves(c *gin.Context) {
 	shelves := []shelfResponse{}
 	for rows.Next() {
 		var s shelfResponse
-		if err := rows.Scan(&s.ID, &s.Name, &s.Slug, &s.ExclusiveGroup, &s.ItemCount); err != nil {
+		if err := rows.Scan(&s.ID, &s.Name, &s.Slug, &s.ExclusiveGroup, &s.CollectionType, &s.ItemCount); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			return
 		}
@@ -157,8 +180,8 @@ func (h *Handler) ensureDefaultShelves(ctx context.Context, userID string) error
 	}
 	for _, s := range defaults {
 		_, err = tx.Exec(ctx,
-			`INSERT INTO collections (user_id, name, slug, is_exclusive, exclusive_group)
-			 VALUES ($1, $2, $3, true, 'read_status')
+			`INSERT INTO collections (user_id, name, slug, is_exclusive, exclusive_group, collection_type)
+			 VALUES ($1, $2, $3, true, 'read_status', 'shelf')
 			 ON CONFLICT DO NOTHING`,
 			userID, s.name, s.slug,
 		)
@@ -180,7 +203,7 @@ func (h *Handler) GetMyShelves(c *gin.Context) {
 	}
 
 	shelfRows, err := h.pool.Query(c.Request.Context(),
-		`SELECT id, name, slug, COALESCE(exclusive_group, '')
+		`SELECT id, name, slug, COALESCE(exclusive_group, ''), collection_type
 		 FROM collections
 		 WHERE user_id = $1
 		 ORDER BY created_at`,
@@ -198,7 +221,7 @@ func (h *Handler) GetMyShelves(c *gin.Context) {
 
 	for shelfRows.Next() {
 		var s myShelfResponse
-		if err := shelfRows.Scan(&s.ID, &s.Name, &s.Slug, &s.ExclusiveGroup); err != nil {
+		if err := shelfRows.Scan(&s.ID, &s.Name, &s.Slug, &s.ExclusiveGroup, &s.CollectionType); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			return
 		}
@@ -323,12 +346,12 @@ func (h *Handler) GetShelfBySlug(c *gin.Context) {
 
 	var shelf shelfDetailResponse
 	err := h.pool.QueryRow(c.Request.Context(),
-		`SELECT c.id, c.name, c.slug, COALESCE(c.exclusive_group, '')
+		`SELECT c.id, c.name, c.slug, COALESCE(c.exclusive_group, ''), c.collection_type
 		 FROM collections c
 		 JOIN users u ON u.id = c.user_id
 		 WHERE u.username = $1 AND u.deleted_at IS NULL AND c.slug = $2`,
 		username, slug,
-	).Scan(&shelf.ID, &shelf.Name, &shelf.Slug, &shelf.ExclusiveGroup)
+	).Scan(&shelf.ID, &shelf.Name, &shelf.Slug, &shelf.ExclusiveGroup, &shelf.CollectionType)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "shelf not found"})
 		return
@@ -361,6 +384,114 @@ func (h *Handler) GetShelfBySlug(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, shelf)
+}
+
+// GetTagBooks - GET /users/:username/tags/*path
+// Public. Returns all books tagged with the given tag path or any sub-tag.
+// E.g. /users/alice/tags/sci-fi returns books tagged "sci-fi" or "sci-fi/moon" etc.
+type tagBooksResponse struct {
+	Path    string            `json:"path"`
+	SubTags []string          `json:"sub_tags"`
+	Books   []shelfDetailBook `json:"books"`
+}
+
+func (h *Handler) GetTagBooks(c *gin.Context) {
+	username := c.Param("username")
+	// Gin wildcard params include a leading slash: "/sci-fi" or "/sci-fi/moon"
+	rawPath := strings.TrimPrefix(c.Param("path"), "/")
+	if rawPath == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tag path required"})
+		return
+	}
+
+	// Find all matching tag collections for this user: slug = path OR slug LIKE path/%
+	tagRows, err := h.pool.Query(c.Request.Context(),
+		`SELECT c.id, c.slug
+		 FROM collections c
+		 JOIN users u ON u.id = c.user_id
+		 WHERE u.username = $1
+		   AND u.deleted_at IS NULL
+		   AND c.collection_type = 'tag'
+		   AND (c.slug = $2 OR c.slug LIKE $3)`,
+		username, rawPath, rawPath+"/%",
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer tagRows.Close()
+
+	type tagEntry struct {
+		id   string
+		slug string
+	}
+	var tags []tagEntry
+	for tagRows.Next() {
+		var t tagEntry
+		if err := tagRows.Scan(&t.id, &t.slug); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		tags = append(tags, t)
+	}
+	tagRows.Close()
+
+	if len(tags) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tag not found"})
+		return
+	}
+
+	// Collect all matching collection IDs and sub-tag slugs (direct children only)
+	collectionIDs := make([]string, 0, len(tags))
+	subTagSet := map[string]struct{}{}
+	for _, t := range tags {
+		collectionIDs = append(collectionIDs, t.id)
+		// If slug is deeper than rawPath, derive its direct child segment
+		if t.slug != rawPath {
+			rest := strings.TrimPrefix(t.slug, rawPath+"/")
+			// Take only the first extra segment
+			parts := strings.SplitN(rest, "/", 2)
+			subTagSet[rawPath+"/"+parts[0]] = struct{}{}
+		}
+	}
+
+	subTags := make([]string, 0, len(subTagSet))
+	for k := range subTagSet {
+		subTags = append(subTags, k)
+	}
+
+	// Fetch books from all matching collections (deduplicated by book_id)
+	bookRows, err := h.pool.Query(c.Request.Context(),
+		`SELECT DISTINCT ON (b.id) b.id, b.open_library_id, b.title, b.cover_url, ci.added_at, ci.rating
+		 FROM collection_items ci
+		 JOIN books b ON b.id = ci.book_id
+		 WHERE ci.collection_id = ANY($1)
+		 ORDER BY b.id, ci.added_at DESC`,
+		collectionIDs,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer bookRows.Close()
+
+	books := []shelfDetailBook{}
+	for bookRows.Next() {
+		var book shelfDetailBook
+		var addedAt time.Time
+		if err := bookRows.Scan(&book.BookID, &book.OpenLibraryID, &book.Title, &book.CoverURL, &addedAt, &book.Rating); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		book.AddedAt = addedAt.Format(time.RFC3339)
+		books = append(books, book)
+	}
+
+	c.JSON(http.StatusOK, tagBooksResponse{
+		Path:    rawPath,
+		SubTags: subTags,
+		Books:   books,
+	})
 }
 
 // RemoveBookFromShelf - DELETE /shelves/:shelfId/books/:olId (authed)
@@ -398,7 +529,8 @@ func (h *Handler) RemoveBookFromShelf(c *gin.Context) {
 // ── Custom shelf management ───────────────────────────────────────────────────
 
 // CreateShelf - POST /me/shelves (authed)
-// Creates a new custom collection. The slug is derived from the name.
+// Creates a new custom collection. For type="tag", the name may include "/"
+// to express hierarchy (e.g. "sci-fi/moon"). The slug is derived from the name.
 // Returns 409 if the user already has a shelf with that slug.
 func (h *Handler) CreateShelf(c *gin.Context) {
 	userID := c.GetString(middleware.UserIDKey)
@@ -408,13 +540,28 @@ func (h *Handler) CreateShelf(c *gin.Context) {
 		IsExclusive    bool   `json:"is_exclusive"`
 		ExclusiveGroup string `json:"exclusive_group" binding:"max=100"`
 		IsPublic       *bool  `json:"is_public"`
+		Type           string `json:"type"` // "shelf" (default) or "tag"
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	slug := slugify(req.Name)
+	collectionType := req.Type
+	if collectionType == "" {
+		collectionType = "shelf"
+	}
+	if collectionType != "shelf" && collectionType != "tag" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "type must be 'shelf' or 'tag'"})
+		return
+	}
+
+	var slug string
+	if collectionType == "tag" {
+		slug = tagSlugify(req.Name)
+	} else {
+		slug = slugify(req.Name)
+	}
 	if slug == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "name produces an empty slug"})
 		return
@@ -437,11 +584,11 @@ func (h *Handler) CreateShelf(c *gin.Context) {
 
 	var shelf shelfResponse
 	err := h.pool.QueryRow(c.Request.Context(),
-		`INSERT INTO collections (user_id, name, slug, is_exclusive, exclusive_group, is_public)
-		 VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6)
-		 RETURNING id, name, slug, COALESCE(exclusive_group, '')`,
-		userID, req.Name, slug, req.IsExclusive, req.ExclusiveGroup, isPublic,
-	).Scan(&shelf.ID, &shelf.Name, &shelf.Slug, &shelf.ExclusiveGroup)
+		`INSERT INTO collections (user_id, name, slug, is_exclusive, exclusive_group, is_public, collection_type)
+		 VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6, $7)
+		 RETURNING id, name, slug, COALESCE(exclusive_group, ''), collection_type`,
+		userID, req.Name, slug, req.IsExclusive, req.ExclusiveGroup, isPublic, collectionType,
+	).Scan(&shelf.ID, &shelf.Name, &shelf.Slug, &shelf.ExclusiveGroup, &shelf.CollectionType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
@@ -493,9 +640,9 @@ func (h *Handler) UpdateShelf(c *gin.Context) {
 	err = h.pool.QueryRow(c.Request.Context(),
 		`UPDATE collections SET name = $1, is_public = $2
 		 WHERE id = $3
-		 RETURNING id, name, slug, COALESCE(exclusive_group, '')`,
+		 RETURNING id, name, slug, COALESCE(exclusive_group, ''), collection_type`,
 		newName, newIsPublic, shelfID,
-	).Scan(&shelf.ID, &shelf.Name, &shelf.Slug, &shelf.ExclusiveGroup)
+	).Scan(&shelf.ID, &shelf.Name, &shelf.Slug, &shelf.ExclusiveGroup, &shelf.CollectionType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
@@ -560,10 +707,11 @@ func (h *Handler) DeleteShelf(c *gin.Context) {
 // are left unchanged. Send null to clear a field.
 //
 // Accepted fields:
-//   rating      int | null   (1–5; null clears it)
-//   review_text string | null
-//   spoiler     bool
-//   date_read   string | null  (RFC3339 or "YYYY-MM-DD"; null clears it)
+//
+//	rating      int | null   (1–5; null clears it)
+//	review_text string | null
+//	spoiler     bool
+//	date_read   string | null  (RFC3339 or "YYYY-MM-DD"; null clears it)
 func (h *Handler) UpdateBookInShelf(c *gin.Context) {
 	userID := c.GetString(middleware.UserIDKey)
 	shelfID := c.Param("shelfId")

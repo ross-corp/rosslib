@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import BookTagPicker, { TagKey } from "@/components/book-tag-picker";
 
 type Book = {
   book_id: string;
@@ -16,10 +17,12 @@ export default function ShelfBookGrid({
   shelfId,
   initialBooks,
   isOwner,
+  tagKeys = [],
 }: {
   shelfId: string;
   initialBooks: Book[];
   isOwner: boolean;
+  tagKeys?: TagKey[];
 }) {
   const [books, setBooks] = useState(initialBooks);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -77,6 +80,14 @@ export default function ShelfBookGrid({
                     ★
                   </span>
                 ))}
+              </div>
+            )}
+            {isOwner && tagKeys.length > 0 && (
+              <div className="mt-1">
+                <BookTagPicker
+                  openLibraryId={book.open_library_id}
+                  tagKeys={tagKeys}
+                />
               </div>
             )}
           </div>

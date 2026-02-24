@@ -421,7 +421,7 @@ func (h *Handler) Commit(c *gin.Context) {
 		{"Read", "read"},
 	}
 	for _, s := range defaults {
-		if _, err := collections.EnsureShelf(c.Request.Context(), h.pool, userID, s.name, s.slug, true, "read_status", true); err != nil {
+		if _, err := collections.EnsureShelf(c.Request.Context(), h.pool, userID, s.name, s.slug, true, "read_status", true, "shelf"); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			return
 		}
@@ -487,7 +487,7 @@ func commitRow(ctx context.Context, pool *pgxpool.Pool, userID string, row Commi
 	exclusiveShelfID, err := collections.EnsureShelf(
 		ctx, pool, userID,
 		slugToName(row.ExclusiveShelf), row.ExclusiveShelf,
-		true, excGroup, true,
+		true, excGroup, true, "shelf",
 	)
 	if err != nil {
 		return fmt.Errorf("ensure exclusive shelf %q: %w", row.ExclusiveShelf, err)
@@ -546,7 +546,7 @@ func commitRow(ctx context.Context, pool *pgxpool.Pool, userID string, row Commi
 		if slug == "" {
 			continue
 		}
-		shelfID, err := collections.EnsureShelf(ctx, pool, userID, slugToName(slug), slug, false, "", true)
+		shelfID, err := collections.EnsureShelf(ctx, pool, userID, slugToName(slug), slug, false, "", true, "tag")
 		if err != nil {
 			continue // non-fatal; best-effort
 		}

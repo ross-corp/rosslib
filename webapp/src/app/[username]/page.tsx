@@ -24,6 +24,7 @@ type UserShelf = {
   name: string;
   slug: string;
   exclusive_group: string;
+  collection_type: string;
   item_count: number;
 };
 
@@ -128,7 +129,8 @@ export default async function UserPage({
 
         {(() => {
           const defaultShelves = shelves.filter(s => s.exclusive_group === "read_status");
-          const customShelves = shelves.filter(s => s.exclusive_group !== "read_status");
+          const customShelves = shelves.filter(s => s.exclusive_group !== "read_status" && s.collection_type === "shelf");
+          const tags = shelves.filter(s => s.collection_type === "tag");
           return (
             <>
               {defaultShelves.length > 0 && (
@@ -172,6 +174,25 @@ export default async function UserPage({
                         <p className="text-xs text-stone-400 mt-1">
                           {shelf.item_count} {shelf.item_count === 1 ? "book" : "books"}
                         </p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {tags.length > 0 && (
+                <div className="mt-8">
+                  <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
+                    Tags
+                  </h2>
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag) => (
+                      <Link
+                        key={tag.id}
+                        href={`/${profile.username}/tags/${tag.slug}`}
+                        className="inline-flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full border border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900 transition-colors"
+                      >
+                        {tag.name}
+                        <span className="text-xs text-stone-400">{tag.item_count}</span>
                       </Link>
                     ))}
                   </div>

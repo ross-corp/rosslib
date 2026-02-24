@@ -12,6 +12,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/collections"
 	"github.com/tristansaldanha/rosslib/api/internal/imports"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/tags"
 	"github.com/tristansaldanha/rosslib/api/internal/users"
 )
 
@@ -56,6 +57,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	collectionsHandler := collections.NewHandler(pool)
 	r.GET("/users/:username/shelves", collectionsHandler.GetUserShelves)
 	r.GET("/users/:username/shelves/:slug", collectionsHandler.GetShelfBySlug)
+	r.GET("/users/:username/tags/*path", collectionsHandler.GetTagBooks)
 
 	authed := r.Group("/")
 	authed.Use(middleware.Auth(secret))
@@ -73,6 +75,17 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	authed.POST("/shelves/:shelfId/books", collectionsHandler.AddBookToShelf)
 	authed.PATCH("/shelves/:shelfId/books/:olId", collectionsHandler.UpdateBookInShelf)
 	authed.DELETE("/shelves/:shelfId/books/:olId", collectionsHandler.RemoveBookFromShelf)
+
+	tagsHandler := tags.NewHandler(pool)
+	authed.GET("/me/tag-keys", tagsHandler.ListTagKeys)
+	authed.POST("/me/tag-keys", tagsHandler.CreateTagKey)
+	authed.DELETE("/me/tag-keys/:keyId", tagsHandler.DeleteTagKey)
+	authed.POST("/me/tag-keys/:keyId/values", tagsHandler.CreateTagValue)
+	authed.DELETE("/me/tag-keys/:keyId/values/:valueId", tagsHandler.DeleteTagValue)
+	authed.GET("/me/books/:olId/tags", tagsHandler.GetBookTags)
+	authed.PUT("/me/books/:olId/tags/:keyId", tagsHandler.SetBookTag)
+	authed.DELETE("/me/books/:olId/tags/:keyId", tagsHandler.UnsetBookTag)
+	authed.DELETE("/me/books/:olId/tags/:keyId/values/:valueId", tagsHandler.UnsetBookTagValue)
 
 	return r
 }

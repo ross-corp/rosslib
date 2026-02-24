@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/nav";
 import ShelfBookGrid from "@/components/shelf-book-grid";
-import { getUser } from "@/lib/auth";
+import { getUser, getToken } from "@/lib/auth";
+import { TagKey } from "@/components/book-tag-picker";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,15 @@ async function fetchUserShelves(username: string): Promise<ShelfSummary[]> {
   return res.json();
 }
 
+async function fetchTagKeys(token: string): Promise<TagKey[]> {
+  const res = await fetch(`${process.env.API_URL}/me/tag-keys`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function ShelfPage({
@@ -59,15 +69,16 @@ export default async function ShelfPage({
   params: Promise<{ username: string; slug: string }>;
 }) {
   const { username, slug } = await params;
-  const [currentUser, shelf, allShelves] = await Promise.all([
-    getUser(),
+  const [currentUser, token] = await Promise.all([getUser(), getToken()]);
+  const isOwner = currentUser?.username === username;
+
+  const [shelf, allShelves, tagKeys] = await Promise.all([
     fetchShelf(username, slug),
     fetchUserShelves(username),
+    isOwner && token ? fetchTagKeys(token) : Promise.resolve([] as TagKey[]),
   ]);
 
   if (!shelf) notFound();
-
-  const isOwner = currentUser?.username === username;
 
   return (
     <div className="min-h-screen">
@@ -111,6 +122,7 @@ export default async function ShelfPage({
           shelfId={shelf.id}
           initialBooks={shelf.books}
           isOwner={isOwner}
+          tagKeys={tagKeys}
         />
       </main>
     </div>
