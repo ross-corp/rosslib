@@ -90,10 +90,12 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [ ] Faceted filters: genre, published year range, language.
   - [ ] Results ranked by relevance, with popular books surfaced higher.
 - [ ] Book pages
-  - [ ] Metadata: title, author(s), cover, description, publisher, year, page count.
-  - [ ] Aggregate stats: average rating, read count, want-to-read count.
-  - [ ] User's own status (added to which collection, their rating/review).
-  - [ ] Community reviews and discussion threads.
+  - [x] Metadata: title, author(s), cover, description (from Open Library).
+  - [x] Aggregate stats: average rating (from Open Library).
+  - [x] User's own status — shelf placement, rating, review shown on book page; shelf picker to add/move the book.
+  - [x] Community reviews — `GET /books/:workId/reviews` returns all user reviews from the local DB; shown on book page with spoiler gating.
+  - [ ] Publisher, year, page count (not exposed by Open Library work API; requires edition lookup).
+  - [ ] Read count / want-to-read count from local DB.
   - [ ] Community links to related works.
 - [ ] Author page
 - [ ] Genre pages

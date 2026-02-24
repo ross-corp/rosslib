@@ -50,6 +50,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http
 	r.GET("/books/search", booksHandler.SearchBooks)
 	r.GET("/books/lookup", booksHandler.LookupBook)
 	r.GET("/books/:workId", booksHandler.GetBook)
+	r.GET("/books/:workId/reviews", booksHandler.GetBookReviews)
 
 	usersHandler := users.NewHandler(pool, store)
 	r.GET("/users", usersHandler.SearchUsers)
@@ -86,6 +87,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http
 	authed.DELETE("/me/tag-keys/:keyId", tagsHandler.DeleteTagKey)
 	authed.POST("/me/tag-keys/:keyId/values", tagsHandler.CreateTagValue)
 	authed.DELETE("/me/tag-keys/:keyId/values/:valueId", tagsHandler.DeleteTagValue)
+	authed.GET("/me/books/:olId/status", booksHandler.GetMyBookStatus)
 	authed.GET("/me/books/:olId/tags", tagsHandler.GetBookTags)
 	authed.PUT("/me/books/:olId/tags/:keyId", tagsHandler.SetBookTag)
 	authed.DELETE("/me/books/:olId/tags/:keyId", tagsHandler.UnsetBookTag)

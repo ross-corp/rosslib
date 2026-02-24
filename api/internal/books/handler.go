@@ -3,6 +3,7 @@ package books
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,9 +11,12 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 )
 
 type Handler struct {
@@ -448,6 +452,116 @@ func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string) (*Bo
 	}
 
 	return result, nil
+}
+
+// GetBookReviews returns all community reviews for a book from the local database.
+//
+// GET /books/:workId/reviews
+func (h *Handler) GetBookReviews(c *gin.Context) {
+	workID := c.Param("workId")
+
+	type review struct {
+		Username    string  `json:"username"`
+		DisplayName *string `json:"display_name"`
+		AvatarURL   *string `json:"avatar_url"`
+		Rating      *int    `json:"rating"`
+		ReviewText  string  `json:"review_text"`
+		Spoiler     bool    `json:"spoiler"`
+		DateRead    *string `json:"date_read"`
+		DateAdded   string  `json:"date_added"`
+	}
+
+	rows, err := h.pool.Query(c.Request.Context(),
+		`SELECT DISTINCT ON (u.id) u.username, u.display_name, u.avatar_url,
+		        ci.rating, ci.review_text, ci.spoiler, ci.date_read, ci.date_added
+		 FROM collection_items ci
+		 JOIN books b       ON b.id  = ci.book_id
+		 JOIN collections c ON c.id  = ci.collection_id
+		 JOIN users u       ON u.id  = c.user_id
+		 WHERE b.open_library_id = $1
+		   AND u.deleted_at IS NULL
+		   AND ci.review_text IS NOT NULL
+		   AND ci.review_text != ''
+		 ORDER BY u.id, ci.date_added DESC`,
+		workID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	reviews := []review{}
+	for rows.Next() {
+		var r review
+		var dateRead *time.Time
+		var dateAdded time.Time
+		if err := rows.Scan(
+			&r.Username, &r.DisplayName, &r.AvatarURL,
+			&r.Rating, &r.ReviewText, &r.Spoiler, &dateRead, &dateAdded,
+		); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		r.DateAdded = dateAdded.Format(time.RFC3339)
+		if dateRead != nil {
+			s := dateRead.Format(time.RFC3339)
+			r.DateRead = &s
+		}
+		reviews = append(reviews, r)
+	}
+
+	c.JSON(http.StatusOK, reviews)
+}
+
+// GetMyBookStatus returns the current user's shelf placement and review for a book.
+//
+// GET /me/books/:olId/status  (requires auth)
+func (h *Handler) GetMyBookStatus(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	olID := c.Param("olId")
+
+	type status struct {
+		ShelfID    string  `json:"shelf_id"`
+		ShelfName  string  `json:"shelf_name"`
+		ShelfSlug  string  `json:"shelf_slug"`
+		Rating     *int    `json:"rating"`
+		ReviewText *string `json:"review_text"`
+		Spoiler    bool    `json:"spoiler"`
+		DateRead   *string `json:"date_read"`
+	}
+
+	var s status
+	var dateRead *time.Time
+
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT c.id, c.name, c.slug,
+		        ci.rating, ci.review_text, ci.spoiler, ci.date_read
+		 FROM collection_items ci
+		 JOIN collections c ON c.id = ci.collection_id
+		 JOIN books b        ON b.id = ci.book_id
+		 WHERE c.user_id = $1
+		   AND b.open_library_id = $2
+		 ORDER BY (c.exclusive_group = 'read_status') DESC, ci.date_added DESC
+		 LIMIT 1`,
+		userID, olID,
+	).Scan(&s.ShelfID, &s.ShelfName, &s.ShelfSlug,
+		&s.Rating, &s.ReviewText, &s.Spoiler, &dateRead)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, nil)
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	if dateRead != nil {
+		ds := dateRead.Format(time.RFC3339)
+		s.DateRead = &ds
+	}
+
+	c.JSON(http.StatusOK, s)
 }
 
 // LookupBook handles the ISBN lookup HTTP endpoint.
