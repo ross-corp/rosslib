@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/nav";
 import FollowButton from "@/components/follow-button";
+import { ActivityCard } from "@/components/activity";
+import type { ActivityItem } from "@/components/activity";
 import { getUser, getToken } from "@/lib/auth";
 
 type UserProfile = {
@@ -50,6 +52,16 @@ async function fetchUserShelves(username: string): Promise<UserShelf[]> {
   return res.json();
 }
 
+async function fetchRecentActivity(username: string): Promise<ActivityItem[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/users/${username}/activity?limit=10`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.activities || [];
+}
+
 export default async function UserPage({
   params,
 }: {
@@ -57,9 +69,10 @@ export default async function UserPage({
 }) {
   const { username } = await params;
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
-  const [profile, shelves] = await Promise.all([
+  const [profile, shelves, recentActivity] = await Promise.all([
     fetchProfile(username, token ?? undefined),
     fetchUserShelves(username),
+    fetchRecentActivity(username),
   ]);
 
   if (!profile) notFound();
@@ -134,6 +147,19 @@ export default async function UserPage({
           </div>
           <p className="text-xs text-stone-400 mt-1">Member since {memberSince}</p>
         </div>
+
+        {recentActivity.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-2">
+              Recent Activity
+            </h2>
+            <div>
+              {recentActivity.map((item) => (
+                <ActivityCard key={item.id} item={item} showUser={false} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {(() => {
           const defaultShelves = shelves.filter(s => s.exclusive_group === "read_status");

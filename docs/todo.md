@@ -27,7 +27,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] Label value navigation in library manager sidebar — clicking a label value fetches and displays all books with that key+value assignment (including nested sub-values) via `GET /users/:username/labels/:keySlug/*valuePath`. Nested values are indented in the sidebar by depth.
   - [x] Nested labels — label values can contain `/` to form a hierarchy (e.g. `genre: History/Engineering`). Viewing a parent label (`genre: History`) includes books tagged at any depth. Public label pages at `/{username}/labels/:keySlug/*valuePath` support breadcrumb navigation and sub-label drill-down, matching the nested tags page behaviour.
   - [x] Avatar upload — `POST /me/avatar` (multipart); stored in MinIO; URL written to `users.avatar_url`. Swap `MINIO_*` env vars for S3 in production.
-  - [ ] Recent activity (reviews, threads, list updates) on profile.
+  - [x] Recent activity (reviews, threads, list updates) on profile.
   - [x] Stats: books read, reviews written, followers/following count shown on profile.
   - [ ] Profiles can be set to private; followers must be approved.
 

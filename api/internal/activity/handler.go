@@ -190,7 +190,12 @@ func (h *Handler) GetFeed(c *gin.Context) {
 func (h *Handler) GetUserActivity(c *gin.Context) {
 	username := c.Param("username")
 	cursor := c.Query("cursor")
-	const limit = 30
+	limit := 30
+	if l := c.Query("limit"); l != "" {
+		if v, err := strconv.Atoi(l); err == nil && v >= 1 && v <= 30 {
+			limit = v
+		}
+	}
 
 	query := `
 		SELECT a.id, a.activity_type, a.created_at,
