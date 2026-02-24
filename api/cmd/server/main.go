@@ -12,6 +12,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/config"
 	"github.com/tristansaldanha/rosslib/api/internal/db"
 	"github.com/tristansaldanha/rosslib/api/internal/server"
+	"github.com/tristansaldanha/rosslib/api/internal/storage"
 )
 
 func main() {
@@ -27,7 +28,22 @@ func main() {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 
-	router := server.NewRouter(pool, cfg.JWTSecret)
+	store, err := storage.NewMinIOClient(
+		cfg.MinIOEndpoint,
+		cfg.MinIOAccessKey,
+		cfg.MinIOSecretKey,
+		cfg.MinIOBucket,
+		cfg.MinIOPublicURL,
+		false,
+	)
+	if err != nil {
+		log.Fatalf("failed to create storage client: %v", err)
+	}
+	if err := store.EnsureBucket(context.Background()); err != nil {
+		log.Printf("warning: could not configure storage bucket: %v", err)
+	}
+
+	router := server.NewRouter(pool, cfg.JWTSecret, store)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,

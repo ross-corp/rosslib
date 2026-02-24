@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function SettingsForm({
   username,
   initialDisplayName,
   initialBio,
+  initialAvatarUrl,
 }: {
   username: string;
   initialDisplayName: string;
   initialBio: string;
+  initialAvatarUrl: string | null;
 }) {
   const router = useRouter();
   const [displayName, setDisplayName] = useState(initialDisplayName);
@@ -18,6 +20,42 @@ export default function SettingsForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+
+  const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAvatarUploading(true);
+    setAvatarError("");
+
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    const res = await fetch("/api/me/avatar", {
+      method: "POST",
+      body: formData,
+    });
+
+    setAvatarUploading(false);
+
+    if (!res.ok) {
+      const data = await res.json();
+      setAvatarError(data.error || "Upload failed.");
+      return;
+    }
+
+    const data = await res.json();
+    setAvatarUrl(data.avatar_url);
+    router.refresh();
+
+    // Reset the input so the same file can be re-selected if needed.
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,68 +82,114 @@ export default function SettingsForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 max-w-md">
-      {error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
-          {error}
-        </p>
-      )}
-      {saved && (
-        <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
-          Profile updated.
-        </p>
-      )}
-
+    <div className="max-w-md space-y-8">
+      {/* Avatar */}
       <div>
-        <label
-          htmlFor="display_name"
-          className="block text-sm font-medium text-stone-700 mb-1"
-        >
-          Display name
-        </label>
-        <input
-          id="display_name"
-          type="text"
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          placeholder={username}
-          maxLength={100}
-          className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm"
-        />
+        <p className="text-sm font-medium text-stone-700 mb-3">Photo</p>
+        <div className="flex items-center gap-4">
+          <div className="relative shrink-0">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt=""
+                className="w-20 h-20 rounded-full object-cover bg-stone-100"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-stone-200 flex items-center justify-center">
+                <span className="text-stone-500 text-2xl font-medium select-none">
+                  {username[0].toUpperCase()}
+                </span>
+              </div>
+            )}
+            {avatarUploading && (
+              <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
+                <span className="text-white text-xs">...</span>
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="cursor-pointer text-sm text-stone-700 hover:text-stone-900 underline underline-offset-2 transition-colors">
+              Change photo
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                className="hidden"
+                onChange={handleAvatarChange}
+                disabled={avatarUploading}
+              />
+            </label>
+            {avatarError && (
+              <p className="text-xs text-red-600 mt-1">{avatarError}</p>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div>
-        <label
-          htmlFor="bio"
-          className="block text-sm font-medium text-stone-700 mb-1"
-        >
-          Byline
-        </label>
-        <textarea
-          id="bio"
-          value={bio}
-          onChange={(e) => setBio(e.target.value)}
-          placeholder="A short line about yourself"
-          rows={3}
-          className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm resize-none"
-        />
-      </div>
+      {/* Profile fields */}
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+            {error}
+          </p>
+        )}
+        {saved && (
+          <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+            Profile updated.
+          </p>
+        )}
 
-      <div className="flex items-center gap-3 pt-1">
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-stone-900 text-white px-4 py-2 rounded text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50"
-        >
-          {loading ? "Saving..." : "Save"}
-        </button>
-        <a
-          href={`/${username}`}
-          className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
-        >
-          Cancel
-        </a>
-      </div>
-    </form>
+        <div>
+          <label
+            htmlFor="display_name"
+            className="block text-sm font-medium text-stone-700 mb-1"
+          >
+            Display name
+          </label>
+          <input
+            id="display_name"
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder={username}
+            maxLength={100}
+            className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="bio"
+            className="block text-sm font-medium text-stone-700 mb-1"
+          >
+            Byline
+          </label>
+          <textarea
+            id="bio"
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            placeholder="A short line about yourself"
+            rows={3}
+            className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm resize-none"
+          />
+        </div>
+
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-stone-900 text-white px-4 py-2 rounded text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50"
+          >
+            {loading ? "Saving..." : "Save"}
+          </button>
+          <a
+            href={`/${username}`}
+            className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
+          >
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
   );
 }

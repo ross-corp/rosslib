@@ -7,6 +7,7 @@ import { getUser } from "@/lib/auth";
 type UserProfile = {
   display_name: string | null;
   bio: string | null;
+  avatar_url: string | null;
 };
 
 async function fetchProfile(username: string): Promise<UserProfile | null> {
@@ -57,6 +58,7 @@ export default async function SettingsPage() {
           username={user.username}
           initialDisplayName={profile?.display_name ?? ""}
           initialBio={profile?.bio ?? ""}
+          initialAvatarUrl={profile?.avatar_url ?? null}
         />
       </main>
     </div>

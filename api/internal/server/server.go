@@ -12,11 +12,12 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/collections"
 	"github.com/tristansaldanha/rosslib/api/internal/imports"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/storage"
 	"github.com/tristansaldanha/rosslib/api/internal/tags"
 	"github.com/tristansaldanha/rosslib/api/internal/users"
 )
 
-func NewRouter(pool *pgxpool.Pool, jwtSecret string) http.Handler {
+func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client) http.Handler {
 	r := gin.Default()
 
 	r.GET("/health", func(c *gin.Context) {
@@ -50,7 +51,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	r.GET("/books/lookup", booksHandler.LookupBook)
 	r.GET("/books/:workId", booksHandler.GetBook)
 
-	usersHandler := users.NewHandler(pool)
+	usersHandler := users.NewHandler(pool, store)
 	r.GET("/users", usersHandler.SearchUsers)
 	r.GET("/users/:username", middleware.OptionalAuth(secret), usersHandler.GetProfile)
 
@@ -62,6 +63,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string) http.Handler {
 	authed := r.Group("/")
 	authed.Use(middleware.Auth(secret))
 	authed.PATCH("/users/me", usersHandler.UpdateMe)
+	authed.POST("/me/avatar", usersHandler.UploadAvatar)
 	authed.POST("/users/:username/follow", usersHandler.Follow)
 	authed.DELETE("/users/:username/follow", usersHandler.Unfollow)
 	importsHandler := imports.NewHandler(pool)

@@ -9,14 +9,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/storage"
 )
 
 type Handler struct {
-	pool *pgxpool.Pool
+	pool  *pgxpool.Pool
+	store *storage.Client
 }
 
-func NewHandler(pool *pgxpool.Pool) *Handler {
-	return &Handler{pool: pool}
+func NewHandler(pool *pgxpool.Pool, store *storage.Client) *Handler {
+	return &Handler{pool: pool, store: store}
 }
 
 // ── types ────────────────────────────────────────────────────────────────────
@@ -249,4 +251,47 @@ func (h *Handler) Unfollow(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func (h *Handler) UploadAvatar(c *gin.Context) {
+	if h.store == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "storage not configured"})
+		return
+	}
+
+	userID := c.GetString(middleware.UserIDKey)
+
+	if err := c.Request.ParseMultipartForm(10 << 20); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "could not parse form"})
+		return
+	}
+
+	file, header, err := c.Request.FormFile("avatar")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing avatar file"})
+		return
+	}
+	defer file.Close()
+
+	if header.Size > 5<<20 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file too large (max 5 MB)"})
+		return
+	}
+
+	url, err := h.store.UploadAvatar(c.Request.Context(), userID, file)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	_, err = h.pool.Exec(c.Request.Context(),
+		`UPDATE users SET avatar_url = $1 WHERE id = $2`,
+		url, userID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"avatar_url": url})
 }
