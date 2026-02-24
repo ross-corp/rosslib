@@ -72,8 +72,8 @@ export default async function UserPage({
   return (
     <div className="min-h-screen">
       <Nav />
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
-        <div className="max-w-xl">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
+        <div>
           <div className="flex items-start justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold text-stone-900">
@@ -138,19 +138,15 @@ export default async function UserPage({
                   <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
                     Shelves
                   </h2>
-                  <div className="flex gap-4">
+                  <div className="flex flex-wrap gap-2">
                     {defaultShelves.map((shelf) => (
                       <Link
                         key={shelf.id}
                         href={`/${profile.username}/shelves/${shelf.slug}`}
-                        className="flex-1 border border-stone-200 rounded p-4 hover:border-stone-400 transition-colors"
+                        className="inline-flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full border border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900 transition-colors"
                       >
-                        <p className="text-sm font-medium text-stone-900">
-                          {shelf.name}
-                        </p>
-                        <p className="text-xs text-stone-400 mt-1">
-                          {shelf.item_count} {shelf.item_count === 1 ? "book" : "books"}
-                        </p>
+                        {shelf.name}
+                        <span className="text-xs text-stone-400">{shelf.item_count}</span>
                       </Link>
                     ))}
                   </div>
@@ -161,29 +157,35 @@ export default async function UserPage({
                   <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
                     Custom Shelves
                   </h2>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-2">
                     {customShelves.map((shelf) => (
                       <Link
                         key={shelf.id}
                         href={`/${profile.username}/shelves/${shelf.slug}`}
-                        className="border border-stone-200 rounded p-3 hover:border-stone-400 transition-colors min-w-32"
+                        className="inline-flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full border border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900 transition-colors"
                       >
-                        <p className="text-sm font-medium text-stone-900">
-                          {shelf.name}
-                        </p>
-                        <p className="text-xs text-stone-400 mt-1">
-                          {shelf.item_count} {shelf.item_count === 1 ? "book" : "books"}
-                        </p>
+                        {shelf.name}
+                        <span className="text-xs text-stone-400">{shelf.item_count}</span>
                       </Link>
                     ))}
                   </div>
                 </div>
               )}
-              {tags.length > 0 && (
+              {(tags.length > 0 || isOwnProfile) && (
                 <div className="mt-8">
-                  <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
-                    Tags
-                  </h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider">
+                      Tags
+                    </h2>
+                    {isOwnProfile && (
+                      <Link
+                        href="/settings/tags"
+                        className="text-xs text-stone-400 hover:text-stone-700 transition-colors"
+                      >
+                        Manage labels
+                      </Link>
+                    )}
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {tags.map((tag) => (
                       <Link
