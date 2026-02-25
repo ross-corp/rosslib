@@ -107,6 +107,7 @@ ALTER TABLE books ADD COLUMN IF NOT EXISTS authors          TEXT;
 ALTER TABLE books ADD COLUMN IF NOT EXISTS publication_year INT;
 ALTER TABLE books ADD COLUMN IF NOT EXISTS publisher        TEXT;
 ALTER TABLE books ADD COLUMN IF NOT EXISTS page_count       INT;
+ALTER TABLE books ADD COLUMN IF NOT EXISTS subjects         TEXT;
 
 ALTER TABLE collection_items ADD COLUMN IF NOT EXISTS rating      SMALLINT;
 ALTER TABLE collection_items ADD COLUMN IF NOT EXISTS review_text TEXT;

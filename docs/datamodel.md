@@ -49,6 +49,7 @@ Global catalog. Not per-user. Records are upserted by `open_library_id` when a u
 | publication_year | integer | nullable; first publish year from OL |
 | publisher | text | nullable; from OL editions API |
 | page_count | integer | nullable; from OL editions API |
+| subjects | text | nullable; comma-separated subjects from OL (up to 10) |
 | created_at | timestamptz | |
 
 ### `collections`

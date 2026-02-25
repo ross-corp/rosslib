@@ -24,7 +24,6 @@ Once we're further along we'll move to GH projects. this is fine for now
 ## Search & Book Pages
 
 - [ ] Author search
-- [ ] Faceted filters: genre, language
 - [ ] Genre pages
 - [ ] Edition handling
 - [ ] Community links to related works on book pages

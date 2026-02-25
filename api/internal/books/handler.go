@@ -42,6 +42,8 @@ type olDoc struct {
 	RatingsAverage   *float64 `json:"ratings_average"`
 	RatingsCount     int      `json:"ratings_count"`
 	AlreadyReadCount int      `json:"already_read_count"`
+	Subject          []string `json:"subject"`
+	Language         []string `json:"language"`
 }
 
 type olResponse struct {
@@ -64,6 +66,7 @@ type olWork struct {
 	Description json.RawMessage `json:"description"`
 	Covers      []int           `json:"covers"`
 	Authors     []olAuthorRef   `json:"authors"`
+	Subjects    []string        `json:"subjects"`
 }
 
 type olRatings struct {
@@ -103,6 +106,7 @@ type BookResult struct {
 	AverageRating    *float64 `json:"average_rating"`
 	RatingCount      int      `json:"rating_count"`
 	AlreadyReadCount int      `json:"already_read_count"`
+	Subjects         []string `json:"subjects"`
 }
 
 // BookDetail is the full book detail shape returned to clients.
@@ -119,6 +123,7 @@ type BookDetail struct {
 	Publisher         *string  `json:"publisher"`
 	PageCount         *int     `json:"page_count"`
 	FirstPublishYear  *int     `json:"first_publish_year"`
+	Subjects          []string `json:"subjects"`
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -128,7 +133,7 @@ const (
 	olSearchURL    = "https://openlibrary.org/search.json"
 	olCoverURL     = "https://covers.openlibrary.org/b/id/%d-L.jpg"
 	olCoverMedURL  = "https://covers.openlibrary.org/b/id/%d-M.jpg"
-	olSearchFields = "key,title,author_name,first_publish_year,isbn,cover_i,edition_count,ratings_average,ratings_count,already_read_count"
+	olSearchFields = "key,title,author_name,first_publish_year,isbn,cover_i,edition_count,ratings_average,ratings_count,already_read_count,subject,language"
 	searchLimit    = 20
 	maxISBNs       = 5
 	maxAuthors     = 5
@@ -139,14 +144,16 @@ const (
 // SearchBooks searches both Meilisearch (local catalog) and Open Library,
 // returning local matches first followed by external results.
 //
-// GET /books/search?q=<title>[&sort=reads|rating][&year_min=N][&year_max=N]
+// GET /books/search?q=<title>[&sort=reads|rating][&year_min=N][&year_max=N][&subject=S][&language=L]
 func (h *Handler) SearchBooks(c *gin.Context) {
 	q := c.Query("q")
 	if q == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "query parameter 'q' is required"})
 		return
 	}
-	sortBy := c.Query("sort") // "reads", "rating", or "" (relevance)
+	sortBy := c.Query("sort")       // "reads", "rating", or "" (relevance)
+	subject := c.Query("subject")   // e.g. "fiction", "fantasy"
+	language := c.Query("language") // e.g. "eng", "spa"
 
 	// Parse optional year range filters.
 	var yearMin, yearMax int
@@ -180,7 +187,7 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 			meiliCh <- meiliResult{}
 			return
 		}
-		docs, err := h.search.SearchBooks(q, searchLimit, yearMin, yearMax)
+		docs, err := h.search.SearchBooks(q, searchLimit, yearMin, yearMax, subject)
 		meiliCh <- meiliResult{docs: docs, err: err}
 	}()
 
@@ -204,6 +211,14 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 				hi = strconv.Itoa(yearMax)
 			}
 			apiURL += fmt.Sprintf("&first_publish_year=[%s TO %s]", lo, hi)
+		}
+		// Add subject filter to OL query if specified.
+		if subject != "" {
+			apiURL += "&subject=" + url.QueryEscape(subject)
+		}
+		// Add language filter to OL query if specified.
+		if language != "" {
+			apiURL += "&language=" + url.QueryEscape(language)
 		}
 		resp, err := http.Get(apiURL) //nolint:noctx // intentional: inherits server timeout
 		if err != nil {
@@ -260,6 +275,7 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 				PublishYear: pubYear,
 				ISBN:        isbn,
 				CoverURL:    coverURL,
+				Subjects:    doc.Subjects,
 			})
 		}
 	}
@@ -304,6 +320,10 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 				AverageRating:    doc.RatingsAverage,
 				RatingCount:      doc.RatingsCount,
 				AlreadyReadCount: doc.AlreadyReadCount,
+			}
+			if len(doc.Subject) > 0 {
+				limit := min(5, len(doc.Subject))
+				b.Subjects = doc.Subject[:limit]
 			}
 			if len(doc.ISBN) > 0 {
 				b.ISBN = doc.ISBN[:min(maxISBNs, len(doc.ISBN))]
@@ -526,6 +546,12 @@ func (h *Handler) GetBook(c *gin.Context) {
 		AverageRating: rr.ratings.Summary.Average,
 	}
 
+	// Include subjects from the work (cap at 10).
+	if len(work.Subjects) > 0 {
+		limit := min(10, len(work.Subjects))
+		detail.Subjects = work.Subjects[:limit]
+	}
+
 	// Parse description (can be a plain string or {"type":..., "value":...}).
 	if len(work.Description) > 0 {
 		var desc string
@@ -685,18 +711,27 @@ func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string, sear
 
 	authors := strings.Join(doc.AuthorName, ", ")
 
+	// Store up to 10 subjects, comma-separated.
+	var subjectsStr *string
+	if len(doc.Subject) > 0 {
+		limit := min(10, len(doc.Subject))
+		s := strings.Join(doc.Subject[:limit], ", ")
+		subjectsStr = &s
+	}
+
 	var bookID string
 	err = pool.QueryRow(ctx,
-		`INSERT INTO books (open_library_id, title, cover_url, isbn13, authors, publication_year, publisher, page_count)
-		 VALUES ($1, $2, $3, $4, $5, $6, NULL, NULL)
+		`INSERT INTO books (open_library_id, title, cover_url, isbn13, authors, publication_year, subjects, publisher, page_count)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, NULL)
 		 ON CONFLICT (open_library_id) DO UPDATE
 		   SET title            = EXCLUDED.title,
 		       cover_url        = EXCLUDED.cover_url,
 		       isbn13           = COALESCE(books.isbn13, EXCLUDED.isbn13),
 		       authors          = COALESCE(books.authors, EXCLUDED.authors),
-		       publication_year = COALESCE(books.publication_year, EXCLUDED.publication_year)
+		       publication_year = COALESCE(books.publication_year, EXCLUDED.publication_year),
+		       subjects         = COALESCE(EXCLUDED.subjects, books.subjects)
 		 RETURNING id`,
-		bareID, doc.Title, coverURL, isbn13, authors, doc.FirstPublishYear,
+		bareID, doc.Title, coverURL, isbn13, authors, doc.FirstPublishYear, subjectsStr,
 	).Scan(&bookID)
 	if err != nil {
 		return nil, fmt.Errorf("upsert book: %w", err)
@@ -716,6 +751,11 @@ func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string, sear
 		if doc.FirstPublishYear != nil {
 			py = *doc.FirstPublishYear
 		}
+		var subjects []string
+		if len(doc.Subject) > 0 {
+			limit := min(10, len(doc.Subject))
+			subjects = doc.Subject[:limit]
+		}
 		go searchClients[0].IndexBook(search.BookDocument{
 			ID:              bookID,
 			OpenLibraryID:   bareID,
@@ -724,6 +764,7 @@ func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string, sear
 			ISBN13:          i13,
 			PublicationYear: py,
 			CoverURL:        cv,
+			Subjects:        subjects,
 		})
 	}
 

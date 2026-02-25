@@ -29,6 +29,8 @@ Open Library is the primary catalog API. It is free, requires no API key, and co
 | `isbn`              | Array of ISBNs across all editions               |
 | `cover_i`           | Cover image ID (integer)                         |
 | `edition_count`     | Number of editions indexed                       |
+| `subject`           | Array of subject/genre strings                   |
+| `language`          | Array of 3-letter language codes (per-edition)   |
 
 **Cover images:**
 
@@ -94,8 +96,19 @@ Used by `GetBook` to populate publisher and page count on the book detail page.
 Our backend proxies the title search:
 
 ```
-GET /books/search?q=<title>
+GET /books/search?q=<title>[&sort=reads|rating][&year_min=N][&year_max=N][&subject=S][&language=L]
 ```
+
+Query parameters:
+
+| Param      | Description                                              |
+|------------|----------------------------------------------------------|
+| `q`        | Title query string (required)                            |
+| `sort`     | `reads`, `rating`, or empty (relevance-blended default)  |
+| `year_min` | Minimum publication year                                 |
+| `year_max` | Maximum publication year                                 |
+| `subject`  | Genre/subject filter, e.g. `fiction`, `fantasy`           |
+| `language` | 3-letter language code, e.g. `eng`, `spa`                |
 
 Response shape:
 

@@ -14,13 +14,14 @@ const booksIndex = "books"
 
 // BookDocument is the document shape stored in Meilisearch.
 type BookDocument struct {
-	ID              string `json:"id"`
-	OpenLibraryID   string `json:"open_library_id"`
-	Title           string `json:"title"`
-	Authors         string `json:"authors"`
-	ISBN13          string `json:"isbn13"`
-	PublicationYear int    `json:"publication_year"`
-	CoverURL        string `json:"cover_url"`
+	ID              string   `json:"id"`
+	OpenLibraryID   string   `json:"open_library_id"`
+	Title           string   `json:"title"`
+	Authors         string   `json:"authors"`
+	ISBN13          string   `json:"isbn13"`
+	PublicationYear int      `json:"publication_year"`
+	CoverURL        string   `json:"cover_url"`
+	Subjects        []string `json:"subjects"`
 }
 
 // Client wraps a Meilisearch index for book search.
@@ -58,7 +59,7 @@ func NewClient(url, apiKey string) (*Client, error) {
 	// Configure searchable attributes.
 	_, err = idx.UpdateSettings(&meilisearch.Settings{
 		SearchableAttributes: []string{"title", "authors", "isbn13"},
-		FilterableAttributes: []string{"open_library_id", "publication_year"},
+		FilterableAttributes: []string{"open_library_id", "publication_year", "subjects"},
 		SortableAttributes:   []string{"publication_year"},
 	})
 	if err != nil {
@@ -74,7 +75,8 @@ func (c *Client) SyncBooks(ctx context.Context, pool *pgxpool.Pool) error {
 	rows, err := pool.Query(ctx,
 		`SELECT id, open_library_id, title,
 		        COALESCE(authors, ''), COALESCE(isbn13, ''),
-		        COALESCE(publication_year, 0), COALESCE(cover_url, '')
+		        COALESCE(publication_year, 0), COALESCE(cover_url, ''),
+		        COALESCE(subjects, '')
 		 FROM books`)
 	if err != nil {
 		return err
@@ -84,9 +86,14 @@ func (c *Client) SyncBooks(ctx context.Context, pool *pgxpool.Pool) error {
 	var docs []BookDocument
 	for rows.Next() {
 		var d BookDocument
+		var subjectsRaw string
 		if err := rows.Scan(&d.ID, &d.OpenLibraryID, &d.Title,
-			&d.Authors, &d.ISBN13, &d.PublicationYear, &d.CoverURL); err != nil {
+			&d.Authors, &d.ISBN13, &d.PublicationYear, &d.CoverURL,
+			&subjectsRaw); err != nil {
 			return err
+		}
+		if subjectsRaw != "" {
+			d.Subjects = strings.Split(subjectsRaw, ", ")
 		}
 		docs = append(docs, d)
 	}
@@ -121,12 +128,13 @@ func (c *Client) IndexBook(doc BookDocument) {
 
 // SearchBooks queries the Meilisearch index and returns matching documents.
 // Optional yearMin/yearMax apply a publication_year range filter.
-func (c *Client) SearchBooks(query string, limit int, yearMin, yearMax int) ([]BookDocument, error) {
+// Optional subject filters results to books with a matching subject.
+func (c *Client) SearchBooks(query string, limit int, yearMin, yearMax int, subject string) ([]BookDocument, error) {
 	req := &meilisearch.SearchRequest{
 		Limit: int64(limit),
 	}
 
-	// Build Meilisearch filter for year range.
+	// Build Meilisearch filter for year range and subject.
 	var filters []string
 	if yearMin > 0 {
 		filters = append(filters, fmt.Sprintf("publication_year >= %d", yearMin))
@@ -134,9 +142,14 @@ func (c *Client) SearchBooks(query string, limit int, yearMin, yearMax int) ([]B
 	if yearMax > 0 {
 		filters = append(filters, fmt.Sprintf("publication_year <= %d", yearMax))
 	}
-	if len(filters) > 0 {
+	if yearMin > 0 || yearMax > 0 {
 		// Exclude books with no year data (publication_year == 0) when filtering.
 		filters = append(filters, "publication_year > 0")
+	}
+	if subject != "" {
+		filters = append(filters, fmt.Sprintf(`subjects = "%s"`, subject))
+	}
+	if len(filters) > 0 {
 		req.Filter = strings.Join(filters, " AND ")
 	}
 

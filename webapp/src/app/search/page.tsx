@@ -17,6 +17,7 @@ type BookResult = {
   average_rating: number | null;
   rating_count: number;
   already_read_count: number;
+  subjects: string[] | null;
 };
 
 type BookSearchResponse = {
@@ -54,14 +55,59 @@ type TagKey = {
   values: StatusValue[];
 };
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const SORT_OPTIONS = [
+  { value: "", label: "Relevance" },
+  { value: "reads", label: "Most read" },
+  { value: "rating", label: "Highest rated" },
+] as const;
+
+const GENRE_OPTIONS = [
+  "Fiction",
+  "Non-fiction",
+  "Fantasy",
+  "Science fiction",
+  "Mystery",
+  "Romance",
+  "Horror",
+  "Thriller",
+  "Biography",
+  "History",
+  "Poetry",
+  "Children",
+] as const;
+
+const LANGUAGE_OPTIONS = [
+  { code: "eng", label: "English" },
+  { code: "spa", label: "Spanish" },
+  { code: "fre", label: "French" },
+  { code: "ger", label: "German" },
+  { code: "ita", label: "Italian" },
+  { code: "por", label: "Portuguese" },
+  { code: "rus", label: "Russian" },
+  { code: "chi", label: "Chinese" },
+  { code: "jpn", label: "Japanese" },
+  { code: "kor", label: "Korean" },
+] as const;
+
 // ── Data fetchers ─────────────────────────────────────────────────────────────
 
-async function searchBooks(q: string, sort: string, yearMin: string, yearMax: string): Promise<BookSearchResponse> {
+async function searchBooks(
+  q: string,
+  sort: string,
+  yearMin: string,
+  yearMax: string,
+  subject: string,
+  language: string,
+): Promise<BookSearchResponse> {
   if (!q.trim()) return { total: 0, results: [] };
   const params = new URLSearchParams({ q });
   if (sort) params.set("sort", sort);
   if (yearMin) params.set("year_min", yearMin);
   if (yearMax) params.set("year_max", yearMax);
+  if (subject) params.set("subject", subject);
+  if (language) params.set("language", language);
   const res = await fetch(
     `${process.env.API_URL}/books/search?${params}`,
     { cache: "no-store" }
@@ -108,26 +154,60 @@ async function fetchStatusMap(token: string): Promise<Record<string, string>> {
   return res.json();
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-const SORT_OPTIONS = [
-  { value: "", label: "Relevance" },
-  { value: "reads", label: "Most read" },
-  { value: "rating", label: "Highest rated" },
-] as const;
+function buildSearchParams(base: {
+  q: string;
+  type: string;
+  sort: string;
+  year_min: string;
+  year_max: string;
+  subject: string;
+  language: string;
+}, overrides: Partial<typeof base> = {}) {
+  const merged = { ...base, ...overrides };
+  const p = new URLSearchParams({ type: merged.type });
+  if (merged.q) p.set("q", merged.q);
+  if (merged.sort) p.set("sort", merged.sort);
+  if (merged.year_min) p.set("year_min", merged.year_min);
+  if (merged.year_max) p.set("year_max", merged.year_max);
+  if (merged.subject) p.set("subject", merged.subject);
+  if (merged.language) p.set("language", merged.language);
+  return `/search?${p}`;
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; type?: string; sort?: string; year_min?: string; year_max?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    type?: string;
+    sort?: string;
+    year_min?: string;
+    year_max?: string;
+    subject?: string;
+    language?: string;
+  }>;
 }) {
-  const { q = "", type, sort = "", year_min = "", year_max = "" } = await searchParams;
+  const {
+    q = "",
+    type,
+    sort = "",
+    year_min = "",
+    year_max = "",
+    subject = "",
+    language = "",
+  } = await searchParams;
   const activeTab = type === "authors" ? "authors" : type === "people" ? "people" : "books";
+
+  const base = { q, type: activeTab, sort, year_min, year_max, subject, language };
 
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
   const [bookData, users, authorData, tagKeys, statusMap] = await Promise.all([
-    activeTab === "books" ? searchBooks(q, sort, year_min, year_max) : Promise.resolve({ total: 0, results: [] }),
+    activeTab === "books" ? searchBooks(q, sort, year_min, year_max, subject, language) : Promise.resolve({ total: 0, results: [] }),
     activeTab === "people" ? searchUsers(q) : Promise.resolve([]),
     activeTab === "authors" ? searchAuthors(q) : Promise.resolve({ total: 0, results: [] }),
     currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
@@ -139,32 +219,8 @@ export default async function SearchPage({
   const statusKeyId: string | null = statusKey?.id ?? null;
   const bookStatusMap: Record<string, string> | null = statusMap;
 
-  const tabLink = (tab: "books" | "people" | "authors") => {
-    const p = new URLSearchParams({ type: tab });
-    if (q) p.set("q", q);
-    if (sort && tab === "books") p.set("sort", sort);
-    if (year_min && tab === "books") p.set("year_min", year_min);
-    if (year_max && tab === "books") p.set("year_max", year_max);
-    return `/search?${p}`;
-  };
-
-  const sortLink = (s: string) => {
-    const p = new URLSearchParams({ type: activeTab });
-    if (q) p.set("q", q);
-    if (s) p.set("sort", s);
-    if (year_min) p.set("year_min", year_min);
-    if (year_max) p.set("year_max", year_max);
-    return `/search?${p}`;
-  };
-
   const hasYearFilter = year_min || year_max;
-
-  const clearYearLink = () => {
-    const p = new URLSearchParams({ type: activeTab });
-    if (q) p.set("q", q);
-    if (sort) p.set("sort", sort);
-    return `/search?${p}`;
-  };
+  const hasAnyFilter = hasYearFilter || subject || language;
 
   return (
     <div className="min-h-screen">
@@ -181,12 +237,14 @@ export default async function SearchPage({
           />
           <input type="hidden" name="type" value={activeTab} />
           {sort && <input type="hidden" name="sort" value={sort} />}
+          {subject && <input type="hidden" name="subject" value={subject} />}
+          {language && <input type="hidden" name="language" value={language} />}
         </form>
 
         {/* Tab selector */}
         <div className="flex gap-1 mb-6 border-b border-stone-200">
           <Link
-            href={tabLink("books")}
+            href={buildSearchParams(base, { type: "books", sort: "", year_min: "", year_max: "", subject: "", language: "" })}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "books"
                 ? "border-stone-900 text-stone-900"
@@ -196,7 +254,7 @@ export default async function SearchPage({
             Books
           </Link>
           <Link
-            href={tabLink("authors")}
+            href={buildSearchParams(base, { type: "authors", sort: "", year_min: "", year_max: "", subject: "", language: "" })}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "authors"
                 ? "border-stone-900 text-stone-900"
@@ -206,7 +264,7 @@ export default async function SearchPage({
             Authors
           </Link>
           <Link
-            href={tabLink("people")}
+            href={buildSearchParams(base, { type: "people", sort: "", year_min: "", year_max: "", subject: "", language: "" })}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "people"
                 ? "border-stone-900 text-stone-900"
@@ -224,7 +282,7 @@ export default async function SearchPage({
             {SORT_OPTIONS.map((opt) => (
               <Link
                 key={opt.value}
-                href={sortLink(opt.value)}
+                href={buildSearchParams(base, { sort: opt.value })}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   sort === opt.value
                     ? "border-stone-900 text-stone-900 bg-stone-900 text-white"
@@ -232,6 +290,46 @@ export default async function SearchPage({
                 }`}
               >
                 {opt.label}
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* Genre filter (books only) */}
+        {activeTab === "books" && q && (
+          <div className="flex items-center gap-2 mb-5 flex-wrap">
+            <span className="text-xs text-stone-400">Genre</span>
+            {GENRE_OPTIONS.map((genre) => (
+              <Link
+                key={genre}
+                href={buildSearchParams(base, { subject: subject === genre.toLowerCase() ? "" : genre.toLowerCase() })}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  subject === genre.toLowerCase()
+                    ? "border-stone-900 bg-stone-900 text-white"
+                    : "border-stone-300 text-stone-500 hover:border-stone-500 hover:text-stone-700"
+                }`}
+              >
+                {genre}
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* Language filter (books only) */}
+        {activeTab === "books" && q && (
+          <div className="flex items-center gap-2 mb-5 flex-wrap">
+            <span className="text-xs text-stone-400">Language</span>
+            {LANGUAGE_OPTIONS.map((lang) => (
+              <Link
+                key={lang.code}
+                href={buildSearchParams(base, { language: language === lang.code ? "" : lang.code })}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  language === lang.code
+                    ? "border-stone-900 bg-stone-900 text-white"
+                    : "border-stone-300 text-stone-500 hover:border-stone-500 hover:text-stone-700"
+                }`}
+              >
+                {lang.label}
               </Link>
             ))}
           </div>
@@ -245,6 +343,8 @@ export default async function SearchPage({
               <input type="hidden" name="type" value="books" />
               <input type="hidden" name="q" value={q} />
               {sort && <input type="hidden" name="sort" value={sort} />}
+              {subject && <input type="hidden" name="subject" value={subject} />}
+              {language && <input type="hidden" name="language" value={language} />}
               <input
                 name="year_min"
                 type="number"
@@ -272,13 +372,25 @@ export default async function SearchPage({
               </button>
               {hasYearFilter && (
                 <Link
-                  href={clearYearLink()}
+                  href={buildSearchParams(base, { year_min: "", year_max: "" })}
                   className="text-xs px-2.5 py-1 rounded-full border border-stone-300 text-stone-500 hover:border-stone-500 hover:text-stone-700 transition-colors"
                 >
                   Clear
                 </Link>
               )}
             </form>
+          </div>
+        )}
+
+        {/* Clear all filters */}
+        {activeTab === "books" && q && hasAnyFilter && (
+          <div className="mb-5">
+            <Link
+              href={buildSearchParams({ q, type: "books", sort, year_min: "", year_max: "", subject: "", language: "" })}
+              className="text-xs text-stone-400 hover:text-stone-700 underline transition-colors"
+            >
+              Clear all filters
+            </Link>
           </div>
         )}
 
