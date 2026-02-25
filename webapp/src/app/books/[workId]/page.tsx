@@ -19,6 +19,9 @@ type BookDetail = {
   rating_count: number;
   local_reads_count: number;
   local_want_to_read_count: number;
+  publisher: string | null;
+  page_count: number | null;
+  first_publish_year: number | null;
 };
 
 type BookReview = {
@@ -184,8 +187,20 @@ export default async function BookPage({
             </h1>
 
             {book.authors && book.authors.length > 0 && (
-              <p className="text-stone-500 text-sm mb-3">
+              <p className="text-stone-500 text-sm mb-1">
                 {book.authors.join(", ")}
+              </p>
+            )}
+
+            {(book.first_publish_year || book.publisher || book.page_count) && (
+              <p className="text-stone-400 text-xs mb-3">
+                {[
+                  book.first_publish_year && `${book.first_publish_year}`,
+                  book.publisher,
+                  book.page_count && `${book.page_count} pages`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             )}
 

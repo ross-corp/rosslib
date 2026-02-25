@@ -47,6 +47,8 @@ Global catalog. Not per-user. Records are upserted by `open_library_id` when a u
 | isbn13 | varchar(13) | nullable |
 | authors | text | nullable; comma-separated author names |
 | publication_year | integer | nullable; first publish year from OL |
+| publisher | text | nullable; from OL editions API |
+| page_count | integer | nullable; from OL editions API |
 | created_at | timestamptz | |
 
 ### `collections`

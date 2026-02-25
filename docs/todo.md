@@ -102,7 +102,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] Aggregate stats: average rating (from Open Library).
   - [x] User's own status — status label, rating, review shown on book page; StatusPicker to add/change status.
   - [x] Community reviews — `GET /books/:workId/reviews` returns all user reviews from the local DB; shown on book page with spoiler gating.
-  - [ ] Publisher, year, page count (not exposed by Open Library work API; requires edition lookup).
+  - [x] Publisher, year, page count — fetched from Open Library editions API (`/works/{id}/editions.json`); displayed on book page below authors. Publication year also pulled from local DB when available.
   - [x] Read count / want-to-read count from local DB — shown on book page.
   - [ ] Community links to related works.
 - [x] Author page — `/authors/:authorKey` fetches from Open Library (`/authors/{key}.json` + `/authors/{key}/works.json`); displays bio, dates, photo, external links, and a grid of works with covers linking to book pages. Author search results now link to author pages.

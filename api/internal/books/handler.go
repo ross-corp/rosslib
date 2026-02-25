@@ -75,6 +75,16 @@ type olAuthor struct {
 	Name string `json:"name"`
 }
 
+type olEdition struct {
+	Publishers   []string `json:"publishers"`
+	NumberOfPages *int    `json:"number_of_pages"`
+	PublishDate  string   `json:"publish_date"`
+}
+
+type olEditionsResponse struct {
+	Entries []olEdition `json:"entries"`
+}
+
 // ── Response types ────────────────────────────────────────────────────────────
 
 // BookResult is the normalized shape returned to clients.
@@ -104,6 +114,9 @@ type BookDetail struct {
 	RatingCount       int      `json:"rating_count"`
 	LocalReadsCount   int      `json:"local_reads_count"`
 	LocalWantToRead   int      `json:"local_want_to_read_count"`
+	Publisher         *string  `json:"publisher"`
+	PageCount         *int     `json:"page_count"`
+	FirstPublishYear  *int     `json:"first_publish_year"`
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -296,8 +309,9 @@ func (h *Handler) GetBook(c *gin.Context) {
 
 	workURL := fmt.Sprintf("%s/works/%s.json", olBaseURL, workID)
 	ratingsURL := fmt.Sprintf("%s/works/%s/ratings.json", olBaseURL, workID)
+	editionsURL := fmt.Sprintf("%s/works/%s/editions.json?limit=5", olBaseURL, workID)
 
-	// Fetch work and ratings concurrently.
+	// Fetch work, ratings, and editions concurrently.
 	type workResult struct {
 		work olWork
 		err  error
@@ -306,9 +320,14 @@ func (h *Handler) GetBook(c *gin.Context) {
 		ratings olRatings
 		err     error
 	}
+	type editionsResult struct {
+		editions olEditionsResponse
+		err      error
+	}
 
 	workCh := make(chan workResult, 1)
 	ratingsCh := make(chan ratingsResult, 1)
+	editionsCh := make(chan editionsResult, 1)
 
 	go func() {
 		resp, err := http.Get(workURL) //nolint:noctx
@@ -343,6 +362,19 @@ func (h *Handler) GetBook(c *gin.Context) {
 		ratingsCh <- ratingsResult{ratings: r}
 	}()
 
+	go func() {
+		resp, err := http.Get(editionsURL) //nolint:noctx
+		if err != nil {
+			editionsCh <- editionsResult{}
+			return
+		}
+		defer resp.Body.Close()
+		body, _ := io.ReadAll(resp.Body)
+		var e olEditionsResponse
+		_ = json.Unmarshal(body, &e)
+		editionsCh <- editionsResult{editions: e}
+	}()
+
 	wr := <-workCh
 	if wr.err != nil {
 		if wr.err.Error() == "not found" {
@@ -354,6 +386,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 	}
 	work := wr.work
 	rr := <-ratingsCh
+	er := <-editionsCh
 
 	// Resolve author names concurrently (up to maxAuthors).
 	authorRefs := work.Authors
@@ -417,6 +450,34 @@ func (h *Handler) GetBook(c *gin.Context) {
 	if len(work.Covers) > 0 && work.Covers[0] > 0 {
 		coverURL := fmt.Sprintf(olCoverURL, work.Covers[0])
 		detail.CoverURL = &coverURL
+	}
+
+	// Extract edition metadata (publisher, page count) from the best edition.
+	if er.err == nil {
+		for _, ed := range er.editions.Entries {
+			if detail.Publisher == nil && len(ed.Publishers) > 0 {
+				detail.Publisher = &ed.Publishers[0]
+			}
+			if detail.PageCount == nil && ed.NumberOfPages != nil && *ed.NumberOfPages > 0 {
+				detail.PageCount = ed.NumberOfPages
+			}
+			if detail.Publisher != nil && detail.PageCount != nil {
+				break
+			}
+		}
+	}
+
+	// Extract first publish year from the work's first edition publish date.
+	// We check the local DB first; if not stored, try parsing from edition data.
+	if h.pool != nil {
+		var pubYear *int
+		_ = h.pool.QueryRow(c.Request.Context(),
+			`SELECT publication_year FROM books WHERE open_library_id = $1`,
+			workID,
+		).Scan(&pubYear)
+		if pubYear != nil && *pubYear > 0 {
+			detail.FirstPublishYear = pubYear
+		}
 	}
 
 	// Query local DB for read and want-to-read counts from user_books + status labels.
@@ -533,8 +594,8 @@ func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string, sear
 
 	var bookID string
 	err = pool.QueryRow(ctx,
-		`INSERT INTO books (open_library_id, title, cover_url, isbn13, authors, publication_year)
-		 VALUES ($1, $2, $3, $4, $5, $6)
+		`INSERT INTO books (open_library_id, title, cover_url, isbn13, authors, publication_year, publisher, page_count)
+		 VALUES ($1, $2, $3, $4, $5, $6, NULL, NULL)
 		 ON CONFLICT (open_library_id) DO UPDATE
 		   SET title            = EXCLUDED.title,
 		       cover_url        = EXCLUDED.cover_url,

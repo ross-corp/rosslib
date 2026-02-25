@@ -75,6 +75,20 @@ https://covers.openlibrary.org/a/olid/{key}-{size}.jpg
 
 Sizes: `S`, `M`, `L`. Availability is inconsistent — many authors have no photo.
 
+### Editions (for page count, publisher)
+
+**Endpoint:** `GET https://openlibrary.org/works/{workId}/editions.json?limit=5`
+
+Returns editions for a work. We fetch up to 5 editions and pick the first one that has a publisher and/or page count.
+
+| Field            | Description                                  |
+|------------------|----------------------------------------------|
+| `publishers`     | Array of publisher names                     |
+| `number_of_pages`| Page count (integer, nullable)               |
+| `publish_date`   | Publication date string                      |
+
+Used by `GetBook` to populate publisher and page count on the book detail page.
+
 ### rosslib API routes
 
 Our backend proxies the title search:
