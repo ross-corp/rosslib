@@ -590,6 +590,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 	// We check the local DB first; if not stored, try parsing from edition data.
 	if h.pool != nil {
 		var pubYear *int
+		// We ignore error here since it's just enriching data
 		_ = h.pool.QueryRow(c.Request.Context(),
 			`SELECT publication_year FROM books WHERE open_library_id = $1`,
 			workID,
@@ -601,6 +602,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 
 	// Query local DB for read and want-to-read counts from user_books + status labels.
 	if h.pool != nil {
+		// We ignore error here since it's just enriching data
 		_ = h.pool.QueryRow(c.Request.Context(),
 			`SELECT
 			    COUNT(*) FILTER (WHERE tv.slug = 'finished')      AS reads_count,
@@ -1313,7 +1315,7 @@ func (h *Handler) GetAuthor(c *gin.Context) {
 
 	// Links.
 	for _, l := range raw.Links {
-		detail.Links = append(detail.Links, AuthorLink{Title: l.Title, URL: l.URL})
+		detail.Links = append(detail.Links, AuthorLink(l))
 	}
 
 	// Works.

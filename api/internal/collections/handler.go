@@ -1024,7 +1024,8 @@ func (h *Handler) ExportCSV(c *gin.Context) {
 	c.Header("Content-Disposition", `attachment; filename="rosslib-export.csv"`)
 
 	w := csv.NewWriter(c.Writer)
-	w.Write([]string{"Title", "Author", "ISBN13", "Status", "Rating", "Review", "Date Added", "Date Read", "Date DNF"})
+	// Ignore header write error
+	_ = w.Write([]string{"Title", "Author", "ISBN13", "Status", "Rating", "Review", "Date Added", "Date Read", "Date DNF"})
 
 	for rows.Next() {
 		var (
@@ -1053,7 +1054,8 @@ func (h *Handler) ExportCSV(c *gin.Context) {
 			formatDate(dateRead),
 			formatDate(dateDNF),
 		}
-		w.Write(record)
+		// Ignore record write error
+		_ = w.Write(record)
 	}
 
 	w.Flush()
