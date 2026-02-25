@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Stars } from "@/components/activity";
+import ReviewText from "@/components/review-text";
 
 export type ReviewItem = {
   book_id: string;
@@ -20,10 +21,6 @@ export type ReviewItem = {
 
 function ReviewCard({ review }: { review: ReviewItem }) {
   const [revealed, setRevealed] = useState(false);
-  const snippet =
-    review.review_text.length > 150
-      ? review.review_text.slice(0, 150) + "..."
-      : review.review_text;
 
   return (
     <div className="flex gap-3 py-4 border-b border-stone-100 last:border-0">
@@ -61,7 +58,9 @@ function ReviewCard({ review }: { review: ReviewItem }) {
             Spoiler — click to reveal
           </button>
         ) : (
-          <p className="mt-1 text-sm text-stone-600 leading-snug">{snippet}</p>
+          <div className="mt-1 text-sm text-stone-600 leading-snug line-clamp-3">
+            <ReviewText text={review.review_text} />
+          </div>
         )}
       </div>
     </div>

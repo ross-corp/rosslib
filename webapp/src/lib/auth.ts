@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 export type AuthUser = {
   user_id: string;
   username: string;
+  is_moderator: boolean;
+  email_verified: boolean;
 };
 
 function decodeJWT(token: string): Record<string, unknown> | null {
@@ -42,7 +44,9 @@ export async function getUser(): Promise<AuthUser | null> {
   if (!username) return null;
 
   return {
-    user_id: payload.id as string || payload.sub as string, // PB uses 'id', previous might use 'sub'
+    user_id: (payload.id as string) || (payload.sub as string),
     username: username,
+    is_moderator: (payload.is_moderator as boolean) ?? false,
+    email_verified: (payload.email_verified as boolean) ?? false,
   };
 }

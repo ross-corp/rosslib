@@ -2,8 +2,35 @@
 
 cd "$(dirname "$0")/.." || exit 1
 
-N=${1:-5}
+PAUSE_FILE="nephewbot/.paused"
 LOG="nephewbot/nephewbot.log.jsonl"
+
+case "${1:-}" in
+  pause)
+    touch "$PAUSE_FILE"
+    echo "nephewbot paused"
+    exit 0
+    ;;
+  resume)
+    rm -f "$PAUSE_FILE"
+    echo "nephewbot resumed"
+    exit 0
+    ;;
+  status)
+    if [ -f "$PAUSE_FILE" ]; then
+      echo "nephewbot is paused"
+    else
+      echo "nephewbot is active"
+    fi
+    exit 0
+    ;;
+esac
+
+if [ -f "$PAUSE_FILE" ]; then
+  exit 0
+fi
+
+N=${1:-5}
 
 for i in $(seq 1 "$N"); do
   TIMESTAMP=$(date -Iseconds)

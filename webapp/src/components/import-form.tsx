@@ -536,16 +536,16 @@ export default function ImportForm() {
 
       <div className="flex items-center gap-3">
         <label className="cursor-pointer">
-          <span className="px-3 py-2 text-sm border border-stone-200 rounded-lg text-stone-700 hover:border-stone-400 transition-colors">
-            {fileName ?? "Choose file"}
+          <span className="px-3 py-2 text-sm border border-stone-200 rounded-lg text-stone-700 hover:border-stone-400 transition-colors focus-within:ring-2 focus-within:ring-stone-900 focus-within:ring-offset-2 relative">
+            {fileName ? "Change file" : "Choose file"}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              className="sr-only"
+              onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
+            />
           </span>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv"
-            className="sr-only"
-            onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
-          />
         </label>
         {fileName && <span className="text-xs text-stone-400 truncate max-w-xs">{fileName}</span>}
       </div>

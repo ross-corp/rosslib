@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/nav";
+import EmailVerificationBanner from "@/components/email-verification-banner";
+import PasswordForm from "@/components/password-form";
 import SettingsForm from "@/components/settings-form";
 import { getUser } from "@/lib/auth";
 
@@ -53,6 +55,12 @@ export default async function SettingsPage() {
               Tag categories
             </Link>
             <Link
+              href="/scan"
+              className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
+            >
+              Scan ISBN
+            </Link>
+            <Link
               href="/settings/import"
               className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
             >
@@ -65,6 +73,12 @@ export default async function SettingsPage() {
               Export to CSV
             </Link>
             <Link
+              href="/library/compare"
+              className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
+            >
+              Compare lists
+            </Link>
+            <Link
               href="/settings/ghost-activity"
               className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
             >
@@ -73,6 +87,8 @@ export default async function SettingsPage() {
           </div>
         </div>
 
+        <EmailVerificationBanner />
+
         <SettingsForm
           username={user.username}
           initialDisplayName={profile?.display_name ?? ""}
@@ -80,6 +96,8 @@ export default async function SettingsPage() {
           initialAvatarUrl={profile?.avatar_url ?? null}
           initialIsPrivate={profile?.is_private ?? false}
         />
+
+        <PasswordForm />
       </main>
     </div>
   );

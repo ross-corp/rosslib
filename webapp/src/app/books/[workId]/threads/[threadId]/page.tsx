@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/nav";
 import ThreadComments from "@/components/thread-comments";
+import SimilarThreads from "@/components/similar-threads";
 import { getUser } from "@/lib/auth";
 
 type Thread = {
@@ -151,6 +152,9 @@ export default async function ThreadPage({
             currentUserId={currentUser?.user_id ?? null}
           />
         </section>
+
+        {/* Similar threads */}
+        <SimilarThreads threadId={threadId} workId={workId} />
       </main>
     </div>
   );

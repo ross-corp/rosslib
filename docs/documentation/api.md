@@ -24,7 +24,76 @@ Creates a user and sets the `token` cookie. Also creates the three default shelv
 { "email": "alice@example.com", "password": "..." }
 ```
 
-Sets the `token` cookie on success.
+Sets the `token` cookie on success. Returns `401` with `"this account uses Google sign-in"` if the account has no password (Google OAuth-only).
+
+### `POST /auth/google`
+
+```json
+{ "google_id": "123456789", "email": "alice@gmail.com", "name": "Alice" }
+```
+
+Sign in or register via Google OAuth. Called by the webapp after exchanging a Google authorization code for tokens and fetching user info. Three flows:
+
+1. **Existing Google user** — finds user by `google_id`, issues JWT. Returns `200`.
+2. **Existing email user** — finds user by email, links `google_id` to the account, issues JWT. Returns `200`.
+3. **New user** — creates account with auto-derived username (from email prefix, with numeric suffix if taken), sets `display_name` from Google profile `name`, creates default shelves. Returns `201`.
+
+The webapp handles the full OAuth flow:
+- `GET /api/auth/google` — redirects to Google consent screen
+- `GET /api/auth/google/callback` — exchanges code for tokens, calls `POST /auth/google`, sets cookie
+
+**Environment variables required:** `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_URL`.
+
+### `POST /auth/forgot-password`
+
+Request a password reset email. Always returns 200 regardless of whether the email exists (to avoid leaking account info).
+
+```json
+{ "email": "alice@example.com" }
+```
+
+```
+200 { "ok": true, "message": "If an account with that email exists, a password reset link has been sent." }
+```
+
+Requires SMTP to be configured (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` env vars). When SMTP is not configured, the request is logged but no email is sent. The reset link expires after 1 hour. Previous unused tokens are invalidated when a new one is requested.
+
+### `POST /auth/reset-password`
+
+Reset password using the token from the email link. The token is single-use and expires after 1 hour.
+
+```json
+{ "token": "<64-char hex token>", "new_password": "new-pass-8chars" }
+```
+
+```
+200 { "ok": true }
+400 { "error": "invalid or expired reset token" }
+400 { "error": "token and new password (min 8 chars) are required" }
+```
+
+### `GET /me/account`  *(auth required)*
+
+Returns whether the current user has a password set and whether a Google account is linked. Used by the settings UI to determine which password form to show.
+
+```json
+{ "has_password": false, "has_google": true }
+```
+
+### `PUT /me/password`  *(auth required)*
+
+Set or change the user's password. If the user already has a password, `current_password` is required. Google OAuth-only users can call this with just `new_password` to enable email+password sign-in.
+
+```json
+{ "current_password": "old-pass", "new_password": "new-pass-8chars" }
+```
+
+```
+200 { "ok": true }
+400 { "error": "new password must be at least 8 characters" }
+400 { "error": "current password is required" }
+401 { "error": "current password is incorrect" }
+```
 
 ---
 
@@ -59,9 +128,70 @@ Optional `year_min` and `year_max` filter results by publication year. Meilisear
 
 Looks up a single book by ISBN via Open Library. Upserts the result into the local `books` table and returns it. Returns 404 if not found.
 
+### `POST /books/scan`
+
+Accepts a `multipart/form-data` image upload (field name `image`). Decodes the image, detects an EAN-13 barcode (ISBN), looks up the book via Open Library, upserts it locally, and returns the result. Supported formats: JPEG, PNG, GIF.
+
+Returns `422` if no barcode is detected (with a `hint` field), `404` if the ISBN is detected but no book matches, and `200` on success:
+
+```json
+{
+  "isbn": "9780261103573",
+  "book": {
+    "key": "/works/OL27448W",
+    "title": "The Lord of the Rings",
+    "authors": ["J.R.R. Tolkien"],
+    "publish_year": 1954,
+    "cover_url": "https://covers.openlibrary.org/b/id/...-M.jpg",
+    ...
+  }
+}
+```
+
 ### `GET /books/:workId`
 
 Returns a book from the local `books` table by its bare OL work ID (e.g. `OL82592W`). 404 if not in the local catalog yet.
+
+### `GET /books/:workId/editions?limit=50&offset=0`
+
+Returns editions for a work from Open Library. Each edition includes cover, format, publisher, page count, ISBN, and language. Paginated via `limit` and `offset`.
+
+```json
+{
+  "total": 251,
+  "editions": [
+    {
+      "key": "OL58959679M",
+      "title": "The Lord of the Rings",
+      "publisher": "HarperCollins",
+      "publish_date": "20 December 2021",
+      "page_count": 1376,
+      "isbn": "9786555112511",
+      "cover_url": "https://covers.openlibrary.org/b/id/15024346-M.jpg",
+      "format": "Hardcover",
+      "language": "por"
+    }
+  ]
+}
+```
+
+`publisher`, `page_count`, `isbn`, and `cover_url` may be null. `format` and `language` may be empty strings when the data is unavailable. Editions are also included inline in the `GET /books/:workId` response (up to 50, with `edition_count` for the total).
+
+### `GET /books/:workId/stats`
+
+Returns precomputed aggregate stats for a book from the `book_stats` cache table. Stats are refreshed asynchronously when users change statuses, ratings, or reviews.
+
+```json
+{
+  "reads_count": 42,
+  "want_to_read_count": 15,
+  "average_rating": 4.2,
+  "rating_count": 30,
+  "review_count": 8
+}
+```
+
+`average_rating` is null when no users have rated the book. Returns 404 if the book is not in the local catalog.
 
 ### `GET /books/:workId/reviews`  *(optional auth)*
 
@@ -136,6 +266,68 @@ Returns 404 for unknown genre slugs.
 
 ---
 
+## Genre Ratings
+
+Users can rate how strongly a book fits each genre on a 0–10 scale. Aggregate averages are shown publicly on book detail pages; individual ratings are visible to the authenticated user.
+
+### `GET /books/:workId/genre-ratings`
+
+Returns aggregate genre ratings for a book, sorted by rater count descending.
+
+```json
+[
+  {
+    "genre": "Science fiction",
+    "average": 7.3,
+    "rater_count": 12
+  },
+  {
+    "genre": "Fiction",
+    "average": 9.1,
+    "rater_count": 8
+  }
+]
+```
+
+Returns an empty array if no ratings exist.
+
+### `GET /me/books/:olId/genre-ratings`  *(auth required)*
+
+Returns the current user's genre ratings for a book.
+
+```json
+[
+  {
+    "genre": "Science fiction",
+    "rating": 8,
+    "updated_at": "2026-02-25T14:00:00Z"
+  }
+]
+```
+
+### `PUT /me/books/:olId/genre-ratings`  *(auth required)*
+
+Set or update genre ratings for a book. Accepts an array of `{genre, rating}` objects. Ratings of 0 or null remove the genre rating. Genres must be from the predefined list.
+
+```json
+[
+  { "genre": "Science fiction", "rating": 8 },
+  { "genre": "Fiction", "rating": 6 },
+  { "genre": "Horror", "rating": 0 }
+]
+```
+
+```
+200 { "ok": true }
+400 { "error": "invalid genre: ..." }
+400 { "error": "rating must be 0-10" }
+404 { "error": "book not found" }
+```
+
+**Valid genres:** Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children.
+
+---
+
 ## Authors
 
 ### `GET /authors/search?q=<name>`
@@ -162,6 +354,34 @@ Proxies to Open Library's author search API. Returns up to 20 results.
 
 `birth_date`, `death_date`, `top_work`, `top_subjects`, and `photo_url` may be null.
 
+### `POST /authors/:authorKey/follow`  *(auth required)*
+
+Follow an author. Accepts optional `{ "author_name": "..." }` to cache the display name.
+
+### `DELETE /authors/:authorKey/follow`  *(auth required)*
+
+Unfollow an author.
+
+### `GET /authors/:authorKey/follow`  *(auth required)*
+
+Check if you follow an author. Returns `{ "following": true/false }`.
+
+### `GET /me/followed-authors`  *(auth required)*
+
+List authors you follow.
+
+```json
+{
+  "authors": [
+    {
+      "author_key": "OL26320A",
+      "author_name": "J.R.R. Tolkien",
+      "created_at": "2026-02-25T14:00:00Z"
+    }
+  ]
+}
+```
+
 ---
 
 ## Users
@@ -187,7 +407,8 @@ Returns a user profile. With a valid token, also returns `is_following` for the 
   "followers_count": 10,
   "following_count": 5,
   "friends_count": 3,
-  "books_read": 42
+  "books_read": 42,
+  "author_key": null
 }
 ```
 
@@ -316,6 +537,64 @@ Rename or toggle visibility. Accepts `{ name?, is_public? }`.
 ### `DELETE /me/shelves/:id`  *(auth required)*
 
 Delete a custom shelf. Returns 403 if `exclusive_group = 'read_status'` (default shelves cannot be deleted).
+
+### `POST /me/shelves/set-operation`  *(auth required)*
+
+Compute a set operation (union, intersection, or difference) between two collections. Both must belong to the authenticated user.
+
+```json
+{
+  "collection_a": "<uuid>",
+  "collection_b": "<uuid>",
+  "operation": "intersection"
+}
+```
+
+Returns `{ operation, collection_a, collection_b, result_count, books[] }`.
+
+### `POST /me/shelves/set-operation/save`  *(auth required)*
+
+Same as above, but also saves the result as a new shelf. Accepts an additional `name` field. Returns `{ id, name, slug, book_count, is_continuous }`. If `is_continuous` is true, the list auto-refreshes when viewed — the operation is re-executed against the current source collections each time `GET /users/:username/shelves/:slug` is called.
+
+```json
+{
+  "collection_a": "<uuid>",
+  "collection_b": "<uuid>",
+  "operation": "union",
+  "name": "Combined Reading",
+  "is_continuous": true
+}
+```
+
+### `POST /me/shelves/cross-user-compare`  *(auth required)*
+
+Compare one of your collections with another user's public collection. Respects privacy — returns 403 for private profiles you don't follow.
+
+```json
+{
+  "my_collection": "<uuid>",
+  "their_username": "alice",
+  "their_slug": "want-to-read",
+  "operation": "intersection"
+}
+```
+
+Returns `{ operation, my_collection, their_username, their_slug, result_count, books[] }`.
+
+### `POST /me/shelves/cross-user-compare/save`  *(auth required)*
+
+Same as above, but also saves the result as a new shelf. Accepts an additional `name` field. Returns `{ id, name, slug, book_count, is_continuous }`. If `is_continuous` is true, the list auto-refreshes when viewed, resolving the other user's collection by stored username+slug on each view (respecting privacy).
+
+```json
+{
+  "my_collection": "<uuid>",
+  "their_username": "alice",
+  "their_slug": "want-to-read",
+  "operation": "intersection",
+  "name": "Books Alice wants that I've read",
+  "is_continuous": true
+}
+```
 
 ### `POST /shelves/:shelfId/books`  *(auth required)*
 
@@ -560,13 +839,366 @@ Returns a chronological feed of activities from users the authenticated user fol
 }
 ```
 
-**Activity types:** `shelved`, `rated`, `reviewed`, `created_thread`, `followed_user`.
+**Activity types:** `shelved`, `started_book`, `finished_book`, `rated`, `reviewed`, `created_thread`, `followed_user`, `followed_author`, `created_link`.
 
-Fields are conditional on type — `book` is null for `followed_user`, `target_user` is null for book-related activities, etc.
+Fields are conditional on type — `book` is null for `followed_user`, `target_user` is null for book-related activities, etc. `created_link` includes `link_type`, `to_book_ol_id`, and `to_book_title` for the target book. `followed_author` includes `author_key` and `author_name` in the response.
 
 ### `GET /users/:username/activity`
 
 Returns recent activity for a specific user. Same response format as `/me/feed`. Cursor-based pagination.
+
+---
+
+## Rate Limiting (Open Library)
+
+All outbound requests to Open Library are routed through a shared rate-limited HTTP client (`api/internal/olhttp`). This uses a token-bucket algorithm (5 requests/second steady-state, burst of 15) to prevent the API from being banned by OL for excessive traffic.
+
+Affected routes: `GET /books/search`, `GET /books/lookup`, `GET /books/:workId`, `GET /books/:workId/editions`, `GET /authors/search`, `GET /authors/:authorKey`, and `POST /me/import/goodreads/preview`.
+
+When the rate limit is saturated, requests wait (up to the 15s client timeout) rather than failing immediately.
+
+---
+
+## Discussion Threads
+
+### `GET /books/:workId/threads`
+
+Returns all discussion threads for a book, ordered by most recent first.
+
+```json
+[
+  {
+    "id": "...",
+    "book_id": "...",
+    "user_id": "...",
+    "username": "alice",
+    "display_name": "Alice",
+    "avatar_url": "https://...",
+    "title": "What did the ending mean?",
+    "body": "I just finished and...",
+    "spoiler": true,
+    "created_at": "2026-02-25T14:00:00Z",
+    "comment_count": 3
+  }
+]
+```
+
+### `GET /threads/:threadId`
+
+Returns a single thread with all its comments.
+
+```json
+{
+  "thread": { ... },
+  "comments": [
+    {
+      "id": "...",
+      "thread_id": "...",
+      "user_id": "...",
+      "username": "bob",
+      "display_name": "Bob",
+      "avatar_url": null,
+      "parent_id": null,
+      "body": "I think it meant...",
+      "created_at": "2026-02-25T15:00:00Z"
+    }
+  ]
+}
+```
+
+### `POST /books/:workId/threads`  *(auth required)*
+
+Create a new discussion thread on a book. Records a `created_thread` activity and notifies book followers.
+
+```json
+{ "title": "What did the ending mean?", "body": "I just finished and...", "spoiler": true }
+```
+
+```
+201 { "id": "...", "created_at": "..." }
+400 { "error": "title and body are required" }
+404 { "error": "book not found" }
+```
+
+### `DELETE /threads/:threadId`  *(auth required)*
+
+Soft-delete a thread (author only). Returns 204.
+
+### `POST /threads/:threadId/comments`  *(auth required)*
+
+Add a comment to a thread. Set `parent_id` to reply to a top-level comment (one level of nesting only).
+
+```json
+{ "body": "I think it meant...", "parent_id": null }
+```
+
+```
+201 { "id": "...", "created_at": "..." }
+400 { "error": "replies can only be one level deep" }
+```
+
+### `DELETE /threads/:threadId/comments/:commentId`  *(auth required)*
+
+Soft-delete a comment (author only). Returns 204.
+
+### `GET /books/:workId/similar-threads?title=<title>`
+
+Find existing threads on a book whose titles are similar to the given title. Uses PostgreSQL `pg_trgm` trigram similarity with a threshold of 0.3. Returns up to 5 results sorted by similarity score. Used by the thread creation form to suggest existing discussions before posting a duplicate.
+
+```json
+[
+  {
+    "id": "...",
+    "title": "Thoughts on the ending?",
+    "username": "alice",
+    "comment_count": 5,
+    "similarity": 0.65,
+    ...
+  }
+]
+```
+
+### `GET /threads/:threadId/similar`
+
+Returns threads on the same book whose titles are similar to the given thread. Same similarity mechanism and response format as the title-based search. Shown on thread detail pages under "Similar Discussions".
+
+---
+
+## Community Links
+
+User-submitted book-to-book connections (sequel, prequel, similar, etc.). Links are upvotable — sorted by vote count on book pages. Both books must exist in the local catalog.
+
+### `GET /books/:workId/links`
+
+Returns all community links for a book, sorted by votes descending. If authenticated, includes whether the caller has voted on each link.
+
+```json
+[
+  {
+    "id": "...",
+    "from_book_ol_id": "OL82592W",
+    "to_book_ol_id": "OL27448W",
+    "to_book_title": "Tender Is the Night",
+    "to_book_authors": "F. Scott Fitzgerald",
+    "to_book_cover_url": "https://...",
+    "link_type": "companion",
+    "note": "Same author, similar themes",
+    "username": "alice",
+    "display_name": "Alice",
+    "votes": 3,
+    "user_voted": true,
+    "created_at": "2026-02-24T14:00:00Z"
+  }
+]
+```
+
+**Link types:** `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`.
+
+### `POST /books/:workId/links`  *(auth required)*
+
+Submit a community link from this book to another.
+
+```json
+{
+  "to_work_id": "OL27448W",
+  "link_type": "companion",
+  "note": "Same author, similar themes"
+}
+```
+
+Returns 201 with `{ id, created_at }`. Auto-upvotes by the creator. Returns 409 if the user already submitted this exact link.
+
+### `DELETE /links/:linkId`  *(auth required)*
+
+Soft-delete a link (author only). Returns 204.
+
+### `POST /links/:linkId/vote`  *(auth required)*
+
+Upvote a link. Idempotent. Returns 204.
+
+### `DELETE /links/:linkId/vote`  *(auth required)*
+
+Remove upvote. Returns 204.
+
+### `POST /links/:linkId/edits`  *(auth required)*
+
+Propose an edit to a community link. At least one of `proposed_type` or `proposed_note` must be provided. Only one pending edit per user per link.
+
+```json
+{
+  "proposed_type": "sequel",
+  "proposed_note": "Updated explanation"
+}
+```
+
+```
+201 { "id": "...", "created_at": "..." }
+400 { "error": "at least one of proposed_type or proposed_note is required" }
+409 { "error": "you already have a pending edit for this link" }
+```
+
+---
+
+## Admin  *(moderator required)*
+
+All `/admin/*` routes require authentication **and** `is_moderator = true` on the JWT. Non-moderators receive `403 Forbidden`.
+
+### `GET /admin/users?q=<query>&page=<n>`
+
+List all users with moderator status. Supports search by username, display name, or email. Paginated (20 per page).
+
+```json
+{
+  "users": [
+    {
+      "user_id": "...",
+      "username": "alice",
+      "display_name": "Alice",
+      "email": "alice@example.com",
+      "is_moderator": false,
+      "author_key": null
+    }
+  ],
+  "page": 1,
+  "has_next": true
+}
+```
+
+### `PUT /admin/users/:userId/moderator`
+
+Grant or revoke moderator status for a user. The change takes effect on the user's next login (JWT must be re-issued).
+
+```json
+{ "is_moderator": true }
+```
+
+```
+200 { "ok": true, "is_moderator": true }
+404 { "error": "user not found" }
+```
+
+### `PUT /admin/users/:userId/author`
+
+Set or clear the Open Library author key for a user. When set, the user's profile displays an "Author" badge linking to their author page.
+
+```json
+{ "author_key": "OL23919A" }
+```
+
+```
+200 { "ok": true, "author_key": "OL23919A" }
+404 { "error": "user not found" }
+```
+
+Send `{ "author_key": "" }` or `{ "author_key": null }` to clear.
+
+### `GET /admin/link-edits?status=pending`
+
+List proposed community link edits. Filterable by status (`pending`, `approved`, `rejected`). Returns edits with current and proposed values, book titles, and reviewer info.
+
+```json
+[
+  {
+    "id": "...",
+    "book_link_id": "...",
+    "username": "alice",
+    "display_name": "Alice",
+    "proposed_type": "sequel",
+    "proposed_note": null,
+    "current_type": "similar",
+    "current_note": "Same author",
+    "from_book_ol_id": "OL82592W",
+    "from_book_title": "The Great Gatsby",
+    "to_book_ol_id": "OL27448W",
+    "to_book_title": "Tender Is the Night",
+    "status": "pending",
+    "reviewer_name": null,
+    "reviewer_comment": null,
+    "created_at": "2026-02-25T14:00:00Z",
+    "reviewed_at": null
+  }
+]
+```
+
+### `PUT /admin/link-edits/:editId`
+
+Approve or reject a pending community link edit. Approved edits are applied to the link immediately within a transaction.
+
+```json
+{
+  "action": "approve",
+  "comment": "Looks good"
+}
+```
+
+```
+200 { "ok": true, "status": "approved" }
+400 { "error": "action must be approve or reject" }
+404 { "error": "pending edit not found" }
+```
+
+---
+
+## Notifications
+
+### `GET /me/notifications`  *(auth required)*
+
+Returns paginated notifications for the current user, newest first. Cursor-based pagination.
+
+**Query parameters:**
+- `cursor` *(optional)* — RFC3339Nano timestamp from `next_cursor` to fetch the next page.
+
+```json
+{
+  "notifications": [
+    {
+      "id": "...",
+      "notif_type": "new_publication",
+      "title": "New work by Brandon Sanderson",
+      "body": "Brandon Sanderson published a new work: Wind and Truth",
+      "metadata": {
+        "author_key": "OL1394865A",
+        "author_name": "Brandon Sanderson",
+        "new_count": "1",
+        "new_titles": "Wind and Truth"
+      },
+      "read": false,
+      "created_at": "2026-02-25T14:00:00.000000Z"
+    }
+  ],
+  "next_cursor": "2026-02-24T13:00:00.000000Z"
+}
+```
+
+### `GET /me/notifications/unread-count`  *(auth required)*
+
+Returns the count of unread notifications.
+
+```json
+{ "count": 3 }
+```
+
+### `POST /me/notifications/:notifId/read`  *(auth required)*
+
+Mark a single notification as read. Returns `{ "ok": true }`. Returns 404 if the notification doesn't exist or doesn't belong to the user.
+
+### `POST /me/notifications/read-all`  *(auth required)*
+
+Mark all unread notifications as read. Returns `{ "ok": true }`.
+
+---
+
+## Background: Author Publication Poller
+
+A background goroutine (`notifications.StartPoller`) runs every 6 hours. It:
+
+1. Queries `author_follows` for all distinct followed author keys.
+2. For each author, fetches the current work count from `https://openlibrary.org/authors/{key}/works.json`.
+3. Compares against the stored snapshot in `author_works_snapshot`.
+4. If the count has increased, creates a `new_publication` notification for each follower of that author.
+5. On first poll for an author, the snapshot is seeded without generating notifications (to avoid flooding users when they first follow an author).
+
+The poller uses the shared rate-limited OL HTTP client and respects the server's context for graceful shutdown.
 
 ---
 

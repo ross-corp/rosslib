@@ -41,6 +41,21 @@ tasks:
       - cmd: echo "  API    - kubectl port-forward -n rosslib svc/rosslib-api 8080:8080"
       - cmd: echo "  RustFS - kubectl port-forward -n rosslib svc/rosslib-rustfs-svc 9000:9000 9001:9001"
 
+  nephewbot:pause:
+    desc: Pause nephewbot
+    cmds:
+      - nephewbot/nephewbot.sh pause
+
+  nephewbot:resume:
+    desc: Resume nephewbot
+    cmds:
+      - nephewbot/nephewbot.sh resume
+
+  nephewbot:status:
+    desc: Check nephewbot status
+    cmds:
+      - nephewbot/nephewbot.sh status
+
   dev:down:
     desc: Tear down the local development environment
     cmds:
