@@ -57,5 +57,3 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 - [ ] Kindle integration (TBD)
 
 ## Feed
-
-- [ ] Activity type: submitted a link (requires community links feature)

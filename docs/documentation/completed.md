@@ -107,5 +107,8 @@ Items completed and moved out of todo.md.
 ## Reviews
 - [x] Wikilinks to other books in review text. `ReviewText` component (`components/review-text.tsx`) parses `[[Book Title]]` wikilinks (linking to search) and `[Title](/books/OLID)` markdown links (direct book page links). `BookReviewEditor` provides `[[` autocomplete that searches books via the API and inserts markdown links. `ReviewText` is now used consistently across all review display locations: book detail page community reviews, user reviews page (`/[username]/reviews`), and recent reviews on profiles.
 
+## Feed
+- [x] Activity type: submitted a link. When a user submits a community link between two books, a `created_link` activity is recorded and shown in the feed. Displays as "submitted a [type] link on [from_book] to [to_book]" with links to both book pages. Metadata includes `link_type`, `to_book_ol_id`, and `to_book_title`. OpenAPI spec updated.
+
 ## Community Link Edit Queue
 - [x] Edit queue for community links. Any authenticated user can propose edits (type and/or note changes) to existing book-to-book links via a pencil icon on book pages. Proposals are stored in `book_link_edits` table with `pending`/`approved`/`rejected` status. One pending edit per user per link. Moderators review edits from the admin panel (`/admin`) with side-by-side current vs. proposed values, approve/reject buttons, and status filter tabs. Approved edits are applied within a DB transaction. API: `POST /links/:linkId/edits` (propose), `GET /admin/link-edits?status=` (list), `PUT /admin/link-edits/:editId` (review). Frontend: inline edit form in `BookLinkList`, `AdminLinkEdits` component on admin page.

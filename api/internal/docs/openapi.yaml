@@ -589,7 +589,7 @@ components:
           format: uuid
         type:
           type: string
-          enum: [shelved, started_book, finished_book, rated, reviewed, created_thread, followed_user]
+          enum: [shelved, started_book, finished_book, rated, reviewed, created_thread, followed_user, created_link]
         created_at:
           type: string
           format: date-time
@@ -643,6 +643,18 @@ components:
         thread_title:
           type: string
           nullable: true
+        link_type:
+          type: string
+          nullable: true
+          description: Type of community link (sequel, prequel, companion, etc.)
+        to_book_ol_id:
+          type: string
+          nullable: true
+          description: Open Library ID of the target book for created_link activities
+        to_book_title:
+          type: string
+          nullable: true
+          description: Title of the target book for created_link activities
 
     FeedResponse:
       type: object

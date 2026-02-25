@@ -62,6 +62,9 @@ type activityItem struct {
 	Rating       *int          `json:"rating,omitempty"`
 	ReviewText   *string       `json:"review_snippet,omitempty"`
 	ThreadTitle  *string       `json:"thread_title,omitempty"`
+	LinkType     *string       `json:"link_type,omitempty"`
+	ToBookOLID   *string       `json:"to_book_ol_id,omitempty"`
+	ToBookTitle  *string       `json:"to_book_title,omitempty"`
 }
 
 type feedResponse struct {
@@ -171,6 +174,15 @@ func (h *Handler) GetFeed(c *gin.Context) {
 			}
 			if v, ok := meta["thread_title"]; ok {
 				item.ThreadTitle = &v
+			}
+			if v, ok := meta["link_type"]; ok {
+				item.LinkType = &v
+			}
+			if v, ok := meta["to_book_ol_id"]; ok {
+				item.ToBookOLID = &v
+			}
+			if v, ok := meta["to_book_title"]; ok {
+				item.ToBookTitle = &v
 			}
 		}
 
@@ -299,6 +311,15 @@ func (h *Handler) GetUserActivity(c *gin.Context) {
 			}
 			if v, ok := meta["thread_title"]; ok {
 				item.ThreadTitle = &v
+			}
+			if v, ok := meta["link_type"]; ok {
+				item.LinkType = &v
+			}
+			if v, ok := meta["to_book_ol_id"]; ok {
+				item.ToBookOLID = &v
+			}
+			if v, ok := meta["to_book_title"]; ok {
+				item.ToBookTitle = &v
 			}
 		}
 

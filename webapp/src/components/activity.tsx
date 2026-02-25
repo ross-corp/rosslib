@@ -24,6 +24,9 @@ export type ActivityItem = {
   rating?: number;
   review_snippet?: string;
   thread_title?: string;
+  link_type?: string;
+  to_book_ol_id?: string;
+  to_book_title?: string;
 };
 
 export type FeedResponse = {
@@ -168,6 +171,33 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
             >
               {item.target_user.display_name || item.target_user.username}
             </Link>
+          )}
+        </>
+      );
+    case "created_link":
+      return (
+        <>
+          submitted a{" "}
+          {item.link_type ? item.link_type.replace("_", " ") : "link"} link on{" "}
+          {item.book && (
+            <Link
+              href={`/books/${item.book.open_library_id}`}
+              className="font-medium text-stone-900 hover:underline"
+            >
+              {item.book.title}
+            </Link>
+          )}
+          {item.to_book_ol_id && item.to_book_title && (
+            <>
+              {" "}
+              to{" "}
+              <Link
+                href={`/books/${item.to_book_ol_id}`}
+                className="font-medium text-stone-900 hover:underline"
+              >
+                {item.to_book_title}
+              </Link>
+            </>
           )}
         </>
       );

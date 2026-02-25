@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 )
 
@@ -186,6 +187,19 @@ func (h *Handler) CreateLink(c *gin.Context) {
 		`INSERT INTO book_link_votes (user_id, book_link_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
 		userID, linkID,
 	)
+
+	// Look up the target book title for the activity feed.
+	var toBookTitle string
+	_ = h.pool.QueryRow(c.Request.Context(),
+		`SELECT title FROM books WHERE id = $1`, toBookID,
+	).Scan(&toBookTitle)
+
+	activity.Record(c.Request.Context(), h.pool, userID, "created_link", &fromBookID, nil, nil, nil,
+		map[string]string{
+			"link_type":      body.LinkType,
+			"to_book_ol_id":  body.ToWorkID,
+			"to_book_title":  toBookTitle,
+		})
 
 	c.JSON(http.StatusCreated, gin.H{
 		"id":         linkID,

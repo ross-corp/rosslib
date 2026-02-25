@@ -585,9 +585,9 @@ Returns a chronological feed of activities from users the authenticated user fol
 }
 ```
 
-**Activity types:** `shelved`, `rated`, `reviewed`, `created_thread`, `followed_user`.
+**Activity types:** `shelved`, `started_book`, `finished_book`, `rated`, `reviewed`, `created_thread`, `followed_user`, `created_link`.
 
-Fields are conditional on type — `book` is null for `followed_user`, `target_user` is null for book-related activities, etc.
+Fields are conditional on type — `book` is null for `followed_user`, `target_user` is null for book-related activities, etc. `created_link` includes `link_type`, `to_book_ol_id`, and `to_book_title` for the target book.
 
 ### `GET /users/:username/activity`
 
