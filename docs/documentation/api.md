@@ -595,6 +595,16 @@ Returns recent activity for a specific user. Same response format as `/me/feed`.
 
 ---
 
+## Rate Limiting (Open Library)
+
+All outbound requests to Open Library are routed through a shared rate-limited HTTP client (`api/internal/olhttp`). This uses a token-bucket algorithm (5 requests/second steady-state, burst of 15) to prevent the API from being banned by OL for excessive traffic.
+
+Affected routes: `GET /books/search`, `GET /books/lookup`, `GET /books/:workId`, `GET /books/:workId/editions`, `GET /authors/search`, `GET /authors/:authorKey`, and `POST /me/import/goodreads/preview`.
+
+When the rate limit is saturated, requests wait (up to the 15s client timeout) rather than failing immediately.
+
+---
+
 ## Health
 
 ### `GET /health`

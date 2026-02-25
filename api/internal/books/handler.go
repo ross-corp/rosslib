@@ -21,12 +21,13 @@ import (
 )
 
 type Handler struct {
-	pool   *pgxpool.Pool
-	search *search.Client
+	pool     *pgxpool.Pool
+	search   *search.Client
+	olClient *http.Client
 }
 
-func NewHandler(pool *pgxpool.Pool, searchClient *search.Client) *Handler {
-	return &Handler{pool: pool, search: searchClient}
+func NewHandler(pool *pgxpool.Pool, searchClient *search.Client, olClient *http.Client) *Handler {
+	return &Handler{pool: pool, search: searchClient, olClient: olClient}
 }
 
 // ── Open Library API types ────────────────────────────────────────────────────
@@ -245,7 +246,7 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 		if language != "" {
 			apiURL += "&language=" + url.QueryEscape(language)
 		}
-		resp, err := http.Get(apiURL) //nolint:noctx // intentional: inherits server timeout
+		resp, err := h.olClient.Get(apiURL) //nolint:noctx
 		if err != nil {
 			olCh <- olResult{err: err}
 			return
@@ -468,7 +469,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 	editionsCh := make(chan editionsResult, 1)
 
 	go func() {
-		resp, err := http.Get(workURL) //nolint:noctx
+		resp, err := h.olClient.Get(workURL) //nolint:noctx
 		if err != nil {
 			workCh <- workResult{err: err}
 			return
@@ -488,7 +489,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 	}()
 
 	go func() {
-		resp, err := http.Get(ratingsURL) //nolint:noctx
+		resp, err := h.olClient.Get(ratingsURL) //nolint:noctx
 		if err != nil {
 			ratingsCh <- ratingsResult{}
 			return
@@ -501,7 +502,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 	}()
 
 	go func() {
-		resp, err := http.Get(editionsURL) //nolint:noctx
+		resp, err := h.olClient.Get(editionsURL) //nolint:noctx
 		if err != nil {
 			editionsCh <- editionsResult{}
 			return
@@ -538,7 +539,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 		go func(idx int, key string) {
 			defer wg.Done()
 			authorURL := fmt.Sprintf("%s%s.json", olBaseURL, key)
-			resp, err := http.Get(authorURL) //nolint:noctx
+			resp, err := h.olClient.Get(authorURL) //nolint:noctx
 			if err != nil {
 				return
 			}
@@ -702,7 +703,7 @@ func (h *Handler) GetEditions(c *gin.Context) {
 	}
 
 	apiURL := fmt.Sprintf("%s/works/%s/editions.json?limit=%d&offset=%d", olBaseURL, workID, limit, offset)
-	resp, err := http.Get(apiURL) //nolint:noctx
+	resp, err := h.olClient.Get(apiURL) //nolint:noctx
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to reach book service"})
 		return
@@ -925,7 +926,7 @@ func (h *Handler) GetGenreBooks(c *gin.Context) {
 // returns the normalised BookResult. It is a package-level function so the
 // import handler can call it directly without going through HTTP.
 // An optional search.Client can be passed to index the book in Meilisearch.
-func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string, searchClients ...*search.Client) (*BookResult, error) {
+func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string, olClient *http.Client, searchClients ...*search.Client) (*BookResult, error) {
 	// Strip everything that isn't a digit or trailing X (ISBN-10 check digit).
 	clean := strings.Map(func(r rune) rune {
 		if r >= '0' && r <= '9' || r == 'X' || r == 'x' {
@@ -944,7 +945,7 @@ func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string, sear
 		olSearchFields,
 	)
 
-	resp, err := http.Get(apiURL) //nolint:noctx
+	resp, err := olClient.Get(apiURL) //nolint:noctx
 	if err != nil {
 		return nil, fmt.Errorf("reach OL: %w", err)
 	}
@@ -1159,7 +1160,7 @@ func (h *Handler) LookupBook(c *gin.Context) {
 		return
 	}
 
-	result, err := LookupBookByISBN(c.Request.Context(), h.pool, isbn, h.search)
+	result, err := LookupBookByISBN(c.Request.Context(), h.pool, isbn, h.olClient, h.search)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to reach book service"})
 		return
@@ -1225,7 +1226,7 @@ func (h *Handler) SearchAuthors(c *gin.Context) {
 		searchLimit,
 	)
 
-	resp, err := http.Get(apiURL) //nolint:noctx // intentional: inherits server timeout
+	resp, err := h.olClient.Get(apiURL) //nolint:noctx
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to reach author search service"})
 		return
@@ -1353,7 +1354,7 @@ func (h *Handler) GetAuthor(c *gin.Context) {
 	worksCh := make(chan worksResult, 1)
 
 	go func() {
-		resp, err := http.Get(authorURL) //nolint:noctx
+		resp, err := h.olClient.Get(authorURL) //nolint:noctx
 		if err != nil {
 			authorCh <- authorResult{err: err}
 			return
@@ -1373,7 +1374,7 @@ func (h *Handler) GetAuthor(c *gin.Context) {
 	}()
 
 	go func() {
-		resp, err := http.Get(worksURL) //nolint:noctx
+		resp, err := h.olClient.Get(worksURL) //nolint:noctx
 		if err != nil {
 			worksCh <- worksResult{}
 			return

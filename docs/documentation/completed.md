@@ -93,3 +93,6 @@ Items completed and moved out of todo.md.
 
 ## API Docs
 - [x] OpenAPI 3.0 spec (`api/internal/docs/openapi.yaml`) documenting all ~60 routes with request/response schemas. Served at `GET /docs/openapi.yaml`. Interactive Swagger UI at `GET /docs` (CDN-hosted Swagger UI bundle). Spec embedded in the binary via `go:embed`.
+
+## API Rate Limiting
+- [x] Rate-limit upstream-proxied routes to avoid getting banned from Open Library. All outbound OL requests share a single rate-limited HTTP client (`api/internal/olhttp`) using a token-bucket algorithm (5 rps, burst 15). Covers book search, ISBN lookup, book detail, editions, author search, author detail, and Goodreads import preview. Requests queue when the limit is hit rather than failing.

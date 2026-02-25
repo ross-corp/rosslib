@@ -15,6 +15,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/ghosts"
 	"github.com/tristansaldanha/rosslib/api/internal/imports"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/olhttp"
 	"github.com/tristansaldanha/rosslib/api/internal/search"
 	"github.com/tristansaldanha/rosslib/api/internal/storage"
 	"github.com/tristansaldanha/rosslib/api/internal/tags"
@@ -54,7 +55,9 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 
 	secret := []byte(jwtSecret)
 
-	booksHandler := books.NewHandler(pool, searchClient)
+	olClient := olhttp.DefaultClient()
+
+	booksHandler := books.NewHandler(pool, searchClient, olClient)
 	r.GET("/books/search", booksHandler.SearchBooks)
 	r.GET("/books/lookup", booksHandler.LookupBook)
 	r.GET("/authors/search", booksHandler.SearchAuthors)
@@ -95,7 +98,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	authed.GET("/me/follow-requests", usersHandler.GetFollowRequests)
 	authed.POST("/me/follow-requests/:userId/accept", usersHandler.AcceptFollowRequest)
 	authed.DELETE("/me/follow-requests/:userId/reject", usersHandler.RejectFollowRequest)
-	importsHandler := imports.NewHandler(pool, searchClient)
+	importsHandler := imports.NewHandler(pool, searchClient, olClient)
 	authed.POST("/me/import/goodreads/preview", importsHandler.Preview)
 	authed.POST("/me/import/goodreads/commit", importsHandler.Commit)
 

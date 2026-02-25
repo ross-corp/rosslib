@@ -9,6 +9,7 @@ require (
 	github.com/meilisearch/meilisearch-go v0.36.1
 	github.com/minio/minio-go/v7 v7.0.98
 	golang.org/x/crypto v0.46.0
+	golang.org/x/time v0.14.0
 )
 
 require (
