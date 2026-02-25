@@ -287,6 +287,89 @@ func (h *Handler) GoogleLogin(c *gin.Context) {
 	c.JSON(http.StatusCreated, authResponse{Token: token, UserID: userID, Username: username})
 }
 
+// GetAccountInfo - GET /me/account (authed)
+// Returns whether the user has a password and/or Google linked.
+func (h *Handler) GetAccountInfo(c *gin.Context) {
+	userID := c.GetString("user_id")
+
+	var hasPassword bool
+	var hasGoogle bool
+	var hash sql.NullString
+	var googleID sql.NullString
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT password_hash, google_id FROM users WHERE id = $1 AND deleted_at IS NULL`,
+		userID,
+	).Scan(&hash, &googleID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	hasPassword = hash.Valid && hash.String != ""
+	hasGoogle = googleID.Valid && googleID.String != ""
+
+	c.JSON(http.StatusOK, gin.H{
+		"has_password": hasPassword,
+		"has_google":   hasGoogle,
+	})
+}
+
+// SetPassword - PUT /me/password (authed)
+// Sets or changes the user's password.
+// If the user already has a password, current_password is required.
+// If the user is Google-only (no password), only new_password is required.
+func (h *Handler) SetPassword(c *gin.Context) {
+	userID := c.GetString("user_id")
+
+	var req struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password" binding:"required,min=8"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "new password must be at least 8 characters"})
+		return
+	}
+
+	var hash sql.NullString
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT password_hash FROM users WHERE id = $1 AND deleted_at IS NULL`,
+		userID,
+	).Scan(&hash)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	// If user already has a password, verify the current one.
+	if hash.Valid && hash.String != "" {
+		if req.CurrentPassword == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "current password is required"})
+			return
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(hash.String), []byte(req.CurrentPassword)); err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "current password is incorrect"})
+			return
+		}
+	}
+
+	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	_, err = h.pool.Exec(c.Request.Context(),
+		`UPDATE users SET password_hash = $1 WHERE id = $2`,
+		string(newHash), userID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
 func (h *Handler) signToken(userID, username string, isModerator bool) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":          userID,

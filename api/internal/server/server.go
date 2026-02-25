@@ -96,6 +96,8 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 
 	authed := r.Group("/")
 	authed.Use(middleware.Auth(secret))
+	authed.GET("/me/account", authHandler.GetAccountInfo)
+	authed.PUT("/me/password", authHandler.SetPassword)
 	authed.GET("/me/feed", activityHandler.GetFeed)
 	authed.PATCH("/users/me", usersHandler.UpdateMe)
 	authed.POST("/me/avatar", usersHandler.UploadAvatar)

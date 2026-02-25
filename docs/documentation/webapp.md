@@ -108,6 +108,8 @@ webapp/src/app/
     ├── admin/users/[userId]/moderator/route.ts    ← PUT grant/revoke moderator
     ├── admin/link-edits/route.ts                  ← GET list link edits
     ├── admin/link-edits/[editId]/route.ts         ← PUT approve/reject link edit
+    ├── me/account/route.ts                         ← GET account info (has_password, has_google)
+    ├── me/password/route.ts                        ← PUT set/change password
     ├── me/notifications/route.ts                  ← GET list notifications
     ├── me/notifications/unread-count/route.ts     ← GET unread count
     ├── me/notifications/read-all/route.ts         ← POST mark all read
@@ -190,6 +192,10 @@ Renders review text with wikilink and markdown link support. Parses two inline l
 - `[Book Title](/books/OL123W)` — rendered as a direct link to the book page
 
 Used on book detail pages (community reviews), user reviews pages, recent reviews on profiles, and the collapsed review view in the book review editor. The companion `BookReviewEditor` component provides `[[` autocomplete that searches books and inserts markdown links.
+
+### `PasswordForm` (`components/password-form.tsx`)
+
+Client component rendered on the settings page below the profile form. Fetches `GET /api/me/account` on mount to determine whether the user has a password and/or Google linked, then shows the appropriate form: "Set password" for OAuth-only users, or "Change password" (with current password verification) for users who already have one. Calls `PUT /api/me/password`.
 
 ### `NotificationBell` (`components/notification-bell.tsx`)
 

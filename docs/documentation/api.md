@@ -44,6 +44,29 @@ The webapp handles the full OAuth flow:
 
 **Environment variables required:** `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_URL`.
 
+### `GET /me/account`  *(auth required)*
+
+Returns whether the current user has a password set and whether a Google account is linked. Used by the settings UI to determine which password form to show.
+
+```json
+{ "has_password": false, "has_google": true }
+```
+
+### `PUT /me/password`  *(auth required)*
+
+Set or change the user's password. If the user already has a password, `current_password` is required. Google OAuth-only users can call this with just `new_password` to enable email+password sign-in.
+
+```json
+{ "current_password": "old-pass", "new_password": "new-pass-8chars" }
+```
+
+```
+200 { "ok": true }
+400 { "error": "new password must be at least 8 characters" }
+400 { "error": "current password is required" }
+401 { "error": "current password is incorrect" }
+```
+
 ---
 
 ## Books

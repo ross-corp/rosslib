@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/nav";
+import PasswordForm from "@/components/password-form";
 import SettingsForm from "@/components/settings-form";
 import { getUser } from "@/lib/auth";
 
@@ -80,6 +81,8 @@ export default async function SettingsPage() {
           initialAvatarUrl={profile?.avatar_url ?? null}
           initialIsPrivate={profile?.is_private ?? false}
         />
+
+        <PasswordForm />
       </main>
     </div>
   );
