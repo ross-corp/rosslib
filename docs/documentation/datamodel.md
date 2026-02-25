@@ -20,6 +20,7 @@ Schema is applied idempotently at API startup via `db.Migrate` in `api/internal/
 | avatar_url | text | nullable; S3 key |
 | is_private | boolean | default false |
 | is_moderator | boolean | default false; grants moderation privileges (e.g. deleting community links); managed via admin UI (`/admin`) |
+| author_key | varchar(50) | nullable; Open Library author ID (e.g. `OL23919A`); links user account to their author page; shows "Author" badge on profile; managed via admin UI |
 | created_at | timestamptz | |
 | deleted_at | timestamptz | soft delete |
 

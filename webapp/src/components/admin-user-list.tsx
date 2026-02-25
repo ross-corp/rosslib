@@ -8,6 +8,7 @@ type AdminUser = {
   display_name: string | null;
   email: string;
   is_moderator: boolean;
+  author_key: string | null;
 };
 
 export default function AdminUserList() {
@@ -17,6 +18,9 @@ export default function AdminUserList() {
   const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [editingAuthor, setEditingAuthor] = useState<string | null>(null);
+  const [authorKeyInput, setAuthorKeyInput] = useState("");
+  const [savingAuthor, setSavingAuthor] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async (q: string, p: number) => {
     setLoading(true);
@@ -63,6 +67,36 @@ export default function AdminUserList() {
     setToggling(null);
   }
 
+  function startEditAuthor(user: AdminUser) {
+    setEditingAuthor(user.user_id);
+    setAuthorKeyInput(user.author_key ?? "");
+  }
+
+  function cancelEditAuthor() {
+    setEditingAuthor(null);
+    setAuthorKeyInput("");
+  }
+
+  async function saveAuthorKey(user: AdminUser) {
+    setSavingAuthor(user.user_id);
+    const newKey = authorKeyInput.trim() || null;
+    const res = await fetch(`/api/admin/users/${user.user_id}/author`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ author_key: newKey }),
+    });
+    if (res.ok) {
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.user_id === user.user_id ? { ...u, author_key: newKey } : u
+        )
+      );
+      setEditingAuthor(null);
+      setAuthorKeyInput("");
+    }
+    setSavingAuthor(null);
+  }
+
   return (
     <div>
       <input
@@ -85,6 +119,7 @@ export default function AdminUserList() {
                 <th className="pb-2 font-medium">Username</th>
                 <th className="pb-2 font-medium">Display Name</th>
                 <th className="pb-2 font-medium">Email</th>
+                <th className="pb-2 font-medium">Author</th>
                 <th className="pb-2 font-medium text-right">Moderator</th>
               </tr>
             </thead>
@@ -101,6 +136,43 @@ export default function AdminUserList() {
                     {u.display_name ?? "—"}
                   </td>
                   <td className="py-2 text-stone-600">{u.email}</td>
+                  <td className="py-2">
+                    {editingAuthor === u.user_id ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          value={authorKeyInput}
+                          onChange={(e) => setAuthorKeyInput(e.target.value)}
+                          placeholder="OL author key"
+                          className="w-28 px-2 py-0.5 text-xs border border-stone-300 rounded bg-white text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-900"
+                        />
+                        <button
+                          onClick={() => saveAuthorKey(u)}
+                          disabled={savingAuthor === u.user_id}
+                          className="px-2 py-0.5 rounded text-xs font-medium bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={cancelEditAuthor}
+                          className="px-2 py-0.5 rounded text-xs text-stone-500 hover:text-stone-900"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startEditAuthor(u)}
+                        className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                          u.author_key
+                            ? "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
+                            : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                        }`}
+                      >
+                        {u.author_key ? `Author (${u.author_key})` : "Set author"}
+                      </button>
+                    )}
+                  </td>
                   <td className="py-2 text-right">
                     <button
                       onClick={() => toggleModerator(u)}

@@ -169,6 +169,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	admin.Use(middleware.RequireModerator())
 	admin.GET("/users", usersHandler.ListAllUsers)
 	admin.PUT("/users/:userId/moderator", usersHandler.SetModerator)
+	admin.PUT("/users/:userId/author", usersHandler.SetAuthor)
 	admin.GET("/link-edits", linksHandler.ListEdits)
 	admin.PUT("/link-edits/:editId", linksHandler.ReviewEdit)
 	ghostsHandler := ghosts.NewHandler(pool)

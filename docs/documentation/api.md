@@ -309,7 +309,8 @@ Returns a user profile. With a valid token, also returns `is_following` for the 
   "followers_count": 10,
   "following_count": 5,
   "friends_count": 3,
-  "books_read": 42
+  "books_read": 42,
+  "author_key": null
 }
 ```
 
@@ -793,7 +794,8 @@ List all users with moderator status. Supports search by username, display name,
       "username": "alice",
       "display_name": "Alice",
       "email": "alice@example.com",
-      "is_moderator": false
+      "is_moderator": false,
+      "author_key": null
     }
   ],
   "page": 1,
@@ -813,6 +815,21 @@ Grant or revoke moderator status for a user. The change takes effect on the user
 200 { "ok": true, "is_moderator": true }
 404 { "error": "user not found" }
 ```
+
+### `PUT /admin/users/:userId/author`
+
+Set or clear the Open Library author key for a user. When set, the user's profile displays an "Author" badge linking to their author page.
+
+```json
+{ "author_key": "OL23919A" }
+```
+
+```
+200 { "ok": true, "author_key": "OL23919A" }
+404 { "error": "user not found" }
+```
+
+Send `{ "author_key": "" }` or `{ "author_key": null }` to clear.
 
 ### `GET /admin/link-edits?status=pending`
 

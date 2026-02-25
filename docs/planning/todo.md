@@ -16,8 +16,6 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## Social
 
-- [ ] Represent users who are also authors (badges)
-
 ## Search & Book Pages
 
 ## Computed Lists

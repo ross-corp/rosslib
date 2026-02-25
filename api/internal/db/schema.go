@@ -409,6 +409,9 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 );
 
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens (user_id);
+
+-- ── Author badge: link a user account to an Open Library author key ─────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS author_key VARCHAR(50);
 `
 
 func Migrate(pool *pgxpool.Pool) error {

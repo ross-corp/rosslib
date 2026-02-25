@@ -44,6 +44,7 @@ type profileResponse struct {
 	AverageRating  *float64 `json:"average_rating"`
 	IsGhost        bool     `json:"is_ghost"`
 	IsRestricted   bool     `json:"is_restricted"`
+	AuthorKey      *string  `json:"author_key"`
 }
 
 type searchResult struct {
@@ -141,7 +142,7 @@ func (h *Handler) GetProfile(c *gin.Context) {
 	var memberSince time.Time
 
 	err := h.pool.QueryRow(c.Request.Context(),
-		`SELECT u.id, u.username, u.display_name, u.bio, u.avatar_url, u.is_private, u.is_ghost, u.created_at,
+		`SELECT u.id, u.username, u.display_name, u.bio, u.avatar_url, u.is_private, u.is_ghost, u.created_at, u.author_key,
 		        (SELECT COUNT(*) FROM follows WHERE followee_id = u.id AND status = 'active') AS followers_count,
 		        (SELECT COUNT(*) FROM follows WHERE follower_id = u.id AND status = 'active') AS following_count,
 		        (SELECT COUNT(*) FROM follows f1
@@ -165,7 +166,7 @@ func (h *Handler) GetProfile(c *gin.Context) {
 		           WHERE ub.user_id = u.id AND ub.rating IS NOT NULL) AS average_rating
 		 FROM users u WHERE u.username = $1 AND u.deleted_at IS NULL`,
 		username,
-	).Scan(&p.UserID, &p.Username, &p.DisplayName, &p.Bio, &p.AvatarURL, &p.IsPrivate, &p.IsGhost, &memberSince, &p.FollowersCount, &p.FollowingCount, &p.FriendsCount, &p.BooksRead, &p.ReviewsCount, &p.BooksThisYear, &p.AverageRating)
+	).Scan(&p.UserID, &p.Username, &p.DisplayName, &p.Bio, &p.AvatarURL, &p.IsPrivate, &p.IsGhost, &memberSince, &p.AuthorKey, &p.FollowersCount, &p.FollowingCount, &p.FriendsCount, &p.BooksRead, &p.ReviewsCount, &p.BooksThisYear, &p.AverageRating)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
@@ -488,6 +489,7 @@ type adminUserRow struct {
 	DisplayName *string `json:"display_name"`
 	Email       string  `json:"email"`
 	IsModerator bool    `json:"is_moderator"`
+	AuthorKey   *string `json:"author_key"`
 }
 
 // ListAllUsers - GET /admin/users (moderator only)
@@ -502,7 +504,7 @@ func (h *Handler) ListAllUsers(c *gin.Context) {
 	var query string
 	var args []interface{}
 	if q != "" {
-		query = `SELECT id, username, display_name, email, is_moderator
+		query = `SELECT id, username, display_name, email, is_moderator, author_key
 			 FROM users
 			 WHERE deleted_at IS NULL
 			   AND (username ILIKE '%' || $1 || '%' OR display_name ILIKE '%' || $1 || '%' OR email ILIKE '%' || $1 || '%')
@@ -510,7 +512,7 @@ func (h *Handler) ListAllUsers(c *gin.Context) {
 			 LIMIT $2 OFFSET $3`
 		args = []interface{}{q, pageSize + 1, offset}
 	} else {
-		query = `SELECT id, username, display_name, email, is_moderator
+		query = `SELECT id, username, display_name, email, is_moderator, author_key
 			 FROM users
 			 WHERE deleted_at IS NULL
 			 ORDER BY username
@@ -528,7 +530,7 @@ func (h *Handler) ListAllUsers(c *gin.Context) {
 	users := []adminUserRow{}
 	for rows.Next() {
 		var u adminUserRow
-		if err := rows.Scan(&u.UserID, &u.Username, &u.DisplayName, &u.Email, &u.IsModerator); err != nil {
+		if err := rows.Scan(&u.UserID, &u.Username, &u.DisplayName, &u.Email, &u.IsModerator, &u.AuthorKey); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			return
 		}
@@ -569,6 +571,39 @@ func (h *Handler) SetModerator(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true, "is_moderator": req.IsModerator})
+}
+
+// SetAuthor - PUT /admin/users/:userId/author (moderator only)
+func (h *Handler) SetAuthor(c *gin.Context) {
+	targetUserID := c.Param("userId")
+
+	var req struct {
+		AuthorKey *string `json:"author_key"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Normalize empty string to nil (clears the author key)
+	if req.AuthorKey != nil && *req.AuthorKey == "" {
+		req.AuthorKey = nil
+	}
+
+	result, err := h.pool.Exec(c.Request.Context(),
+		`UPDATE users SET author_key = $1 WHERE id = $2 AND deleted_at IS NULL`,
+		req.AuthorKey, targetUserID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	if result.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true, "author_key": req.AuthorKey})
 }
 
 func (h *Handler) UploadAvatar(c *gin.Context) {
