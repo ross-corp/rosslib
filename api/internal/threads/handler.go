@@ -165,6 +165,117 @@ func (h *Handler) GetThread(c *gin.Context) {
 	})
 }
 
+// ── Similar threads (by title) for a specific thread ────────────────────────
+
+// GET /threads/:threadId/similar
+func (h *Handler) GetSimilarThreads(c *gin.Context) {
+	threadID := c.Param("threadId")
+
+	const threshold = 0.3
+
+	rows, err := h.pool.Query(c.Request.Context(),
+		`SELECT t.id, t.book_id, t.user_id, u.username, u.display_name, u.avatar_url,
+		        t.title, t.body, t.spoiler, t.created_at,
+		        (SELECT COUNT(*) FROM thread_comments tc
+		         WHERE tc.thread_id = t.id AND tc.deleted_at IS NULL) AS comment_count,
+		        similarity(t.title, ref.title) AS sim
+		 FROM threads ref
+		 JOIN threads t ON t.book_id = ref.book_id AND t.id != ref.id
+		 JOIN users u ON u.id = t.user_id
+		 WHERE ref.id = $1
+		   AND t.deleted_at IS NULL
+		   AND u.deleted_at IS NULL
+		   AND similarity(t.title, ref.title) > $2
+		 ORDER BY sim DESC
+		 LIMIT 5`,
+		threadID, threshold,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	type similarThread struct {
+		threadResponse
+		Similarity float64 `json:"similarity"`
+	}
+	results := []similarThread{}
+	for rows.Next() {
+		var st similarThread
+		var createdAt time.Time
+		if err := rows.Scan(
+			&st.ID, &st.BookID, &st.UserID, &st.Username, &st.DisplayName, &st.AvatarURL,
+			&st.Title, &st.Body, &st.Spoiler, &createdAt, &st.CommentCount, &st.Similarity,
+		); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		st.CreatedAt = createdAt.Format(time.RFC3339)
+		results = append(results, st)
+	}
+
+	c.JSON(http.StatusOK, results)
+}
+
+// ── Similar threads by title query (for pre-creation check) ─────────────────
+
+// GET /books/:workId/threads/similar?title=...
+func (h *Handler) FindSimilarByTitle(c *gin.Context) {
+	workID := c.Param("workId")
+	title := c.Query("title")
+	if title == "" {
+		c.JSON(http.StatusOK, []struct{}{})
+		return
+	}
+
+	const threshold = 0.3
+
+	rows, err := h.pool.Query(c.Request.Context(),
+		`SELECT t.id, t.book_id, t.user_id, u.username, u.display_name, u.avatar_url,
+		        t.title, t.body, t.spoiler, t.created_at,
+		        (SELECT COUNT(*) FROM thread_comments tc
+		         WHERE tc.thread_id = t.id AND tc.deleted_at IS NULL) AS comment_count,
+		        similarity(t.title, $2) AS sim
+		 FROM threads t
+		 JOIN books b ON b.id = t.book_id
+		 JOIN users u ON u.id = t.user_id
+		 WHERE b.open_library_id = $1
+		   AND t.deleted_at IS NULL
+		   AND u.deleted_at IS NULL
+		   AND similarity(t.title, $2) > $3
+		 ORDER BY sim DESC
+		 LIMIT 5`,
+		workID, title, threshold,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	type similarThread struct {
+		threadResponse
+		Similarity float64 `json:"similarity"`
+	}
+	results := []similarThread{}
+	for rows.Next() {
+		var st similarThread
+		var createdAt time.Time
+		if err := rows.Scan(
+			&st.ID, &st.BookID, &st.UserID, &st.Username, &st.DisplayName, &st.AvatarURL,
+			&st.Title, &st.Body, &st.Spoiler, &createdAt, &st.CommentCount, &st.Similarity,
+		); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		st.CreatedAt = createdAt.Format(time.RFC3339)
+		results = append(results, st)
+	}
+
+	c.JSON(http.StatusOK, results)
+}
+
 // ── Create a thread ──────────────────────────────────────────────────────────
 
 // POST /books/:workId/threads  (requires auth)

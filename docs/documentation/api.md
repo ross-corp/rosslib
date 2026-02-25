@@ -823,6 +823,111 @@ When the rate limit is saturated, requests wait (up to the 15s client timeout) r
 
 ---
 
+## Discussion Threads
+
+### `GET /books/:workId/threads`
+
+Returns all discussion threads for a book, ordered by most recent first.
+
+```json
+[
+  {
+    "id": "...",
+    "book_id": "...",
+    "user_id": "...",
+    "username": "alice",
+    "display_name": "Alice",
+    "avatar_url": "https://...",
+    "title": "What did the ending mean?",
+    "body": "I just finished and...",
+    "spoiler": true,
+    "created_at": "2026-02-25T14:00:00Z",
+    "comment_count": 3
+  }
+]
+```
+
+### `GET /threads/:threadId`
+
+Returns a single thread with all its comments.
+
+```json
+{
+  "thread": { ... },
+  "comments": [
+    {
+      "id": "...",
+      "thread_id": "...",
+      "user_id": "...",
+      "username": "bob",
+      "display_name": "Bob",
+      "avatar_url": null,
+      "parent_id": null,
+      "body": "I think it meant...",
+      "created_at": "2026-02-25T15:00:00Z"
+    }
+  ]
+}
+```
+
+### `POST /books/:workId/threads`  *(auth required)*
+
+Create a new discussion thread on a book. Records a `created_thread` activity and notifies book followers.
+
+```json
+{ "title": "What did the ending mean?", "body": "I just finished and...", "spoiler": true }
+```
+
+```
+201 { "id": "...", "created_at": "..." }
+400 { "error": "title and body are required" }
+404 { "error": "book not found" }
+```
+
+### `DELETE /threads/:threadId`  *(auth required)*
+
+Soft-delete a thread (author only). Returns 204.
+
+### `POST /threads/:threadId/comments`  *(auth required)*
+
+Add a comment to a thread. Set `parent_id` to reply to a top-level comment (one level of nesting only).
+
+```json
+{ "body": "I think it meant...", "parent_id": null }
+```
+
+```
+201 { "id": "...", "created_at": "..." }
+400 { "error": "replies can only be one level deep" }
+```
+
+### `DELETE /threads/:threadId/comments/:commentId`  *(auth required)*
+
+Soft-delete a comment (author only). Returns 204.
+
+### `GET /books/:workId/similar-threads?title=<title>`
+
+Find existing threads on a book whose titles are similar to the given title. Uses PostgreSQL `pg_trgm` trigram similarity with a threshold of 0.3. Returns up to 5 results sorted by similarity score. Used by the thread creation form to suggest existing discussions before posting a duplicate.
+
+```json
+[
+  {
+    "id": "...",
+    "title": "Thoughts on the ending?",
+    "username": "alice",
+    "comment_count": 5,
+    "similarity": 0.65,
+    ...
+  }
+]
+```
+
+### `GET /threads/:threadId/similar`
+
+Returns threads on the same book whose titles are similar to the given thread. Same similarity mechanism and response format as the title-based search. Shown on thread detail pages under "Similar Discussions".
+
+---
+
 ## Community Links
 
 User-submitted book-to-book connections (sequel, prequel, similar, etc.). Links are upvotable — sorted by vote count on book pages. Both books must exist in the local catalog.

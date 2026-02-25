@@ -97,7 +97,9 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 
 	threadsHandler := threads.NewHandler(pool)
 	r.GET("/books/:workId/threads", threadsHandler.ListThreads)
+	r.GET("/books/:workId/similar-threads", threadsHandler.FindSimilarByTitle)
 	r.GET("/threads/:threadId", threadsHandler.GetThread)
+	r.GET("/threads/:threadId/similar", threadsHandler.GetSimilarThreads)
 
 	linksHandler := links.NewHandler(pool)
 	r.GET("/books/:workId/links", middleware.OptionalAuth(secret), linksHandler.ListLinks)

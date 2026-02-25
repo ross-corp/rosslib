@@ -198,7 +198,7 @@ Discussion threads on a book's page. Any logged-in user can create a thread.
 | created_at | timestamptz | |
 | deleted_at | timestamptz | soft delete |
 
-Index: `book_id` for listing threads by book.
+Indexes: `book_id` for listing threads by book; GIN trigram index on `title` (`gin_trgm_ops`) for similar-thread lookups via `pg_trgm` `similarity()`.
 
 ### `thread_comments`
 

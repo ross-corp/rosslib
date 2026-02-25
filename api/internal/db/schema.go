@@ -8,6 +8,7 @@ import (
 
 const schema = `
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 CREATE TABLE IF NOT EXISTS users (
 	id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -149,6 +150,7 @@ CREATE TABLE IF NOT EXISTS threads (
 );
 
 CREATE INDEX IF NOT EXISTS idx_threads_book_id ON threads (book_id);
+CREATE INDEX IF NOT EXISTS idx_threads_title_trgm ON threads USING gin (title gin_trgm_ops);
 
 CREATE TABLE IF NOT EXISTS thread_comments (
 	id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),

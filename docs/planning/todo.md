@@ -22,9 +22,6 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## Discussion Threads
 
-- [ ] Recommend merging similar threads
-  - [ ] Link to similar threads if similarity score > threshold
-
 ## Community Links (Wiki)
 
 ## Genre Ratings

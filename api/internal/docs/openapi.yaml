@@ -596,6 +596,16 @@ components:
         comment_count:
           type: integer
 
+    SimilarThreadResponse:
+      allOf:
+        - $ref: '#/components/schemas/ThreadResponse'
+        - type: object
+          properties:
+            similarity:
+              type: number
+              format: float
+              description: Trigram similarity score (0–1)
+
     CommentResponse:
       type: object
       properties:
@@ -1566,6 +1576,55 @@ paths:
       responses:
         "204":
           description: Comment deleted
+
+  /books/{workId}/similar-threads:
+    get:
+      summary: Find similar threads by title (pre-creation check)
+      description: Returns existing threads on the same book whose titles are similar to the given title. Uses PostgreSQL pg_trgm trigram similarity with a threshold of 0.3.
+      tags: [Threads]
+      parameters:
+        - name: workId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: title
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Title to compare against existing threads
+      responses:
+        "200":
+          description: Similar threads (up to 5, sorted by similarity descending)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SimilarThreadResponse'
+
+  /threads/{threadId}/similar:
+    get:
+      summary: Get similar threads for an existing thread
+      description: Returns other threads on the same book whose titles are similar to the given thread. Uses PostgreSQL pg_trgm trigram similarity with a threshold of 0.3.
+      tags: [Threads]
+      parameters:
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Similar threads (up to 5, sorted by similarity descending)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SimilarThreadResponse'
 
   /authors/search:
     get:

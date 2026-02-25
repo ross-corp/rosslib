@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 type Thread = {
@@ -16,6 +16,8 @@ type Thread = {
   created_at: string;
   comment_count: number;
 };
+
+type SimilarThread = Thread & { similarity: number };
 
 type Props = {
   workId: string;
@@ -39,6 +41,36 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
   const [spoiler, setSpoiler] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [similarThreads, setSimilarThreads] = useState<SimilarThread[]>([]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounced search for similar threads as user types title
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (title.trim().length < 5) {
+      setSimilarThreads([]);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/books/${workId}/similar-threads?title=${encodeURIComponent(title.trim())}`
+        );
+        if (res.ok) {
+          const data: SimilarThread[] = await res.json();
+          setSimilarThreads(data);
+        }
+      } catch {
+        // Ignore network errors for suggestions
+      }
+    }, 400);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [title, workId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,6 +101,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
     setTitle("");
     setBody("");
     setSpoiler(false);
+    setSimilarThreads([]);
     setShowForm(false);
   }
 
@@ -102,6 +135,30 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
             disabled={submitting}
             className="w-full border border-stone-200 rounded px-3 py-2 text-sm text-stone-700 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
           />
+
+          {/* Similar thread suggestions */}
+          {similarThreads.length > 0 && (
+            <div className="border border-amber-200 bg-amber-50 rounded-lg p-3">
+              <p className="text-xs font-medium text-amber-700 mb-2">
+                Similar discussions already exist:
+              </p>
+              <div className="space-y-2">
+                {similarThreads.map((st) => (
+                  <Link
+                    key={st.id}
+                    href={`/books/${workId}/threads/${st.id}`}
+                    className="block text-sm text-amber-900 hover:text-amber-700 transition-colors"
+                  >
+                    <span className="font-medium">{st.title}</span>
+                    <span className="text-xs text-amber-500 ml-2">
+                      {st.comment_count} {st.comment_count === 1 ? "reply" : "replies"}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
@@ -138,6 +195,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
                 setBody("");
                 setSpoiler(false);
                 setError(null);
+                setSimilarThreads([]);
               }}
               disabled={submitting}
               className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
