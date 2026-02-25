@@ -85,6 +85,54 @@ When a valid token is provided, reviews from users the caller follows are sorted
 
 ---
 
+## Genres
+
+### `GET /genres`
+
+Returns the list of predefined genres with book counts from the local catalog.
+
+```json
+[
+  {
+    "slug": "fiction",
+    "name": "Fiction",
+    "book_count": 142
+  },
+  {
+    "slug": "science-fiction",
+    "name": "Science fiction",
+    "book_count": 37
+  }
+]
+```
+
+### `GET /genres/:slug/books?page=1&limit=20`
+
+Returns books matching a genre, browsing the local Meilisearch index (or DB fallback) without requiring a search query. Paginated.
+
+```json
+{
+  "genre": "Fiction",
+  "total": 142,
+  "page": 1,
+  "results": [
+    {
+      "key": "/works/OL82592W",
+      "title": "The Great Gatsby",
+      "authors": ["F. Scott Fitzgerald"],
+      "publish_year": 1925,
+      "isbn": ["9780743273565"],
+      "cover_url": "https://covers.openlibrary.org/b/id/8410459-M.jpg",
+      "subjects": ["Fiction", "Classic"]
+    }
+  ]
+}
+```
+
+Returns 404 for unknown genre slugs.
+
+---
+
 ## Authors
 
 ### `GET /authors/search?q=<name>`

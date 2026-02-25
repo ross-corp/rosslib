@@ -126,6 +126,27 @@ func (c *Client) IndexBook(doc BookDocument) {
 	}
 }
 
+// BrowseBooks returns documents matching a subject filter without requiring a
+// search query. Used by genre pages to list books in a genre.
+func (c *Client) BrowseBooks(subject string, limit, offset int) ([]BookDocument, int64, error) {
+	req := &meilisearch.SearchRequest{
+		Limit:  int64(limit),
+		Offset: int64(offset),
+		Filter: fmt.Sprintf(`subjects = "%s"`, subject),
+	}
+
+	resp, err := c.index.Search("", req)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var results []BookDocument
+	if err := resp.Hits.DecodeInto(&results); err != nil {
+		return nil, 0, err
+	}
+	return results, resp.EstimatedTotalHits, nil
+}
+
 // SearchBooks queries the Meilisearch index and returns matching documents.
 // Optional yearMin/yearMax apply a publication_year range filter.
 // Optional subject filters results to books with a matching subject.

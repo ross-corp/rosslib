@@ -44,6 +44,7 @@ Items completed and moved out of todo.md.
 - [x] Published year range filter (`year_min`/`year_max`).
 - [x] Popularity-blended default ranking (OL read count, rating quality, edition count).
 - [x] Faceted filters: genre (subject) and language. Predefined genre chips (Fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, etc.) and language pills (English, Spanish, French, German, etc.). Filters apply to both Meilisearch local catalog and Open Library external search. Subjects stored on `books.subjects` column and indexed in Meilisearch; language is pass-through to OL. "Clear all filters" link when any filter is active.
+- [x] Genre pages: `/genres` index with card grid showing 12 predefined genres and local book counts; `/genres/:slug` detail page with paginated book list, StatusPicker for logged-in users, breadcrumb nav. API endpoints `GET /genres` (genre list with DB counts) and `GET /genres/:slug/books?page=&limit=` (Meilisearch browse with subject filter, DB fallback). Genres link in nav bar.
 
 ## Book Pages
 - [x] Metadata, cover, description, aggregate rating from Open Library.

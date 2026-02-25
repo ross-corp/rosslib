@@ -620,6 +620,192 @@ func (h *Handler) GetBook(c *gin.Context) {
 	c.JSON(http.StatusOK, detail)
 }
 
+// ── Genre browsing ───────────────────────────────────────────────────────────
+
+// predefinedGenres is the canonical genre list, kept in sync with the webapp.
+var predefinedGenres = []string{
+	"Fiction",
+	"Non-fiction",
+	"Fantasy",
+	"Science fiction",
+	"Mystery",
+	"Romance",
+	"Horror",
+	"Thriller",
+	"Biography",
+	"History",
+	"Poetry",
+	"Children",
+}
+
+type genreInfo struct {
+	Slug      string `json:"slug"`
+	Name      string `json:"name"`
+	BookCount int    `json:"book_count"`
+}
+
+// GetGenres returns the predefined genre list with book counts from the
+// local catalog.
+//
+// GET /genres
+func (h *Handler) GetGenres(c *gin.Context) {
+	genres := make([]genreInfo, len(predefinedGenres))
+	for i, g := range predefinedGenres {
+		slug := strings.ToLower(strings.ReplaceAll(g, " ", "-"))
+		genres[i] = genreInfo{Slug: slug, Name: g}
+	}
+
+	if h.pool != nil {
+		// Count books per genre in a single query using FILTER clauses.
+		for i, g := range predefinedGenres {
+			var count int
+			_ = h.pool.QueryRow(c.Request.Context(),
+				`SELECT COUNT(*) FROM books WHERE subjects ILIKE '%' || $1 || '%'`,
+				g,
+			).Scan(&count)
+			genres[i].BookCount = count
+		}
+	}
+
+	c.JSON(http.StatusOK, genres)
+}
+
+// genreSlugToName converts a URL slug back to the display name.
+func genreSlugToName(slug string) string {
+	for _, g := range predefinedGenres {
+		if strings.ToLower(strings.ReplaceAll(g, " ", "-")) == slug {
+			return g
+		}
+	}
+	return ""
+}
+
+// GetGenreBooks returns books matching a genre, browsing the local Meilisearch
+// index without requiring a search query.
+//
+// GET /genres/:slug/books?page=1&limit=20
+func (h *Handler) GetGenreBooks(c *gin.Context) {
+	slug := c.Param("slug")
+	genreName := genreSlugToName(slug)
+	if genreName == "" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "unknown genre"})
+		return
+	}
+
+	page := 1
+	if v := c.Query("page"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			page = n
+		}
+	}
+	limit := 20
+	if v := c.Query("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 100 {
+			limit = n
+		}
+	}
+	offset := (page - 1) * limit
+
+	if h.search == nil {
+		// Fallback: return books from DB directly.
+		rows, err := h.pool.Query(c.Request.Context(),
+			`SELECT open_library_id, title, COALESCE(authors, ''),
+			        COALESCE(cover_url, ''), COALESCE(publication_year, 0),
+			        COALESCE(isbn13, ''), COALESCE(subjects, '')
+			 FROM books
+			 WHERE subjects ILIKE '%' || $1 || '%'
+			 ORDER BY title
+			 LIMIT $2 OFFSET $3`,
+			genreName, limit, offset,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		defer rows.Close()
+
+		results := []BookResult{}
+		for rows.Next() {
+			var olID, title, authors, coverURL, isbn13, subjects string
+			var pubYear int
+			if err := rows.Scan(&olID, &title, &authors, &coverURL, &pubYear, &isbn13, &subjects); err != nil {
+				continue
+			}
+			b := BookResult{
+				Key:   "/works/" + olID,
+				Title: title,
+			}
+			if authors != "" {
+				b.Authors = strings.Split(authors, ", ")
+			}
+			if coverURL != "" {
+				b.CoverURL = &coverURL
+			}
+			if pubYear > 0 {
+				b.PublishYear = &pubYear
+			}
+			if isbn13 != "" {
+				b.ISBN = []string{isbn13}
+			}
+			if subjects != "" {
+				b.Subjects = strings.Split(subjects, ", ")
+			}
+			results = append(results, b)
+		}
+
+		var total int
+		_ = h.pool.QueryRow(c.Request.Context(),
+			`SELECT COUNT(*) FROM books WHERE subjects ILIKE '%' || $1 || '%'`,
+			genreName,
+		).Scan(&total)
+
+		c.JSON(http.StatusOK, gin.H{
+			"genre":   genreName,
+			"total":   total,
+			"page":    page,
+			"results": results,
+		})
+		return
+	}
+
+	// Use Meilisearch for browsing.
+	docs, total, err := h.search.BrowseBooks(genreName, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "search error"})
+		return
+	}
+
+	results := make([]BookResult, 0, len(docs))
+	for _, doc := range docs {
+		b := BookResult{
+			Key:   "/works/" + doc.OpenLibraryID,
+			Title: doc.Title,
+		}
+		if doc.Authors != "" {
+			b.Authors = strings.Split(doc.Authors, ", ")
+		}
+		if doc.CoverURL != "" {
+			b.CoverURL = &doc.CoverURL
+		}
+		if doc.PublicationYear > 0 {
+			y := doc.PublicationYear
+			b.PublishYear = &y
+		}
+		if doc.ISBN13 != "" {
+			b.ISBN = []string{doc.ISBN13}
+		}
+		b.Subjects = doc.Subjects
+		results = append(results, b)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"genre":   genreName,
+		"total":   total,
+		"page":    page,
+		"results": results,
+	})
+}
+
 // ── ISBN lookup ───────────────────────────────────────────────────────────────
 
 // LookupBookByISBN queries the Open Library search API for a single book by
