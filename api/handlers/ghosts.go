@@ -34,7 +34,7 @@ func SeedGhosts(app core.App) func(e *core.RequestEvent) error {
 			return err
 		}
 
-		created := 0
+		var createdNames []string
 		for _, persona := range ghostPersonas {
 			// Check if already exists
 			existing, _ := app.FindRecordsByFilter("users",
@@ -60,12 +60,12 @@ func SeedGhosts(app core.App) func(e *core.RequestEvent) error {
 			_ = createDefaultShelves(app, rec.Id)
 			_, _, _ = ensureStatusTagKey(app, rec.Id)
 
-			created++
+			createdNames = append(createdNames, persona.Username)
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{
-			"message": fmt.Sprintf("Created %d ghost users", created),
-			"created": created,
+			"message": fmt.Sprintf("Created %d ghost users", len(createdNames)),
+			"created": createdNames,
 		})
 	}
 }
@@ -78,54 +78,93 @@ func SimulateGhosts(app core.App) func(e *core.RequestEvent) error {
 			"is_ghost = true", "", 100, 0, nil,
 		)
 		if err != nil || len(ghosts) == 0 {
-			return e.JSON(http.StatusOK, map[string]any{"message": "No ghost users found"})
+			return e.JSON(http.StatusOK, map[string]any{
+				"results": []any{},
+				"error":   "No ghost users found. Seed ghosts first.",
+			})
 		}
 
 		// Get some books to work with
-		books, _ := app.FindRecordsByFilter("books", "1=1", "-created", 50, 0, nil)
+		books, _ := app.FindRecordsByFilter("books", "1=1", "-created", 200, 0, nil)
 		if len(books) == 0 {
-			return e.JSON(http.StatusOK, map[string]any{"message": "No books in database"})
+			return e.JSON(http.StatusOK, map[string]any{
+				"results": []any{},
+				"error":   "No books in the database. Search for and add some books first.",
+			})
 		}
 
-		actions := 0
 		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-		for _, ghost := range ghosts {
-			// Each ghost interacts with a few random books
-			numBooks := rng.Intn(5) + 1
-			for i := 0; i < numBooks && i < len(books); i++ {
-				book := books[rng.Intn(len(books))]
+		type ghostResult struct {
+			Ghost   string   `json:"ghost"`
+			Actions []string `json:"actions"`
+		}
+		var results []ghostResult
 
-				// Create user_book with random rating
-				existing, _ := app.FindRecordsByFilter("user_books",
-					"user = {:user} && book = {:book}",
-					"", 1, 0,
-					map[string]any{"user": ghost.Id, "book": book.Id},
-				)
-				if len(existing) > 0 {
-					continue
+		for _, ghost := range ghosts {
+			gr := ghostResult{
+				Ghost:   ghost.GetString("username"),
+				Actions: []string{},
+			}
+
+			// Find books this ghost hasn't rated yet
+			ratedBooks, _ := app.FindRecordsByFilter("user_books",
+				"user = {:user}", "", 1000, 0,
+				map[string]any{"user": ghost.Id},
+			)
+			ratedSet := make(map[string]bool)
+			for _, rb := range ratedBooks {
+				ratedSet[rb.GetString("book")] = true
+			}
+
+			var available []*core.Record
+			for _, b := range books {
+				if !ratedSet[b.Id] {
+					available = append(available, b)
 				}
+			}
+
+			if len(available) == 0 {
+				gr.Actions = append(gr.Actions, "Already rated all available books")
+				results = append(results, gr)
+				continue
+			}
+
+			// Shuffle available books
+			rng.Shuffle(len(available), func(i, j int) {
+				available[i], available[j] = available[j], available[i]
+			})
+
+			numBooks := rng.Intn(5) + 1
+			if numBooks > len(available) {
+				numBooks = len(available)
+			}
+
+			for i := 0; i < numBooks; i++ {
+				book := available[i]
 
 				coll, _ := app.FindCollectionByNameOrId("user_books")
 				ub := core.NewRecord(coll)
 				ub.Set("user", ghost.Id)
 				ub.Set("book", book.Id)
-				ub.Set("rating", rng.Intn(5)+1)
+				rating := rng.Intn(5) + 1
+				ub.Set("rating", rating)
 				ub.Set("date_added", time.Now().UTC().Format(time.RFC3339))
 				if err := app.Save(ub); err != nil {
+					gr.Actions = append(gr.Actions, fmt.Sprintf("Failed to rate \"%s\": %v", book.GetString("title"), err))
 					continue
 				}
 
-				// Set status tag to "finished"
 				setStatusTag(app, ghost.Id, book.Id, "finished")
 				refreshBookStats(app, book.Id)
-				actions++
+				gr.Actions = append(gr.Actions, fmt.Sprintf("Rated \"%s\" %d/5", book.GetString("title"), rating))
 			}
+
+			results = append(results, gr)
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{
-			"message": fmt.Sprintf("Simulated %d actions", actions),
-			"actions": actions,
+			"results": results,
 		})
 	}
 }
@@ -133,23 +172,82 @@ func SimulateGhosts(app core.App) func(e *core.RequestEvent) error {
 // GetGhostStatus handles GET /admin/ghosts/status
 func GetGhostStatus(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
+		ghosts, err := app.FindRecordsByFilter("users", "is_ghost = true", "", 100, 0, nil)
+		if err != nil || len(ghosts) == 0 {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		type ghostStatus struct {
+			Username       string `json:"username"`
+			DisplayName    string `json:"display_name"`
+			UserID         string `json:"user_id"`
+			BooksRead      int    `json:"books_read"`
+			CurrentlyReading int  `json:"currently_reading"`
+			WantToRead     int    `json:"want_to_read"`
+			FollowingCount int    `json:"following_count"`
+			FollowersCount int    `json:"followers_count"`
+		}
+
 		type countResult struct {
 			Count int `db:"count"`
 		}
-		var ghostCount countResult
-		_ = app.DB().NewQuery("SELECT COUNT(*) as count FROM users WHERE is_ghost = true").One(&ghostCount)
 
-		var bookCount countResult
-		_ = app.DB().NewQuery(`
-			SELECT COUNT(DISTINCT book) as count FROM user_books ub
-			JOIN users u ON ub.user = u.id
-			WHERE u.is_ghost = true
-		`).One(&bookCount)
+		var result []ghostStatus
+		for _, g := range ghosts {
+			gs := ghostStatus{
+				Username:    g.GetString("username"),
+				DisplayName: g.GetString("display_name"),
+				UserID:      g.Id,
+			}
 
-		return e.JSON(http.StatusOK, map[string]any{
-			"ghost_users":  ghostCount.Count,
-			"books_rated":  bookCount.Count,
-			"total_ghosts": len(ghostPersonas),
-		})
+			var c countResult
+
+			// Books read (status tag = "finished")
+			_ = app.DB().NewQuery(`
+				SELECT COUNT(*) as count FROM book_tag_values btv
+				JOIN tag_values tv ON btv.tag_value = tv.id
+				JOIN tag_keys tk ON tv.tag_key = tk.id
+				WHERE tk.user = {:uid} AND tk.name = 'Status' AND tv.value = 'finished'
+			`).Bind(map[string]any{"uid": g.Id}).One(&c)
+			gs.BooksRead = c.Count
+
+			// Currently reading
+			c.Count = 0
+			_ = app.DB().NewQuery(`
+				SELECT COUNT(*) as count FROM book_tag_values btv
+				JOIN tag_values tv ON btv.tag_value = tv.id
+				JOIN tag_keys tk ON tv.tag_key = tk.id
+				WHERE tk.user = {:uid} AND tk.name = 'Status' AND tv.value = 'reading'
+			`).Bind(map[string]any{"uid": g.Id}).One(&c)
+			gs.CurrentlyReading = c.Count
+
+			// Want to read
+			c.Count = 0
+			_ = app.DB().NewQuery(`
+				SELECT COUNT(*) as count FROM book_tag_values btv
+				JOIN tag_values tv ON btv.tag_value = tv.id
+				JOIN tag_keys tk ON tv.tag_key = tk.id
+				WHERE tk.user = {:uid} AND tk.name = 'Status' AND tv.value = 'to-read'
+			`).Bind(map[string]any{"uid": g.Id}).One(&c)
+			gs.WantToRead = c.Count
+
+			// Following count
+			c.Count = 0
+			_ = app.DB().NewQuery(`
+				SELECT COUNT(*) as count FROM follows WHERE follower = {:uid} AND status = 'active'
+			`).Bind(map[string]any{"uid": g.Id}).One(&c)
+			gs.FollowingCount = c.Count
+
+			// Followers count
+			c.Count = 0
+			_ = app.DB().NewQuery(`
+				SELECT COUNT(*) as count FROM follows WHERE following = {:uid} AND status = 'active'
+			`).Bind(map[string]any{"uid": g.Id}).One(&c)
+			gs.FollowersCount = c.Count
+
+			result = append(result, gs)
+		}
+
+		return e.JSON(http.StatusOK, result)
 	}
 }

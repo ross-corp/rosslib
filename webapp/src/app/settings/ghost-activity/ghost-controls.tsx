@@ -51,15 +51,24 @@ export default function GhostControls({
   async function simulate() {
     setSimulating(true);
     setSimulateResults([]);
+    setSeedMessage("");
     try {
       const res = await fetch("/api/admin/ghosts/simulate", { method: "POST" });
       const data = await res.json();
+      if (data.error) {
+        setSeedMessage(`Error: ${data.error}`);
+      }
       if (res.ok && data.results) {
-        setSimulateResults(data.results);
+        setSimulateResults(
+          data.results.map((r: SimulateResult) => ({
+            ...r,
+            actions: r.actions ?? [],
+          }))
+        );
         await refreshStatus();
       }
     } catch {
-      // ignore
+      setSeedMessage("Error: network failure");
     }
     setSimulating(false);
   }
@@ -69,7 +78,7 @@ export default function GhostControls({
       const res = await fetch("/api/admin/ghosts/status");
       if (res.ok) {
         const data = await res.json();
-        setGhosts(data);
+        setGhosts(Array.isArray(data) ? data : []);
       }
     } catch {
       // ignore

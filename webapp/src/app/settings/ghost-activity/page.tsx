@@ -20,7 +20,8 @@ async function fetchGhostStatus(token: string): Promise<GhostStatus[]> {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return [];
-  return res.json();
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
 }
 
 export default async function GhostActivityPage() {
