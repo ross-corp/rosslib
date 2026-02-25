@@ -17,17 +17,17 @@ func TestFormatRating(t *testing.T) {
 		},
 		{
 			name:     "positive integer",
-			input:    ptr(5),
+			input:    intPtr(5),
 			expected: "5",
 		},
 		{
 			name:     "zero",
-			input:    ptr(0),
+			input:    intPtr(0),
 			expected: "0",
 		},
 		{
 			name:     "negative integer",
-			input:    ptr(-1),
+			input:    intPtr(-1),
 			expected: "-1",
 		},
 	}
@@ -42,6 +42,6 @@ func TestFormatRating(t *testing.T) {
 	}
 }
 
-func ptr(i int) *int {
+func intPtr(i int) *int {
 	return &i
 }
