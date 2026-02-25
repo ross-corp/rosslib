@@ -101,27 +101,6 @@ var defaultShelfMap = map[string]string{
 	"to-read":           "want-to-read",
 }
 
-// slugDisplayNames maps common Goodreads slugs to human-readable names.
-var slugDisplayNames = map[string]string{
-	"read":              "Read",
-	"currently-reading": "Currently Reading",
-	"want-to-read":      "Want to Read",
-	"owned-to-read":     "Owned to Read",
-	"dnf":               "Did Not Finish",
-}
-
-func slugToName(slug string) string {
-	if name, ok := slugDisplayNames[slug]; ok {
-		return name
-	}
-	parts := strings.Split(slug, "-")
-	for i, p := range parts {
-		if len(p) > 0 {
-			parts[i] = strings.ToUpper(p[:1]) + p[1:]
-		}
-	}
-	return strings.Join(parts, " ")
-}
 
 // ── CSV helpers ───────────────────────────────────────────────────────────────
 
@@ -164,7 +143,8 @@ func parseCSV(r io.Reader) ([]goodreadsRow, error) {
 		}
 
 		var rating int
-		fmt.Sscanf(record[7], "%d", &rating) // 0 if empty or unparseable
+		// 0 if empty or unparseable, error ignored intentionally
+		_, _ = fmt.Sscanf(record[7], "%d", &rating)
 
 		exclusiveRaw := strings.TrimSpace(record[18])
 		exclusiveSlug, ok := defaultShelfMap[exclusiveRaw]

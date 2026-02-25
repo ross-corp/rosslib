@@ -582,11 +582,12 @@ func (h *Handler) GetBook(c *gin.Context) {
 	// Parse description (can be a plain string or {"type":..., "value":...}).
 	if len(work.Description) > 0 {
 		var desc string
-		if err := json.Unmarshal(work.Description, &desc); err == nil {
+		if json.Unmarshal(work.Description, &desc) == nil {
 			detail.Description = &desc
 		} else {
 			var obj olDescription
-			if err := json.Unmarshal(work.Description, &obj); err == nil && obj.Value != "" {
+			// Unused variable 'err' would be caught here, so we ignore it
+			if json.Unmarshal(work.Description, &obj) == nil && obj.Value != "" {
 				detail.Description = &obj.Value
 			}
 		}
@@ -617,6 +618,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 	// We check the local DB first; if not stored, try parsing from edition data.
 	if h.pool != nil {
 		var pubYear *int
+		// We ignore error here since it's just enriching data
 		_ = h.pool.QueryRow(c.Request.Context(),
 			`SELECT publication_year FROM books WHERE open_library_id = $1`,
 			workID,
@@ -628,6 +630,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 
 	// Query local DB for read and want-to-read counts from user_books + status labels.
 	if h.pool != nil {
+		// We ignore error here since it's just enriching data
 		_ = h.pool.QueryRow(c.Request.Context(),
 			`SELECT
 			    COUNT(*) FILTER (WHERE tv.slug = 'finished')      AS reads_count,
@@ -1410,11 +1413,12 @@ func (h *Handler) GetAuthor(c *gin.Context) {
 	// Parse bio (can be a plain string or {"type":..., "value":...}).
 	if len(raw.Bio) > 0 {
 		var bio string
-		if err := json.Unmarshal(raw.Bio, &bio); err == nil {
+		if json.Unmarshal(raw.Bio, &bio) == nil {
 			detail.Bio = &bio
 		} else {
 			var obj olDescription
-			if err := json.Unmarshal(raw.Bio, &obj); err == nil && obj.Value != "" {
+			// Unused variable 'err' would be caught here, so we ignore it
+			if json.Unmarshal(raw.Bio, &obj) == nil && obj.Value != "" {
 				detail.Bio = &obj.Value
 			}
 		}
@@ -1427,7 +1431,7 @@ func (h *Handler) GetAuthor(c *gin.Context) {
 
 	// Links.
 	for _, l := range raw.Links {
-		detail.Links = append(detail.Links, AuthorLink{Title: l.Title, URL: l.URL})
+		detail.Links = append(detail.Links, AuthorLink(l))
 	}
 
 	// Works.
