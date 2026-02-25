@@ -1,18 +1,22 @@
-FROM golang:1.25-alpine
-
-RUN apk add --no-cache git
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
-ENV GOFLAGS=-mod=mod
-
-RUN go install github.com/air-verse/air@latest
-
-COPY go.mod ./
-RUN go mod download || true
+COPY go.mod go.sum ./
+RUN go mod download
 
 COPY . .
 
-EXPOSE 8080
+# Build with CGO_ENABLED=0 for static binary
+RUN CGO_ENABLED=0 go build -o /pocketbase main.go
 
-CMD ["air", "-c", ".air.toml"]
+FROM alpine:latest
+
+WORKDIR /app
+
+COPY --from=builder /pocketbase /app/pocketbase
+
+EXPOSE 8090
+
+# Default command to start PocketBase
+CMD ["/app/pocketbase", "serve", "--http=0.0.0.0:8090"]

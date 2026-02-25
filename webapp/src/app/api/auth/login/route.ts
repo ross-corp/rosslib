@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   const body = await req.json();
 
+  // Call the PocketBase custom route
   const apiRes = await fetch(`${process.env.API_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -18,6 +19,15 @@ export async function POST(req: Request) {
 
   const cookieStore = await cookies();
   cookieStore.set("token", data.token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+
+  // Also store username because PB token might not have it
+  cookieStore.set("username", data.username, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

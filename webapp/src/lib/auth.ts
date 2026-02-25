@@ -32,9 +32,20 @@ export async function getUser(): Promise<AuthUser | null> {
   const exp = payload.exp as number | undefined;
   if (exp && Date.now() / 1000 > exp) return null;
 
+  // PocketBase token might not have username, so check cookie
+  let username = payload.username as string | undefined;
+  if (!username) {
+      username = cookieStore.get("username")?.value;
+  }
+
+  // If still no username (and it's required by type), we might need to fallback or return null?
+  // But strictly speaking, if we just registered/logged in, the cookie should be there.
+  // If the user clears cookies partly, they might be logged out effectively.
+  if (!username) return null;
+
   return {
-    user_id: payload.sub as string,
-    username: payload.username as string,
+    user_id: (payload.id as string) || (payload.sub as string),
+    username: username,
     is_moderator: (payload.is_moderator as boolean) ?? false,
     email_verified: (payload.email_verified as boolean) ?? false,
   };
