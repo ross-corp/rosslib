@@ -128,7 +128,7 @@ type BookDetail struct {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const (
+var (
 	olBaseURL      = "https://openlibrary.org"
 	olSearchURL    = "https://openlibrary.org/search.json"
 	olCoverURL     = "https://covers.openlibrary.org/b/id/%d-L.jpg"
