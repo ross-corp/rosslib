@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	UserIDKey   = "user_id"
-	UsernameKey = "username"
+	UserIDKey      = "user_id"
+	UsernameKey    = "username"
+	IsModeratorKey = "is_moderator"
 )
 
 func Auth(jwtSecret []byte) gin.HandlerFunc {
@@ -23,6 +24,9 @@ func Auth(jwtSecret []byte) gin.HandlerFunc {
 		}
 		c.Set(UserIDKey, claims["sub"].(string))
 		c.Set(UsernameKey, claims["username"].(string))
+		if mod, ok := claims["is_moderator"].(bool); ok {
+			c.Set(IsModeratorKey, mod)
+		}
 		c.Next()
 	}
 }
@@ -32,6 +36,9 @@ func OptionalAuth(jwtSecret []byte) gin.HandlerFunc {
 		if claims, ok := parseToken(c, jwtSecret); ok {
 			c.Set(UserIDKey, claims["sub"].(string))
 			c.Set(UsernameKey, claims["username"].(string))
+			if mod, ok := claims["is_moderator"].(bool); ok {
+				c.Set(IsModeratorKey, mod)
+			}
 		}
 		c.Next()
 	}

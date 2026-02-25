@@ -43,8 +43,8 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## Community Links (Wiki)
 
-- [ ] Moderator soft-delete (currently only the link author can delete)
 - [ ] Edit queue similar to book metadata edits
+- [ ] Admin UI to grant/revoke moderator status
 
 ## Genre Ratings
 

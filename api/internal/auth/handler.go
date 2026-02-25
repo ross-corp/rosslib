@@ -67,12 +67,13 @@ func (h *Handler) Register(c *gin.Context) {
 	defer tx.Rollback(c.Request.Context()) //nolint:errcheck
 
 	var userID, username string
+	var isModerator bool
 	err = tx.QueryRow(c.Request.Context(),
 		`INSERT INTO users (username, email, password_hash)
 		 VALUES ($1, $2, $3)
-		 RETURNING id, username`,
+		 RETURNING id, username, is_moderator`,
 		req.Username, strings.ToLower(strings.TrimSpace(req.Email)), string(hash),
-	).Scan(&userID, &username)
+	).Scan(&userID, &username, &isModerator)
 	if err != nil {
 		if strings.Contains(err.Error(), "unique") {
 			c.JSON(http.StatusConflict, gin.H{"error": "email or username already taken"})
@@ -104,7 +105,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	token, err := h.signToken(userID, username)
+	token, err := h.signToken(userID, username, isModerator)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
@@ -121,10 +122,11 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	var userID, username, hash string
+	var isModerator bool
 	err := h.pool.QueryRow(c.Request.Context(),
-		`SELECT id, username, password_hash FROM users WHERE email = $1 AND deleted_at IS NULL`,
+		`SELECT id, username, password_hash, is_moderator FROM users WHERE email = $1 AND deleted_at IS NULL`,
 		strings.ToLower(strings.TrimSpace(req.Email)),
-	).Scan(&userID, &username, &hash)
+	).Scan(&userID, &username, &hash, &isModerator)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid email or password"})
 		return
@@ -135,7 +137,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.signToken(userID, username)
+	token, err := h.signToken(userID, username, isModerator)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
@@ -144,12 +146,13 @@ func (h *Handler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, authResponse{Token: token, UserID: userID, Username: username})
 }
 
-func (h *Handler) signToken(userID, username string) (string, error) {
+func (h *Handler) signToken(userID, username string, isModerator bool) (string, error) {
 	claims := jwt.MapClaims{
-		"sub":      userID,
-		"username": username,
-		"exp":      time.Now().Add(30 * 24 * time.Hour).Unix(),
-		"iat":      time.Now().Unix(),
+		"sub":          userID,
+		"username":     username,
+		"is_moderator": isModerator,
+		"exp":          time.Now().Add(30 * 24 * time.Hour).Unix(),
+		"iat":          time.Now().Unix(),
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(h.jwtSecret)
 }

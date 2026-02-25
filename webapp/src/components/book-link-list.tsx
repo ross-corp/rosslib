@@ -23,6 +23,8 @@ type Props = {
   workId: string;
   initialLinks: BookLink[];
   isLoggedIn: boolean;
+  currentUsername?: string;
+  isModerator?: boolean;
 };
 
 const LINK_TYPES = [
@@ -38,7 +40,7 @@ function linkTypeLabel(type: string): string {
   return LINK_TYPES.find((t) => t.value === type)?.label ?? type;
 }
 
-export default function BookLinkList({ workId, initialLinks, isLoggedIn }: Props) {
+export default function BookLinkList({ workId, initialLinks, isLoggedIn, currentUsername, isModerator }: Props) {
   const [links, setLinks] = useState<BookLink[]>(initialLinks);
   const [showForm, setShowForm] = useState(false);
   const [toWorkId, setToWorkId] = useState("");
@@ -47,6 +49,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn }: Props
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [votingIds, setVotingIds] = useState<Set<string>>(new Set());
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
   async function refetchLinks() {
     const res = await fetch(`/api/books/${workId}/links`);
@@ -95,6 +98,22 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn }: Props
 
     await refetchLinks();
     setVotingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(linkId);
+      return next;
+    });
+  }
+
+  async function handleDelete(linkId: string) {
+    if (deletingIds.has(linkId)) return;
+    setDeletingIds((prev) => new Set(prev).add(linkId));
+
+    const res = await fetch(`/api/links/${linkId}`, { method: "DELETE" });
+    if (res.ok || res.status === 204) {
+      setLinks((prev) => prev.filter((l) => l.id !== linkId));
+    }
+
+    setDeletingIds((prev) => {
       const next = new Set(prev);
       next.delete(linkId);
       return next;
@@ -254,36 +273,51 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn }: Props
                       </p>
                     </div>
 
-                    {/* Vote button */}
-                    {isLoggedIn && (
-                      <button
-                        type="button"
-                        onClick={() => handleVote(link.id, link.user_voted)}
-                        disabled={votingIds.has(link.id)}
-                        className={`shrink-0 flex flex-col items-center gap-0.5 px-2 py-1 rounded text-xs transition-colors ${
-                          link.user_voted
-                            ? "text-stone-900 bg-stone-100"
-                            : "text-stone-400 hover:text-stone-600 hover:bg-stone-50"
-                        } disabled:opacity-50`}
-                        title={link.user_voted ? "Remove upvote" : "Upvote"}
-                      >
-                        <svg
-                          viewBox="0 0 12 12"
-                          className="w-3 h-3"
-                          fill={link.user_voted ? "currentColor" : "none"}
-                          stroke="currentColor"
-                          strokeWidth={1.5}
+                    {/* Actions: vote + delete */}
+                    <div className="shrink-0 flex items-center gap-1">
+                      {isLoggedIn && (
+                        <button
+                          type="button"
+                          onClick={() => handleVote(link.id, link.user_voted)}
+                          disabled={votingIds.has(link.id)}
+                          className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded text-xs transition-colors ${
+                            link.user_voted
+                              ? "text-stone-900 bg-stone-100"
+                              : "text-stone-400 hover:text-stone-600 hover:bg-stone-50"
+                          } disabled:opacity-50`}
+                          title={link.user_voted ? "Remove upvote" : "Upvote"}
                         >
-                          <path d="M6 2L10 8H2L6 2Z" />
-                        </svg>
-                        <span>{link.votes}</span>
-                      </button>
-                    )}
-                    {!isLoggedIn && link.votes > 0 && (
-                      <span className="shrink-0 text-xs text-stone-400 px-2 py-1">
-                        {link.votes}
-                      </span>
-                    )}
+                          <svg
+                            viewBox="0 0 12 12"
+                            className="w-3 h-3"
+                            fill={link.user_voted ? "currentColor" : "none"}
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                          >
+                            <path d="M6 2L10 8H2L6 2Z" />
+                          </svg>
+                          <span>{link.votes}</span>
+                        </button>
+                      )}
+                      {!isLoggedIn && link.votes > 0 && (
+                        <span className="text-xs text-stone-400 px-2 py-1">
+                          {link.votes}
+                        </span>
+                      )}
+                      {isLoggedIn && (currentUsername === link.username || isModerator) && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(link.id)}
+                          disabled={deletingIds.has(link.id)}
+                          className="px-1.5 py-1 rounded text-stone-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                          title={currentUsername === link.username ? "Delete your link" : "Remove link (moderator)"}
+                        >
+                          <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                            <path d="M2 3h8M4.5 3V2h3v1M3 3v7h6V3M5 5v3M7 5v3" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

@@ -18,6 +18,7 @@ Schema is applied idempotently at API startup via `db.Migrate` in `api/internal/
 | bio | text | nullable |
 | avatar_url | text | nullable; S3 key |
 | is_private | boolean | default false |
+| is_moderator | boolean | default false; grants moderation privileges (e.g. deleting community links) |
 | created_at | timestamptz | |
 | deleted_at | timestamptz | soft delete |
 
@@ -248,7 +249,7 @@ users ──< activities >── books, users, collections, threads
 
 ### `book_links`
 
-Community-submitted book-to-book connections. Any authenticated user can suggest a link between two books already in the local catalog.
+Community-submitted book-to-book connections. Any authenticated user can suggest a link between two books already in the local catalog. Links can be soft-deleted by the original author or by any user with `is_moderator = true`.
 
 | Column | Type | Notes |
 |---|---|---|

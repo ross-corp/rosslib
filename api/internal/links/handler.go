@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 )
@@ -192,18 +193,30 @@ func (h *Handler) CreateLink(c *gin.Context) {
 	})
 }
 
-// ── Delete a link (soft delete, author only) ─────────────────────────────────
+// ── Delete a link (soft delete, author or moderator) ─────────────────────────
 
 // DELETE /links/:linkId  (requires auth)
 func (h *Handler) DeleteLink(c *gin.Context) {
 	linkID := c.Param("linkId")
 	userID := c.GetString(middleware.UserIDKey)
+	isMod, _ := c.Get(middleware.IsModeratorKey)
 
-	tag, err := h.pool.Exec(c.Request.Context(),
-		`UPDATE book_links SET deleted_at = NOW()
-		 WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
-		linkID, userID,
-	)
+	var tag pgconn.CommandTag
+	var err error
+
+	if isMod == true {
+		tag, err = h.pool.Exec(c.Request.Context(),
+			`UPDATE book_links SET deleted_at = NOW()
+			 WHERE id = $1 AND deleted_at IS NULL`,
+			linkID,
+		)
+	} else {
+		tag, err = h.pool.Exec(c.Request.Context(),
+			`UPDATE book_links SET deleted_at = NOW()
+			 WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+			linkID, userID,
+		)
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return

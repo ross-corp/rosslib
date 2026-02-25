@@ -449,6 +449,8 @@ export default async function BookPage({
             workId={workId}
             initialLinks={bookLinks}
             isLoggedIn={!!currentUser}
+            currentUsername={currentUser?.username}
+            isModerator={currentUser?.is_moderator}
           />
         </section>
 
