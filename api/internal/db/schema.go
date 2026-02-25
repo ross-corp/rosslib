@@ -300,6 +300,30 @@ WHERE NOT EXISTS (
 )
 ORDER BY btv.user_id, btv.book_id, ci.rating DESC NULLS LAST
 ON CONFLICT (user_id, book_id) DO NOTHING;
+
+-- ── Community links: book-to-book connections ────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS book_links (
+	id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	from_book_id UUID         NOT NULL REFERENCES books(id),
+	to_book_id   UUID         NOT NULL REFERENCES books(id),
+	user_id      UUID         NOT NULL REFERENCES users(id),
+	link_type    VARCHAR(50)  NOT NULL,
+	note         TEXT,
+	created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+	deleted_at   TIMESTAMPTZ,
+	UNIQUE(from_book_id, to_book_id, link_type, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_book_links_from ON book_links (from_book_id);
+CREATE INDEX IF NOT EXISTS idx_book_links_to   ON book_links (to_book_id);
+
+CREATE TABLE IF NOT EXISTS book_link_votes (
+	user_id      UUID        NOT NULL REFERENCES users(id),
+	book_link_id UUID        NOT NULL REFERENCES book_links(id) ON DELETE CASCADE,
+	created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	PRIMARY KEY (user_id, book_link_id)
+);
 `
 
 func Migrate(pool *pgxpool.Pool) error {

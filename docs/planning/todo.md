@@ -23,8 +23,6 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## Search & Book Pages
 
-- [ ] Community links to related works on book pages
-
 ## Computed Lists
 
 - [ ] Set operations on lists (union, intersection, difference)
@@ -45,11 +43,8 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## Community Links (Wiki)
 
-- [ ] Link types: `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`
-- [ ] Optional note explaining the connection
-- [ ] Links are upvotable; sorted by upvotes on book pages
-- [ ] Soft-deleted by moderators if spam/incorrect
-- [ ] Future: edit queue similar to book metadata edits
+- [ ] Moderator soft-delete (currently only the link author can delete)
+- [ ] Edit queue similar to book metadata edits
 
 ## Genre Ratings
 

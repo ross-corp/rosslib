@@ -14,6 +14,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/docs"
 	"github.com/tristansaldanha/rosslib/api/internal/ghosts"
 	"github.com/tristansaldanha/rosslib/api/internal/imports"
+	"github.com/tristansaldanha/rosslib/api/internal/links"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 	"github.com/tristansaldanha/rosslib/api/internal/olhttp"
 	"github.com/tristansaldanha/rosslib/api/internal/search"
@@ -88,6 +89,9 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	r.GET("/books/:workId/threads", threadsHandler.ListThreads)
 	r.GET("/threads/:threadId", threadsHandler.GetThread)
 
+	linksHandler := links.NewHandler(pool)
+	r.GET("/books/:workId/links", middleware.OptionalAuth(secret), linksHandler.ListLinks)
+
 	authed := r.Group("/")
 	authed.Use(middleware.Auth(secret))
 	authed.GET("/me/feed", activityHandler.GetFeed)
@@ -133,6 +137,11 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	authed.DELETE("/threads/:threadId", threadsHandler.DeleteThread)
 	authed.POST("/threads/:threadId/comments", threadsHandler.CreateComment)
 	authed.DELETE("/threads/:threadId/comments/:commentId", threadsHandler.DeleteComment)
+
+	authed.POST("/books/:workId/links", linksHandler.CreateLink)
+	authed.DELETE("/links/:linkId", linksHandler.DeleteLink)
+	authed.POST("/links/:linkId/vote", linksHandler.Vote)
+	authed.DELETE("/links/:linkId/vote", linksHandler.Unvote)
 
 	ghostsHandler := ghosts.NewHandler(pool)
 	authed.POST("/admin/ghosts/seed", ghostsHandler.Seed)

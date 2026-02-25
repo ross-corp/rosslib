@@ -96,3 +96,6 @@ Items completed and moved out of todo.md.
 
 ## API Rate Limiting
 - [x] Rate-limit upstream-proxied routes to avoid getting banned from Open Library. All outbound OL requests share a single rate-limited HTTP client (`api/internal/olhttp`) using a token-bucket algorithm (5 rps, burst 15). Covers book search, ISBN lookup, book detail, editions, author search, author detail, and Goodreads import preview. Requests queue when the limit is hit rather than failing.
+
+## Community Links
+- [x] Community-submitted book-to-book connections on book detail pages. Link types: `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`. Optional note per link. Upvotable (sorted by votes on book pages). Soft-deleted by link author. DB tables: `book_links` + `book_link_votes`. API: `GET/POST /books/:workId/links`, `DELETE /links/:linkId`, `POST/DELETE /links/:linkId/vote`. Frontend: `BookLinkList` client component with grouped display, inline add-link form, and upvote toggle.

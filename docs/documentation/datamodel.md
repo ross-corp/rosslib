@@ -246,6 +246,54 @@ users ──< thread_comments >── threads
 users ──< activities >── books, users, collections, threads
 ```
 
+### `book_links`
+
+Community-submitted book-to-book connections. Any authenticated user can suggest a link between two books already in the local catalog.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| from_book_id | uuid FK → books | source book |
+| to_book_id | uuid FK → books | target book |
+| user_id | uuid FK → users | who submitted the link |
+| link_type | varchar(50) | `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation` |
+| note | text | nullable; optional explanation of the connection |
+| created_at | timestamptz | |
+| deleted_at | timestamptz | soft delete |
+
+Unique constraint: `(from_book_id, to_book_id, link_type, user_id)` — each user can submit a given link type between two books once.
+
+Indexes: `from_book_id`, `to_book_id`.
+
+### `book_link_votes`
+
+Upvotes on community links. Sorted by vote count on book pages.
+
+| Column | Type | Notes |
+|---|---|---|
+| user_id | uuid FK → users | |
+| book_link_id | uuid FK → book_links (cascade) | |
+| created_at | timestamptz | |
+
+PK: `(user_id, book_link_id)` — one vote per user per link.
+
+---
+
+## Relationships
+
+```
+users ──< follows >── users
+users ──< user_books >── books
+users ──< collections ──< collection_items >── books  (tag collections)
+users ──< tag_keys ──< tag_values
+users ──< book_tag_values >── tag_values >── tag_keys  (includes Status labels)
+users ──< threads >── books
+users ──< thread_comments >── threads
+users ──< activities >── books, users, collections, threads
+users ──< book_links >── books  (from/to)
+users ──< book_link_votes >── book_links
+```
+
 ---
 
 ## Planned tables (not yet in schema.go)
@@ -259,10 +307,6 @@ Author records and the book↔author join table. Currently authors are stored as
 ### `reviews`
 
 Standalone review table. The current model keeps rating and review on `user_books` (one per user per book), which already enforces uniqueness. A dedicated reviews table may be useful if reviews gain features like upvotes, replies, or rich formatting.
-
-### `links`
-
-Community-submitted book-to-book connections (sequel, prequel, similar, etc.).
 
 ### `book_stats`
 

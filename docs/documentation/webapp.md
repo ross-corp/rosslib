@@ -98,6 +98,9 @@ webapp/src/app/
     ├── me/import/goodreads/commit/route.ts
     ├── shelves/[shelfId]/books/route.ts
     ├── shelves/[shelfId]/books/[olId]/route.ts    ← GET, PATCH, DELETE
+    ├── books/[workId]/links/route.ts              ← GET, POST community links
+    ├── links/[linkId]/route.ts                    ← DELETE community link
+    ├── links/[linkId]/vote/route.ts               ← POST, DELETE vote on link
     └── users/[username]/
         ├── tags/[...path]/route.ts
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
@@ -156,6 +159,10 @@ Dropdown for managing label assignments on a single book. Lazily loads current a
 ### `ShelfPicker` (`components/shelf-picker.tsx`)
 
 Dropdown for adding/moving/removing a single book from shelves. Used on search results and book pages.
+
+### `BookLinkList` (`components/book-link-list.tsx`)
+
+Client component for community links (related books) on book detail pages. Shows links grouped by relationship type (sequel, prequel, companion, similar, etc.), sorted by upvote count. Logged-in users can upvote/unvote links and suggest new ones via an inline form. Target book is specified by Open Library work ID.
 
 ### `StarRating` (`components/star-rating.tsx`)
 

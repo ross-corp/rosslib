@@ -605,6 +605,64 @@ When the rate limit is saturated, requests wait (up to the 15s client timeout) r
 
 ---
 
+## Community Links
+
+User-submitted book-to-book connections (sequel, prequel, similar, etc.). Links are upvotable — sorted by vote count on book pages. Both books must exist in the local catalog.
+
+### `GET /books/:workId/links`
+
+Returns all community links for a book, sorted by votes descending. If authenticated, includes whether the caller has voted on each link.
+
+```json
+[
+  {
+    "id": "...",
+    "from_book_ol_id": "OL82592W",
+    "to_book_ol_id": "OL27448W",
+    "to_book_title": "Tender Is the Night",
+    "to_book_authors": "F. Scott Fitzgerald",
+    "to_book_cover_url": "https://...",
+    "link_type": "companion",
+    "note": "Same author, similar themes",
+    "username": "alice",
+    "display_name": "Alice",
+    "votes": 3,
+    "user_voted": true,
+    "created_at": "2026-02-24T14:00:00Z"
+  }
+]
+```
+
+**Link types:** `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`.
+
+### `POST /books/:workId/links`  *(auth required)*
+
+Submit a community link from this book to another.
+
+```json
+{
+  "to_work_id": "OL27448W",
+  "link_type": "companion",
+  "note": "Same author, similar themes"
+}
+```
+
+Returns 201 with `{ id, created_at }`. Auto-upvotes by the creator. Returns 409 if the user already submitted this exact link.
+
+### `DELETE /links/:linkId`  *(auth required)*
+
+Soft-delete a link (author only). Returns 204.
+
+### `POST /links/:linkId/vote`  *(auth required)*
+
+Upvote a link. Idempotent. Returns 204.
+
+### `DELETE /links/:linkId/vote`  *(auth required)*
+
+Remove upvote. Returns 204.
+
+---
+
 ## Health
 
 ### `GET /health`
