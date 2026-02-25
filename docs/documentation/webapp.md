@@ -171,6 +171,14 @@ Client component for community links (related books) on book detail pages. Shows
 
 Client component for the `/admin` page. Provides a searchable, paginated table of all users with inline moderator toggle buttons. Moderators see a filled "Moderator" button; non-moderators see a "Grant" button. Search is debounced (300ms) and queries by username, display name, or email.
 
+### `ReviewText` (`components/review-text.tsx`)
+
+Renders review text with wikilink and markdown link support. Parses two inline link syntaxes:
+- `[[Book Title]]` — rendered as a link to `/search?q=Book%20Title`
+- `[Book Title](/books/OL123W)` — rendered as a direct link to the book page
+
+Used on book detail pages (community reviews), user reviews pages, recent reviews on profiles, and the collapsed review view in the book review editor. The companion `BookReviewEditor` component provides `[[` autocomplete that searches books and inserts markdown links.
+
 ### `StarRating` (`components/star-rating.tsx`)
 
 Read-only star display used on shelf book cards.

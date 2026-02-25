@@ -52,8 +52,6 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## Reviews
 
-- [ ] Wikilinks to other books in review text
-
 ## API
 
 ## Import / Export

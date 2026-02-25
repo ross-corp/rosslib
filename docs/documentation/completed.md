@@ -103,3 +103,6 @@ Items completed and moved out of todo.md.
 
 ## Admin
 - [x] Admin UI to grant/revoke moderator status. Added `RequireModerator()` middleware that gates all `/admin/*` routes (403 for non-moderators). API endpoints: `GET /admin/users` (paginated user list with search by username/display name/email, includes `is_moderator` flag) and `PUT /admin/users/:userId/moderator` (set `is_moderator` true/false). Existing ghost admin routes (`/admin/ghosts/*`) now also require moderator access. Frontend: `/admin` page with searchable user table and inline moderator toggle buttons. "Admin" nav link visible only to moderators. Changes take effect on the target user's next login (JWT re-issue required).
+
+## Reviews
+- [x] Wikilinks to other books in review text. `ReviewText` component (`components/review-text.tsx`) parses `[[Book Title]]` wikilinks (linking to search) and `[Title](/books/OLID)` markdown links (direct book page links). `BookReviewEditor` provides `[[` autocomplete that searches books via the API and inserts markdown links. `ReviewText` is now used consistently across all review display locations: book detail page community reviews, user reviews page (`/[username]/reviews`), and recent reviews on profiles.
