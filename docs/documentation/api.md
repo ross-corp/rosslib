@@ -661,6 +661,23 @@ Upvote a link. Idempotent. Returns 204.
 
 Remove upvote. Returns 204.
 
+### `POST /links/:linkId/edits`  *(auth required)*
+
+Propose an edit to a community link. At least one of `proposed_type` or `proposed_note` must be provided. Only one pending edit per user per link.
+
+```json
+{
+  "proposed_type": "sequel",
+  "proposed_note": "Updated explanation"
+}
+```
+
+```
+201 { "id": "...", "created_at": "..." }
+400 { "error": "at least one of proposed_type or proposed_note is required" }
+409 { "error": "you already have a pending edit for this link" }
+```
+
 ---
 
 ## Admin  *(moderator required)*
@@ -698,6 +715,51 @@ Grant or revoke moderator status for a user. The change takes effect on the user
 ```
 200 { "ok": true, "is_moderator": true }
 404 { "error": "user not found" }
+```
+
+### `GET /admin/link-edits?status=pending`
+
+List proposed community link edits. Filterable by status (`pending`, `approved`, `rejected`). Returns edits with current and proposed values, book titles, and reviewer info.
+
+```json
+[
+  {
+    "id": "...",
+    "book_link_id": "...",
+    "username": "alice",
+    "display_name": "Alice",
+    "proposed_type": "sequel",
+    "proposed_note": null,
+    "current_type": "similar",
+    "current_note": "Same author",
+    "from_book_ol_id": "OL82592W",
+    "from_book_title": "The Great Gatsby",
+    "to_book_ol_id": "OL27448W",
+    "to_book_title": "Tender Is the Night",
+    "status": "pending",
+    "reviewer_name": null,
+    "reviewer_comment": null,
+    "created_at": "2026-02-25T14:00:00Z",
+    "reviewed_at": null
+  }
+]
+```
+
+### `PUT /admin/link-edits/:editId`
+
+Approve or reject a pending community link edit. Approved edits are applied to the link immediately within a transaction.
+
+```json
+{
+  "action": "approve",
+  "comment": "Looks good"
+}
+```
+
+```
+200 { "ok": true, "status": "approved" }
+400 { "error": "action must be approve or reject" }
+404 { "error": "pending edit not found" }
 ```
 
 ---

@@ -278,6 +278,27 @@ Upvotes on community links. Sorted by vote count on book pages.
 
 PK: `(user_id, book_link_id)` — one vote per user per link.
 
+### `book_link_edits`
+
+Proposed edits to community links. Any authenticated user can propose a change to a link's type or note. Moderators approve or reject edits from the admin panel. Approved edits are applied to the link immediately.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| book_link_id | uuid FK → book_links (cascade) | the link being edited |
+| user_id | uuid FK → users | who proposed the edit |
+| proposed_type | varchar(50) | nullable; new link_type if changed |
+| proposed_note | text | nullable; new note if changed |
+| status | varchar(20) | `'pending'`, `'approved'`, or `'rejected'` |
+| reviewer_id | uuid FK → users | nullable; moderator who reviewed |
+| reviewer_comment | text | nullable; optional reviewer note |
+| created_at | timestamptz | |
+| reviewed_at | timestamptz | nullable; when reviewed |
+
+Indexes: `status`, `book_link_id`.
+
+At least one of `proposed_type` or `proposed_note` must be non-null (enforced in application code). One pending edit per user per link (enforced in application code).
+
 ---
 
 ## Relationships
@@ -293,6 +314,7 @@ users ──< thread_comments >── threads
 users ──< activities >── books, users, collections, threads
 users ──< book_links >── books  (from/to)
 users ──< book_link_votes >── book_links
+users ──< book_link_edits >── book_links  (proposed edits)
 ```
 
 ---

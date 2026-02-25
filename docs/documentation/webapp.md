@@ -102,8 +102,11 @@ webapp/src/app/
     ├── books/[workId]/links/route.ts              ← GET, POST community links
     ├── links/[linkId]/route.ts                    ← DELETE community link
     ├── links/[linkId]/vote/route.ts               ← POST, DELETE vote on link
+    ├── links/[linkId]/edits/route.ts              ← POST propose link edit
     ├── admin/users/route.ts                       ← GET admin user list
     ├── admin/users/[userId]/moderator/route.ts    ← PUT grant/revoke moderator
+    ├── admin/link-edits/route.ts                  ← GET list link edits
+    ├── admin/link-edits/[editId]/route.ts         ← PUT approve/reject link edit
     └── users/[username]/
         ├── tags/[...path]/route.ts
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
@@ -165,11 +168,15 @@ Dropdown for adding/moving/removing a single book from shelves. Used on search r
 
 ### `BookLinkList` (`components/book-link-list.tsx`)
 
-Client component for community links (related books) on book detail pages. Shows links grouped by relationship type (sequel, prequel, companion, similar, etc.), sorted by upvote count. Logged-in users can upvote/unvote links and suggest new ones via an inline form. Target book is specified by Open Library work ID.
+Client component for community links (related books) on book detail pages. Shows links grouped by relationship type (sequel, prequel, companion, similar, etc.), sorted by upvote count. Logged-in users can upvote/unvote links, suggest new ones via an inline form, and propose edits to existing links (edit pencil icon). Proposed edits are submitted for moderator review. Target book is specified by Open Library work ID.
 
 ### `AdminUserList` (`components/admin-user-list.tsx`)
 
 Client component for the `/admin` page. Provides a searchable, paginated table of all users with inline moderator toggle buttons. Moderators see a filled "Moderator" button; non-moderators see a "Grant" button. Search is debounced (300ms) and queries by username, display name, or email.
+
+### `AdminLinkEdits` (`components/admin-link-edits.tsx`)
+
+Client component for the `/admin` page. Displays proposed community link edits with status filter tabs (pending/approved/rejected). Each edit shows the proposer, book pair, current vs. proposed values (type and note) side by side, and approve/reject buttons for pending edits. Reviewed edits show the reviewer name, date, and optional comment.
 
 ### `ReviewText` (`components/review-text.tsx`)
 

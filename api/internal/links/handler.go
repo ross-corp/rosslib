@@ -275,3 +275,253 @@ func (h *Handler) Unvote(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
+
+// ── Edit queue ──────────────────────────────────────────────────────────────
+
+type editResponse struct {
+	ID              string  `json:"id"`
+	BookLinkID      string  `json:"book_link_id"`
+	Username        string  `json:"username"`
+	DisplayName     *string `json:"display_name"`
+	ProposedType    *string `json:"proposed_type"`
+	ProposedNote    *string `json:"proposed_note"`
+	CurrentType     string  `json:"current_type"`
+	CurrentNote     *string `json:"current_note"`
+	FromBookOLID    string  `json:"from_book_ol_id"`
+	FromBookTitle   string  `json:"from_book_title"`
+	ToBookOLID      string  `json:"to_book_ol_id"`
+	ToBookTitle     string  `json:"to_book_title"`
+	Status          string  `json:"status"`
+	ReviewerName    *string `json:"reviewer_name"`
+	ReviewerComment *string `json:"reviewer_comment"`
+	CreatedAt       string  `json:"created_at"`
+	ReviewedAt      *string `json:"reviewed_at"`
+}
+
+// POST /links/:linkId/edits  (requires auth)
+func (h *Handler) ProposeEdit(c *gin.Context) {
+	linkID := c.Param("linkId")
+	userID := c.GetString(middleware.UserIDKey)
+
+	var body struct {
+		ProposedType *string `json:"proposed_type"`
+		ProposedNote *string `json:"proposed_note"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	if body.ProposedType == nil && body.ProposedNote == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one of proposed_type or proposed_note is required"})
+		return
+	}
+
+	if body.ProposedType != nil && !validLinkTypes[*body.ProposedType] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid proposed_type"})
+		return
+	}
+
+	// Verify the link exists and isn't deleted.
+	var exists bool
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT EXISTS(SELECT 1 FROM book_links WHERE id = $1 AND deleted_at IS NULL)`,
+		linkID,
+	).Scan(&exists)
+	if err != nil || !exists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "link not found"})
+		return
+	}
+
+	// Check for existing pending edit by same user on same link.
+	var hasPending bool
+	err = h.pool.QueryRow(c.Request.Context(),
+		`SELECT EXISTS(SELECT 1 FROM book_link_edits WHERE book_link_id = $1 AND user_id = $2 AND status = 'pending')`,
+		linkID, userID,
+	).Scan(&hasPending)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	if hasPending {
+		c.JSON(http.StatusConflict, gin.H{"error": "you already have a pending edit for this link"})
+		return
+	}
+
+	var editID string
+	var createdAt time.Time
+	err = h.pool.QueryRow(c.Request.Context(),
+		`INSERT INTO book_link_edits (book_link_id, user_id, proposed_type, proposed_note)
+		 VALUES ($1, $2, $3, $4)
+		 RETURNING id, created_at`,
+		linkID, userID, body.ProposedType, body.ProposedNote,
+	).Scan(&editID, &createdAt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"id":         editID,
+		"created_at": createdAt.Format(time.RFC3339),
+	})
+}
+
+// GET /admin/link-edits?status=pending  (moderator only)
+func (h *Handler) ListEdits(c *gin.Context) {
+	statusFilter := c.DefaultQuery("status", "pending")
+	if statusFilter != "pending" && statusFilter != "approved" && statusFilter != "rejected" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "status must be pending, approved, or rejected"})
+		return
+	}
+
+	rows, err := h.pool.Query(c.Request.Context(),
+		`SELECT e.id, e.book_link_id,
+		        u.username, u.display_name,
+		        e.proposed_type, e.proposed_note,
+		        bl.link_type AS current_type, bl.note AS current_note,
+		        fb.open_library_id AS from_ol_id, fb.title AS from_title,
+		        tb.open_library_id AS to_ol_id, tb.title AS to_title,
+		        e.status,
+		        ru.username AS reviewer_name,
+		        e.reviewer_comment,
+		        e.created_at, e.reviewed_at
+		 FROM book_link_edits e
+		 JOIN book_links bl ON bl.id = e.book_link_id
+		 JOIN books fb ON fb.id = bl.from_book_id
+		 JOIN books tb ON tb.id = bl.to_book_id
+		 JOIN users u ON u.id = e.user_id
+		 LEFT JOIN users ru ON ru.id = e.reviewer_id
+		 WHERE e.status = $1
+		 ORDER BY e.created_at ASC`,
+		statusFilter,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	edits := []editResponse{}
+	for rows.Next() {
+		var e editResponse
+		var createdAt time.Time
+		var reviewedAt *time.Time
+		if err := rows.Scan(
+			&e.ID, &e.BookLinkID,
+			&e.Username, &e.DisplayName,
+			&e.ProposedType, &e.ProposedNote,
+			&e.CurrentType, &e.CurrentNote,
+			&e.FromBookOLID, &e.FromBookTitle,
+			&e.ToBookOLID, &e.ToBookTitle,
+			&e.Status,
+			&e.ReviewerName,
+			&e.ReviewerComment,
+			&createdAt, &reviewedAt,
+		); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		e.CreatedAt = createdAt.Format(time.RFC3339)
+		if reviewedAt != nil {
+			formatted := reviewedAt.Format(time.RFC3339)
+			e.ReviewedAt = &formatted
+		}
+		edits = append(edits, e)
+	}
+
+	c.JSON(http.StatusOK, edits)
+}
+
+// PUT /admin/link-edits/:editId  (moderator only)
+func (h *Handler) ReviewEdit(c *gin.Context) {
+	editID := c.Param("editId")
+	reviewerID := c.GetString(middleware.UserIDKey)
+
+	var body struct {
+		Action  string  `json:"action" binding:"required"`
+		Comment *string `json:"comment"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "action is required (approve or reject)"})
+		return
+	}
+
+	if body.Action != "approve" && body.Action != "reject" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "action must be approve or reject"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	// Fetch the pending edit.
+	var bookLinkID string
+	var proposedType *string
+	var proposedNote *string
+	err = tx.QueryRow(ctx,
+		`SELECT book_link_id, proposed_type, proposed_note
+		 FROM book_link_edits
+		 WHERE id = $1 AND status = 'pending'`,
+		editID,
+	).Scan(&bookLinkID, &proposedType, &proposedNote)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "pending edit not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	newStatus := "rejected"
+	if body.Action == "approve" {
+		newStatus = "approved"
+
+		// Apply the proposed changes to the link.
+		if proposedType != nil {
+			_, err = tx.Exec(ctx,
+				`UPDATE book_links SET link_type = $1 WHERE id = $2`,
+				*proposedType, bookLinkID,
+			)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+				return
+			}
+		}
+		if proposedNote != nil {
+			_, err = tx.Exec(ctx,
+				`UPDATE book_links SET note = $1 WHERE id = $2`,
+				*proposedNote, bookLinkID,
+			)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+				return
+			}
+		}
+	}
+
+	// Mark edit as reviewed.
+	_, err = tx.Exec(ctx,
+		`UPDATE book_link_edits
+		 SET status = $1, reviewer_id = $2, reviewer_comment = $3, reviewed_at = NOW()
+		 WHERE id = $4`,
+		newStatus, reviewerID, body.Comment, editID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true, "status": newStatus})
+}

@@ -43,8 +43,6 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## Community Links (Wiki)
 
-- [ ] Edit queue similar to book metadata edits
-
 ## Genre Ratings
 
 - [ ] Rate a book on genre dimensions (e.g. "is this book a comedy? 0-10")

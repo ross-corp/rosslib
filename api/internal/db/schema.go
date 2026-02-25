@@ -325,6 +325,24 @@ CREATE TABLE IF NOT EXISTS book_link_votes (
 	created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 	PRIMARY KEY (user_id, book_link_id)
 );
+
+-- ── Community link edit queue: proposed edits awaiting moderator review ───────
+
+CREATE TABLE IF NOT EXISTS book_link_edits (
+	id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	book_link_id    UUID         NOT NULL REFERENCES book_links(id) ON DELETE CASCADE,
+	user_id         UUID         NOT NULL REFERENCES users(id),
+	proposed_type   VARCHAR(50),
+	proposed_note   TEXT,
+	status          VARCHAR(20)  NOT NULL DEFAULT 'pending',
+	reviewer_id     UUID         REFERENCES users(id),
+	reviewer_comment TEXT,
+	created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+	reviewed_at     TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_book_link_edits_status  ON book_link_edits (status);
+CREATE INDEX IF NOT EXISTS idx_book_link_edits_link_id ON book_link_edits (book_link_id);
 `
 
 func Migrate(pool *pgxpool.Pool) error {
