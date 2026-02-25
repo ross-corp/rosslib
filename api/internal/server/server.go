@@ -13,6 +13,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/email"
 	"github.com/tristansaldanha/rosslib/api/internal/collections"
 	"github.com/tristansaldanha/rosslib/api/internal/docs"
+	"github.com/tristansaldanha/rosslib/api/internal/genreratings"
 	"github.com/tristansaldanha/rosslib/api/internal/ghosts"
 	"github.com/tristansaldanha/rosslib/api/internal/imports"
 	"github.com/tristansaldanha/rosslib/api/internal/links"
@@ -73,6 +74,9 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	r.GET("/books/:workId", booksHandler.GetBook)
 	r.GET("/books/:workId/editions", booksHandler.GetEditions)
 	r.GET("/books/:workId/reviews", middleware.OptionalAuth(secret), booksHandler.GetBookReviews)
+
+	genreRatingsHandler := genreratings.NewHandler(pool)
+	r.GET("/books/:workId/genre-ratings", genreRatingsHandler.GetBookGenreRatings)
 
 	usersHandler := users.NewHandler(pool, store)
 	r.GET("/users", usersHandler.SearchUsers)
@@ -147,6 +151,8 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	authed.PUT("/me/books/:olId/tags/:keyId", tagsHandler.SetBookTag)
 	authed.DELETE("/me/books/:olId/tags/:keyId", tagsHandler.UnsetBookTag)
 	authed.DELETE("/me/books/:olId/tags/:keyId/values/:valueId", tagsHandler.UnsetBookTagValue)
+	authed.GET("/me/books/:olId/genre-ratings", genreRatingsHandler.GetMyGenreRatings)
+	authed.PUT("/me/books/:olId/genre-ratings", genreRatingsHandler.SetGenreRatings)
 
 	authed.POST("/books/:workId/threads", threadsHandler.CreateThread)
 	authed.DELETE("/threads/:threadId", threadsHandler.DeleteThread)

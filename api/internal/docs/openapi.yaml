@@ -36,6 +36,8 @@ tags:
     description: Author search and detail
   - name: Genres
     description: Genre browsing
+  - name: Genre Ratings
+    description: Per-user genre dimension ratings on books (0–10 scale)
   - name: Users
     description: User profiles and social
   - name: Collections
@@ -845,6 +847,49 @@ components:
         year:
           type: integer
           nullable: true
+
+    AggregateGenreRating:
+      type: object
+      properties:
+        genre:
+          type: string
+          example: "Science fiction"
+        average:
+          type: number
+          format: float
+          example: 7.3
+        rater_count:
+          type: integer
+          example: 12
+
+    GenreRating:
+      type: object
+      properties:
+        genre:
+          type: string
+          example: "Science fiction"
+        rating:
+          type: integer
+          minimum: 0
+          maximum: 10
+          example: 8
+        updated_at:
+          type: string
+          format: date-time
+
+    GenreRatingInput:
+      type: object
+      required: [genre]
+      properties:
+        genre:
+          type: string
+          example: "Science fiction"
+        rating:
+          type: integer
+          minimum: 0
+          maximum: 10
+          nullable: true
+          description: "0 or null to remove the rating"
 
 paths:
   /health:
@@ -3094,3 +3139,90 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Ok"
+
+  /books/{workId}/genre-ratings:
+    get:
+      tags: [Genre Ratings]
+      summary: Get aggregate genre ratings for a book
+      parameters:
+        - name: workId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: OL82592W
+      responses:
+        "200":
+          description: Aggregate genre ratings sorted by rater count
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AggregateGenreRating"
+
+  /me/books/{olId}/genre-ratings:
+    get:
+      tags: [Genre Ratings]
+      summary: Get your genre ratings for a book
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: olId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: OL82592W
+      responses:
+        "200":
+          description: Your genre ratings for this book
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GenreRating"
+    put:
+      tags: [Genre Ratings]
+      summary: Set your genre ratings for a book
+      description: |
+        Accepts an array of genre/rating pairs. Ratings of 0 or null remove the genre rating.
+        Valid genres: Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror,
+        Thriller, Biography, History, Poetry, Children.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: olId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: OL82592W
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/GenreRatingInput"
+      responses:
+        "200":
+          description: Ratings saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ok"
+        "400":
+          description: Invalid genre or rating
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"

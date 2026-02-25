@@ -375,8 +375,28 @@ users ──< author_follows     (OL author keys)
 users ──< book_follows >── books  (book subscriptions)
 users ──< notifications      (per-user notifications)
 users ──< password_reset_tokens  (password reset tokens)
+users ──< genre_ratings >── books  (per-user genre dimension scores)
 author_works_snapshot        (OL author key → work count snapshot)
 ```
+
+### `genre_ratings`
+
+Per-user genre dimension scores on books. Users rate how strongly a book fits each genre on a 0–10 scale. Aggregate averages are shown on book detail pages.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user_id | uuid FK → users | |
+| book_id | uuid FK → books | |
+| genre | varchar(100) | genre name (from predefined list) |
+| rating | smallint | 0–10; CHECK constraint enforced |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+
+Unique constraint: `(user_id, book_id, genre)` — one rating per user per book per genre.
+Index: `book_id` for efficient aggregate queries.
+
+Allowed genres (same as the predefined genre list): Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children.
 
 ### `password_reset_tokens`
 

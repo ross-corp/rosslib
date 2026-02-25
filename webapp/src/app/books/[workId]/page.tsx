@@ -10,6 +10,7 @@ import ReviewText from "@/components/review-text";
 import EditionList from "@/components/edition-list";
 import BookLinkList from "@/components/book-link-list";
 import BookFollowButton from "@/components/book-follow-button";
+import GenreRatingEditor from "@/components/genre-rating-editor";
 import { getUser, getToken } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -108,6 +109,17 @@ type TagKey = {
   values: StatusValue[];
 };
 
+type AggregateGenreRating = {
+  genre: string;
+  average: number;
+  rater_count: number;
+};
+
+type MyGenreRating = {
+  genre: string;
+  rating: number;
+};
+
 // ── Data fetchers ───────────────────────────────────────────────────────────────
 
 async function fetchBook(workId: string): Promise<BookDetail | null> {
@@ -187,6 +199,32 @@ async function fetchBookFollowStatus(
   return data.following === true;
 }
 
+async function fetchAggregateGenreRatings(
+  workId: string
+): Promise<AggregateGenreRating[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/books/${workId}/genre-ratings`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchMyGenreRatings(
+  token: string,
+  workId: string
+): Promise<MyGenreRating[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/me/books/${workId}/genre-ratings`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function renderStars(rating: number): string {
@@ -213,7 +251,7 @@ export default async function BookPage({
   const { workId } = await params;
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook] = await Promise.all([
+  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings] = await Promise.all([
     fetchBook(workId),
     fetchBookReviews(workId, token ?? undefined),
     fetchThreads(workId),
@@ -225,6 +263,10 @@ export default async function BookPage({
     currentUser && token
       ? fetchBookFollowStatus(token, workId)
       : Promise.resolve(false),
+    fetchAggregateGenreRatings(workId),
+    currentUser && token
+      ? fetchMyGenreRatings(token, workId)
+      : Promise.resolve([]),
   ]);
 
   if (!book) notFound();
@@ -355,6 +397,21 @@ export default async function BookPage({
               initialDateRead={myStatus.date_read}
               initialDateDnf={myStatus.date_dnf}
               statusSlug={myStatus.status_slug}
+            />
+          </section>
+        )}
+
+        {/* ── Genre ratings ── */}
+        {(aggregateGenreRatings.length > 0 || currentUser) && (
+          <section className="mb-10 border-t border-stone-100 pt-8">
+            <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
+              Genre ratings
+            </h2>
+            <GenreRatingEditor
+              openLibraryId={workId}
+              isLoggedIn={!!currentUser}
+              initialAggregateRatings={aggregateGenreRatings}
+              initialMyRatings={myGenreRatings}
             />
           </section>
         )}

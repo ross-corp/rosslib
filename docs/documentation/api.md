@@ -230,6 +230,68 @@ Returns 404 for unknown genre slugs.
 
 ---
 
+## Genre Ratings
+
+Users can rate how strongly a book fits each genre on a 0–10 scale. Aggregate averages are shown publicly on book detail pages; individual ratings are visible to the authenticated user.
+
+### `GET /books/:workId/genre-ratings`
+
+Returns aggregate genre ratings for a book, sorted by rater count descending.
+
+```json
+[
+  {
+    "genre": "Science fiction",
+    "average": 7.3,
+    "rater_count": 12
+  },
+  {
+    "genre": "Fiction",
+    "average": 9.1,
+    "rater_count": 8
+  }
+]
+```
+
+Returns an empty array if no ratings exist.
+
+### `GET /me/books/:olId/genre-ratings`  *(auth required)*
+
+Returns the current user's genre ratings for a book.
+
+```json
+[
+  {
+    "genre": "Science fiction",
+    "rating": 8,
+    "updated_at": "2026-02-25T14:00:00Z"
+  }
+]
+```
+
+### `PUT /me/books/:olId/genre-ratings`  *(auth required)*
+
+Set or update genre ratings for a book. Accepts an array of `{genre, rating}` objects. Ratings of 0 or null remove the genre rating. Genres must be from the predefined list.
+
+```json
+[
+  { "genre": "Science fiction", "rating": 8 },
+  { "genre": "Fiction", "rating": 6 },
+  { "genre": "Horror", "rating": 0 }
+]
+```
+
+```
+200 { "ok": true }
+400 { "error": "invalid genre: ..." }
+400 { "error": "rating must be 0-10" }
+404 { "error": "book not found" }
+```
+
+**Valid genres:** Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children.
+
+---
+
 ## Authors
 
 ### `GET /authors/search?q=<name>`

@@ -412,6 +412,21 @@ CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_t
 
 -- ── Author badge: link a user account to an Open Library author key ─────────
 ALTER TABLE users ADD COLUMN IF NOT EXISTS author_key VARCHAR(50);
+
+-- ── Genre ratings: per-user genre dimension scores on books ─────────────────
+
+CREATE TABLE IF NOT EXISTS genre_ratings (
+	id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	user_id    UUID         NOT NULL REFERENCES users(id),
+	book_id    UUID         NOT NULL REFERENCES books(id),
+	genre      VARCHAR(100) NOT NULL,
+	rating     SMALLINT     NOT NULL CHECK (rating >= 0 AND rating <= 10),
+	created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+	updated_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+	UNIQUE(user_id, book_id, genre)
+);
+
+CREATE INDEX IF NOT EXISTS idx_genre_ratings_book_id ON genre_ratings (book_id);
 `
 
 func Migrate(pool *pgxpool.Pool) error {

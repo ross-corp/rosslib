@@ -40,9 +40,6 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## Genre Ratings
 
-- [ ] Rate a book on genre dimensions (e.g. "is this book a comedy? 0-10")
-- [ ] Data model changes needed; useful for recommendations
-
 ## Reviews
 
 ## API

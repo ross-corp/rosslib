@@ -112,6 +112,8 @@ webapp/src/app/
     ├── admin/users/[userId]/moderator/route.ts    ← PUT grant/revoke moderator
     ├── admin/link-edits/route.ts                  ← GET list link edits
     ├── admin/link-edits/[editId]/route.ts         ← PUT approve/reject link edit
+    ├── books/[workId]/genre-ratings/route.ts         ← GET aggregate genre ratings
+    ├── me/books/[olId]/genre-ratings/route.ts       ← GET, PUT user genre ratings
     ├── me/account/route.ts                         ← GET account info (has_password, has_google)
     ├── me/password/route.ts                        ← PUT set/change password
     ├── me/notifications/route.ts                  ← GET list notifications
@@ -204,6 +206,10 @@ Client component rendered on the settings page below the profile form. Fetches `
 ### `NotificationBell` (`components/notification-bell.tsx`)
 
 Client component rendered in the nav bar for authenticated users. Polls `GET /api/me/notifications/unread-count` every 60 seconds and displays a bell icon with a red badge when unread notifications exist. Links to `/notifications`.
+
+### `GenreRatingEditor` (`components/genre-rating-editor.tsx`)
+
+Client component for genre dimension ratings on book detail pages. Shows aggregate community ratings as horizontal bar charts (genre name, progress bar, average/10, rater count). Logged-in users can expand an editor with 0–10 sliders for each of the 12 predefined genres (Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children). Setting a slider to 0 removes the rating. Saves via `PUT /api/me/books/:olId/genre-ratings` and refreshes aggregate data on save.
 
 ### `StarRating` (`components/star-rating.tsx`)
 
