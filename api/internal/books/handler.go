@@ -555,7 +555,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 	// Parse description (can be a plain string or {"type":..., "value":...}).
 	if len(work.Description) > 0 {
 		var desc string
-		if err := json.Unmarshal(work.Description, &desc); err == nil {
+		if json.Unmarshal(work.Description, &desc) == nil {
 			detail.Description = &desc
 		} else {
 			var obj olDescription
@@ -1299,7 +1299,7 @@ func (h *Handler) GetAuthor(c *gin.Context) {
 	// Parse bio (can be a plain string or {"type":..., "value":...}).
 	if len(raw.Bio) > 0 {
 		var bio string
-		if err := json.Unmarshal(raw.Bio, &bio); err == nil {
+		if json.Unmarshal(raw.Bio, &bio) == nil {
 			detail.Bio = &bio
 		} else {
 			var obj olDescription
