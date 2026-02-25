@@ -107,7 +107,7 @@ func GetAccount(app core.App) func(e *core.RequestEvent) error {
 			"username":       user.GetString("username"),
 			"email":          user.Email(),
 			"display_name":   user.GetString("display_name"),
-			"has_password":   user.ValidatePassword("") == false, // always true if password is set
+			"has_password":   !user.ValidatePassword(""),
 			"email_verified": user.GetBool("email_verified"),
 			"is_moderator":   user.GetBool("is_moderator"),
 		})

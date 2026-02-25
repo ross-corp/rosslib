@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -292,12 +293,12 @@ export default function ImportForm() {
             </ul>
           </details>
         )}
-        <a
+        <Link
           href="/me/shelves"
           className="inline-block mt-2 text-sm text-stone-900 underline hover:no-underline"
         >
           Go to your shelves
-        </a>
+        </Link>
       </div>
     );
   }
