@@ -25,8 +25,6 @@ Thigns ROSSLIB supports that Goodreads doesn't:
 - granularity
   - support for treating short stories as independent works (inside of anthologies)
 
-game: browse /r/goodreads to find complaints, add them here as features
+## nephewbot
 
-- add a "gave up on" date for DNF
-- "we aren't doing half stars" https://help.goodreads.com/s/article/Why-doesn-t-Goodreads-have-half-stars
-- https://help.goodreads.com/s/Ideas
+`nephewbot/` contains a script that runs Claude Code's `/worker` skill on a cron (every 2 hours, 5 iterations). It works through the TODO list in `docs/TODO.md` autonomously. Logs go to `nephewbot/nephewbot.log`.

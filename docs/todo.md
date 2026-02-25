@@ -4,6 +4,10 @@ Backlog of all things we need #todo
 
 Once we're further along we'll move to GH projects. this is fine for now
 
+## UNSORTED
+
+- [ ] add a DNF option with a date, so a book can be completed OR stopped on a date.
+
 ## Book Scanning
 
 - [ ] Book cover scan — take a picture of a cover, lookup ISBN for import
