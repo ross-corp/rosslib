@@ -16,6 +16,12 @@ type Config struct {
 	MeiliMasterKey     string
 	GoogleClientID     string
 	GoogleClientSecret string
+	SMTPHost           string
+	SMTPPort           string
+	SMTPUser           string
+	SMTPPassword       string
+	SMTPFrom           string
+	WebappURL          string
 }
 
 func Load() Config {
@@ -41,6 +47,12 @@ func Load() Config {
 		MeiliMasterKey:     getEnv("MEILI_MASTER_KEY", "masterKey"),
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		SMTPHost:           os.Getenv("SMTP_HOST"),
+		SMTPPort:           getEnv("SMTP_PORT", "587"),
+		SMTPUser:           os.Getenv("SMTP_USER"),
+		SMTPPassword:       os.Getenv("SMTP_PASSWORD"),
+		SMTPFrom:           os.Getenv("SMTP_FROM"),
+		WebappURL:          getEnv("WEBAPP_URL", "http://localhost:3000"),
 	}
 }
 

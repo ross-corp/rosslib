@@ -11,6 +11,7 @@ import (
 
 	"github.com/tristansaldanha/rosslib/api/internal/config"
 	"github.com/tristansaldanha/rosslib/api/internal/db"
+	"github.com/tristansaldanha/rosslib/api/internal/email"
 	"github.com/tristansaldanha/rosslib/api/internal/notifications"
 	"github.com/tristansaldanha/rosslib/api/internal/olhttp"
 	"github.com/tristansaldanha/rosslib/api/internal/search"
@@ -58,7 +59,15 @@ func main() {
 		}()
 	}
 
-	router := server.NewRouter(pool, cfg.JWTSecret, store, searchClient)
+	var emailClient *email.Client
+	if cfg.SMTPHost != "" {
+		emailClient = email.NewClient(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPassword, cfg.SMTPFrom)
+		log.Println("SMTP configured for password reset emails")
+	} else {
+		log.Println("SMTP not configured — password reset emails will be logged only")
+	}
+
+	router := server.NewRouter(pool, cfg.JWTSecret, store, searchClient, emailClient, cfg.WebappURL)
 
 	// Start background poller for new publications by followed authors.
 	pollerCtx, pollerCancel := context.WithCancel(context.Background())

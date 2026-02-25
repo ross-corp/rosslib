@@ -44,6 +44,34 @@ The webapp handles the full OAuth flow:
 
 **Environment variables required:** `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_URL`.
 
+### `POST /auth/forgot-password`
+
+Request a password reset email. Always returns 200 regardless of whether the email exists (to avoid leaking account info).
+
+```json
+{ "email": "alice@example.com" }
+```
+
+```
+200 { "ok": true, "message": "If an account with that email exists, a password reset link has been sent." }
+```
+
+Requires SMTP to be configured (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` env vars). When SMTP is not configured, the request is logged but no email is sent. The reset link expires after 1 hour. Previous unused tokens are invalidated when a new one is requested.
+
+### `POST /auth/reset-password`
+
+Reset password using the token from the email link. The token is single-use and expires after 1 hour.
+
+```json
+{ "token": "<64-char hex token>", "new_password": "new-pass-8chars" }
+```
+
+```
+200 { "ok": true }
+400 { "error": "invalid or expired reset token" }
+400 { "error": "token and new password (min 8 chars) are required" }
+```
+
 ### `GET /me/account`  *(auth required)*
 
 Returns whether the current user has a password set and whether a Google account is linked. Used by the settings UI to determine which password form to show.

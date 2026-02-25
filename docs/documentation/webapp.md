@@ -68,6 +68,8 @@ webapp/src/app/
 ├── page.tsx                        home / landing
 ├── login/page.tsx
 ├── register/page.tsx
+├── forgot-password/page.tsx          forgot password (request reset link)
+├── reset-password/page.tsx           set new password (from email link)
 ├── search/page.tsx                 book + user search
 ├── users/page.tsx                  browse all users
 ├── books/[workId]/page.tsx         single book page
@@ -86,6 +88,8 @@ webapp/src/app/
     ├── auth/login/route.ts
     ├── auth/register/route.ts
     ├── auth/logout/route.ts
+    ├── auth/forgot-password/route.ts       ← POST request reset email
+    ├── auth/reset-password/route.ts        ← POST reset password with token
     ├── users/me/route.ts
     ├── users/[username]/follow/route.ts
     ├── me/shelves/route.ts

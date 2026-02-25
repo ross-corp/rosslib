@@ -373,8 +373,24 @@ users ──< book_link_edits >── book_links  (proposed edits)
 users ──< author_follows     (OL author keys)
 users ──< book_follows >── books  (book subscriptions)
 users ──< notifications      (per-user notifications)
+users ──< password_reset_tokens  (password reset tokens)
 author_works_snapshot        (OL author key → work count snapshot)
 ```
+
+### `password_reset_tokens`
+
+Tokens for the forgot-password flow. Tokens are stored as SHA-256 hashes (not raw values). Single-use, expire after 1 hour. Previous unused tokens for a user are invalidated when a new one is requested.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user_id | uuid FK → users | |
+| token_hash | text | SHA-256 hash of the raw token sent in the email |
+| expires_at | timestamptz | 1 hour after creation |
+| used | boolean | default false; set to true after successful reset |
+| created_at | timestamptz | |
+
+Index: `user_id`
 
 ---
 

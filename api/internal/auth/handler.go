@@ -1,8 +1,12 @@
 package auth
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -11,18 +15,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tristansaldanha/rosslib/api/internal/email"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var usernameRe = regexp.MustCompile(`^[a-z0-9-]{1,40}$`)
 
 type Handler struct {
-	pool      *pgxpool.Pool
-	jwtSecret []byte
+	pool        *pgxpool.Pool
+	jwtSecret   []byte
+	emailClient *email.Client
+	webappURL   string
 }
 
-func NewHandler(pool *pgxpool.Pool, jwtSecret string) *Handler {
-	return &Handler{pool: pool, jwtSecret: []byte(jwtSecret)}
+func NewHandler(pool *pgxpool.Pool, jwtSecret string, emailClient *email.Client, webappURL string) *Handler {
+	return &Handler{pool: pool, jwtSecret: []byte(jwtSecret), emailClient: emailClient, webappURL: webappURL}
 }
 
 type registerRequest struct {
@@ -363,6 +370,155 @@ func (h *Handler) SetPassword(c *gin.Context) {
 		string(newHash), userID,
 	)
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// ForgotPassword - POST /auth/forgot-password
+// Generates a password reset token and emails it to the user.
+// Always returns 200 to avoid leaking whether an email exists.
+func (h *Handler) ForgotPassword(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "valid email is required"})
+		return
+	}
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
+	// Always return success to avoid leaking whether an email exists.
+	okMsg := gin.H{"ok": true, "message": "If an account with that email exists, a password reset link has been sent."}
+
+	if h.emailClient == nil {
+		log.Printf("password reset requested for %s but SMTP is not configured", req.Email)
+		c.JSON(http.StatusOK, okMsg)
+		return
+	}
+
+	// Look up user by email.
+	var userID string
+	var hasPassword bool
+	var hash sql.NullString
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT id, password_hash FROM users WHERE email = $1 AND deleted_at IS NULL`,
+		req.Email,
+	).Scan(&userID, &hash)
+	if err != nil {
+		// User not found — return success anyway.
+		c.JSON(http.StatusOK, okMsg)
+		return
+	}
+	hasPassword = hash.Valid && hash.String != ""
+	_ = hasPassword // Reset works for all accounts (including Google-only, to set a password).
+
+	// Invalidate any existing unused tokens for this user.
+	_, _ = h.pool.Exec(c.Request.Context(),
+		`UPDATE password_reset_tokens SET used = true WHERE user_id = $1 AND used = false`,
+		userID,
+	)
+
+	// Generate a random token.
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	rawToken := hex.EncodeToString(tokenBytes)
+
+	// Store the hash of the token (not the raw token).
+	tokenHash := sha256.Sum256([]byte(rawToken))
+	tokenHashHex := hex.EncodeToString(tokenHash[:])
+
+	expiresAt := time.Now().Add(1 * time.Hour)
+	_, err = h.pool.Exec(c.Request.Context(),
+		`INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+		 VALUES ($1, $2, $3)`,
+		userID, tokenHashHex, expiresAt,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	resetURL := fmt.Sprintf("%s/reset-password?token=%s", h.webappURL, rawToken)
+	if err := h.emailClient.SendPasswordReset(req.Email, resetURL); err != nil {
+		log.Printf("failed to send password reset email to %s: %v", req.Email, err)
+		// Still return success to avoid leaking information.
+	}
+
+	c.JSON(http.StatusOK, okMsg)
+}
+
+// ResetPassword - POST /auth/reset-password
+// Validates the reset token and sets a new password.
+func (h *Handler) ResetPassword(c *gin.Context) {
+	var req struct {
+		Token       string `json:"token"        binding:"required"`
+		NewPassword string `json:"new_password"  binding:"required,min=8"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "token and new password (min 8 chars) are required"})
+		return
+	}
+
+	// Hash the provided token to look it up.
+	tokenHash := sha256.Sum256([]byte(req.Token))
+	tokenHashHex := hex.EncodeToString(tokenHash[:])
+
+	var tokenID, userID string
+	var expiresAt time.Time
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT id, user_id, expires_at FROM password_reset_tokens
+		 WHERE token_hash = $1 AND used = false`,
+		tokenHashHex,
+	).Scan(&tokenID, &userID, &expiresAt)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or expired reset token"})
+		return
+	}
+
+	if time.Now().After(expiresAt) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or expired reset token"})
+		return
+	}
+
+	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	// Update password and mark token as used in a transaction.
+	tx, err := h.pool.Begin(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer tx.Rollback(c.Request.Context()) //nolint:errcheck
+
+	_, err = tx.Exec(c.Request.Context(),
+		`UPDATE users SET password_hash = $1 WHERE id = $2`,
+		string(newHash), userID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	_, err = tx.Exec(c.Request.Context(),
+		`UPDATE password_reset_tokens SET used = true WHERE id = $1`,
+		tokenID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	if err = tx.Commit(c.Request.Context()); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}

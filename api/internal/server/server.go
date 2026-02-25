@@ -10,6 +10,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/auth"
 	"github.com/tristansaldanha/rosslib/api/internal/books"
+	"github.com/tristansaldanha/rosslib/api/internal/email"
 	"github.com/tristansaldanha/rosslib/api/internal/collections"
 	"github.com/tristansaldanha/rosslib/api/internal/docs"
 	"github.com/tristansaldanha/rosslib/api/internal/ghosts"
@@ -26,7 +27,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/users"
 )
 
-func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, searchClient *search.Client) http.Handler {
+func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, searchClient *search.Client, emailClient *email.Client, webappURL string) http.Handler {
 	r := gin.Default()
 
 	docs.Register(r)
@@ -51,10 +52,12 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 		})
 	})
 
-	authHandler := auth.NewHandler(pool, jwtSecret)
+	authHandler := auth.NewHandler(pool, jwtSecret, emailClient, webappURL)
 	r.POST("/auth/register", authHandler.Register)
 	r.POST("/auth/login", authHandler.Login)
 	r.POST("/auth/google", authHandler.GoogleLogin)
+	r.POST("/auth/forgot-password", authHandler.ForgotPassword)
+	r.POST("/auth/reset-password", authHandler.ResetPassword)
 
 	secret := []byte(jwtSecret)
 

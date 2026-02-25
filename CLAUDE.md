@@ -101,8 +101,14 @@ Defined in `.env` (copy from `.env.example`):
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth client ID (webapp, enables Google sign-in buttons) |
 | `NEXT_PUBLIC_URL` | Webapp public URL for OAuth redirects (default `http://localhost:3000`) |
+| `SMTP_HOST` | SMTP server hostname (optional; leave blank to disable reset emails) |
+| `SMTP_PORT` | SMTP server port (default `587`) |
+| `SMTP_USER` | SMTP username |
+| `SMTP_PASSWORD` | SMTP password |
+| `SMTP_FROM` | Sender email address for reset emails |
+| `WEBAPP_URL` | Webapp public URL used by the API for password reset links (default `http://localhost:3000`) |
 
-The API reads `DATABASE_URL`, `REDIS_URL`, `PORT`, `JWT_SECRET`, `MEILI_URL`, `MEILI_MASTER_KEY`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET` from environment. The webapp reads `API_URL` (server-side), `NEXT_PUBLIC_API_URL` (browser-side), `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `NEXT_PUBLIC_URL`.
+The API reads `DATABASE_URL`, `REDIS_URL`, `PORT`, `JWT_SECRET`, `MEILI_URL`, `MEILI_MASTER_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, and `WEBAPP_URL` from environment. The webapp reads `API_URL` (server-side), `NEXT_PUBLIC_API_URL` (browser-side), `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `NEXT_PUBLIC_URL`.
 
 ## CI/CD
 
