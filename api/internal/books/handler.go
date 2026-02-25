@@ -559,7 +559,8 @@ func (h *Handler) GetBook(c *gin.Context) {
 			detail.Description = &desc
 		} else {
 			var obj olDescription
-			if err := json.Unmarshal(work.Description, &obj); err == nil && obj.Value != "" {
+			// Unused variable 'err' would be caught here, so we ignore it
+			if json.Unmarshal(work.Description, &obj) == nil && obj.Value != "" {
 				detail.Description = &obj.Value
 			}
 		}
@@ -1302,7 +1303,8 @@ func (h *Handler) GetAuthor(c *gin.Context) {
 			detail.Bio = &bio
 		} else {
 			var obj olDescription
-			if err := json.Unmarshal(raw.Bio, &obj); err == nil && obj.Value != "" {
+			// Unused variable 'err' would be caught here, so we ignore it
+			if json.Unmarshal(raw.Bio, &obj) == nil && obj.Value != "" {
 				detail.Bio = &obj.Value
 			}
 		}
