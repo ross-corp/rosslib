@@ -5,32 +5,32 @@ export default async function Nav() {
   const user = await getUser();
 
   return (
-    <header className="border-b border-stone-200 bg-white">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
+    <header className="border-b-2 border-black bg-white sticky top-0 z-50">
+      <div className="max-w-5xl mx-auto px-4 h-16 flex items-center gap-4">
         <Link
           href="/"
-          className="font-semibold text-stone-900 tracking-tight text-lg shrink-0"
+          className="font-bold text-2xl tracking-tighter uppercase border-2 border-black p-1 shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] transition-all bg-white text-black shrink-0"
         >
-          rosslib
+          ROSSLIB
         </Link>
         <form action="/search" method="get" className="flex-1 max-w-xs">
           <input
             name="q"
             type="search"
-            placeholder="Search books..."
-            className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded bg-stone-50 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent"
+            placeholder="SEARCH..."
+            className="w-full uppercase placeholder:text-stone-400"
           />
         </form>
-        <nav className="flex items-center gap-2 ml-auto shrink-0">
+        <nav className="flex items-center divide-x-2 divide-black border-2 border-black bg-white shadow-[4px_4px_0_0_#000] ml-auto shrink-0">
           <Link
             href="/genres"
-            className="text-sm text-stone-500 hover:text-stone-900 px-3 py-1.5 rounded transition-colors hidden sm:inline-flex"
+            className="px-4 py-2 text-sm font-bold uppercase hover:bg-black hover:text-white transition-colors hidden sm:inline-block"
           >
             Genres
           </Link>
           <Link
             href="/users"
-            className="text-sm text-stone-500 hover:text-stone-900 px-3 py-1.5 rounded transition-colors hidden sm:inline-flex"
+            className="px-4 py-2 text-sm font-bold uppercase hover:bg-black hover:text-white transition-colors hidden sm:inline-block"
           >
             People
           </Link>
@@ -38,19 +38,19 @@ export default async function Nav() {
             <>
               <Link
                 href="/feed"
-                className="text-sm text-stone-500 hover:text-stone-900 px-3 py-1.5 rounded transition-colors hidden sm:inline-flex"
+                className="px-4 py-2 text-sm font-bold uppercase hover:bg-black hover:text-white transition-colors hidden sm:inline-block"
               >
                 Feed
               </Link>
               <Link
                 href={`/${user.username}`}
-                className="text-sm text-stone-600 hover:text-stone-900 px-3 py-1.5 rounded transition-colors"
+                className="px-4 py-2 text-sm font-bold uppercase hover:bg-black hover:text-white transition-colors"
               >
                 {user.username}
               </Link>
               <Link
                 href="/api/auth/logout"
-                className="text-sm text-stone-600 hover:text-stone-900 px-3 py-1.5 rounded transition-colors"
+                className="px-4 py-2 text-sm font-bold uppercase hover:bg-black hover:text-white transition-colors"
               >
                 Sign out
               </Link>
@@ -59,13 +59,13 @@ export default async function Nav() {
             <>
               <Link
                 href="/login"
-                className="text-sm text-stone-600 hover:text-stone-900 px-3 py-1.5 rounded transition-colors"
+                className="px-4 py-2 text-sm font-bold uppercase hover:bg-black hover:text-white transition-colors"
               >
                 Sign in
               </Link>
               <Link
                 href="/register"
-                className="text-sm bg-stone-900 text-white px-3 py-1.5 rounded hover:bg-stone-700 transition-colors"
+                className="px-4 py-2 text-sm font-bold uppercase bg-black text-white hover:bg-white hover:text-black transition-colors"
               >
                 Sign up
               </Link>
