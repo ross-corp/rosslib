@@ -9,3 +9,8 @@ infra/*.tfvars
 infra/.terraform.lock.hcl
 
 assets/
+
+# Helm
+infra/charts/**/charts/*.tgz
+infra/charts/**/charts/*.lock
+infra/charts/**/charts/*.txt

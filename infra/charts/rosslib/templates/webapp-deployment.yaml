@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rosslib.fullname" . }}-webapp
+  labels:
+    {{- include "rosslib.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webapp
+spec:
+  replicas: {{ .Values.webapp.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "rosslib.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: webapp
+  template:
+    metadata:
+      labels:
+        {{- include "rosslib.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: webapp
+    spec:
+      containers:
+        - name: webapp
+          image: "{{ .Values.webapp.image.repository }}:{{ .Values.webapp.image.tag }}"
+          imagePullPolicy: {{ .Values.webapp.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: API_URL
+              value: "http://{{ include "rosslib.fullname" . }}-api:8080"
+            - name: NEXT_PUBLIC_API_URL
+              value: "{{ .Values.webapp.env.NEXT_PUBLIC_API_URL }}"
+          resources:
+            {{- toYaml .Values.webapp.resources | nindent 12 }}
