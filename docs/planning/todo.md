@@ -21,7 +21,6 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 ## Computed Lists
 
 - [ ] Continuous vs. one-time computed lists
-- [ ] Cross-user set operations (e.g. "Books I've read that are also in my friend's Want to Read list")
 
 ## Sublists / Hierarchical Tags
 

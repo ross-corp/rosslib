@@ -96,6 +96,9 @@ webapp/src/app/
     ├── me/shelves/route.ts
     ├── me/shelves/set-operation/route.ts
     ├── me/shelves/set-operation/save/route.ts
+    ├── me/shelves/cross-user-compare/route.ts
+    ├── me/shelves/cross-user-compare/save/route.ts
+    ├── users/[username]/shelves/route.ts
     ├── me/tag-keys/route.ts
     ├── me/tag-keys/[keyId]/route.ts
     ├── me/tag-keys/[keyId]/values/route.ts
@@ -220,7 +223,15 @@ Read-only star display used on shelf book cards.
 
 ### `SetOperationForm` (`components/set-operation-form.tsx`)
 
-Client component on `/library/compare`. Two collection dropdown selectors, operation picker (union/intersection/difference) with descriptions, compare button, result book grid with covers and ratings, and "Save as new list" form. Calls `POST /api/me/shelves/set-operation` to compute and `POST /api/me/shelves/set-operation/save` to persist.
+Client component on `/library/compare` "My Lists" tab. Two collection dropdown selectors, operation picker (union/intersection/difference) with descriptions, compare button, result book grid with covers and ratings, and "Save as new list" form. Calls `POST /api/me/shelves/set-operation` to compute and `POST /api/me/shelves/set-operation/save` to persist.
+
+### `CrossUserCompareForm` (`components/cross-user-compare-form.tsx`)
+
+Client component on `/library/compare` "Compare with a Friend" tab. Select one of your lists, enter a friend's username, load their public shelves, pick one of their lists, choose an operation, compare. Result grid with book covers and star ratings. "Save as new list" option. Calls `GET /api/users/:username/shelves` to fetch friend's shelves, `POST /api/me/shelves/cross-user-compare` to compute, and `POST /api/me/shelves/cross-user-compare/save` to persist.
+
+### `CompareTabs` (`components/compare-tabs.tsx`)
+
+Client component providing tab navigation between "My Lists" and "Compare with a Friend" modes on the compare page.
 
 ---
 

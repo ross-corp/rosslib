@@ -1296,6 +1296,268 @@ func (h *Handler) SaveSetOperation(c *gin.Context) {
 	})
 }
 
+// ── Cross-User Set Operations ────────────────────────────────────────────────
+
+type crossUserCompareRequest struct {
+	MyCollection  string `json:"my_collection" binding:"required"`   // current user's collection ID
+	TheirUsername string `json:"their_username" binding:"required"`  // other user's username
+	TheirSlug     string `json:"their_slug" binding:"required"`      // other user's collection slug
+	Operation     string `json:"operation" binding:"required"`       // "union", "intersection", "difference"
+}
+
+type crossUserCompareResponse struct {
+	Operation      string            `json:"operation"`
+	MyCollection   string            `json:"my_collection"`
+	TheirUsername  string            `json:"their_username"`
+	TheirSlug     string            `json:"their_slug"`
+	ResultCount    int               `json:"result_count"`
+	Books          []shelfDetailBook `json:"books"`
+}
+
+// resolveCollections validates the current user's collection and resolves
+// the other user's collection by username+slug, respecting privacy.
+// Returns (myCollID, theirCollID, error message, http status).
+func (h *Handler) resolveCollections(c *gin.Context, userID string, req crossUserCompareRequest) (string, string, string, int) {
+	// Verify the current user's collection
+	var myCount int
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT COUNT(*) FROM collections WHERE id = $1 AND user_id = $2`,
+		req.MyCollection, userID,
+	).Scan(&myCount)
+	if err != nil || myCount == 0 {
+		return "", "", "your collection not found", http.StatusNotFound
+	}
+
+	// Resolve the other user's collection by username + slug, respecting privacy
+	theirUserID, _, canView := privacy.CanViewProfile(c.Request.Context(), h.pool, req.TheirUsername, userID)
+	if theirUserID == "" {
+		return "", "", "user not found", http.StatusNotFound
+	}
+	if !canView {
+		return "", "", "this user's profile is private", http.StatusForbidden
+	}
+
+	var theirCollID string
+	err = h.pool.QueryRow(c.Request.Context(),
+		`SELECT id FROM collections WHERE user_id = $1 AND slug = $2`,
+		theirUserID, req.TheirSlug,
+	).Scan(&theirCollID)
+	if err != nil {
+		return "", "", "their collection not found", http.StatusNotFound
+	}
+
+	return req.MyCollection, theirCollID, "", 0
+}
+
+// CrossUserCompare - POST /me/shelves/cross-user-compare (authed)
+// Computes union, intersection, or difference between the user's collection
+// and another user's public collection.
+func (h *Handler) CrossUserCompare(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+
+	var req crossUserCompareRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.Operation != "union" && req.Operation != "intersection" && req.Operation != "difference" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "operation must be 'union', 'intersection', or 'difference'"})
+		return
+	}
+
+	myCollID, theirCollID, errMsg, errStatus := h.resolveCollections(c, userID, req)
+	if errMsg != "" {
+		c.JSON(errStatus, gin.H{"error": errMsg})
+		return
+	}
+
+	var query string
+	var args []interface{}
+	switch req.Operation {
+	case "union":
+		query = `SELECT DISTINCT ON (b.id) b.id, b.open_library_id, b.title, b.cover_url, ci.added_at, ci.rating
+			FROM collection_items ci
+			JOIN books b ON b.id = ci.book_id
+			WHERE ci.collection_id = ANY($1)
+			ORDER BY b.id, ci.added_at DESC`
+		args = []interface{}{[]string{myCollID, theirCollID}}
+	case "intersection":
+		query = `SELECT b.id, b.open_library_id, b.title, b.cover_url, ci_a.added_at, ci_a.rating
+			FROM collection_items ci_a
+			JOIN collection_items ci_b ON ci_a.book_id = ci_b.book_id
+			JOIN books b ON b.id = ci_a.book_id
+			WHERE ci_a.collection_id = $1 AND ci_b.collection_id = $2
+			ORDER BY ci_a.added_at DESC`
+		args = []interface{}{myCollID, theirCollID}
+	case "difference":
+		query = `SELECT b.id, b.open_library_id, b.title, b.cover_url, ci.added_at, ci.rating
+			FROM collection_items ci
+			JOIN books b ON b.id = ci.book_id
+			WHERE ci.collection_id = $1
+			  AND NOT EXISTS (
+				SELECT 1 FROM collection_items ci2
+				WHERE ci2.collection_id = $2 AND ci2.book_id = ci.book_id
+			  )
+			ORDER BY ci.added_at DESC`
+		args = []interface{}{myCollID, theirCollID}
+	}
+
+	rows, queryErr := h.pool.Query(c.Request.Context(), query, args...)
+	if queryErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	books := []shelfDetailBook{}
+	for rows.Next() {
+		var book shelfDetailBook
+		var addedAt time.Time
+		if err := rows.Scan(&book.BookID, &book.OpenLibraryID, &book.Title, &book.CoverURL, &addedAt, &book.Rating); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		book.AddedAt = addedAt.Format(time.RFC3339)
+		books = append(books, book)
+	}
+
+	c.JSON(http.StatusOK, crossUserCompareResponse{
+		Operation:     req.Operation,
+		MyCollection:  req.MyCollection,
+		TheirUsername: req.TheirUsername,
+		TheirSlug:    req.TheirSlug,
+		ResultCount:   len(books),
+		Books:         books,
+	})
+}
+
+// SaveCrossUserCompare - POST /me/shelves/cross-user-compare/save (authed)
+// Computes the cross-user set operation and saves the result as a new collection.
+func (h *Handler) SaveCrossUserCompare(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+
+	var req struct {
+		crossUserCompareRequest
+		Name string `json:"name" binding:"required,max=255"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.Operation != "union" && req.Operation != "intersection" && req.Operation != "difference" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "operation must be 'union', 'intersection', or 'difference'"})
+		return
+	}
+
+	myCollID, theirCollID, errMsg, errStatus := h.resolveCollections(c, userID, req.crossUserCompareRequest)
+	if errMsg != "" {
+		c.JSON(errStatus, gin.H{"error": errMsg})
+		return
+	}
+
+	slug := slugify(req.Name)
+	if slug == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name produces an empty slug"})
+		return
+	}
+
+	var existing int
+	_ = h.pool.QueryRow(c.Request.Context(),
+		`SELECT COUNT(*) FROM collections WHERE user_id = $1 AND slug = $2`,
+		userID, slug,
+	).Scan(&existing)
+	if existing > 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "a shelf with that name already exists"})
+		return
+	}
+
+	var bookQuery string
+	var bookArgs []interface{}
+	switch req.Operation {
+	case "union":
+		bookQuery = `SELECT DISTINCT ci.book_id
+			FROM collection_items ci
+			WHERE ci.collection_id = ANY($1)`
+		bookArgs = []interface{}{[]string{myCollID, theirCollID}}
+	case "intersection":
+		bookQuery = `SELECT ci_a.book_id
+			FROM collection_items ci_a
+			JOIN collection_items ci_b ON ci_a.book_id = ci_b.book_id
+			WHERE ci_a.collection_id = $1 AND ci_b.collection_id = $2`
+		bookArgs = []interface{}{myCollID, theirCollID}
+	case "difference":
+		bookQuery = `SELECT ci.book_id
+			FROM collection_items ci
+			WHERE ci.collection_id = $1
+			  AND NOT EXISTS (
+				SELECT 1 FROM collection_items ci2
+				WHERE ci2.collection_id = $2 AND ci2.book_id = ci.book_id
+			  )`
+		bookArgs = []interface{}{myCollID, theirCollID}
+	}
+
+	var bookIDs []string
+	bookRows, queryErr := h.pool.Query(c.Request.Context(), bookQuery, bookArgs...)
+	if queryErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	for bookRows.Next() {
+		var id string
+		if err := bookRows.Scan(&id); err != nil {
+			bookRows.Close()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		bookIDs = append(bookIDs, id)
+	}
+	bookRows.Close()
+
+	tx, err := h.pool.Begin(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer tx.Rollback(c.Request.Context()) //nolint:errcheck
+
+	var newCollID string
+	err = tx.QueryRow(c.Request.Context(),
+		`INSERT INTO collections (user_id, name, slug, is_exclusive, collection_type)
+		 VALUES ($1, $2, $3, false, 'shelf')
+		 RETURNING id`,
+		userID, req.Name, slug,
+	).Scan(&newCollID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	for _, bookID := range bookIDs {
+		_, err = tx.Exec(c.Request.Context(),
+			`INSERT INTO collection_items (collection_id, book_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+			newCollID, bookID,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+	}
+
+	if err := tx.Commit(c.Request.Context()); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"id":         newCollID,
+		"name":       req.Name,
+		"slug":       slug,
+		"book_count": len(bookIDs),
+	})
+}
+
 func derefStr(s *string) string {
 	if s == nil {
 		return ""

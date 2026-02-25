@@ -529,6 +529,35 @@ Same as above, but also saves the result as a new shelf. Accepts an additional `
 }
 ```
 
+### `POST /me/shelves/cross-user-compare`  *(auth required)*
+
+Compare one of your collections with another user's public collection. Respects privacy — returns 403 for private profiles you don't follow.
+
+```json
+{
+  "my_collection": "<uuid>",
+  "their_username": "alice",
+  "their_slug": "want-to-read",
+  "operation": "intersection"
+}
+```
+
+Returns `{ operation, my_collection, their_username, their_slug, result_count, books[] }`.
+
+### `POST /me/shelves/cross-user-compare/save`  *(auth required)*
+
+Same as above, but also saves the result as a new shelf. Accepts an additional `name` field. Returns `{ id, name, slug, book_count }`.
+
+```json
+{
+  "my_collection": "<uuid>",
+  "their_username": "alice",
+  "their_slug": "want-to-read",
+  "operation": "intersection",
+  "name": "Books Alice wants that I've read"
+}
+```
+
 ### `POST /shelves/:shelfId/books`  *(auth required)*
 
 Add a book to a shelf. Upserts the book into the global `books` catalog. For exclusive shelves, removes the book from all other shelves in the same `exclusive_group` for this user.

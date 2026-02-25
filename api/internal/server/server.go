@@ -130,6 +130,8 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	authed.POST("/me/shelves", collectionsHandler.CreateShelf)
 	authed.POST("/me/shelves/set-operation", collectionsHandler.SetOperation)
 	authed.POST("/me/shelves/set-operation/save", collectionsHandler.SaveSetOperation)
+	authed.POST("/me/shelves/cross-user-compare", collectionsHandler.CrossUserCompare)
+	authed.POST("/me/shelves/cross-user-compare/save", collectionsHandler.SaveCrossUserCompare)
 	authed.PATCH("/me/shelves/:id", collectionsHandler.UpdateShelf)
 	authed.DELETE("/me/shelves/:id", collectionsHandler.DeleteShelf)
 	authed.POST("/shelves/:shelfId/books", collectionsHandler.AddBookToShelf)

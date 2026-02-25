@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/nav";
 import SetOperationForm from "@/components/set-operation-form";
+import CrossUserCompareForm from "@/components/cross-user-compare-form";
+import CompareTabs from "@/components/compare-tabs";
 import { getUser, getToken } from "@/lib/auth";
 
 type Shelf = {
@@ -55,7 +57,17 @@ export default async function ComparePage() {
           unique to one list. Save the result as a new list.
         </p>
 
-        <SetOperationForm shelves={shelves} username={user.username} />
+        <CompareTabs
+          myListsContent={
+            <SetOperationForm shelves={shelves} username={user.username} />
+          }
+          friendContent={
+            <CrossUserCompareForm
+              myShelves={shelves}
+              username={user.username}
+            />
+          }
+        />
       </main>
     </div>
   );

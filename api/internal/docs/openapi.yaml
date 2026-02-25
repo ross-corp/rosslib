@@ -2553,6 +2553,150 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /me/shelves/cross-user-compare:
+    post:
+      summary: Compare your collection with another user's collection
+      description: >
+        Computes the union, intersection, or difference between one of your collections
+        and another user's public collection (identified by username and shelf slug).
+        Respects profile privacy — returns 403 for private profiles you don't follow.
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [my_collection, their_username, their_slug, operation]
+              properties:
+                my_collection:
+                  type: string
+                  format: uuid
+                  description: ID of your collection
+                their_username:
+                  type: string
+                  description: The other user's username
+                their_slug:
+                  type: string
+                  description: Slug of the other user's collection
+                operation:
+                  type: string
+                  enum: [union, intersection, difference]
+      responses:
+        "200":
+          description: Cross-user set operation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  operation:
+                    type: string
+                  my_collection:
+                    type: string
+                  their_username:
+                    type: string
+                  their_slug:
+                    type: string
+                  result_count:
+                    type: integer
+                  books:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShelfDetailBook'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: User's profile is private
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: User or collection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /me/shelves/cross-user-compare/save:
+    post:
+      summary: Compare with another user's collection and save the result
+      description: >
+        Computes the cross-user set operation and creates a new shelf containing the resulting books.
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [my_collection, their_username, their_slug, operation, name]
+              properties:
+                my_collection:
+                  type: string
+                  format: uuid
+                their_username:
+                  type: string
+                their_slug:
+                  type: string
+                operation:
+                  type: string
+                  enum: [union, intersection, difference]
+                name:
+                  type: string
+                  maxLength: 255
+                  description: Name for the new collection
+      responses:
+        "201":
+          description: Collection created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  slug:
+                    type: string
+                  book_count:
+                    type: integer
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: User's profile is private
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: User or collection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "409":
+          description: Duplicate slug
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /shelves/{shelfId}/books:
     post:
       summary: Add a book to a shelf
