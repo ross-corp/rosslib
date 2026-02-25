@@ -28,9 +28,11 @@ Sets the `token` cookie on success.
 
 ## Books
 
-### `GET /books/search?q=<title>[&sort=reads|rating]`
+### `GET /books/search?q=<title>[&sort=reads|rating][&year_min=N][&year_max=N]`
 
 Searches both Meilisearch (local catalog) and Open Library concurrently. Local matches appear first, followed by external results deduplicated by work ID. Returns up to 20 results.
+
+Optional `year_min` and `year_max` filter results by publication year. Meilisearch uses its `publication_year` filterable attribute; Open Library uses the `first_publish_year` range parameter. Books without a year are excluded when a year filter is active.
 
 ```json
 {

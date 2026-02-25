@@ -56,10 +56,12 @@ type TagKey = {
 
 // ── Data fetchers ─────────────────────────────────────────────────────────────
 
-async function searchBooks(q: string, sort: string): Promise<BookSearchResponse> {
+async function searchBooks(q: string, sort: string, yearMin: string, yearMax: string): Promise<BookSearchResponse> {
   if (!q.trim()) return { total: 0, results: [] };
   const params = new URLSearchParams({ q });
   if (sort) params.set("sort", sort);
+  if (yearMin) params.set("year_min", yearMin);
+  if (yearMax) params.set("year_max", yearMax);
   const res = await fetch(
     `${process.env.API_URL}/books/search?${params}`,
     { cache: "no-store" }
@@ -117,15 +119,15 @@ const SORT_OPTIONS = [
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; type?: string; sort?: string }>;
+  searchParams: Promise<{ q?: string; type?: string; sort?: string; year_min?: string; year_max?: string }>;
 }) {
-  const { q = "", type, sort = "" } = await searchParams;
+  const { q = "", type, sort = "", year_min = "", year_max = "" } = await searchParams;
   const activeTab = type === "authors" ? "authors" : type === "people" ? "people" : "books";
 
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
   const [bookData, users, authorData, tagKeys, statusMap] = await Promise.all([
-    activeTab === "books" ? searchBooks(q, sort) : Promise.resolve({ total: 0, results: [] }),
+    activeTab === "books" ? searchBooks(q, sort, year_min, year_max) : Promise.resolve({ total: 0, results: [] }),
     activeTab === "people" ? searchUsers(q) : Promise.resolve([]),
     activeTab === "authors" ? searchAuthors(q) : Promise.resolve({ total: 0, results: [] }),
     currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
@@ -141,6 +143,8 @@ export default async function SearchPage({
     const p = new URLSearchParams({ type: tab });
     if (q) p.set("q", q);
     if (sort && tab === "books") p.set("sort", sort);
+    if (year_min && tab === "books") p.set("year_min", year_min);
+    if (year_max && tab === "books") p.set("year_max", year_max);
     return `/search?${p}`;
   };
 
@@ -148,6 +152,17 @@ export default async function SearchPage({
     const p = new URLSearchParams({ type: activeTab });
     if (q) p.set("q", q);
     if (s) p.set("sort", s);
+    if (year_min) p.set("year_min", year_min);
+    if (year_max) p.set("year_max", year_max);
+    return `/search?${p}`;
+  };
+
+  const hasYearFilter = year_min || year_max;
+
+  const clearYearLink = () => {
+    const p = new URLSearchParams({ type: activeTab });
+    if (q) p.set("q", q);
+    if (sort) p.set("sort", sort);
     return `/search?${p}`;
   };
 
@@ -219,6 +234,51 @@ export default async function SearchPage({
                 {opt.label}
               </Link>
             ))}
+          </div>
+        )}
+
+        {/* Year range filter (books only) */}
+        {activeTab === "books" && q && (
+          <div className="flex items-center gap-2 mb-5">
+            <span className="text-xs text-stone-400">Year</span>
+            <form action="/search" method="get" className="flex items-center gap-2">
+              <input type="hidden" name="type" value="books" />
+              <input type="hidden" name="q" value={q} />
+              {sort && <input type="hidden" name="sort" value={sort} />}
+              <input
+                name="year_min"
+                type="number"
+                defaultValue={year_min}
+                placeholder="From"
+                min="0"
+                max="2099"
+                className="w-20 px-2 py-1 text-xs border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-900"
+              />
+              <span className="text-xs text-stone-300">&ndash;</span>
+              <input
+                name="year_max"
+                type="number"
+                defaultValue={year_max}
+                placeholder="To"
+                min="0"
+                max="2099"
+                className="w-20 px-2 py-1 text-xs border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-900"
+              />
+              <button
+                type="submit"
+                className="text-xs px-2.5 py-1 rounded-full border border-stone-900 bg-stone-900 text-white hover:bg-stone-700 transition-colors"
+              >
+                Apply
+              </button>
+              {hasYearFilter && (
+                <Link
+                  href={clearYearLink()}
+                  className="text-xs px-2.5 py-1 rounded-full border border-stone-300 text-stone-500 hover:border-stone-500 hover:text-stone-700 transition-colors"
+                >
+                  Clear
+                </Link>
+              )}
+            </form>
           </div>
         )}
 

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -137,7 +138,7 @@ const (
 // SearchBooks searches both Meilisearch (local catalog) and Open Library,
 // returning local matches first followed by external results.
 //
-// GET /books/search?q=<title>[&sort=reads|rating]
+// GET /books/search?q=<title>[&sort=reads|rating][&year_min=N][&year_max=N]
 func (h *Handler) SearchBooks(c *gin.Context) {
 	q := c.Query("q")
 	if q == "" {
@@ -145,6 +146,19 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 		return
 	}
 	sortBy := c.Query("sort") // "reads", "rating", or "" (relevance)
+
+	// Parse optional year range filters.
+	var yearMin, yearMax int
+	if v := c.Query("year_min"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			yearMin = n
+		}
+	}
+	if v := c.Query("year_max"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			yearMax = n
+		}
+	}
 
 	// Run Meilisearch and Open Library searches concurrently.
 	type meiliResult struct {
@@ -165,7 +179,7 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 			meiliCh <- meiliResult{}
 			return
 		}
-		docs, err := h.search.SearchBooks(q, searchLimit)
+		docs, err := h.search.SearchBooks(q, searchLimit, yearMin, yearMax)
 		meiliCh <- meiliResult{docs: docs, err: err}
 	}()
 
@@ -178,6 +192,18 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 			olSearchFields,
 			searchLimit,
 		)
+		// Add year range filter to OL query if specified.
+		if yearMin > 0 || yearMax > 0 {
+			lo := "*"
+			hi := "*"
+			if yearMin > 0 {
+				lo = strconv.Itoa(yearMin)
+			}
+			if yearMax > 0 {
+				hi = strconv.Itoa(yearMax)
+			}
+			apiURL += fmt.Sprintf("&first_publish_year=[%s TO %s]", lo, hi)
+		}
 		resp, err := http.Get(apiURL) //nolint:noctx // intentional: inherits server timeout
 		if err != nil {
 			olCh <- olResult{err: err}
@@ -243,6 +269,19 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 			}
 			if len(results) >= searchLimit {
 				break
+			}
+
+			// Post-filter OL results by year range.
+			if yearMin > 0 || yearMax > 0 {
+				if doc.FirstPublishYear == nil {
+					continue // skip books with no year data when filtering
+				}
+				if yearMin > 0 && *doc.FirstPublishYear < yearMin {
+					continue
+				}
+				if yearMax > 0 && *doc.FirstPublishYear > yearMax {
+					continue
+				}
 			}
 
 			b := BookResult{

@@ -2,7 +2,9 @@ package search
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/meilisearch/meilisearch-go"
@@ -118,10 +120,27 @@ func (c *Client) IndexBook(doc BookDocument) {
 }
 
 // SearchBooks queries the Meilisearch index and returns matching documents.
-func (c *Client) SearchBooks(query string, limit int) ([]BookDocument, error) {
-	resp, err := c.index.Search(query, &meilisearch.SearchRequest{
+// Optional yearMin/yearMax apply a publication_year range filter.
+func (c *Client) SearchBooks(query string, limit int, yearMin, yearMax int) ([]BookDocument, error) {
+	req := &meilisearch.SearchRequest{
 		Limit: int64(limit),
-	})
+	}
+
+	// Build Meilisearch filter for year range.
+	var filters []string
+	if yearMin > 0 {
+		filters = append(filters, fmt.Sprintf("publication_year >= %d", yearMin))
+	}
+	if yearMax > 0 {
+		filters = append(filters, fmt.Sprintf("publication_year <= %d", yearMax))
+	}
+	if len(filters) > 0 {
+		// Exclude books with no year data (publication_year == 0) when filtering.
+		filters = append(filters, "publication_year > 0")
+		req.Filter = strings.Join(filters, " AND ")
+	}
+
+	resp, err := c.index.Search(query, req)
 	if err != nil {
 		return nil, err
 	}
