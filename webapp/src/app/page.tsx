@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Nav from "@/components/nav";
 import { getUser } from "@/lib/auth";
 
 const features = [
@@ -25,31 +24,26 @@ export default async function Home() {
   const user = await getUser();
   if (user) redirect("/feed");
   return (
-    <div className="min-h-screen">
-      <Nav />
-
+    <>
       {/* Hero */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-24 pb-20 text-center">
-        <h1 className="text-5xl sm:text-6xl font-bold text-stone-900 tracking-tight leading-tight mb-5">
+      <section className="pt-20 pb-16 text-center">
+        <h1 className="text-5xl font-bold text-text-primary tracking-tight leading-tight mb-5">
           Track your reading.
           <br />
           Build your library.
         </h1>
-        <p className="text-xl text-stone-500 mb-10 max-w-xl mx-auto leading-relaxed">
+        <p className="text-lg text-text-secondary mb-10 max-w-xl mx-auto leading-relaxed">
           A better home for your books. Flexible collections, community
           discussions, and clean design — built for people who take reading
           seriously.
         </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link
-            href="/register"
-            className="bg-stone-900 text-white px-7 py-3 rounded font-medium hover:bg-stone-700 transition-colors w-full sm:w-auto"
-          >
+        <div className="flex items-center justify-center gap-3">
+          <Link href="/register" className="btn-primary px-7 py-3">
             Get started — it&rsquo;s free
           </Link>
           <Link
             href="/login"
-            className="text-stone-600 px-7 py-3 rounded font-medium hover:text-stone-900 transition-colors w-full sm:w-auto"
+            className="text-text-secondary px-7 py-3 rounded font-medium hover:text-text-primary transition-colors"
           >
             Sign in
           </Link>
@@ -57,29 +51,19 @@ export default async function Home() {
       </section>
 
       {/* Divider */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6">
-        <div className="border-t border-stone-200" />
-      </div>
+      <div className="divider" />
 
       {/* Features */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 py-20 grid grid-cols-1 sm:grid-cols-3 gap-10">
+      <section className="py-16 grid grid-cols-3 gap-10">
         {features.map((f) => (
           <div key={f.title}>
-            <h3 className="font-semibold text-stone-900 mb-2">{f.title}</h3>
-            <p className="text-stone-500 text-sm leading-relaxed">
+            <h3 className="section-heading mb-2">{f.title}</h3>
+            <p className="text-text-secondary text-sm leading-relaxed">
               {f.description}
             </p>
           </div>
         ))}
       </section>
-
-      {/* Footer */}
-      <footer className="border-t border-stone-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-between text-xs text-stone-400">
-          <span>rosslib</span>
-          <span>Better than Goodreads.</span>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }

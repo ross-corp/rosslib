@@ -67,8 +67,8 @@ export default function ShelfBrowser({
             onClick={() => loadStatus(status.slug)}
             className={`shrink-0 text-sm px-3 py-1.5 rounded-full border transition-colors ${
               activeStatus.slug === status.slug
-                ? "border-stone-900 bg-stone-900 text-white"
-                : "border-stone-200 text-stone-600 hover:border-stone-400"
+                ? "tag-pill-active"
+                : "tag-pill"
             }`}
           >
             {status.name}
@@ -80,10 +80,10 @@ export default function ShelfBrowser({
       <div className="mt-4 min-h-[120px]">
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="w-5 h-5 border-2 border-stone-300 border-t-stone-600 rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-border border-t-text-secondary rounded-full animate-spin" />
           </div>
         ) : books.length === 0 ? (
-          <p className="text-sm text-stone-400 py-8 text-center">
+          <p className="text-sm text-text-tertiary py-8 text-center">
             No books with this status yet.
           </p>
         ) : (
@@ -102,13 +102,13 @@ export default function ShelfBrowser({
                       className="w-full aspect-[2/3] object-cover rounded shadow-sm group-hover:shadow-md transition-shadow"
                     />
                   ) : (
-                    <div className="w-full aspect-[2/3] rounded bg-stone-200 flex items-center justify-center">
-                      <span className="text-[10px] text-stone-400 text-center px-1 line-clamp-3">
+                    <div className="w-full aspect-[2/3] rounded bg-surface-2 flex items-center justify-center">
+                      <span className="text-[10px] text-text-tertiary text-center px-1 line-clamp-3">
                         {book.title}
                       </span>
                     </div>
                   )}
-                  <p className="mt-1 text-xs text-stone-600 truncate group-hover:text-stone-900">
+                  <p className="mt-1 text-xs text-text-secondary truncate group-hover:text-text-primary">
                     {book.title}
                   </p>
                 </Link>
@@ -117,7 +117,7 @@ export default function ShelfBrowser({
             {activeStatus.count > books.length && (
               <Link
                 href={`/${username}/shelves/${activeStatus.slug}`}
-                className="block text-center text-xs text-stone-400 hover:text-stone-700 transition-colors pt-3"
+                className="block text-center text-xs text-text-tertiary hover:text-text-secondary transition-colors pt-3"
               >
                 View all {activeStatus.count} books &rarr;
               </Link>

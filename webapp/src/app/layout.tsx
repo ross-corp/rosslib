@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
+import Nav from "@/components/nav";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+});
 
 export const metadata: Metadata = {
   title: "rosslib",
@@ -15,9 +20,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
-      <body className="font-sans antialiased bg-stone-50 text-stone-900" suppressHydrationWarning>
-        {children}
+    <html
+      lang="en"
+      className={`${inter.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning
+    >
+      <body
+        className="font-sans antialiased bg-surface-0 text-text-primary"
+        suppressHydrationWarning
+      >
+        <Nav />
+        <main className="max-w-shell mx-auto px-6 py-8">{children}</main>
+        <footer className="border-t border-border">
+          <div className="max-w-shell mx-auto px-6 py-4 flex items-center justify-between font-mono text-xs text-text-tertiary">
+            <span>rosslib</span>
+            <span>better than goodreads</span>
+          </div>
+        </footer>
       </body>
     </html>
   );

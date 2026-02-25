@@ -82,8 +82,8 @@ export default function AdminLinkEdits() {
             onClick={() => setStatusFilter(s)}
             className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
               statusFilter === s
-                ? "bg-stone-900 text-white"
-                : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                ? "bg-accent text-white"
+                : "bg-surface-2 text-text-primary hover:bg-surface-2"
             }`}
           >
             {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -92,9 +92,9 @@ export default function AdminLinkEdits() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-stone-400">Loading...</p>
+        <p className="text-sm text-text-primary">Loading...</p>
       ) : edits.length === 0 ? (
-        <p className="text-sm text-stone-400">
+        <p className="text-sm text-text-primary">
           No {statusFilter} link edits.
         </p>
       ) : (
@@ -102,11 +102,11 @@ export default function AdminLinkEdits() {
           {edits.map((edit) => (
             <div
               key={edit.id}
-              className="border border-stone-200 rounded-lg p-4"
+              className="border border-border rounded-lg p-4"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-sm text-stone-900">
+                  <p className="text-sm text-text-primary">
                     <span className="font-medium">
                       {edit.display_name ?? edit.username}
                     </span>{" "}
@@ -125,7 +125,7 @@ export default function AdminLinkEdits() {
                       {edit.to_book_title}
                     </a>
                   </p>
-                  <p className="text-xs text-stone-400 mt-1">
+                  <p className="text-xs text-text-primary mt-1">
                     {formatDate(edit.created_at)}
                   </p>
                 </div>
@@ -152,41 +152,41 @@ export default function AdminLinkEdits() {
 
               <div className="mt-3 grid grid-cols-2 gap-4 text-xs">
                 <div>
-                  <p className="font-medium text-stone-500 mb-1">Current</p>
-                  <p className="text-stone-700">
+                  <p className="font-medium text-text-primary mb-1">Current</p>
+                  <p className="text-text-primary">
                     Type: {TYPE_LABELS[edit.current_type] ?? edit.current_type}
                   </p>
-                  <p className="text-stone-700">
-                    Note: {edit.current_note ?? <span className="text-stone-400 italic">none</span>}
+                  <p className="text-text-primary">
+                    Note: {edit.current_note ?? <span className="text-text-primary italic">none</span>}
                   </p>
                 </div>
                 <div>
-                  <p className="font-medium text-stone-500 mb-1">Proposed</p>
-                  <p className="text-stone-700">
+                  <p className="font-medium text-text-primary mb-1">Proposed</p>
+                  <p className="text-text-primary">
                     Type:{" "}
                     {edit.proposed_type ? (
                       <span className="font-medium text-blue-700">
                         {TYPE_LABELS[edit.proposed_type] ?? edit.proposed_type}
                       </span>
                     ) : (
-                      <span className="text-stone-400 italic">no change</span>
+                      <span className="text-text-primary italic">no change</span>
                     )}
                   </p>
-                  <p className="text-stone-700">
+                  <p className="text-text-primary">
                     Note:{" "}
                     {edit.proposed_note != null ? (
                       <span className="font-medium text-blue-700">
                         {edit.proposed_note || <span className="italic">empty</span>}
                       </span>
                     ) : (
-                      <span className="text-stone-400 italic">no change</span>
+                      <span className="text-text-primary italic">no change</span>
                     )}
                   </p>
                 </div>
               </div>
 
               {edit.reviewer_name && (
-                <p className="text-xs text-stone-400 mt-2">
+                <p className="text-xs text-text-primary mt-2">
                   Reviewed by {edit.reviewer_name}
                   {edit.reviewed_at && ` on ${formatDate(edit.reviewed_at)}`}
                   {edit.reviewer_comment && ` — ${edit.reviewer_comment}`}

@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const [error, setError] = useState("");
@@ -54,20 +54,17 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4">
+      <div className="min-h-[70vh] flex flex-col items-center justify-center">
         <div className="w-full max-w-sm text-center">
-          <Link href="/" className="font-semibold text-stone-900 text-xl">
-            rosslib
-          </Link>
-          <h1 className="mt-4 text-2xl font-bold text-stone-900">
+          <h1 className="text-2xl font-bold text-text-primary">
             Invalid reset link
           </h1>
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 text-sm text-text-secondary">
             This password reset link is invalid. Please request a new one.
           </p>
           <Link
             href="/forgot-password"
-            className="inline-block mt-4 text-stone-900 font-medium hover:underline text-sm"
+            className="inline-block mt-4 text-text-primary font-medium hover:underline text-sm"
           >
             Request new reset link
           </Link>
@@ -77,24 +74,21 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="min-h-[70vh] flex flex-col items-center justify-center">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <Link href="/" className="font-semibold text-stone-900 text-xl">
-            rosslib
-          </Link>
-          <h1 className="mt-4 text-2xl font-bold text-stone-900">
+          <h1 className="text-2xl font-bold text-text-primary">
             Set new password
           </h1>
         </div>
 
         {success ? (
-          <div className="text-sm text-stone-700 bg-stone-50 border border-stone-200 rounded px-4 py-3">
-            <p className="font-medium mb-1">Password reset successful</p>
+          <div className="text-sm text-text-secondary panel px-4 py-3">
+            <p className="font-medium mb-1 text-text-primary">Password reset successful</p>
             <p>Your password has been updated. You can now sign in.</p>
             <Link
               href="/login"
-              className="inline-block mt-4 text-stone-900 font-medium hover:underline"
+              className="inline-block mt-4 text-text-primary font-medium hover:underline"
             >
               Sign in
             </Link>
@@ -102,7 +96,7 @@ export default function ResetPasswordPage() {
         ) : (
           <form className="space-y-4" onSubmit={handleSubmit}>
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
                 {error}
               </p>
             )}
@@ -110,7 +104,7 @@ export default function ResetPasswordPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-stone-700 mb-1"
+                className="label-mono block mb-1"
               >
                 New password
               </label>
@@ -121,7 +115,7 @@ export default function ResetPasswordPage() {
                 autoComplete="new-password"
                 required
                 minLength={8}
-                className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm"
+                className="input-field"
                 placeholder="••••••••"
               />
             </div>
@@ -129,7 +123,7 @@ export default function ResetPasswordPage() {
             <div>
               <label
                 htmlFor="confirm_password"
-                className="block text-sm font-medium text-stone-700 mb-1"
+                className="label-mono block mb-1"
               >
                 Confirm password
               </label>
@@ -140,7 +134,7 @@ export default function ResetPasswordPage() {
                 autoComplete="new-password"
                 required
                 minLength={8}
-                className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm"
+                className="input-field"
                 placeholder="••••••••"
               />
             </div>
@@ -148,7 +142,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-stone-900 text-white py-2.5 rounded font-medium hover:bg-stone-700 transition-colors text-sm disabled:opacity-50"
+              className="w-full btn-primary py-2.5"
             >
               {loading ? "Resetting..." : "Reset password"}
             </button>
@@ -156,5 +150,13 @@ export default function ResetPasswordPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

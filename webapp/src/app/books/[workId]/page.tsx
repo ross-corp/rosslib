@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Nav from "@/components/nav";
 import StarRating from "@/components/star-rating";
 import StatusPicker, { type StatusValue } from "@/components/shelf-picker";
 import BookReviewEditor from "@/components/book-review-editor";
@@ -278,7 +277,6 @@ export default async function BookPage({
 
   return (
     <div className="min-h-screen">
-      <Nav />
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
         {/* ── Book header ── */}
         <div className="flex gap-8 items-start mb-10">
@@ -290,22 +288,22 @@ export default async function BookPage({
               className="w-32 shrink-0 rounded shadow-sm object-cover"
             />
           ) : (
-            <div className="w-32 h-48 shrink-0 bg-stone-100 rounded" />
+            <div className="w-32 h-48 shrink-0 bg-surface-2 rounded" />
           )}
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-stone-900 mb-1">
+            <h1 className="text-2xl font-bold text-text-primary mb-1">
               {book.title}
             </h1>
 
             {book.authors && book.authors.length > 0 && (
-              <p className="text-stone-500 text-sm mb-1">
+              <p className="text-text-primary text-sm mb-1">
                 {book.authors.join(", ")}
               </p>
             )}
 
             {(book.first_publish_year || book.publisher || book.page_count) && (
-              <p className="text-stone-400 text-xs mb-3">
+              <p className="text-text-primary text-xs mb-3">
                 {[
                   book.first_publish_year && `${book.first_publish_year}`,
                   book.publisher,
@@ -326,16 +324,16 @@ export default async function BookPage({
             )}
 
             {(book.local_reads_count > 0 || book.local_want_to_read_count > 0) && (
-              <div className="flex items-center gap-3 mb-3 text-xs text-stone-400">
+              <div className="flex items-center gap-3 mb-3 text-xs text-text-primary">
                 {book.local_reads_count > 0 && (
                   <span>
-                    <span className="font-medium text-stone-600">{book.local_reads_count}</span>{" "}
+                    <span className="font-medium text-text-primary">{book.local_reads_count}</span>{" "}
                     {book.local_reads_count === 1 ? "reader" : "readers"}
                   </span>
                 )}
                 {book.local_want_to_read_count > 0 && (
                   <span>
-                    <span className="font-medium text-stone-600">{book.local_want_to_read_count}</span>{" "}
+                    <span className="font-medium text-text-primary">{book.local_want_to_read_count}</span>{" "}
                     want to read
                   </span>
                 )}
@@ -376,7 +374,7 @@ export default async function BookPage({
             )}
 
             {book.description && (
-              <p className="text-stone-700 text-sm leading-relaxed">
+              <p className="text-text-primary text-sm leading-relaxed">
                 {book.description}
               </p>
             )}
@@ -385,8 +383,8 @@ export default async function BookPage({
 
         {/* ── User's review (rate / write / edit / delete) ── */}
         {myStatus && (
-          <section className="mb-10 border-t border-stone-100 pt-8">
-            <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
+          <section className="mb-10 border-t border-border pt-8">
+            <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-4">
               Your review
             </h2>
             <BookReviewEditor
@@ -403,8 +401,8 @@ export default async function BookPage({
 
         {/* ── Genre ratings ── */}
         {(aggregateGenreRatings.length > 0 || currentUser) && (
-          <section className="mb-10 border-t border-stone-100 pt-8">
-            <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
+          <section className="mb-10 border-t border-border pt-8">
+            <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-4">
               Genre ratings
             </h2>
             <GenreRatingEditor
@@ -417,15 +415,15 @@ export default async function BookPage({
         )}
 
         {/* ── Community reviews ── */}
-        <section className="border-t border-stone-100 pt-8">
-          <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-6">
+        <section className="border-t border-border pt-8">
+          <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-6">
             {reviews.length > 0
               ? `Reviews (${reviews.length})`
               : "Reviews"}
           </h2>
 
           {reviews.length === 0 ? (
-            <p className="text-stone-400 text-sm">No reviews yet.</p>
+            <p className="text-text-primary text-sm">No reviews yet.</p>
           ) : (
             <div className="space-y-8">
               {reviews.map((review) => (
@@ -442,7 +440,7 @@ export default async function BookPage({
                         className="w-8 h-8 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-stone-200" />
+                      <div className="w-8 h-8 rounded-full bg-surface-2" />
                     )}
                   </Link>
 
@@ -451,12 +449,12 @@ export default async function BookPage({
                     <div className="flex items-center gap-2">
                       <Link
                         href={`/${review.username}`}
-                        className="text-sm font-medium text-stone-900 hover:underline"
+                        className="text-sm font-medium text-text-primary hover:underline"
                       >
                         {review.display_name ?? review.username}
                       </Link>
                       {review.is_followed && (
-                        <span className="text-[10px] font-medium text-stone-400 border border-stone-200 rounded px-1.5 py-0.5 leading-none">
+                        <span className="text-[10px] font-medium text-text-primary border border-border rounded px-1.5 py-0.5 leading-none">
                           Following
                         </span>
                       )}
@@ -470,12 +468,12 @@ export default async function BookPage({
                         </span>
                       )}
                       {review.date_read && (
-                        <span className="text-xs text-stone-400">
+                        <span className="text-xs text-text-primary">
                           Read {formatDate(review.date_read)}
                         </span>
                       )}
                       {review.date_dnf && (
-                        <span className="text-xs text-stone-400">
+                        <span className="text-xs text-text-primary">
                           Stopped {formatDate(review.date_dnf)}
                         </span>
                       )}
@@ -485,21 +483,21 @@ export default async function BookPage({
                     <div className="mt-2">
                       {review.spoiler ? (
                         <details>
-                          <summary className="text-xs text-stone-400 cursor-pointer select-none hover:text-stone-600 transition-colors">
+                          <summary className="text-xs text-text-primary cursor-pointer select-none hover:text-text-primary transition-colors">
                             Show review (contains spoilers)
                           </summary>
-                          <div className="mt-2 text-sm text-stone-700 leading-relaxed">
+                          <div className="mt-2 text-sm text-text-primary leading-relaxed">
                             <ReviewText text={review.review_text} />
                           </div>
                         </details>
                       ) : (
-                        <div className="text-sm text-stone-700 leading-relaxed">
+                        <div className="text-sm text-text-primary leading-relaxed">
                           <ReviewText text={review.review_text} />
                         </div>
                       )}
                     </div>
 
-                    <p className="text-xs text-stone-400 mt-2">
+                    <p className="text-xs text-text-primary mt-2">
                       {formatDate(review.date_added)}
                     </p>
                   </div>
@@ -511,8 +509,8 @@ export default async function BookPage({
 
         {/* ── Editions ── */}
         {book.editions && book.editions.length > 0 && (
-          <section className="border-t border-stone-100 pt-8 mt-10">
-            <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
+          <section className="border-t border-border pt-8 mt-10">
+            <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-4">
               Editions{book.edition_count > 0 && ` (${book.edition_count})`}
             </h2>
             <EditionList
@@ -524,7 +522,7 @@ export default async function BookPage({
         )}
 
         {/* ── Related books (community links) ── */}
-        <section className="border-t border-stone-100 pt-8 mt-10">
+        <section className="border-t border-border pt-8 mt-10">
           <BookLinkList
             workId={workId}
             initialLinks={bookLinks}
@@ -535,7 +533,7 @@ export default async function BookPage({
         </section>
 
         {/* ── Discussion threads ── */}
-        <section className="border-t border-stone-100 pt-8 mt-10">
+        <section className="border-t border-border pt-8 mt-10">
           <ThreadList
             workId={workId}
             initialThreads={threads}

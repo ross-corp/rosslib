@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Nav from "@/components/nav";
 import ReviewText from "@/components/review-text";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -59,20 +58,19 @@ export default async function ReviewsPage({
 
   return (
     <div className="min-h-screen">
-      <Nav />
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
         <div className="mb-8">
           <Link
             href={`/${username}`}
-            className="text-sm text-stone-400 hover:text-stone-700 transition-colors"
+            className="text-sm text-text-primary hover:text-text-primary transition-colors"
           >
             &larr; {username}
           </Link>
-          <h1 className="text-2xl font-bold text-stone-900 mt-2">Reviews</h1>
+          <h1 className="text-2xl font-bold text-text-primary mt-2">Reviews</h1>
         </div>
 
         {reviews.length === 0 ? (
-          <p className="text-stone-400 text-sm">No reviews yet.</p>
+          <p className="text-text-primary text-sm">No reviews yet.</p>
         ) : (
           <div className="space-y-8">
             {reviews.map((review) => (
@@ -86,7 +84,7 @@ export default async function ReviewsPage({
                       className="w-16 rounded shadow-sm object-cover"
                     />
                   ) : (
-                    <div className="w-16 h-24 bg-stone-100 rounded" />
+                    <div className="w-16 h-24 bg-surface-2 rounded" />
                   )}
                 </Link>
 
@@ -94,12 +92,12 @@ export default async function ReviewsPage({
                   {/* Book info */}
                   <Link
                     href={`/books/${review.open_library_id}`}
-                    className="font-semibold text-stone-900 hover:underline leading-snug block"
+                    className="font-semibold text-text-primary hover:underline leading-snug block"
                   >
                     {review.title}
                   </Link>
                   {review.authors && (
-                    <p className="text-xs text-stone-400 mt-0.5">{review.authors}</p>
+                    <p className="text-xs text-text-primary mt-0.5">{review.authors}</p>
                   )}
 
                   {/* Rating + date */}
@@ -110,12 +108,12 @@ export default async function ReviewsPage({
                       </span>
                     )}
                     {review.date_read && (
-                      <span className="text-xs text-stone-400">
+                      <span className="text-xs text-text-primary">
                         Read {formatDate(review.date_read)}
                       </span>
                     )}
                     {review.date_dnf && (
-                      <span className="text-xs text-stone-400">
+                      <span className="text-xs text-text-primary">
                         Stopped {formatDate(review.date_dnf)}
                       </span>
                     )}
@@ -125,21 +123,21 @@ export default async function ReviewsPage({
                   <div className="mt-2">
                     {review.spoiler ? (
                       <details className="group">
-                        <summary className="text-xs text-stone-400 cursor-pointer select-none hover:text-stone-600 transition-colors">
+                        <summary className="text-xs text-text-primary cursor-pointer select-none hover:text-text-primary transition-colors">
                           Show review (contains spoilers)
                         </summary>
-                        <div className="mt-2 text-sm text-stone-700 leading-relaxed">
+                        <div className="mt-2 text-sm text-text-primary leading-relaxed">
                           <ReviewText text={review.review_text} />
                         </div>
                       </details>
                     ) : (
-                      <div className="text-sm text-stone-700 leading-relaxed">
+                      <div className="text-sm text-text-primary leading-relaxed">
                         <ReviewText text={review.review_text} />
                       </div>
                     )}
                   </div>
 
-                  <p className="text-xs text-stone-400 mt-2">
+                  <p className="text-xs text-text-primary mt-2">
                     {formatDate(review.date_added)}
                   </p>
                 </div>

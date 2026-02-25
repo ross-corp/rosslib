@@ -29,8 +29,8 @@ export default function BookFollowButton({
       disabled={loading}
       className={`text-sm px-3 py-1.5 rounded border transition-colors disabled:opacity-50 ${
         following
-          ? "border-stone-300 text-stone-600 hover:border-stone-400 hover:text-stone-900"
-          : "border-stone-300 text-stone-500 hover:border-stone-400 hover:text-stone-700"
+          ? "border-border text-text-primary hover:border-border hover:text-text-primary"
+          : "border-border text-text-primary hover:border-border hover:text-text-primary"
       }`}
     >
       {loading ? "..." : following ? "Following book" : "Follow book"}

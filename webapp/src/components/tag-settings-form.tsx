@@ -94,17 +94,17 @@ export default function TagSettingsForm({
   return (
     <div className="space-y-6">
       {tagKeys.map((key) => (
-        <div key={key.id} className="border border-stone-200 rounded-lg p-4">
+        <div key={key.id} className="border border-border rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="font-semibold text-stone-900">{key.name}</h2>
-              <p className="text-xs text-stone-400 mt-0.5">
+              <h2 className="font-semibold text-text-primary">{key.name}</h2>
+              <p className="text-xs text-text-primary mt-0.5">
                 {key.mode === "select_multiple" ? "Select multiple" : "Select one"}
               </p>
             </div>
             <button
               onClick={() => deleteKey(key.id)}
-              className="text-xs text-stone-400 hover:text-red-500 transition-colors"
+              className="text-xs text-text-primary hover:text-red-500 transition-colors"
             >
               Delete
             </button>
@@ -114,12 +114,12 @@ export default function TagSettingsForm({
             {key.values.map((val) => (
               <span
                 key={val.id}
-                className="inline-flex items-center gap-1 text-sm px-2.5 py-0.5 rounded-full border border-stone-200 text-stone-700"
+                className="inline-flex items-center gap-1 text-sm px-2.5 py-0.5 rounded-full border border-border text-text-primary"
               >
                 {val.name}
                 <button
                   onClick={() => deleteValue(key.id, val.id)}
-                  className="text-stone-300 hover:text-red-400 transition-colors leading-none"
+                  className="text-text-primary hover:text-red-400 transition-colors leading-none"
                   aria-label={`Remove ${val.name}`}
                 >
                   ×
@@ -127,7 +127,7 @@ export default function TagSettingsForm({
               </span>
             ))}
             {key.values.length === 0 && (
-              <span className="text-sm text-stone-400">No values yet</span>
+              <span className="text-sm text-text-primary">No values yet</span>
             )}
           </div>
 
@@ -142,12 +142,12 @@ export default function TagSettingsForm({
               onChange={(e) =>
                 setNewValueInputs((prev) => ({ ...prev, [key.id]: e.target.value }))
               }
-              className="flex-1 text-sm border border-stone-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-stone-400"
+              className="flex-1 text-sm border border-border rounded px-2.5 py-1.5 focus:outline-none focus:border-border"
             />
             <button
               type="submit"
               disabled={addingValue === key.id || !(newValueInputs[key.id] ?? "").trim()}
-              className="text-sm px-3 py-1.5 rounded border border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors disabled:opacity-50"
+              className="text-sm px-3 py-1.5 rounded border border-border text-text-primary hover:border-border-strong hover:text-text-primary transition-colors disabled:opacity-50"
             >
               {addingValue === key.id ? "Adding..." : "Add"}
             </button>
@@ -155,8 +155,8 @@ export default function TagSettingsForm({
         </div>
       ))}
 
-      <div className="border border-stone-200 border-dashed rounded-lg p-4">
-        <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3">
+      <div className="border border-border border-dashed rounded-lg p-4">
+        <p className="text-xs font-semibold text-text-primary uppercase tracking-wider mb-3">
           New label category
         </p>
         <form onSubmit={createKey} className="space-y-3">
@@ -165,10 +165,10 @@ export default function TagSettingsForm({
             placeholder="Name (e.g. Gifted from, Read in)"
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
-            className="w-full text-sm border border-stone-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-stone-400"
+            className="w-full text-sm border border-border rounded px-2.5 py-1.5 focus:outline-none focus:border-border"
           />
           <div className="flex gap-3">
-            <label className="flex items-center gap-1.5 text-sm text-stone-600 cursor-pointer">
+            <label className="flex items-center gap-1.5 text-sm text-text-primary cursor-pointer">
               <input
                 type="radio"
                 name="mode"
@@ -178,7 +178,7 @@ export default function TagSettingsForm({
               />
               Select one
             </label>
-            <label className="flex items-center gap-1.5 text-sm text-stone-600 cursor-pointer">
+            <label className="flex items-center gap-1.5 text-sm text-text-primary cursor-pointer">
               <input
                 type="radio"
                 name="mode"
@@ -192,7 +192,7 @@ export default function TagSettingsForm({
           <button
             type="submit"
             disabled={addingKey || !newKeyName.trim()}
-            className="text-sm px-3 py-1.5 rounded border border-stone-800 bg-stone-800 text-white hover:bg-stone-700 transition-colors disabled:opacity-50"
+            className="text-sm px-3 py-1.5 rounded border border-accent bg-accent text-white hover:bg-surface-3 transition-colors disabled:opacity-50"
           >
             {addingKey ? "Creating..." : "Create category"}
           </button>

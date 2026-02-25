@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Nav from "@/components/nav";
 
 type UserRow = {
   user_id: string;
@@ -31,33 +30,32 @@ export default async function UsersPage({
 
   return (
     <div className="min-h-screen">
-      <Nav />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-stone-900">People</h1>
+          <h1 className="text-2xl font-bold text-text-primary">People</h1>
           <Link
             href="/search"
-            className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
+            className="text-sm text-text-primary hover:text-text-primary transition-colors"
           >
             Search users
           </Link>
         </div>
 
         {users.length === 0 ? (
-          <p className="text-sm text-stone-400">No users yet.</p>
+          <p className="text-sm text-text-primary">No users yet.</p>
         ) : (
-          <ul className="divide-y divide-stone-100 max-w-md">
+          <ul className="divide-y divide-border max-w-md">
             {users.map((user) => (
               <li key={user.user_id}>
                 <Link
                   href={`/${user.username}`}
-                  className="flex flex-col py-3 hover:bg-stone-50 -mx-3 px-3 rounded transition-colors"
+                  className="flex flex-col py-3 hover:bg-surface-2 -mx-3 px-3 rounded transition-colors"
                 >
-                  <span className="text-sm font-medium text-stone-900">
+                  <span className="text-sm font-medium text-text-primary">
                     {user.display_name || user.username}
                   </span>
                   {user.display_name && (
-                    <span className="text-xs text-stone-400 mt-0.5">
+                    <span className="text-xs text-text-primary mt-0.5">
                       @{user.username}
                     </span>
                   )}
@@ -72,7 +70,7 @@ export default async function UsersPage({
             {page > 1 ? (
               <Link
                 href={`/users?page=${page - 1}`}
-                className="text-sm text-stone-600 hover:text-stone-900 transition-colors"
+                className="text-sm text-text-primary hover:text-text-primary transition-colors"
               >
                 &larr; Previous
               </Link>
@@ -82,7 +80,7 @@ export default async function UsersPage({
             {has_next && (
               <Link
                 href={`/users?page=${page + 1}`}
-                className="text-sm text-stone-600 hover:text-stone-900 transition-colors ml-auto"
+                className="text-sm text-text-primary hover:text-text-primary transition-colors ml-auto"
               >
                 Next &rarr;
               </Link>

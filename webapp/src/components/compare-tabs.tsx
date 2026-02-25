@@ -13,13 +13,13 @@ export default function CompareTabs({
 
   return (
     <div>
-      <div className="flex gap-1 border-b border-stone-200 mb-8">
+      <div className="flex gap-1 border-b border-border mb-8">
         <button
           onClick={() => setTab("my-lists")}
           className={`px-4 py-2 text-sm font-medium transition-colors ${
             tab === "my-lists"
-              ? "text-stone-900 border-b-2 border-stone-900"
-              : "text-stone-400 hover:text-stone-600"
+              ? "text-text-primary border-b-2 border-accent"
+              : "text-text-primary hover:text-text-primary"
           }`}
         >
           My Lists
@@ -28,8 +28,8 @@ export default function CompareTabs({
           onClick={() => setTab("friend")}
           className={`px-4 py-2 text-sm font-medium transition-colors ${
             tab === "friend"
-              ? "text-stone-900 border-b-2 border-stone-900"
-              : "text-stone-400 hover:text-stone-600"
+              ? "text-text-primary border-b-2 border-accent"
+              : "text-text-primary hover:text-text-primary"
           }`}
         >
           Compare with a Friend

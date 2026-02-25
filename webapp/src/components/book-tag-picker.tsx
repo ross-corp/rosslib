@@ -147,25 +147,25 @@ export default function BookTagPicker({
         onClick={() => setOpen((v) => !v)}
         className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
           totalSet > 0
-            ? "border-stone-400 text-stone-600"
-            : "border-stone-200 text-stone-400 hover:border-stone-400 hover:text-stone-600"
+            ? "border-border text-text-primary"
+            : "border-border text-text-primary hover:border-border hover:text-text-primary"
         }`}
       >
         {totalSet > 0 ? `${totalSet} label${totalSet > 1 ? "s" : ""}` : "label"}
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-20 bg-white border border-stone-200 rounded shadow-md min-w-[200px]">
+        <div className="absolute left-0 top-full mt-1 z-20 bg-surface-0 border border-border rounded shadow-md min-w-[200px]">
           {!loaded ? (
-            <div className="px-3 py-2 text-xs text-stone-400">Loading...</div>
+            <div className="px-3 py-2 text-xs text-text-primary">Loading...</div>
           ) : (
             tagKeys.map((key) => (
-              <div key={key.id} className="border-b border-stone-100 last:border-0">
+              <div key={key.id} className="border-b border-border last:border-0">
                 <div className="px-3 pt-2 pb-1 flex items-center gap-1.5">
-                  <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
+                  <span className="text-[10px] font-semibold text-text-primary uppercase tracking-wider">
                     {key.name}
                   </span>
-                  <span className="text-[9px] text-stone-300">
+                  <span className="text-[9px] text-text-primary">
                     {key.mode === "select_multiple" ? "multi" : "single"}
                   </span>
                 </div>
@@ -179,8 +179,8 @@ export default function BookTagPicker({
                         key={val.id}
                         onClick={() => toggle(key, val.id)}
                         disabled={busy}
-                        className={`w-full text-left px-3 py-1.5 text-xs transition-colors hover:bg-stone-50 disabled:opacity-50 ${
-                          checked ? "text-stone-900 font-medium" : "text-stone-600"
+                        className={`w-full text-left px-3 py-1.5 text-xs transition-colors hover:bg-surface-2 disabled:opacity-50 ${
+                          checked ? "text-text-primary font-medium" : "text-text-primary"
                         }`}
                       >
                         <span className="inline-block w-3">
@@ -193,7 +193,7 @@ export default function BookTagPicker({
                     );
                   })}
                   {key.values.length === 0 && (
-                    <p className="px-3 py-1 text-xs text-stone-400">No values defined</p>
+                    <p className="px-3 py-1 text-xs text-text-primary">No values defined</p>
                   )}
                 </div>
 
@@ -210,12 +210,12 @@ export default function BookTagPicker({
                       onChange={(e) =>
                         setFreeInput((prev) => ({ ...prev, [key.id]: e.target.value }))
                       }
-                      className="flex-1 text-[10px] border border-stone-200 rounded px-1.5 py-1 focus:outline-none focus:border-stone-400 min-w-0"
+                      className="flex-1 text-[10px] border border-border rounded px-1.5 py-1 focus:outline-none focus:border-border min-w-0"
                     />
                     <button
                       type="submit"
                       disabled={addingFree === key.id || !(freeInput[key.id] ?? "").trim()}
-                      className="text-[10px] px-1.5 py-1 rounded border border-stone-200 text-stone-500 hover:border-stone-400 disabled:opacity-40 shrink-0"
+                      className="text-[10px] px-1.5 py-1 rounded border border-border text-text-primary hover:border-border disabled:opacity-40 shrink-0"
                     >
                       {addingFree === key.id ? "..." : "+"}
                     </button>

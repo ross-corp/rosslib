@@ -277,7 +277,7 @@ export default function ImportForm() {
   if (phase === "done" && doneResult) {
     return (
       <div className="space-y-4">
-        <p className="text-stone-900 font-medium">
+        <p className="text-text-primary font-medium">
           {doneResult.imported} book{doneResult.imported !== 1 ? "s" : ""} imported successfully.
         </p>
         {doneResult.failed > 0 && (
@@ -286,8 +286,8 @@ export default function ImportForm() {
           </p>
         )}
         {(doneResult.errors ?? []).length > 0 && (
-          <details className="text-xs text-stone-500">
-            <summary className="cursor-pointer hover:text-stone-700">Show errors</summary>
+          <details className="text-xs text-text-primary">
+            <summary className="cursor-pointer hover:text-text-primary">Show errors</summary>
             <ul className="mt-2 space-y-1 list-disc list-inside">
               {doneResult.errors.map((e, i) => <li key={i}>{e}</li>)}
             </ul>
@@ -295,7 +295,7 @@ export default function ImportForm() {
         )}
         <Link
           href="/me/shelves"
-          className="inline-block mt-2 text-sm text-stone-900 underline hover:no-underline"
+          className="inline-block mt-2 text-sm text-text-primary underline hover:no-underline"
         >
           Go to your shelves
         </Link>
@@ -305,8 +305,8 @@ export default function ImportForm() {
 
   if (phase === "previewing" || phase === "importing") {
     return (
-      <div className="flex items-center gap-3 text-sm text-stone-600">
-        <svg className="animate-spin h-4 w-4 text-stone-400" fill="none" viewBox="0 0 24 24">
+      <div className="flex items-center gap-3 text-sm text-text-primary">
+        <svg className="animate-spin h-4 w-4 text-text-primary" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
@@ -335,7 +335,7 @@ export default function ImportForm() {
             </span>
           )}
           {preview.unmatched > 0 && (
-            <span className="px-2.5 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-600">
+            <span className="px-2.5 py-1 rounded-full bg-surface-2 border border-border text-text-primary">
               {preview.unmatched} not found
             </span>
           )}
@@ -344,15 +344,15 @@ export default function ImportForm() {
         {/* Ambiguous — always expanded (requires user input) */}
         {ambiguousRows.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold text-stone-700 mb-3">
+            <h2 className="text-sm font-semibold text-text-primary mb-3">
               Choose edition ({ambiguousRows.length})
             </h2>
-            <p className="text-xs text-stone-400 mb-4">
+            <p className="text-xs text-text-primary mb-4">
               Multiple editions found — pick the one you read.
             </p>
             <ul className="space-y-4">
               {ambiguousRows.map((row) => (
-                <li key={row.row_id} className="border border-stone-200 rounded-lg p-4">
+                <li key={row.row_id} className="border border-border rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <input
                       type="checkbox"
@@ -360,16 +360,16 @@ export default function ImportForm() {
                       onChange={(e) =>
                         setSelected((prev) => new Map(prev).set(row.row_id, e.target.checked))
                       }
-                      className="mt-0.5 rounded border-stone-300 accent-stone-900"
+                      className="mt-0.5 rounded border-border accent-neutral-400"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-stone-900 truncate">{row.title}</p>
-                      <p className="text-xs text-stone-500">{row.author}</p>
+                      <p className="text-sm font-medium text-text-primary truncate">{row.title}</p>
+                      <p className="text-xs text-text-primary">{row.author}</p>
                       {row.rating && (
-                        <p className="text-xs text-stone-400 mt-0.5 font-mono">{stars(row.rating)}</p>
+                        <p className="text-xs text-text-primary mt-0.5 font-mono">{stars(row.rating)}</p>
                       )}
                       <select
-                        className="mt-2 text-xs border border-stone-200 rounded px-2 py-1.5 w-full max-w-md text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400"
+                        className="mt-2 text-xs border border-border rounded px-2 py-1.5 w-full max-w-md text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong"
                         value={choices.get(row.row_id) ?? row.candidates?.[0]?.ol_id ?? ""}
                         onChange={(e) =>
                           setChoices((prev) => new Map(prev).set(row.row_id, e.target.value))
@@ -397,7 +397,7 @@ export default function ImportForm() {
             <button
               type="button"
               onClick={() => setMatchedExpanded((v) => !v)}
-              className="flex items-center gap-2 text-sm font-semibold text-stone-700 hover:text-stone-900 transition-colors"
+              className="flex items-center gap-2 text-sm font-semibold text-text-primary hover:text-text-primary transition-colors"
             >
               <span>Matched ({matchedRows.length})</span>
               <svg
@@ -409,25 +409,25 @@ export default function ImportForm() {
             </button>
 
             {matchedExpanded && (
-              <ul className="mt-3 divide-y divide-stone-100 border border-stone-100 rounded-lg overflow-hidden">
+              <ul className="mt-3 divide-y divide-border border border-border rounded-lg overflow-hidden">
                 {matchedRows.map((row) => (
-                  <li key={row.row_id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50">
+                  <li key={row.row_id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-2">
                     <input
                       type="checkbox"
                       checked={selected.get(row.row_id) ?? true}
                       onChange={(e) =>
                         setSelected((prev) => new Map(prev).set(row.row_id, e.target.checked))
                       }
-                      className="rounded border-stone-300 accent-stone-900 shrink-0"
+                      className="rounded border-border accent-neutral-400 shrink-0"
                     />
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm text-stone-900 truncate block">{row.title}</span>
-                      <span className="text-xs text-stone-400">{row.author}</span>
+                      <span className="text-sm text-text-primary truncate block">{row.title}</span>
+                      <span className="text-xs text-text-primary">{row.author}</span>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className="text-xs text-stone-400">{shelfLabel(row.exclusive_shelf_slug)}</span>
+                      <span className="text-xs text-text-primary">{shelfLabel(row.exclusive_shelf_slug)}</span>
                       {row.rating && (
-                        <span className="block text-xs text-stone-300 font-mono">{stars(row.rating)}</span>
+                        <span className="block text-xs text-text-primary font-mono">{stars(row.rating)}</span>
                       )}
                     </div>
                   </li>
@@ -440,17 +440,17 @@ export default function ImportForm() {
         {/* Unmatched */}
         {unmatchedRows.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold text-stone-700 mb-1">
+            <h2 className="text-sm font-semibold text-text-primary mb-1">
               Not found ({unmatchedRows.length})
             </h2>
-            <p className="text-xs text-stone-400 mb-3">
+            <p className="text-xs text-text-primary mb-3">
               These books couldn&apos;t be matched to Open Library and will be skipped.
             </p>
-            <ul className="divide-y divide-stone-100 border border-stone-100 rounded-lg overflow-hidden">
+            <ul className="divide-y divide-border border border-border rounded-lg overflow-hidden">
               {unmatchedRows.map((row) => (
                 <li key={row.row_id} className="px-4 py-2.5">
-                  <span className="text-sm text-stone-500 truncate block">{row.title}</span>
-                  <span className="text-xs text-stone-400">{row.author}</span>
+                  <span className="text-sm text-text-primary truncate block">{row.title}</span>
+                  <span className="text-xs text-text-primary">{row.author}</span>
                 </li>
               ))}
             </ul>
@@ -460,19 +460,19 @@ export default function ImportForm() {
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         {/* Commit bar */}
-        <div className="flex items-center gap-4 pt-2 border-t border-stone-100">
+        <div className="flex items-center gap-4 pt-2 border-t border-border">
           <button
             type="button"
             onClick={handleCommit}
             disabled={selectedCount === 0}
-            className="px-4 py-2 bg-stone-900 text-white text-sm rounded-lg hover:bg-stone-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-accent text-white text-sm rounded-lg hover:bg-surface-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Import {selectedCount} book{selectedCount !== 1 ? "s" : ""}
           </button>
           <button
             type="button"
             onClick={() => { setPhase("idle"); setPreview(null); setError(null); }}
-            className="text-sm text-stone-400 hover:text-stone-700 transition-colors"
+            className="text-sm text-text-primary hover:text-text-primary transition-colors"
           >
             Cancel
           </button>
@@ -505,19 +505,19 @@ export default function ImportForm() {
             {savedUnmatched.map((book, i) => (
               <li key={i} className="flex items-center gap-3 py-2">
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm text-stone-800 truncate block">{book.title}</span>
-                  <span className="text-xs text-stone-500">{book.author}</span>
+                  <span className="text-sm text-text-primary truncate block">{book.title}</span>
+                  <span className="text-xs text-text-primary">{book.author}</span>
                 </div>
                 <a
                   href={`/search?q=${encodeURIComponent(book.title)}`}
-                  className="text-xs text-stone-500 hover:text-stone-900 underline shrink-0 transition-colors"
+                  className="text-xs text-text-primary hover:text-text-primary underline shrink-0 transition-colors"
                 >
                   Search
                 </a>
                 <button
                   type="button"
                   onClick={() => dismissUnmatched(i)}
-                  className="text-xs text-stone-400 hover:text-stone-600 shrink-0 transition-colors"
+                  className="text-xs text-text-primary hover:text-text-primary shrink-0 transition-colors"
                   aria-label="Dismiss"
                 >
                   ✕
@@ -528,16 +528,16 @@ export default function ImportForm() {
         </section>
       )}
 
-      <div className="text-sm text-stone-500 space-y-1">
+      <div className="text-sm text-text-primary space-y-1">
         <p>Export your library from Goodreads:</p>
-        <p className="text-stone-400">
+        <p className="text-text-primary">
           My Books → Import and Export → Export Library → Download
         </p>
       </div>
 
       <div className="flex items-center gap-3">
         <label className="cursor-pointer">
-          <span className="px-3 py-2 text-sm border border-stone-200 rounded-lg text-stone-700 hover:border-stone-400 transition-colors focus-within:ring-2 focus-within:ring-stone-900 focus-within:ring-offset-2 relative">
+          <span className="px-3 py-2 text-sm border border-border rounded-lg text-text-primary hover:border-border transition-colors focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2 relative">
             {fileName ? "Change file" : "Choose file"}
             <input
               ref={fileInputRef}
@@ -548,7 +548,7 @@ export default function ImportForm() {
             />
           </span>
         </label>
-        {fileName && <span className="text-xs text-stone-400 truncate max-w-xs">{fileName}</span>}
+        {fileName && <span className="text-xs text-text-primary truncate max-w-xs">{fileName}</span>}
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -557,7 +557,7 @@ export default function ImportForm() {
         type="button"
         onClick={handlePreview}
         disabled={!fileName}
-        className="px-4 py-2 bg-stone-900 text-white text-sm rounded-lg hover:bg-stone-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="px-4 py-2 bg-accent text-white text-sm rounded-lg hover:bg-surface-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
         Preview import
       </button>

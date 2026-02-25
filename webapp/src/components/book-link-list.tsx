@@ -181,14 +181,14 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider">
+        <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider">
           {links.length > 0 ? `Related Books (${links.length})` : "Related Books"}
         </h2>
         {isLoggedIn && !showForm && (
           <button
             type="button"
             onClick={() => setShowForm(true)}
-            className="text-xs px-3 py-1.5 rounded bg-stone-900 text-white hover:bg-stone-700 transition-colors"
+            className="text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-surface-3 transition-colors"
           >
             Suggest link
           </button>
@@ -199,7 +199,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
       {showForm && (
         <form onSubmit={handleSubmit} className="mb-8 space-y-3">
           <div>
-            <label className="block text-xs text-stone-500 mb-1">
+            <label className="block text-xs text-text-primary mb-1">
               Target book ID (Open Library work ID, e.g. OL82592W)
             </label>
             <input
@@ -208,18 +208,18 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
               onChange={(e) => setToWorkId(e.target.value)}
               placeholder="OL82592W"
               disabled={submitting}
-              className="w-full border border-stone-200 rounded px-3 py-2 text-sm text-stone-700 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
+              className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
             />
           </div>
           <div>
-            <label className="block text-xs text-stone-500 mb-1">
+            <label className="block text-xs text-text-primary mb-1">
               Relationship type
             </label>
             <select
               value={linkType}
               onChange={(e) => setLinkType(e.target.value)}
               disabled={submitting}
-              className="w-full border border-stone-200 rounded px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
+              className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
             >
               {LINK_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
@@ -229,7 +229,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
             </select>
           </div>
           <div>
-            <label className="block text-xs text-stone-500 mb-1">
+            <label className="block text-xs text-text-primary mb-1">
               Note (optional)
             </label>
             <input
@@ -238,14 +238,14 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
               onChange={(e) => setNote(e.target.value)}
               placeholder="Explain the connection..."
               disabled={submitting}
-              className="w-full border border-stone-200 rounded px-3 py-2 text-sm text-stone-700 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
+              className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
             />
           </div>
           <div className="flex items-center gap-3">
             <button
               type="submit"
               disabled={submitting || !toWorkId.trim()}
-              className="text-xs px-3 py-1.5 rounded bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-surface-3 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? "Adding..." : "Add link"}
             </button>
@@ -259,7 +259,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                 setError(null);
               }}
               disabled={submitting}
-              className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+              className="text-xs text-text-primary hover:text-text-primary transition-colors"
             >
               Cancel
             </button>
@@ -270,20 +270,20 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
 
       {/* Link list grouped by type */}
       {links.length === 0 ? (
-        <p className="text-stone-400 text-sm">
+        <p className="text-text-primary text-sm">
           No related books yet.{isLoggedIn && " Be the first to suggest a connection."}
         </p>
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([type, typeLinks]) => (
             <div key={type}>
-              <h3 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">
+              <h3 className="text-xs font-medium text-text-primary uppercase tracking-wider mb-3">
                 {linkTypeLabel(type)}
               </h3>
               <div className="space-y-3">
                 {typeLinks.map((link) => (
                   <div key={link.id}>
-                    <div className="flex items-start gap-3 border border-stone-100 rounded-lg p-3">
+                    <div className="flex items-start gap-3 border border-border rounded-lg p-3">
                       {/* Cover thumbnail */}
                       <Link
                         href={`/books/${link.to_book_ol_id}`}
@@ -296,7 +296,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                             className="w-10 h-14 rounded object-cover"
                           />
                         ) : (
-                          <div className="w-10 h-14 rounded bg-stone-100" />
+                          <div className="w-10 h-14 rounded bg-surface-2" />
                         )}
                       </Link>
 
@@ -304,21 +304,21 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                       <div className="flex-1 min-w-0">
                         <Link
                           href={`/books/${link.to_book_ol_id}`}
-                          className="text-sm font-medium text-stone-900 hover:underline line-clamp-1"
+                          className="text-sm font-medium text-text-primary hover:underline line-clamp-1"
                         >
                           {link.to_book_title}
                         </Link>
                         {link.to_book_authors && (
-                          <p className="text-xs text-stone-400 line-clamp-1">
+                          <p className="text-xs text-text-primary line-clamp-1">
                             {link.to_book_authors}
                           </p>
                         )}
                         {link.note && (
-                          <p className="text-xs text-stone-500 mt-1 line-clamp-2">
+                          <p className="text-xs text-text-primary mt-1 line-clamp-2">
                             {link.note}
                           </p>
                         )}
-                        <p className="text-[10px] text-stone-400 mt-1">
+                        <p className="text-[10px] text-text-primary mt-1">
                           by {link.display_name ?? link.username}
                         </p>
                       </div>
@@ -332,8 +332,8 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                             disabled={votingIds.has(link.id)}
                             className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded text-xs transition-colors ${
                               link.user_voted
-                                ? "text-stone-900 bg-stone-100"
-                                : "text-stone-400 hover:text-stone-600 hover:bg-stone-50"
+                                ? "text-text-primary bg-surface-2"
+                                : "text-text-primary hover:text-text-primary hover:bg-surface-2"
                             } disabled:opacity-50`}
                             title={link.user_voted ? "Remove upvote" : "Upvote"}
                           >
@@ -350,7 +350,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                           </button>
                         )}
                         {!isLoggedIn && link.votes > 0 && (
-                          <span className="text-xs text-stone-400 px-2 py-1">
+                          <span className="text-xs text-text-primary px-2 py-1">
                             {link.votes}
                           </span>
                         )}
@@ -362,7 +362,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                                 ? setEditingId(null)
                                 : openEditForm(link)
                             }
-                            className="px-1.5 py-1 rounded text-stone-300 hover:text-stone-600 hover:bg-stone-50 transition-colors"
+                            className="px-1.5 py-1 rounded text-text-primary hover:text-text-primary hover:bg-surface-2 transition-colors"
                             title="Suggest an edit"
                           >
                             <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
@@ -375,7 +375,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                             type="button"
                             onClick={() => handleDelete(link.id)}
                             disabled={deletingIds.has(link.id)}
-                            className="px-1.5 py-1 rounded text-stone-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                            className="px-1.5 py-1 rounded text-text-primary hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
                             title={currentUsername === link.username ? "Delete your link" : "Remove link (moderator)"}
                           >
                             <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
@@ -390,18 +390,18 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                     {editingId === link.id && (
                       <form
                         onSubmit={(e) => handleEditSubmit(e, link)}
-                        className="mt-2 ml-13 border border-stone-100 rounded-lg p-3 bg-stone-50 space-y-2"
+                        className="mt-2 ml-13 border border-border rounded-lg p-3 bg-surface-2 space-y-2"
                       >
-                        <p className="text-xs font-medium text-stone-500">Suggest an edit</p>
+                        <p className="text-xs font-medium text-text-primary">Suggest an edit</p>
                         <div>
-                          <label className="block text-xs text-stone-400 mb-1">
+                          <label className="block text-xs text-text-primary mb-1">
                             Relationship type
                           </label>
                           <select
                             value={editType}
                             onChange={(e) => setEditType(e.target.value)}
                             disabled={editSubmitting}
-                            className="w-full border border-stone-200 rounded px-2 py-1.5 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50 bg-white"
+                            className="w-full border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50 bg-surface-0"
                           >
                             {LINK_TYPES.map((t) => (
                               <option key={t.value} value={t.value}>
@@ -411,21 +411,21 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs text-stone-400 mb-1">Note</label>
+                          <label className="block text-xs text-text-primary mb-1">Note</label>
                           <input
                             type="text"
                             value={editNote}
                             onChange={(e) => setEditNote(e.target.value)}
                             placeholder="Explain the connection..."
                             disabled={editSubmitting}
-                            className="w-full border border-stone-200 rounded px-2 py-1.5 text-xs text-stone-700 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50 bg-white"
+                            className="w-full border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50 bg-surface-0"
                           />
                         </div>
                         <div className="flex items-center gap-3">
                           <button
                             type="submit"
                             disabled={editSubmitting}
-                            className="text-xs px-3 py-1 rounded bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-50 transition-colors"
+                            className="text-xs px-3 py-1 rounded bg-accent text-white hover:bg-surface-3 disabled:opacity-50 transition-colors"
                           >
                             {editSubmitting ? "Submitting..." : "Propose edit"}
                           </button>
@@ -433,7 +433,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                             type="button"
                             onClick={() => setEditingId(null)}
                             disabled={editSubmitting}
-                            className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+                            className="text-xs text-text-primary hover:text-text-primary transition-colors"
                           >
                             Cancel
                           </button>

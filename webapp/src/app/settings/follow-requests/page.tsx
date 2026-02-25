@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Nav from "@/components/nav";
 import FollowRequestsList from "./follow-requests-list";
 import { getUser, getToken } from "@/lib/auth";
 
@@ -30,21 +29,20 @@ export default async function FollowRequestsPage() {
 
   return (
     <div className="min-h-screen">
-      <Nav />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
-        <div className="mb-8 flex items-center gap-2 text-sm text-stone-400">
-          <Link href={`/${user.username}`} className="hover:text-stone-700 transition-colors">
+        <div className="mb-8 flex items-center gap-2 text-sm text-text-primary">
+          <Link href={`/${user.username}`} className="hover:text-text-primary transition-colors">
             {user.username}
           </Link>
           <span>/</span>
-          <Link href="/settings" className="hover:text-stone-700 transition-colors">
+          <Link href="/settings" className="hover:text-text-primary transition-colors">
             Settings
           </Link>
           <span>/</span>
-          <span className="text-stone-600">Follow requests</span>
+          <span className="text-text-primary">Follow requests</span>
         </div>
 
-        <h1 className="text-2xl font-bold text-stone-900 mb-8">Follow requests</h1>
+        <h1 className="text-2xl font-bold text-text-primary mb-8">Follow requests</h1>
 
         <FollowRequestsList initialRequests={requests} />
       </main>

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Nav from "@/components/nav";
 import BookList from "@/components/book-list";
 import { type StatusValue } from "@/components/shelf-picker";
 import { getToken, getUser } from "@/lib/auth";
@@ -225,7 +224,6 @@ export default async function SearchPage({
 
   return (
     <div className="min-h-screen">
-      <Nav />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
         <form action="/search" method="get" className="mb-6 max-w-md flex gap-2">
           <input
@@ -234,7 +232,7 @@ export default async function SearchPage({
             defaultValue={q}
             placeholder={activeTab === "books" ? "Search by title..." : activeTab === "authors" ? "Search by author name..." : "Search by name..."}
             autoFocus
-            className="flex-1 px-3 py-2 text-sm border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent"
+            className="flex-1 px-3 py-2 text-sm border border-border rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
           />
           <input type="hidden" name="type" value={activeTab} />
           {sort && <input type="hidden" name="sort" value={sort} />}
@@ -243,13 +241,13 @@ export default async function SearchPage({
         </form>
 
         {/* Tab selector */}
-        <div className="flex gap-1 mb-6 border-b border-stone-200">
+        <div className="flex gap-1 mb-6 border-b border-border">
           <Link
             href={buildSearchParams(base, { type: "books", sort: "", year_min: "", year_max: "", subject: "", language: "" })}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "books"
-                ? "border-stone-900 text-stone-900"
-                : "border-transparent text-stone-400 hover:text-stone-700"
+                ? "border-accent text-text-primary"
+                : "border-transparent text-text-primary hover:text-text-primary"
             }`}
           >
             Books
@@ -258,8 +256,8 @@ export default async function SearchPage({
             href={buildSearchParams(base, { type: "authors", sort: "", year_min: "", year_max: "", subject: "", language: "" })}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "authors"
-                ? "border-stone-900 text-stone-900"
-                : "border-transparent text-stone-400 hover:text-stone-700"
+                ? "border-accent text-text-primary"
+                : "border-transparent text-text-primary hover:text-text-primary"
             }`}
           >
             Authors
@@ -268,8 +266,8 @@ export default async function SearchPage({
             href={buildSearchParams(base, { type: "people", sort: "", year_min: "", year_max: "", subject: "", language: "" })}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "people"
-                ? "border-stone-900 text-stone-900"
-                : "border-transparent text-stone-400 hover:text-stone-700"
+                ? "border-accent text-text-primary"
+                : "border-transparent text-text-primary hover:text-text-primary"
             }`}
           >
             People
@@ -279,15 +277,15 @@ export default async function SearchPage({
         {/* Sort controls (books only) */}
         {activeTab === "books" && q && (
           <div className="flex items-center gap-2 mb-5">
-            <span className="text-xs text-stone-400">Sort by</span>
+            <span className="text-xs text-text-primary">Sort by</span>
             {SORT_OPTIONS.map((opt) => (
               <Link
                 key={opt.value}
                 href={buildSearchParams(base, { sort: opt.value })}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   sort === opt.value
-                    ? "border-stone-900 text-stone-900 bg-stone-900 text-white"
-                    : "border-stone-300 text-stone-500 hover:border-stone-500 hover:text-stone-700"
+                    ? "border-accent text-text-primary bg-accent text-white"
+                    : "border-border text-text-primary hover:border-border-strong hover:text-text-primary"
                 }`}
               >
                 {opt.label}
@@ -299,15 +297,15 @@ export default async function SearchPage({
         {/* Genre filter (books only) */}
         {activeTab === "books" && q && (
           <div className="flex items-center gap-2 mb-5 flex-wrap">
-            <span className="text-xs text-stone-400">Genre</span>
+            <span className="text-xs text-text-primary">Genre</span>
             {GENRE_OPTIONS.map((genre) => (
               <Link
                 key={genre}
                 href={buildSearchParams(base, { subject: subject === genre.toLowerCase() ? "" : genre.toLowerCase() })}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   subject === genre.toLowerCase()
-                    ? "border-stone-900 bg-stone-900 text-white"
-                    : "border-stone-300 text-stone-500 hover:border-stone-500 hover:text-stone-700"
+                    ? "border-accent bg-accent text-white"
+                    : "border-border text-text-primary hover:border-border-strong hover:text-text-primary"
                 }`}
               >
                 {genre}
@@ -319,15 +317,15 @@ export default async function SearchPage({
         {/* Language filter (books only) */}
         {activeTab === "books" && q && (
           <div className="flex items-center gap-2 mb-5 flex-wrap">
-            <span className="text-xs text-stone-400">Language</span>
+            <span className="text-xs text-text-primary">Language</span>
             {LANGUAGE_OPTIONS.map((lang) => (
               <Link
                 key={lang.code}
                 href={buildSearchParams(base, { language: language === lang.code ? "" : lang.code })}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   language === lang.code
-                    ? "border-stone-900 bg-stone-900 text-white"
-                    : "border-stone-300 text-stone-500 hover:border-stone-500 hover:text-stone-700"
+                    ? "border-accent bg-accent text-white"
+                    : "border-border text-text-primary hover:border-border-strong hover:text-text-primary"
                 }`}
               >
                 {lang.label}
@@ -339,7 +337,7 @@ export default async function SearchPage({
         {/* Year range filter (books only) */}
         {activeTab === "books" && q && (
           <div className="flex items-center gap-2 mb-5">
-            <span className="text-xs text-stone-400">Year</span>
+            <span className="text-xs text-text-primary">Year</span>
             <form action="/search" method="get" className="flex items-center gap-2">
               <input type="hidden" name="type" value="books" />
               <input type="hidden" name="q" value={q} />
@@ -353,9 +351,9 @@ export default async function SearchPage({
                 placeholder="From"
                 min="0"
                 max="2099"
-                className="w-20 px-2 py-1 text-xs border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-900"
+                className="w-20 px-2 py-1 text-xs border border-border rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent"
               />
-              <span className="text-xs text-stone-300">&ndash;</span>
+              <span className="text-xs text-text-primary">&ndash;</span>
               <input
                 name="year_max"
                 type="number"
@@ -363,18 +361,18 @@ export default async function SearchPage({
                 placeholder="To"
                 min="0"
                 max="2099"
-                className="w-20 px-2 py-1 text-xs border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-900"
+                className="w-20 px-2 py-1 text-xs border border-border rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent"
               />
               <button
                 type="submit"
-                className="text-xs px-2.5 py-1 rounded-full border border-stone-900 bg-stone-900 text-white hover:bg-stone-700 transition-colors"
+                className="text-xs px-2.5 py-1 rounded-full border border-accent bg-accent text-white hover:bg-surface-3 transition-colors"
               >
                 Apply
               </button>
               {hasYearFilter && (
                 <Link
                   href={buildSearchParams(base, { year_min: "", year_max: "" })}
-                  className="text-xs px-2.5 py-1 rounded-full border border-stone-300 text-stone-500 hover:border-stone-500 hover:text-stone-700 transition-colors"
+                  className="text-xs px-2.5 py-1 rounded-full border border-border text-text-primary hover:border-border-strong hover:text-text-primary transition-colors"
                 >
                   Clear
                 </Link>
@@ -388,7 +386,7 @@ export default async function SearchPage({
           <div className="mb-5">
             <Link
               href={buildSearchParams({ q, type: "books", sort, year_min: "", year_max: "", subject: "", language: "" })}
-              className="text-xs text-stone-400 hover:text-stone-700 underline transition-colors"
+              className="text-xs text-text-primary hover:text-text-primary underline transition-colors"
             >
               Clear all filters
             </Link>
@@ -397,21 +395,21 @@ export default async function SearchPage({
 
         {/* Result count */}
         {q && activeTab === "books" && (
-          <p className="text-sm text-stone-400 mb-6">
+          <p className="text-sm text-text-primary mb-6">
             {bookData.results.length === 0
               ? `No books found for "${q}"`
               : `${bookData.total.toLocaleString()} result${bookData.total === 1 ? "" : "s"} for "${q}"`}
           </p>
         )}
         {q && activeTab === "authors" && (
-          <p className="text-sm text-stone-400 mb-6">
+          <p className="text-sm text-text-primary mb-6">
             {authorData.results.length === 0
               ? `No authors found for "${q}"`
               : `${authorData.total.toLocaleString()} result${authorData.total === 1 ? "" : "s"} for "${q}"`}
           </p>
         )}
         {q && activeTab === "people" && (
-          <p className="text-sm text-stone-400 mb-6">
+          <p className="text-sm text-text-primary mb-6">
             {users.length === 0
               ? `No people found for "${q}"`
               : `${users.length} result${users.length === 1 ? "" : "s"} for "${q}"`}
@@ -430,33 +428,33 @@ export default async function SearchPage({
 
         {/* Author results */}
         {activeTab === "authors" && authorData.results.length > 0 && (
-          <ul className="divide-y divide-stone-100 max-w-2xl">
+          <ul className="divide-y divide-border max-w-2xl">
             {authorData.results.map((author) => (
               <li key={author.key}>
                 <Link
                   href={`/authors/${author.key}`}
-                  className="flex items-start gap-3 py-4 hover:bg-stone-50 -mx-3 px-3 rounded transition-colors"
+                  className="flex items-start gap-3 py-4 hover:bg-surface-2 -mx-3 px-3 rounded transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-full bg-stone-100 flex-shrink-0 flex items-center justify-center text-sm font-medium text-stone-500">
+                  <div className="w-10 h-10 rounded-full bg-surface-2 flex-shrink-0 flex items-center justify-center text-sm font-medium text-text-primary">
                     {author.name.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium text-stone-900">
+                    <span className="text-sm font-medium text-text-primary">
                       {author.name}
                     </span>
                     {(author.birth_date || author.death_date) && (
-                      <span className="text-xs text-stone-400 ml-2">
+                      <span className="text-xs text-text-primary ml-2">
                         {author.birth_date ?? "?"}
                         {" \u2013 "}
                         {author.death_date ?? ""}
                       </span>
                     )}
                     {author.top_work && (
-                      <p className="text-xs text-stone-500 mt-0.5 truncate">
+                      <p className="text-xs text-text-primary mt-0.5 truncate">
                         Best known for <span className="italic">{author.top_work}</span>
                       </p>
                     )}
-                    <p className="text-xs text-stone-400 mt-0.5">
+                    <p className="text-xs text-text-primary mt-0.5">
                       {author.work_count} work{author.work_count === 1 ? "" : "s"}
                       {author.top_subjects && author.top_subjects.length > 0 && (
                         <span> &middot; {author.top_subjects.slice(0, 3).join(", ")}</span>
@@ -471,18 +469,18 @@ export default async function SearchPage({
 
         {/* People results */}
         {activeTab === "people" && users.length > 0 && (
-          <ul className="divide-y divide-stone-100 max-w-md">
+          <ul className="divide-y divide-border max-w-md">
             {users.map((user) => (
               <li key={user.user_id}>
                 <Link
                   href={`/${user.username}`}
-                  className="flex flex-col py-3 hover:bg-stone-50 -mx-3 px-3 rounded transition-colors"
+                  className="flex flex-col py-3 hover:bg-surface-2 -mx-3 px-3 rounded transition-colors"
                 >
-                  <span className="text-sm font-medium text-stone-900">
+                  <span className="text-sm font-medium text-text-primary">
                     {user.display_name || user.username}
                   </span>
                   {user.display_name && (
-                    <span className="text-xs text-stone-400 mt-0.5">
+                    <span className="text-xs text-text-primary mt-0.5">
                       @{user.username}
                     </span>
                   )}

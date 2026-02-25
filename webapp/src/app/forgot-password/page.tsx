@@ -34,31 +34,28 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="min-h-[70vh] flex flex-col items-center justify-center">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <Link href="/" className="font-semibold text-stone-900 text-xl">
-            rosslib
-          </Link>
-          <h1 className="mt-4 text-2xl font-bold text-stone-900">
+          <h1 className="text-2xl font-bold text-text-primary">
             Reset your password
           </h1>
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 text-sm text-text-secondary">
             Enter your email and we&rsquo;ll send you a link to reset your
             password.
           </p>
         </div>
 
         {success ? (
-          <div className="text-sm text-stone-700 bg-stone-50 border border-stone-200 rounded px-4 py-3">
-            <p className="font-medium mb-1">Check your email</p>
+          <div className="text-sm text-text-secondary panel px-4 py-3">
+            <p className="font-medium mb-1 text-text-primary">Check your email</p>
             <p>
               If an account with that email exists, we&rsquo;ve sent a password
               reset link. It expires in 1 hour.
             </p>
             <Link
               href="/login"
-              className="inline-block mt-4 text-stone-900 font-medium hover:underline"
+              className="inline-block mt-4 text-text-primary font-medium hover:underline"
             >
               Back to sign in
             </Link>
@@ -66,7 +63,7 @@ export default function ForgotPasswordPage() {
         ) : (
           <form className="space-y-4" onSubmit={handleSubmit}>
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
                 {error}
               </p>
             )}
@@ -74,7 +71,7 @@ export default function ForgotPasswordPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-stone-700 mb-1"
+                className="label-mono block mb-1"
               >
                 Email
               </label>
@@ -84,7 +81,7 @@ export default function ForgotPasswordPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm"
+                className="input-field"
                 placeholder="you@example.com"
               />
             </div>
@@ -92,17 +89,17 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-stone-900 text-white py-2.5 rounded font-medium hover:bg-stone-700 transition-colors text-sm disabled:opacity-50"
+              className="w-full btn-primary py-2.5"
             >
               {loading ? "Sending..." : "Send reset link"}
             </button>
           </form>
         )}
 
-        <p className="mt-6 text-center text-sm text-stone-500">
+        <p className="mt-6 text-center text-sm text-text-secondary">
           <Link
             href="/login"
-            className="text-stone-900 font-medium hover:underline"
+            className="text-text-primary font-medium hover:underline"
           >
             Back to sign in
           </Link>

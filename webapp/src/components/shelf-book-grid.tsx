@@ -40,7 +40,7 @@ export default function ShelfBookGrid({
 
   if (books.length === 0) {
     return (
-      <p className="text-sm text-stone-400">No books on this shelf yet.</p>
+      <p className="text-sm text-text-primary">No books on this shelf yet.</p>
     );
   }
 
@@ -53,11 +53,11 @@ export default function ShelfBookGrid({
               <img
                 src={book.cover_url}
                 alt={book.title}
-                className="w-full aspect-[2/3] object-cover rounded shadow-sm bg-stone-100 group-hover:shadow-md transition-shadow"
+                className="w-full aspect-[2/3] object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
               />
             ) : (
-              <div className="w-full aspect-[2/3] bg-stone-100 rounded shadow-sm flex items-end p-2 group-hover:shadow-md transition-shadow">
-                <span className="text-xs text-stone-400 leading-tight line-clamp-3">
+              <div className="w-full aspect-[2/3] bg-surface-2 rounded shadow-sm flex items-end p-2 group-hover:shadow-md transition-shadow">
+                <span className="text-xs text-text-primary leading-tight line-clamp-3">
                   {book.title}
                 </span>
               </div>
@@ -66,7 +66,7 @@ export default function ShelfBookGrid({
           <div className="min-w-0">
             <Link
               href={`/books/${book.open_library_id}`}
-              className="text-xs font-medium text-stone-800 hover:text-stone-900 line-clamp-2 leading-snug"
+              className="text-xs font-medium text-text-primary hover:text-text-primary line-clamp-2 leading-snug"
             >
               {book.title}
             </Link>
@@ -75,7 +75,7 @@ export default function ShelfBookGrid({
                 {[1, 2, 3, 4, 5].map((n) => (
                   <span
                     key={n}
-                    className={`text-[10px] leading-none ${n <= book.rating! ? "text-amber-500" : "text-stone-200"}`}
+                    className={`text-[10px] leading-none ${n <= book.rating! ? "text-amber-500" : "text-text-primary"}`}
                   >
                     ★
                   </span>
@@ -95,7 +95,7 @@ export default function ShelfBookGrid({
             <button
               onClick={() => removeBook(book.open_library_id)}
               disabled={removing === book.open_library_id}
-              className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white border border-stone-200 rounded px-1.5 py-0.5 text-xs text-stone-400 hover:text-stone-700 hover:border-stone-400 disabled:opacity-50"
+              className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-surface-0 border border-border rounded px-1.5 py-0.5 text-xs text-text-primary hover:text-text-primary hover:border-border disabled:opacity-50"
             >
               {removing === book.open_library_id ? "..." : "✕"}
             </button>

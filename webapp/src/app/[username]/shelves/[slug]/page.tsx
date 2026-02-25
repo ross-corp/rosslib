@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Nav from "@/components/nav";
 import ShelfBookGrid from "@/components/shelf-book-grid";
 import LibraryManager, { ShelfSummary } from "@/components/library-manager";
 import { getUser, getToken } from "@/lib/auth";
@@ -140,7 +139,6 @@ export default async function ShelfPage({
 
     return (
       <div className="h-screen flex flex-col overflow-hidden">
-        <Nav />
         {shelf?.computed?.is_continuous && (
           <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 text-sm text-blue-700 flex items-center gap-2">
             <span className="font-medium">Live list</span>
@@ -166,22 +164,21 @@ export default async function ShelfPage({
 
   return (
     <div className="min-h-screen">
-      <Nav />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
-        <nav className="flex items-center gap-2 text-xs text-stone-400 mb-8">
+        <nav className="flex items-center gap-2 text-xs text-text-primary mb-8">
           <Link
             href={`/${username}`}
-            className="hover:text-stone-700 transition-colors"
+            className="hover:text-text-primary transition-colors"
           >
             {username}
           </Link>
           <span>/</span>
-          <span className="text-stone-600">{displayName}</span>
+          <span className="text-text-primary">{displayName}</span>
         </nav>
 
         <div className="flex items-baseline gap-3 mb-8">
-          <h1 className="text-2xl font-bold text-stone-900">{displayName}</h1>
-          <span className="text-sm text-stone-400">
+          <h1 className="text-2xl font-bold text-text-primary">{displayName}</h1>
+          <span className="text-sm text-text-primary">
             {books.length} {books.length === 1 ? "book" : "books"}
           </span>
           {shelf?.computed?.is_continuous && (
@@ -201,8 +198,8 @@ export default async function ShelfPage({
                   href={`/${username}/shelves/${s.slug}`}
                   className={`text-sm px-3 py-1 rounded border transition-colors ${
                     s.slug === slug
-                      ? "border-stone-800 bg-stone-800 text-white"
-                      : "border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900"
+                      ? "border-accent bg-accent text-white"
+                      : "border-border text-text-primary hover:border-border hover:text-text-primary"
                   }`}
                 >
                   {s.name}

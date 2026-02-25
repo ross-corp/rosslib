@@ -88,18 +88,18 @@ export default function SettingsForm({
     <div className="max-w-md space-y-8">
       {/* Avatar */}
       <div>
-        <p className="text-sm font-medium text-stone-700 mb-3">Photo</p>
+        <p className="text-sm font-medium text-text-primary mb-3">Photo</p>
         <div className="flex items-center gap-4">
           <div className="relative shrink-0">
             {avatarUrl ? (
               <img
                 src={avatarUrl}
                 alt=""
-                className="w-20 h-20 rounded-full object-cover bg-stone-100"
+                className="w-20 h-20 rounded-full object-cover bg-surface-2"
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-stone-200 flex items-center justify-center">
-                <span className="text-stone-500 text-2xl font-medium select-none">
+              <div className="w-20 h-20 rounded-full bg-surface-2 flex items-center justify-center">
+                <span className="text-text-primary text-2xl font-medium select-none">
                   {username[0].toUpperCase()}
                 </span>
               </div>
@@ -111,7 +111,7 @@ export default function SettingsForm({
             )}
           </div>
           <div>
-            <label className="cursor-pointer text-sm text-stone-700 hover:text-stone-900 underline underline-offset-2 transition-colors">
+            <label className="cursor-pointer text-sm text-text-primary hover:text-text-primary underline underline-offset-2 transition-colors">
               Change photo
               <input
                 ref={fileInputRef}
@@ -145,7 +145,7 @@ export default function SettingsForm({
         <div>
           <label
             htmlFor="display_name"
-            className="block text-sm font-medium text-stone-700 mb-1"
+            className="block text-sm font-medium text-text-primary mb-1"
           >
             Display name
           </label>
@@ -156,14 +156,14 @@ export default function SettingsForm({
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder={username}
             maxLength={100}
-            className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm"
+            className="w-full px-3 py-2 border border-border rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
           />
         </div>
 
         <div>
           <label
             htmlFor="bio"
-            className="block text-sm font-medium text-stone-700 mb-1"
+            className="block text-sm font-medium text-text-primary mb-1"
           >
             Byline
           </label>
@@ -173,7 +173,7 @@ export default function SettingsForm({
             onChange={(e) => setBio(e.target.value)}
             placeholder="A short line about yourself"
             rows={3}
-            className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm resize-none"
+            className="w-full px-3 py-2 border border-border rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent text-sm resize-none"
           />
         </div>
 
@@ -183,13 +183,13 @@ export default function SettingsForm({
               type="checkbox"
               checked={isPrivate}
               onChange={(e) => setIsPrivate(e.target.checked)}
-              className="rounded border-stone-300 text-stone-900 focus:ring-stone-900"
+              className="rounded border-border text-text-primary focus:ring-accent"
             />
-            <span className="text-sm text-stone-700">
+            <span className="text-sm text-text-primary">
               Private account
             </span>
           </label>
-          <p className="text-xs text-stone-400 mt-1 ml-6">
+          <p className="text-xs text-text-primary mt-1 ml-6">
             Only approved followers can see your books and activity
           </p>
         </div>
@@ -198,13 +198,13 @@ export default function SettingsForm({
           <button
             type="submit"
             disabled={loading}
-            className="bg-stone-900 text-white px-4 py-2 rounded text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50"
+            className="bg-accent text-white px-4 py-2 rounded text-sm font-medium hover:bg-surface-3 transition-colors disabled:opacity-50"
           >
             {loading ? "Saving..." : "Save"}
           </button>
           <a
             href={`/${username}`}
-            className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
+            className="text-sm text-text-primary hover:text-text-primary transition-colors"
           >
             Cancel
           </a>

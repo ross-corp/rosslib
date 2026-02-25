@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const googleErrorMessages: Record<string, string> = {
@@ -12,7 +12,7 @@ const googleErrorMessages: Record<string, string> = {
   google_login_failed: "Failed to sign in with Google. Please try again.",
 };
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState("");
@@ -56,20 +56,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="min-h-[70vh] flex flex-col items-center justify-center">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <Link href="/" className="font-semibold text-stone-900 text-xl">
-            rosslib
-          </Link>
-          <h1 className="mt-4 text-2xl font-bold text-stone-900">
+          <h1 className="text-2xl font-bold text-text-primary">
             Sign in to your account
           </h1>
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
               {error}
             </p>
           )}
@@ -77,7 +74,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-stone-700 mb-1"
+              className="label-mono block mb-1"
             >
               Email
             </label>
@@ -87,7 +84,7 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               required
-              className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm"
+              className="input-field"
               placeholder="you@example.com"
             />
           </div>
@@ -96,13 +93,13 @@ export default function LoginPage() {
             <div className="flex items-center justify-between mb-1">
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-stone-700"
+                className="label-mono"
               >
                 Password
               </label>
               <Link
                 href="/forgot-password"
-                className="text-xs text-stone-500 hover:text-stone-900"
+                className="text-xs text-text-tertiary hover:text-text-primary"
               >
                 Forgot password?
               </Link>
@@ -113,7 +110,7 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               required
-              className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm"
+              className="input-field"
               placeholder="••••••••"
             />
           </div>
@@ -121,7 +118,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-stone-900 text-white py-2.5 rounded font-medium hover:bg-stone-700 transition-colors text-sm disabled:opacity-50"
+            className="w-full btn-primary py-2.5"
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
@@ -131,17 +128,17 @@ export default function LoginPage() {
           <>
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-stone-200" />
+                <div className="divider w-full" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-white px-2 text-stone-400">or</span>
+                <span className="bg-surface-0 px-2 text-text-tertiary">or</span>
               </div>
             </div>
 
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/google"
-              className="w-full flex items-center justify-center gap-2 border border-stone-300 rounded py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors"
+              className="w-full flex items-center justify-center gap-2 border border-border rounded py-2.5 text-sm font-medium text-text-secondary hover:bg-surface-2 transition-colors"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path
@@ -166,16 +163,24 @@ export default function LoginPage() {
           </>
         )}
 
-        <p className="mt-6 text-center text-sm text-stone-500">
+        <p className="mt-6 text-center text-sm text-text-secondary">
           Don&rsquo;t have an account?{" "}
           <Link
             href="/register"
-            className="text-stone-900 font-medium hover:underline"
+            className="text-text-primary font-medium hover:underline"
           >
             Sign up
           </Link>
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

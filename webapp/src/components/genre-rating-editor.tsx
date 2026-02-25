@@ -132,19 +132,19 @@ export default function GenreRatingEditor({
         <div className="space-y-2 mb-4">
           {aggregateRatings.map((r) => (
             <div key={r.genre} className="flex items-center gap-3">
-              <span className="text-xs text-stone-600 w-28 shrink-0 truncate">
+              <span className="text-xs text-text-primary w-28 shrink-0 truncate">
                 {r.genre}
               </span>
-              <div className="flex-1 h-2 bg-stone-100 rounded-full overflow-hidden">
+              <div className="flex-1 h-2 bg-surface-2 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-stone-400 rounded-full transition-all"
+                  className="h-full bg-text-tertiary rounded-full transition-all"
                   style={{ width: `${(r.average / 10) * 100}%` }}
                 />
               </div>
-              <span className="text-xs text-stone-500 w-16 text-right shrink-0">
+              <span className="text-xs text-text-primary w-16 text-right shrink-0">
                 {r.average.toFixed(1)}/10
               </span>
-              <span className="text-[10px] text-stone-400 w-10 text-right shrink-0">
+              <span className="text-[10px] text-text-primary w-10 text-right shrink-0">
                 ({r.rater_count})
               </span>
             </div>
@@ -153,7 +153,7 @@ export default function GenreRatingEditor({
       )}
 
       {!hasAggregate && !isLoggedIn && (
-        <p className="text-stone-400 text-sm">No genre ratings yet.</p>
+        <p className="text-text-primary text-sm">No genre ratings yet.</p>
       )}
 
       {/* ── User rating editor ── */}
@@ -161,15 +161,15 @@ export default function GenreRatingEditor({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+          className="text-xs text-text-primary hover:text-text-primary transition-colors"
         >
           {hasAnyRating ? "Edit your genre ratings" : "Rate genres"}
         </button>
       )}
 
       {isLoggedIn && expanded && (
-        <div className="mt-3 space-y-3 border border-stone-100 rounded-lg p-4 bg-stone-50/50">
-          <p className="text-xs text-stone-500 mb-2">
+        <div className="mt-3 space-y-3 border border-border rounded-lg p-4 bg-surface-2/50">
+          <p className="text-xs text-text-primary mb-2">
             How strongly does this book fit each genre? (0 = not at all, 10 =
             defining example)
           </p>
@@ -177,7 +177,7 @@ export default function GenreRatingEditor({
           <div className="space-y-2">
             {GENRES.map((genre) => (
               <div key={genre} className="flex items-center gap-3">
-                <span className="text-xs text-stone-600 w-28 shrink-0 truncate">
+                <span className="text-xs text-text-primary w-28 shrink-0 truncate">
                   {genre}
                 </span>
                 <input
@@ -189,9 +189,9 @@ export default function GenreRatingEditor({
                     handleSliderChange(genre, parseInt(e.target.value))
                   }
                   disabled={saving}
-                  className="flex-1 h-1.5 accent-stone-600"
+                  className="flex-1 h-1.5 accent-neutral-400"
                 />
-                <span className="text-xs text-stone-500 w-6 text-right tabular-nums">
+                <span className="text-xs text-text-primary w-6 text-right tabular-nums">
                   {myRatings[genre] ?? 0}
                 </span>
               </div>
@@ -203,7 +203,7 @@ export default function GenreRatingEditor({
               type="button"
               onClick={save}
               disabled={saving || !hasChanges}
-              className="text-xs px-3 py-1.5 rounded bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-surface-3 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {saving ? "Saving..." : "Save"}
             </button>
@@ -214,12 +214,12 @@ export default function GenreRatingEditor({
                 setExpanded(false);
               }}
               disabled={saving}
-              className="text-xs text-stone-400 hover:text-stone-600 transition-colors disabled:opacity-50"
+              className="text-xs text-text-primary hover:text-text-primary transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             {message && (
-              <span className="text-xs text-stone-500 ml-auto">{message}</span>
+              <span className="text-xs text-text-primary ml-auto">{message}</span>
             )}
           </div>
         </div>

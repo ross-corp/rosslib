@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Nav from "@/components/nav";
 import { getUser, getToken } from "@/lib/auth";
 import { formatTime } from "@/components/activity";
 import NotificationList from "./notification-list";
@@ -49,10 +48,9 @@ export default async function NotificationsPage({
 
   return (
     <div className="min-h-screen">
-      <Nav />
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-stone-900">Notifications</h1>
+          <h1 className="text-2xl font-bold text-text-primary">Notifications</h1>
           {data.notifications.length > 0 && (
             <NotificationList
               notifications={data.notifications}
@@ -63,21 +61,21 @@ export default async function NotificationsPage({
 
         {data.notifications.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-stone-500 text-sm">
+            <p className="text-text-primary text-sm">
               No notifications yet. Follow authors to get notified about
               new publications, or follow books to hear about new discussions,
               links, and reviews.
             </p>
             <Link
               href="/feed"
-              className="inline-block mt-4 text-sm text-stone-600 hover:text-stone-900 border border-stone-300 px-4 py-2 rounded transition-colors"
+              className="inline-block mt-4 text-sm text-text-primary hover:text-text-primary border border-border px-4 py-2 rounded transition-colors"
             >
               Go to feed
             </Link>
           </div>
         ) : (
           <>
-            <div className="divide-y divide-stone-100">
+            <div className="divide-y divide-border">
               {data.notifications.map((notif) => (
                 <NotificationCard key={notif.id} notif={notif} />
               ))}
@@ -87,7 +85,7 @@ export default async function NotificationsPage({
               <div className="mt-8 text-center">
                 <Link
                   href={`/notifications?cursor=${encodeURIComponent(data.next_cursor)}`}
-                  className="text-sm text-stone-500 hover:text-stone-900 border border-stone-300 px-4 py-2 rounded transition-colors"
+                  className="text-sm text-text-primary hover:text-text-primary border border-border px-4 py-2 rounded transition-colors"
                 >
                   Load more
                 </Link>
@@ -108,7 +106,7 @@ function NotificationCard({ notif }: { notif: Notification }) {
     <div
       className={`py-4 flex gap-3 ${notif.read ? "opacity-60" : ""}`}
     >
-      <div className="shrink-0 w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-500">
+      <div className="shrink-0 w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-primary">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
@@ -119,18 +117,18 @@ function NotificationCard({ notif }: { notif: Notification }) {
         </svg>
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-stone-900">{notif.title}</p>
+        <p className="text-sm font-medium text-text-primary">{notif.title}</p>
         {notif.body && (
-          <p className="text-sm text-stone-600 mt-0.5">{notif.body}</p>
+          <p className="text-sm text-text-primary mt-0.5">{notif.body}</p>
         )}
         <div className="flex items-center gap-3 mt-1">
-          <span className="text-xs text-stone-400">
+          <span className="text-xs text-text-primary">
             {formatTime(notif.created_at)}
           </span>
           {authorKey && (
             <Link
               href={`/authors/${authorKey}`}
-              className="text-xs text-stone-500 hover:text-stone-900 hover:underline"
+              className="text-xs text-text-primary hover:text-text-primary hover:underline"
             >
               View author
             </Link>
@@ -138,7 +136,7 @@ function NotificationCard({ notif }: { notif: Notification }) {
           {bookOlId && (
             <Link
               href={`/books/${bookOlId}`}
-              className="text-xs text-stone-500 hover:text-stone-900 hover:underline"
+              className="text-xs text-text-primary hover:text-text-primary hover:underline"
             >
               View book
             </Link>

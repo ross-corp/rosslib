@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
@@ -35,21 +35,18 @@ export default function VerifyEmailPage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4">
+      <div className="min-h-[70vh] flex flex-col items-center justify-center">
         <div className="w-full max-w-sm text-center">
-          <Link href="/" className="font-semibold text-stone-900 text-xl">
-            rosslib
-          </Link>
-          <h1 className="mt-4 text-2xl font-bold text-stone-900">
+          <h1 className="text-2xl font-bold text-text-primary">
             Invalid verification link
           </h1>
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 text-sm text-text-secondary">
             This verification link is invalid. You can request a new one from
             your settings page.
           </p>
           <Link
             href="/settings"
-            className="inline-block mt-4 text-stone-900 font-medium hover:underline text-sm"
+            className="inline-block mt-4 text-text-primary font-medium hover:underline text-sm"
           >
             Go to settings
           </Link>
@@ -59,22 +56,18 @@ export default function VerifyEmailPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="min-h-[70vh] flex flex-col items-center justify-center">
       <div className="w-full max-w-sm text-center">
-        <Link href="/" className="font-semibold text-stone-900 text-xl">
-          rosslib
-        </Link>
-
         {loading && (
-          <p className="mt-6 text-sm text-stone-500">Verifying your email...</p>
+          <p className="text-sm text-text-secondary">Verifying your email...</p>
         )}
 
         {success && (
-          <div className="mt-6">
-            <h1 className="text-2xl font-bold text-stone-900">
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary">
               Email verified
             </h1>
-            <p className="mt-2 text-sm text-stone-500">
+            <p className="mt-2 text-sm text-text-secondary">
               Your email has been verified. You now have full access.
             </p>
             <button
@@ -82,7 +75,7 @@ export default function VerifyEmailPage() {
                 router.push("/");
                 router.refresh();
               }}
-              className="inline-block mt-4 bg-stone-900 text-white px-4 py-2 rounded text-sm font-medium hover:bg-stone-700 transition-colors"
+              className="inline-block mt-4 btn-primary"
             >
               Go to home
             </button>
@@ -90,14 +83,14 @@ export default function VerifyEmailPage() {
         )}
 
         {error && (
-          <div className="mt-6">
-            <h1 className="text-2xl font-bold text-stone-900">
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary">
               Verification failed
             </h1>
-            <p className="mt-2 text-sm text-red-600">{error}</p>
+            <p className="mt-2 text-sm text-red-400">{error}</p>
             <Link
               href="/settings"
-              className="inline-block mt-4 text-stone-900 font-medium hover:underline text-sm"
+              className="inline-block mt-4 text-text-primary font-medium hover:underline text-sm"
             >
               Request a new verification email
             </Link>
@@ -105,5 +98,13 @@ export default function VerifyEmailPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

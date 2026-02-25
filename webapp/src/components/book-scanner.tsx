@@ -194,7 +194,7 @@ export default function BookScanner({
   return (
     <div className="space-y-6">
       {/* Mode selector */}
-      <div className="flex gap-1 border-b border-stone-200">
+      <div className="flex gap-1 border-b border-border">
         {hasBarcodeApi && (
           <button
             onClick={() => {
@@ -204,8 +204,8 @@ export default function BookScanner({
             }}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               mode === "camera"
-                ? "border-stone-900 text-stone-900"
-                : "border-transparent text-stone-400 hover:text-stone-700"
+                ? "border-accent text-text-primary"
+                : "border-transparent text-text-primary hover:text-text-primary"
             }`}
           >
             Camera
@@ -219,8 +219,8 @@ export default function BookScanner({
           }}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
             mode === "upload"
-              ? "border-stone-900 text-stone-900"
-              : "border-transparent text-stone-400 hover:text-stone-700"
+              ? "border-accent text-text-primary"
+              : "border-transparent text-text-primary hover:text-text-primary"
           }`}
         >
           Upload Photo
@@ -233,8 +233,8 @@ export default function BookScanner({
           }}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
             mode === "manual"
-              ? "border-stone-900 text-stone-900"
-              : "border-transparent text-stone-400 hover:text-stone-700"
+              ? "border-accent text-text-primary"
+              : "border-transparent text-text-primary hover:text-text-primary"
           }`}
         >
           Enter ISBN
@@ -244,7 +244,7 @@ export default function BookScanner({
       {/* Camera mode */}
       {mode === "camera" && (
         <div className="space-y-4">
-          <div className="relative bg-stone-100 rounded-lg overflow-hidden max-w-md aspect-[4/3]">
+          <div className="relative bg-surface-2 rounded-lg overflow-hidden max-w-md aspect-[4/3]">
             <video
               ref={videoRef}
               className="w-full h-full object-cover"
@@ -255,15 +255,15 @@ export default function BookScanner({
               <div className="absolute inset-0 flex items-center justify-center">
                 <button
                   onClick={startCamera}
-                  className="px-4 py-2 bg-stone-900 text-white text-sm rounded hover:bg-stone-700 transition-colors"
+                  className="px-4 py-2 bg-accent text-white text-sm rounded hover:bg-surface-3 transition-colors"
                 >
                   Start Camera
                 </button>
               </div>
             )}
             {cameraActive && (
-              <div className="absolute inset-0 pointer-events-none border-2 border-dashed border-stone-400 rounded-lg m-4 flex items-center justify-center">
-                <span className="bg-white/80 text-stone-600 text-xs px-2 py-1 rounded">
+              <div className="absolute inset-0 pointer-events-none border-2 border-dashed border-border rounded-lg m-4 flex items-center justify-center">
+                <span className="bg-surface-0/80 text-text-primary text-xs px-2 py-1 rounded">
                   Point at barcode
                 </span>
               </div>
@@ -272,13 +272,13 @@ export default function BookScanner({
           {cameraActive && (
             <button
               onClick={stopCamera}
-              className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
+              className="text-xs text-text-primary hover:text-text-primary transition-colors"
             >
               Stop camera
             </button>
           )}
           {loading && (
-            <p className="text-sm text-stone-500">Looking up book...</p>
+            <p className="text-sm text-text-primary">Looking up book...</p>
           )}
         </div>
       )}
@@ -287,9 +287,9 @@ export default function BookScanner({
       {mode === "upload" && (
         <div className="space-y-4">
           <label className="block max-w-md">
-            <div className="border-2 border-dashed border-stone-300 rounded-lg p-8 text-center hover:border-stone-400 transition-colors cursor-pointer">
+            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-border transition-colors cursor-pointer">
               <svg
-                className="mx-auto h-10 w-10 text-stone-400 mb-3"
+                className="mx-auto h-10 w-10 text-text-primary mb-3"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -306,10 +306,10 @@ export default function BookScanner({
                   d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"
                 />
               </svg>
-              <p className="text-sm text-stone-600 mb-1">
+              <p className="text-sm text-text-primary mb-1">
                 {loading ? "Scanning..." : "Upload a photo of the barcode"}
               </p>
-              <p className="text-xs text-stone-400">JPEG, PNG, or GIF</p>
+              <p className="text-xs text-text-primary">JPEG, PNG, or GIF</p>
             </div>
             <input
               type="file"
@@ -331,12 +331,12 @@ export default function BookScanner({
             value={manualIsbn}
             onChange={(e) => setManualIsbn(e.target.value)}
             placeholder="Enter ISBN (10 or 13 digits)"
-            className="flex-1 px-3 py-2 text-sm border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent"
+            className="flex-1 px-3 py-2 text-sm border border-border rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
           />
           <button
             type="submit"
             disabled={loading || !manualIsbn.trim()}
-            className="px-4 py-2 bg-stone-900 text-white text-sm rounded hover:bg-stone-700 transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-accent text-white text-sm rounded hover:bg-surface-3 transition-colors disabled:opacity-50"
           >
             {loading ? "..." : "Look up"}
           </button>
@@ -353,7 +353,7 @@ export default function BookScanner({
 
       {/* Current result */}
       {result && (
-        <div className="border border-stone-200 rounded-lg p-4 max-w-lg">
+        <div className="border border-border rounded-lg p-4 max-w-lg">
           <div className="flex gap-4">
             {result.book.cover_url ? (
               <img
@@ -362,28 +362,28 @@ export default function BookScanner({
                 className="w-16 h-24 object-cover rounded shadow-sm flex-shrink-0"
               />
             ) : (
-              <div className="w-16 h-24 bg-stone-100 rounded flex-shrink-0 flex items-center justify-center text-stone-400 text-xs">
+              <div className="w-16 h-24 bg-surface-2 rounded flex-shrink-0 flex items-center justify-center text-text-primary text-xs">
                 No cover
               </div>
             )}
             <div className="flex-1 min-w-0">
               <Link
                 href={`/books/${getOlId(result.book.key)}`}
-                className="text-sm font-medium text-stone-900 hover:underline"
+                className="text-sm font-medium text-text-primary hover:underline"
               >
                 {result.book.title}
               </Link>
               {result.book.authors && result.book.authors.length > 0 && (
-                <p className="text-xs text-stone-500 mt-0.5">
+                <p className="text-xs text-text-primary mt-0.5">
                   {result.book.authors.join(", ")}
                 </p>
               )}
               {result.book.publish_year && (
-                <p className="text-xs text-stone-400 mt-0.5">
+                <p className="text-xs text-text-primary mt-0.5">
                   {result.book.publish_year}
                 </p>
               )}
-              <p className="text-xs text-stone-400 mt-1">
+              <p className="text-xs text-text-primary mt-1">
                 ISBN: {result.isbn}
               </p>
               {statusValues.length > 0 && statusKeyId && (
@@ -406,7 +406,7 @@ export default function BookScanner({
       {/* Previously scanned books */}
       {scannedBooks.length > 1 && (
         <div>
-          <h2 className="text-sm font-medium text-stone-700 mb-3">
+          <h2 className="text-sm font-medium text-text-primary mb-3">
             Scanned Books ({scannedBooks.length})
           </h2>
           <div className="space-y-3">
@@ -416,7 +416,7 @@ export default function BookScanner({
               .map((scan) => (
                 <div
                   key={scan.isbn}
-                  className="flex items-center gap-3 border border-stone-100 rounded-lg p-3"
+                  className="flex items-center gap-3 border border-border rounded-lg p-3"
                 >
                   {scan.book.cover_url ? (
                     <img
@@ -425,17 +425,17 @@ export default function BookScanner({
                       className="w-10 h-14 object-cover rounded shadow-sm flex-shrink-0"
                     />
                   ) : (
-                    <div className="w-10 h-14 bg-stone-100 rounded flex-shrink-0" />
+                    <div className="w-10 h-14 bg-surface-2 rounded flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
                     <Link
                       href={`/books/${getOlId(scan.book.key)}`}
-                      className="text-sm text-stone-900 hover:underline truncate block"
+                      className="text-sm text-text-primary hover:underline truncate block"
                     >
                       {scan.book.title}
                     </Link>
                     {scan.book.authors && (
-                      <p className="text-xs text-stone-400 truncate">
+                      <p className="text-xs text-text-primary truncate">
                         {scan.book.authors.join(", ")}
                       </p>
                     )}

@@ -33,8 +33,8 @@ export default function AuthorFollowButton({
       disabled={loading}
       className={`text-sm px-3 py-1.5 rounded border transition-colors disabled:opacity-50 ${
         following
-          ? "border-stone-300 text-stone-600 hover:border-stone-400 hover:text-stone-900"
-          : "border-stone-900 bg-stone-900 text-white hover:bg-stone-700"
+          ? "border-border text-text-primary hover:border-border hover:text-text-primary"
+          : "border-accent bg-accent text-white hover:bg-surface-3"
       }`}
     >
       {loading ? "..." : following ? "Following" : "Follow"}

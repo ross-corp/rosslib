@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Nav from "@/components/nav";
 import ShelfBookGrid from "@/components/shelf-book-grid";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -73,37 +72,36 @@ export default async function LabelPage({
 
   return (
     <div className="min-h-screen">
-      <Nav />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-xs text-stone-400 mb-8 flex-wrap">
-          <Link href={`/${username}`} className="hover:text-stone-700 transition-colors">
+        <nav className="flex items-center gap-2 text-xs text-text-primary mb-8 flex-wrap">
+          <Link href={`/${username}`} className="hover:text-text-primary transition-colors">
             {username}
           </Link>
           <span>/</span>
-          <span className="text-stone-500">{labelData.key_name}</span>
+          <span className="text-text-primary">{labelData.key_name}</span>
           {breadcrumbs.map((crumb, i) => (
             <span key={crumb.path} className="flex items-center gap-2">
               <span>/</span>
               {i < breadcrumbs.length - 1 ? (
                 <Link
                   href={`/${username}/labels/${keySlug}/${crumb.path}`}
-                  className="hover:text-stone-700 transition-colors"
+                  className="hover:text-text-primary transition-colors"
                 >
                   {crumb.label}
                 </Link>
               ) : (
-                <span className="text-stone-600">{crumb.label}</span>
+                <span className="text-text-primary">{crumb.label}</span>
               )}
             </span>
           ))}
         </nav>
 
         <div className="flex items-baseline gap-3 mb-6">
-          <h1 className="text-2xl font-bold text-stone-900">
+          <h1 className="text-2xl font-bold text-text-primary">
             {labelData.key_name}: {labelData.value_name}
           </h1>
-          <span className="text-sm text-stone-400">
+          <span className="text-sm text-text-primary">
             {labelData.books.length} {labelData.books.length === 1 ? "book" : "books"}
           </span>
         </div>
@@ -114,7 +112,7 @@ export default async function LabelPage({
             {parent && (
               <Link
                 href={`/${username}/labels/${keySlug}/${parent}`}
-                className="text-sm px-3 py-1 rounded-full border border-stone-200 text-stone-500 hover:border-stone-400 hover:text-stone-700 transition-colors"
+                className="text-sm px-3 py-1 rounded-full border border-border text-text-primary hover:border-border hover:text-text-primary transition-colors"
               >
                 ← {parent.split("/").pop()}
               </Link>
@@ -125,7 +123,7 @@ export default async function LabelPage({
                 <Link
                   key={sub}
                   href={`/${username}/labels/${keySlug}/${sub}`}
-                  className="text-sm px-3 py-1 rounded-full border border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900 transition-colors"
+                  className="text-sm px-3 py-1 rounded-full border border-border text-text-primary hover:border-border hover:text-text-primary transition-colors"
                 >
                   {label}
                 </Link>

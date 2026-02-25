@@ -82,25 +82,25 @@ export default function GhostControls({
         <button
           onClick={seed}
           disabled={seeding}
-          className="text-sm px-4 py-2 rounded border border-stone-900 bg-stone-900 text-white hover:bg-stone-700 transition-colors disabled:opacity-50"
+          className="text-sm px-4 py-2 rounded border border-accent bg-accent text-white hover:bg-surface-3 transition-colors disabled:opacity-50"
         >
           {seeding ? "Seeding..." : "Seed ghosts"}
         </button>
         <button
           onClick={simulate}
           disabled={simulating || ghosts.length === 0}
-          className="text-sm px-4 py-2 rounded border border-stone-300 text-stone-600 hover:border-stone-400 hover:text-stone-900 transition-colors disabled:opacity-50"
+          className="text-sm px-4 py-2 rounded border border-border text-text-primary hover:border-border hover:text-text-primary transition-colors disabled:opacity-50"
         >
           {simulating ? "Simulating..." : "Simulate round"}
         </button>
       </div>
 
       {seedMessage && (
-        <p className="text-sm text-stone-600">{seedMessage}</p>
+        <p className="text-sm text-text-primary">{seedMessage}</p>
       )}
 
       {ghosts.length === 0 ? (
-        <p className="text-sm text-stone-400">
+        <p className="text-sm text-text-primary">
           No ghosts seeded yet. Click &quot;Seed ghosts&quot; to create them.
         </p>
       ) : (
@@ -108,29 +108,29 @@ export default function GhostControls({
           {ghosts.map((g) => (
             <div
               key={g.username}
-              className="border border-stone-200 rounded-lg p-4 space-y-2"
+              className="border border-border rounded-lg p-4 space-y-2"
             >
               <div className="flex items-center justify-between">
                 <Link
                   href={`/${g.username}`}
-                  className="font-medium text-stone-900 hover:underline"
+                  className="font-medium text-text-primary hover:underline"
                 >
                   {g.display_name}
                 </Link>
-                <span className="text-xs text-stone-400">@{g.username}</span>
+                <span className="text-xs text-text-primary">@{g.username}</span>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-sm text-stone-500">
+              <div className="grid grid-cols-3 gap-2 text-sm text-text-primary">
                 <div>
-                  <span className="font-medium text-stone-700">{g.books_read}</span> read
+                  <span className="font-medium text-text-primary">{g.books_read}</span> read
                 </div>
                 <div>
-                  <span className="font-medium text-stone-700">{g.currently_reading}</span> reading
+                  <span className="font-medium text-text-primary">{g.currently_reading}</span> reading
                 </div>
                 <div>
-                  <span className="font-medium text-stone-700">{g.want_to_read}</span> want
+                  <span className="font-medium text-text-primary">{g.want_to_read}</span> want
                 </div>
               </div>
-              <div className="text-xs text-stone-400">
+              <div className="text-xs text-text-primary">
                 {g.following_count} following &middot; {g.followers_count} followers
               </div>
             </div>
@@ -140,14 +140,14 @@ export default function GhostControls({
 
       {simulateResults.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-stone-900">Simulation results</h2>
+          <h2 className="text-lg font-semibold text-text-primary">Simulation results</h2>
           {simulateResults.map((r) => (
-            <div key={r.ghost} className="border border-stone-100 rounded-lg p-3">
-              <p className="text-sm font-medium text-stone-700 mb-1">@{r.ghost}</p>
+            <div key={r.ghost} className="border border-border rounded-lg p-3">
+              <p className="text-sm font-medium text-text-primary mb-1">@{r.ghost}</p>
               {r.actions.length === 0 ? (
-                <p className="text-xs text-stone-400">No actions taken</p>
+                <p className="text-xs text-text-primary">No actions taken</p>
               ) : (
-                <ul className="text-xs text-stone-500 space-y-0.5">
+                <ul className="text-xs text-text-primary space-y-0.5">
                   {r.actions.map((a, i) => (
                     <li key={i}>{a}</li>
                   ))}

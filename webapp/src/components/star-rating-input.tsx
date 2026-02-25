@@ -26,7 +26,7 @@ export default function StarRatingInput({ value, onChange, disabled }: Props) {
           className="text-lg leading-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer select-none"
           aria-label={`${star} star${star !== 1 ? "s" : ""}`}
         >
-          <span className={star <= display ? "text-amber-500" : "text-stone-300"}>
+          <span className={star <= display ? "text-amber-500" : "text-text-primary"}>
             ★
           </span>
         </button>

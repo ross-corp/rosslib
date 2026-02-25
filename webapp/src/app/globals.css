@@ -1,3 +1,101 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --surface-0: #0a0a0a;
+    --surface-1: #141414;
+    --surface-2: #1c1c1c;
+    --surface-3: #262626;
+    --border: #2a2a2a;
+    --border-strong: #3a3a3a;
+    --text-primary: #f0f0f0;
+    --text-secondary: #d4d4d4;
+    --text-tertiary: #a0a0a0;
+    --text-inverted: #0a0a0a;
+    --accent: #d4d4d4;
+    --accent-hover: #e5e5e5;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  /* All links get underlines to indicate interactivity */
+  a {
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 2px;
+  }
+
+  a:hover {
+    text-decoration-color: var(--text-primary);
+  }
+
+  /* Exceptions: buttons, nav links, and elements that are obviously clickable */
+  nav a,
+  a.btn-primary,
+  a.btn-secondary,
+  a.nav-link,
+  a.tag-pill,
+  a.tag-pill-active {
+    text-decoration: none;
+  }
+}
+
+@layer components {
+  .label-mono {
+    @apply font-mono text-xs text-text-secondary tracking-wide;
+  }
+
+  .section-heading {
+    @apply font-mono text-xs font-semibold uppercase tracking-widest text-text-secondary;
+  }
+
+  .page-heading {
+    @apply text-xl font-bold text-text-primary tracking-tight;
+  }
+
+  .panel {
+    @apply bg-surface-1 border border-border rounded;
+  }
+
+  .input-field {
+    @apply w-full px-3 py-2 bg-surface-2 border border-border rounded text-text-primary placeholder-text-tertiary text-sm focus:outline-none focus:ring-1 focus:ring-accent focus:border-transparent;
+  }
+
+  .btn-primary {
+    @apply bg-accent text-text-inverted px-4 py-2 rounded font-medium text-sm hover:bg-accent-hover transition-colors disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply bg-surface-2 text-text-primary border border-border px-4 py-2 rounded font-medium text-sm hover:bg-surface-3 transition-colors;
+  }
+
+  .nav-link {
+    @apply font-mono text-sm text-text-secondary hover:text-text-primary px-2 py-1 transition-colors;
+  }
+
+  .tag-pill {
+    @apply font-mono text-xs px-2 py-0.5 rounded bg-surface-2 border border-border text-text-secondary hover:text-text-primary transition-colors;
+  }
+
+  .tag-pill-active {
+    @apply font-mono text-xs px-2 py-0.5 rounded bg-accent text-text-inverted;
+  }
+
+  .divider {
+    @apply border-t border-border;
+  }
+
+  .divider-strong {
+    @apply border-t border-border-strong;
+  }
+
+  /* Inline links within prose/text get underline styling by default.
+     Use .no-underline on links that shouldn't have it (covers, images, etc.) */
+  .no-underline {
+    text-decoration: none !important;
+  }
+}

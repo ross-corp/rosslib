@@ -92,23 +92,23 @@ export default function StatusPicker({
         disabled={loading}
         className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 whitespace-nowrap ${
           currentValue
-            ? "border-stone-900 bg-stone-900 text-white hover:bg-stone-700"
-            : "border-stone-300 text-stone-500 hover:border-stone-500 hover:text-stone-700"
+            ? "border-accent bg-accent text-white hover:bg-surface-3"
+            : "border-border text-text-primary hover:border-border-strong hover:text-text-primary"
         }`}
       >
         {loading ? "..." : currentValue ? currentValue.name : "Add to library"}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-10 bg-white border border-stone-200 rounded shadow-sm min-w-[160px]">
+        <div className="absolute right-0 top-full mt-1 z-10 bg-surface-0 border border-border rounded shadow-sm min-w-[160px]">
           {statusValues.map((value) => (
             <button
               key={value.id}
               onClick={() => selectStatus(value)}
-              className={`w-full text-left px-3 py-2 text-xs transition-colors hover:bg-stone-50 ${
+              className={`w-full text-left px-3 py-2 text-xs transition-colors hover:bg-surface-2 ${
                 value.id === activeValueId
-                  ? "text-stone-900 font-medium"
-                  : "text-stone-600"
+                  ? "text-text-primary font-medium"
+                  : "text-text-primary"
               }`}
             >
               {value.id === activeValueId ? "\u2713 " : ""}
@@ -117,10 +117,10 @@ export default function StatusPicker({
           ))}
           {activeValueId && (
             <>
-              <div className="border-t border-stone-100 mx-2" />
+              <div className="border-t border-border mx-2" />
               <button
                 onClick={removeFromLibrary}
-                className="w-full text-left px-3 py-2 text-xs text-stone-400 hover:text-stone-600 hover:bg-stone-50 transition-colors"
+                className="w-full text-left px-3 py-2 text-xs text-text-primary hover:text-text-primary hover:bg-surface-2 transition-colors"
               >
                 Remove
               </button>

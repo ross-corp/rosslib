@@ -108,7 +108,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider">
+        <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider">
           {threads.length > 0
             ? `Discussions (${threads.length})`
             : "Discussions"}
@@ -117,7 +117,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
           <button
             type="button"
             onClick={() => setShowForm(true)}
-            className="text-xs px-3 py-1.5 rounded bg-stone-900 text-white hover:bg-stone-700 transition-colors"
+            className="text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-surface-3 transition-colors"
           >
             New thread
           </button>
@@ -133,7 +133,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Thread title"
             disabled={submitting}
-            className="w-full border border-stone-200 rounded px-3 py-2 text-sm text-stone-700 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
+            className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
           />
 
           {/* Similar thread suggestions */}
@@ -165,16 +165,16 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
             placeholder="What do you want to discuss?"
             rows={4}
             disabled={submitting}
-            className="w-full border border-stone-200 rounded px-3 py-2 text-sm text-stone-700 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400 resize-y disabled:opacity-50"
+            className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong resize-y disabled:opacity-50"
           />
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-1.5 text-xs text-stone-500">
+            <label className="flex items-center gap-1.5 text-xs text-text-primary">
               <input
                 type="checkbox"
                 checked={spoiler}
                 onChange={(e) => setSpoiler(e.target.checked)}
                 disabled={submitting}
-                className="rounded border-stone-300"
+                className="rounded border-border"
               />
               Contains spoilers
             </label>
@@ -183,7 +183,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
             <button
               type="submit"
               disabled={submitting || !title.trim() || !body.trim()}
-              className="text-xs px-3 py-1.5 rounded bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-surface-3 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? "Posting..." : "Post thread"}
             </button>
@@ -198,7 +198,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
                 setSimilarThreads([]);
               }}
               disabled={submitting}
-              className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+              className="text-xs text-text-primary hover:text-text-primary transition-colors"
             >
               Cancel
             </button>
@@ -209,14 +209,14 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
 
       {/* Thread list */}
       {threads.length === 0 ? (
-        <p className="text-stone-400 text-sm">No discussions yet.</p>
+        <p className="text-text-primary text-sm">No discussions yet.</p>
       ) : (
         <div className="space-y-4">
           {threads.map((thread) => (
             <Link
               key={thread.id}
               href={`/books/${workId}/threads/${thread.id}`}
-              className="block border border-stone-100 rounded-lg p-4 hover:border-stone-300 transition-colors"
+              className="block border border-border rounded-lg p-4 hover:border-border transition-colors"
             >
               <div className="flex items-start gap-3">
                 {thread.avatar_url ? (
@@ -226,11 +226,11 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
                     className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5"
                   />
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-stone-200 shrink-0 mt-0.5" />
+                  <div className="w-6 h-6 rounded-full bg-surface-2 shrink-0 mt-0.5" />
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-medium text-stone-900 truncate">
+                    <h3 className="text-sm font-medium text-text-primary truncate">
                       {thread.spoiler && (
                         <span className="text-[10px] font-medium text-amber-600 border border-amber-200 rounded px-1 py-0.5 mr-2 leading-none">
                           Spoiler
@@ -239,7 +239,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
                       {thread.title}
                     </h3>
                   </div>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-stone-400">
+                  <div className="flex items-center gap-2 mt-1 text-xs text-text-primary">
                     <span>{thread.display_name ?? thread.username}</span>
                     <span>&middot;</span>
                     <span>{formatDate(thread.created_at)}</span>

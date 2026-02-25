@@ -45,27 +45,24 @@ export default function RegisterPage() {
 
   if (registered) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4">
+      <div className="min-h-[70vh] flex flex-col items-center justify-center">
         <div className="w-full max-w-sm text-center">
-          <Link href="/" className="font-semibold text-stone-900 text-xl">
-            rosslib
-          </Link>
-          <h1 className="mt-6 text-2xl font-bold text-stone-900">
+          <h1 className="text-2xl font-bold text-text-primary">
             Check your email
           </h1>
-          <p className="mt-3 text-sm text-stone-500">
+          <p className="mt-3 text-sm text-text-secondary">
             We sent a verification link to{" "}
-            <span className="font-medium text-stone-700">{registeredEmail}</span>.
+            <span className="font-medium text-text-primary">{registeredEmail}</span>.
             Click the link to verify your email and get full access.
           </p>
-          <p className="mt-4 text-xs text-stone-400">
+          <p className="mt-4 text-xs text-text-tertiary">
             {"Didn't"} receive it? Check your spam folder, or{" "}
             <button
               onClick={() => {
                 router.push("/");
                 router.refresh();
               }}
-              className="text-stone-900 font-medium hover:underline"
+              className="text-text-primary font-medium hover:underline"
             >
               continue to rosslib
             </button>{" "}
@@ -77,20 +74,17 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="min-h-[70vh] flex flex-col items-center justify-center">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <Link href="/" className="font-semibold text-stone-900 text-xl">
-            rosslib
-          </Link>
-          <h1 className="mt-4 text-2xl font-bold text-stone-900">
+          <h1 className="text-2xl font-bold text-text-primary">
             Create your account
           </h1>
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
               {error}
             </p>
           )}
@@ -98,7 +92,7 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="username"
-              className="block text-sm font-medium text-stone-700 mb-1"
+              className="label-mono block mb-1"
             >
               Username
             </label>
@@ -108,10 +102,10 @@ export default function RegisterPage() {
               type="text"
               autoComplete="username"
               required
-              className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm"
+              className="input-field"
               placeholder="yourname"
             />
-            <p className="mt-1 text-xs text-stone-400">
+            <p className="mt-1 text-xs text-text-tertiary">
               Lowercase letters, numbers, and hyphens only.
             </p>
           </div>
@@ -119,7 +113,7 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-stone-700 mb-1"
+              className="label-mono block mb-1"
             >
               Email
             </label>
@@ -129,7 +123,7 @@ export default function RegisterPage() {
               type="email"
               autoComplete="email"
               required
-              className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm"
+              className="input-field"
               placeholder="you@example.com"
             />
           </div>
@@ -137,7 +131,7 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-stone-700 mb-1"
+              className="label-mono block mb-1"
             >
               Password
             </label>
@@ -148,16 +142,16 @@ export default function RegisterPage() {
               autoComplete="new-password"
               required
               minLength={8}
-              className="w-full px-3 py-2 border border-stone-300 rounded text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent text-sm"
+              className="input-field"
               placeholder="••••••••"
             />
-            <p className="mt-1 text-xs text-stone-400">At least 8 characters.</p>
+            <p className="mt-1 text-xs text-text-tertiary">At least 8 characters.</p>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-stone-900 text-white py-2.5 rounded font-medium hover:bg-stone-700 transition-colors text-sm disabled:opacity-50"
+            className="w-full btn-primary py-2.5"
           >
             {loading ? "Creating account..." : "Create account"}
           </button>
@@ -167,17 +161,17 @@ export default function RegisterPage() {
           <>
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-stone-200" />
+                <div className="divider w-full" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-white px-2 text-stone-400">or</span>
+                <span className="bg-surface-0 px-2 text-text-tertiary">or</span>
               </div>
             </div>
 
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/google"
-              className="w-full flex items-center justify-center gap-2 border border-stone-300 rounded py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors"
+              className="w-full flex items-center justify-center gap-2 border border-border rounded py-2.5 text-sm font-medium text-text-secondary hover:bg-surface-2 transition-colors"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path
@@ -202,11 +196,11 @@ export default function RegisterPage() {
           </>
         )}
 
-        <p className="mt-6 text-center text-sm text-stone-500">
+        <p className="mt-6 text-center text-sm text-text-secondary">
           Already have an account?{" "}
           <Link
             href="/login"
-            className="text-stone-900 font-medium hover:underline"
+            className="text-text-primary font-medium hover:underline"
           >
             Sign in
           </Link>

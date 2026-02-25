@@ -26,14 +26,14 @@ export default function NotificationBell() {
   return (
     <Link
       href="/notifications"
-      className="relative text-sm text-stone-500 hover:text-stone-900 px-2 py-1.5 rounded transition-colors hidden sm:inline-flex"
+      className="relative text-sm text-text-secondary hover:text-text-primary px-2 py-1 transition-colors"
       title="Notifications"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 20 20"
         fill="currentColor"
-        className="w-5 h-5"
+        className="w-4 h-4"
       >
         <path
           fillRule="evenodd"

@@ -42,10 +42,10 @@ export default function FollowButton({
       disabled={loading}
       className={`text-sm px-3 py-1.5 rounded border transition-colors disabled:opacity-50 ${
         status === "active"
-          ? "border-stone-300 text-stone-600 hover:border-stone-400 hover:text-stone-900"
+          ? "border-border text-text-secondary hover:border-border-strong hover:text-text-primary"
           : status === "pending"
-            ? "border-stone-200 text-stone-400 hover:border-stone-300 hover:text-stone-600"
-            : "border-stone-900 bg-stone-900 text-white hover:bg-stone-700"
+            ? "border-border text-text-tertiary hover:border-border-strong hover:text-text-secondary"
+            : "border-accent bg-accent text-text-inverted hover:bg-accent-hover"
       }`}
     >
       {loading ? "..." : label}

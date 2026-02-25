@@ -175,7 +175,7 @@ export default function CrossUserCompareForm({
       {/* Your list */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">
+          <label className="block text-sm font-medium text-text-primary mb-1">
             Your list
           </label>
           <select
@@ -184,7 +184,7 @@ export default function CrossUserCompareForm({
               setMyCollection(e.target.value);
               setHasResult(false);
             }}
-            className="w-full px-3 py-2 text-sm border border-stone-200 rounded bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900"
+            className="w-full px-3 py-2 text-sm border border-border rounded bg-surface-0 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="">Select one of your lists...</option>
             {myShelves.map((s) => (
@@ -197,7 +197,7 @@ export default function CrossUserCompareForm({
 
         {/* Operation */}
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">
+          <label className="block text-sm font-medium text-text-primary mb-1">
             Operation
           </label>
           <select
@@ -206,7 +206,7 @@ export default function CrossUserCompareForm({
               setOperation(e.target.value as Operation);
               setHasResult(false);
             }}
-            className="w-full px-3 py-2 text-sm border border-stone-200 rounded bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900"
+            className="w-full px-3 py-2 text-sm border border-border rounded bg-surface-0 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
           >
             {(Object.keys(operationLabels) as Operation[]).map((op) => (
               <option key={op} value={op}>
@@ -214,7 +214,7 @@ export default function CrossUserCompareForm({
               </option>
             ))}
           </select>
-          <p className="text-xs text-stone-400 mt-1">
+          <p className="text-xs text-text-primary mt-1">
             {operationLabels[operation].description}
           </p>
         </div>
@@ -222,7 +222,7 @@ export default function CrossUserCompareForm({
 
       {/* Their username + shelf lookup */}
       <div className="space-y-3">
-        <label className="block text-sm font-medium text-stone-700">
+        <label className="block text-sm font-medium text-text-primary">
           Friend&apos;s username
         </label>
         <div className="flex gap-2 items-start">
@@ -240,12 +240,12 @@ export default function CrossUserCompareForm({
               if (e.key === "Enter") loadTheirShelves();
             }}
             placeholder="Enter username..."
-            className="px-3 py-2 text-sm border border-stone-200 rounded bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900 w-64"
+            className="px-3 py-2 text-sm border border-border rounded bg-surface-0 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent w-64"
           />
           <button
             onClick={loadTheirShelves}
             disabled={!theirUsername.trim() || loadingShelves}
-            className="px-3 py-2 text-sm bg-stone-200 text-stone-700 rounded hover:bg-stone-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-2 text-sm bg-surface-2 text-text-primary rounded hover:bg-surface-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loadingShelves ? "Loading..." : "Load shelves"}
           </button>
@@ -253,7 +253,7 @@ export default function CrossUserCompareForm({
 
         {shelvesLoaded && theirShelves.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">
+            <label className="block text-sm font-medium text-text-primary mb-1">
               Their list
             </label>
             <select
@@ -262,7 +262,7 @@ export default function CrossUserCompareForm({
                 setTheirSlug(e.target.value);
                 setHasResult(false);
               }}
-              className="w-full max-w-md px-3 py-2 text-sm border border-stone-200 rounded bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900"
+              className="w-full max-w-md px-3 py-2 text-sm border border-border rounded bg-surface-0 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="">Select their list...</option>
               {theirShelves.map((s) => (
@@ -278,7 +278,7 @@ export default function CrossUserCompareForm({
       <button
         onClick={compute}
         disabled={!canCompute || loading}
-        className="px-4 py-2 text-sm bg-stone-900 text-white rounded hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-4 py-2 text-sm bg-accent text-white rounded hover:bg-surface-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "Computing..." : "Compare"}
       </button>
@@ -289,16 +289,16 @@ export default function CrossUserCompareForm({
       {hasResult && (
         <div>
           <div className="flex items-baseline gap-3 mb-4">
-            <h2 className="text-lg font-semibold text-stone-900">
+            <h2 className="text-lg font-semibold text-text-primary">
               Result: {books.length} book{books.length !== 1 ? "s" : ""}
             </h2>
-            <span className="text-sm text-stone-400">
+            <span className="text-sm text-text-primary">
               {operationLabels[operation].label} of {myName} and {theirName}
             </span>
           </div>
 
           {books.length === 0 ? (
-            <p className="text-sm text-stone-400">
+            <p className="text-sm text-text-primary">
               No books match this operation.
             </p>
           ) : (
@@ -314,11 +314,11 @@ export default function CrossUserCompareForm({
                         <img
                           src={book.cover_url}
                           alt={book.title}
-                          className="w-full aspect-[2/3] object-cover rounded shadow-sm bg-stone-100 group-hover:shadow-md transition-shadow"
+                          className="w-full aspect-[2/3] object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
                         />
                       ) : (
-                        <div className="w-full aspect-[2/3] bg-stone-100 rounded shadow-sm flex items-end p-2 group-hover:shadow-md transition-shadow">
-                          <span className="text-xs text-stone-400 leading-tight line-clamp-3">
+                        <div className="w-full aspect-[2/3] bg-surface-2 rounded shadow-sm flex items-end p-2 group-hover:shadow-md transition-shadow">
+                          <span className="text-xs text-text-primary leading-tight line-clamp-3">
                             {book.title}
                           </span>
                         </div>
@@ -327,7 +327,7 @@ export default function CrossUserCompareForm({
                     <div className="min-w-0">
                       <Link
                         href={`/books/${book.open_library_id}`}
-                        className="text-xs font-medium text-stone-800 hover:text-stone-900 line-clamp-2 leading-snug"
+                        className="text-xs font-medium text-text-primary hover:text-text-primary line-clamp-2 leading-snug"
                       >
                         {book.title}
                       </Link>
@@ -342,7 +342,7 @@ export default function CrossUserCompareForm({
                               className={`text-[10px] leading-none ${
                                 n <= book.rating!
                                   ? "text-amber-500"
-                                  : "text-stone-200"
+                                  : "text-text-primary"
                               }`}
                             >
                               &#9733;
@@ -356,8 +356,8 @@ export default function CrossUserCompareForm({
               </ul>
 
               {/* Save as new list */}
-              <div className="border-t border-stone-200 pt-6">
-                <h3 className="text-sm font-medium text-stone-700 mb-3">
+              <div className="border-t border-border pt-6">
+                <h3 className="text-sm font-medium text-text-primary mb-3">
                   Save as new list
                 </h3>
                 {savedSlug ? (
@@ -378,22 +378,22 @@ export default function CrossUserCompareForm({
                         value={saveName}
                         onChange={(e) => setSaveName(e.target.value)}
                         placeholder="New list name..."
-                        className="px-3 py-1.5 text-sm border border-stone-200 rounded bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900 w-64"
+                        className="px-3 py-1.5 text-sm border border-border rounded bg-surface-0 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent w-64"
                       />
                       <button
                         onClick={saveAsNewList}
                         disabled={!saveName.trim() || saving}
-                        className="px-3 py-1.5 text-sm bg-stone-900 text-white rounded hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-1.5 text-sm bg-accent text-white rounded hover:bg-surface-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {saving ? "Saving..." : "Save"}
                       </button>
                     </div>
-                    <label className="flex items-center gap-2 text-sm text-stone-600 cursor-pointer">
+                    <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
                       <input
                         type="checkbox"
                         checked={isContinuous}
                         onChange={(e) => setIsContinuous(e.target.checked)}
-                        className="rounded border-stone-300 text-stone-900 focus:ring-stone-900"
+                        className="rounded border-border text-text-primary focus:ring-accent"
                       />
                       Keep updated — list auto-refreshes when source lists change
                     </label>

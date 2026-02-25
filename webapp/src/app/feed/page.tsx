@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Nav from "@/components/nav";
 import { ActivityCard } from "@/components/activity";
 import type { FeedResponse } from "@/components/activity";
 import { getUser, getToken } from "@/lib/auth";
@@ -34,18 +33,17 @@ export default async function FeedPage({
 
   return (
     <div className="min-h-screen">
-      <Nav />
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
-        <h1 className="text-2xl font-bold text-stone-900 mb-8">Feed</h1>
+        <h1 className="text-2xl font-bold text-text-primary mb-8">Feed</h1>
 
         {feed.activities.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-stone-500 text-sm">
+            <p className="text-text-primary text-sm">
               No activity yet. Follow some people to see their updates here.
             </p>
             <Link
               href="/users"
-              className="inline-block mt-4 text-sm text-stone-600 hover:text-stone-900 border border-stone-300 px-4 py-2 rounded transition-colors"
+              className="inline-block mt-4 text-sm text-text-primary hover:text-text-primary border border-border px-4 py-2 rounded transition-colors"
             >
               Browse people
             </Link>
@@ -62,7 +60,7 @@ export default async function FeedPage({
               <div className="mt-8 text-center">
                 <Link
                   href={`/feed?cursor=${encodeURIComponent(feed.next_cursor)}`}
-                  className="text-sm text-stone-500 hover:text-stone-900 border border-stone-300 px-4 py-2 rounded transition-colors"
+                  className="text-sm text-text-primary hover:text-text-primary border border-border px-4 py-2 rounded transition-colors"
                 >
                   Load more
                 </Link>

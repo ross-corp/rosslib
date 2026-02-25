@@ -40,8 +40,8 @@ export default function SimilarThreads({ threadId, workId }: Props) {
   if (similar.length === 0) return null;
 
   return (
-    <aside className="border-t border-stone-100 pt-6 mt-8">
-      <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-3">
+    <aside className="border-t border-border pt-6 mt-8">
+      <h3 className="text-xs font-semibold text-text-primary uppercase tracking-wider mb-3">
         Similar Discussions
       </h3>
       <div className="space-y-2">
@@ -49,9 +49,9 @@ export default function SimilarThreads({ threadId, workId }: Props) {
           <Link
             key={st.id}
             href={`/books/${workId}/threads/${st.id}`}
-            className="block border border-stone-100 rounded-lg px-3 py-2 hover:border-stone-300 transition-colors"
+            className="block border border-border rounded-lg px-3 py-2 hover:border-border transition-colors"
           >
-            <p className="text-sm font-medium text-stone-900 truncate">
+            <p className="text-sm font-medium text-text-primary truncate">
               {st.spoiler && (
                 <span className="text-[10px] font-medium text-amber-600 border border-amber-200 rounded px-1 py-0.5 mr-1 leading-none">
                   Spoiler
@@ -59,7 +59,7 @@ export default function SimilarThreads({ threadId, workId }: Props) {
               )}
               {st.title}
             </p>
-            <div className="flex items-center gap-2 mt-0.5 text-xs text-stone-400">
+            <div className="flex items-center gap-2 mt-0.5 text-xs text-text-primary">
               <span>{st.display_name ?? st.username}</span>
               <span>&middot;</span>
               <span>{formatDate(st.created_at)}</span>

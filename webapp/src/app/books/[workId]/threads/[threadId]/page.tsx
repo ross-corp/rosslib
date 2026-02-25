@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Nav from "@/components/nav";
 import ThreadComments from "@/components/thread-comments";
 import SimilarThreads from "@/components/similar-threads";
 import { getUser } from "@/lib/auth";
@@ -80,11 +79,10 @@ export default async function ThreadPage({
 
   return (
     <div className="min-h-screen">
-      <Nav />
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
         {/* Breadcrumb */}
-        <div className="text-xs text-stone-400 mb-6">
-          <Link href={`/books/${workId}`} className="hover:text-stone-600 transition-colors">
+        <div className="text-xs text-text-primary mb-6">
+          <Link href={`/books/${workId}`} className="hover:text-text-primary transition-colors">
             {bookTitle ?? "Book"}
           </Link>
           <span className="mx-2">/</span>
@@ -93,7 +91,7 @@ export default async function ThreadPage({
 
         {/* Thread header */}
         <article className="mb-10">
-          <h1 className="text-xl font-bold text-stone-900 mb-3">
+          <h1 className="text-xl font-bold text-text-primary mb-3">
             {thread.spoiler && (
               <span className="text-xs font-medium text-amber-600 border border-amber-200 rounded px-1.5 py-0.5 mr-2 leading-none align-middle">
                 Spoiler
@@ -111,17 +109,17 @@ export default async function ThreadPage({
                   className="w-8 h-8 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-stone-200" />
+                <div className="w-8 h-8 rounded-full bg-surface-2" />
               )}
             </Link>
             <div>
               <Link
                 href={`/${thread.username}`}
-                className="text-sm font-medium text-stone-900 hover:underline"
+                className="text-sm font-medium text-text-primary hover:underline"
               >
                 {thread.display_name ?? thread.username}
               </Link>
-              <p className="text-xs text-stone-400">
+              <p className="text-xs text-text-primary">
                 {formatDate(thread.created_at)}
               </p>
             </div>
@@ -129,22 +127,22 @@ export default async function ThreadPage({
 
           {thread.spoiler ? (
             <details>
-              <summary className="text-xs text-stone-400 cursor-pointer select-none hover:text-stone-600 transition-colors">
+              <summary className="text-xs text-text-primary cursor-pointer select-none hover:text-text-primary transition-colors">
                 Show thread body (contains spoilers)
               </summary>
-              <p className="mt-3 text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">
+              <p className="mt-3 text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
                 {thread.body}
               </p>
             </details>
           ) : (
-            <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">
+            <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
               {thread.body}
             </p>
           )}
         </article>
 
         {/* Comments */}
-        <section className="border-t border-stone-100 pt-8">
+        <section className="border-t border-border pt-8">
           <ThreadComments
             threadId={threadId}
             initialComments={comments}

@@ -68,7 +68,7 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
           {item.book && (
             <Link
               href={`/books/${item.book.open_library_id}`}
-              className="font-medium text-stone-900 hover:underline"
+              className="font-medium text-text-primary hover:underline"
             >
               {item.book.title}
             </Link>
@@ -83,7 +83,7 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
           {item.book && (
             <Link
               href={`/books/${item.book.open_library_id}`}
-              className="font-medium text-stone-900 hover:underline"
+              className="font-medium text-text-primary hover:underline"
             >
               {item.book.title}
             </Link>
@@ -103,7 +103,7 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
           {item.book && (
             <Link
               href={`/books/${item.book.open_library_id}`}
-              className="font-medium text-stone-900 hover:underline"
+              className="font-medium text-text-primary hover:underline"
             >
               {item.book.title}
             </Link>
@@ -126,7 +126,7 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
               on{" "}
               <Link
                 href={`/books/${item.book.open_library_id}`}
-                className="font-medium text-stone-900 hover:underline"
+                className="font-medium text-text-primary hover:underline"
               >
                 {item.book.title}
               </Link>
@@ -141,7 +141,7 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
           {item.book && (
             <Link
               href={`/books/${item.book.open_library_id}`}
-              className="font-medium text-stone-900 hover:underline"
+              className="font-medium text-text-primary hover:underline"
             >
               {item.book.title}
             </Link>
@@ -155,7 +155,7 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
           {item.book && (
             <Link
               href={`/books/${item.book.open_library_id}`}
-              className="font-medium text-stone-900 hover:underline"
+              className="font-medium text-text-primary hover:underline"
             >
               {item.book.title}
             </Link>
@@ -169,7 +169,7 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
           {item.target_user && (
             <Link
               href={`/${item.target_user.username}`}
-              className="font-medium text-stone-900 hover:underline"
+              className="font-medium text-text-primary hover:underline"
             >
               {item.target_user.display_name || item.target_user.username}
             </Link>
@@ -183,7 +183,7 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
           {item.author_key ? (
             <Link
               href={`/authors/${item.author_key}`}
-              className="font-medium text-stone-900 hover:underline"
+              className="font-medium text-text-primary hover:underline"
             >
               {item.author_name || item.author_key}
             </Link>
@@ -199,7 +199,7 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
           {item.book ? (
             <Link
               href={`/books/${item.book.open_library_id}`}
-              className="font-medium text-stone-900 hover:underline"
+              className="font-medium text-text-primary hover:underline"
             >
               {item.book.title}
             </Link>
@@ -216,7 +216,7 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
           {item.book && (
             <Link
               href={`/books/${item.book.open_library_id}`}
-              className="font-medium text-stone-900 hover:underline"
+              className="font-medium text-text-primary hover:underline"
             >
               {item.book.title}
             </Link>
@@ -227,7 +227,7 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
               to{" "}
               <Link
                 href={`/books/${item.to_book_ol_id}`}
-                className="font-medium text-stone-900 hover:underline"
+                className="font-medium text-text-primary hover:underline"
               >
                 {item.to_book_title}
               </Link>
@@ -250,7 +250,7 @@ export function ActivityCard({
   const displayName = item.user.display_name || item.user.username;
 
   return (
-    <div className="flex gap-3 py-4 border-b border-stone-100 last:border-0">
+    <div className="flex gap-3 py-4 border-b border-border last:border-0">
       {/* Book cover or avatar */}
       <div className="shrink-0 w-10">
         {item.book?.cover_url ? (
@@ -262,7 +262,7 @@ export function ActivityCard({
             />
           </Link>
         ) : (
-          <div className="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center text-stone-500 text-xs font-medium">
+          <div className="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-tertiary text-xs font-medium">
             {displayName.charAt(0).toUpperCase()}
           </div>
         )}
@@ -270,12 +270,12 @@ export function ActivityCard({
 
       <div className="flex-1 min-w-0">
         {/* Action description */}
-        <p className="text-sm text-stone-700 leading-snug">
+        <p className="text-sm text-text-secondary leading-snug">
           {showUser && (
             <>
               <Link
                 href={`/${item.user.username}`}
-                className="font-semibold text-stone-900 hover:underline"
+                className="font-semibold text-text-primary hover:underline"
               >
                 {displayName}
               </Link>{" "}
@@ -293,13 +293,13 @@ export function ActivityCard({
 
         {/* Review snippet */}
         {item.review_snippet && (
-          <p className="mt-1 text-sm text-stone-500 line-clamp-2">
+          <p className="mt-1 text-sm text-text-secondary line-clamp-2">
             {item.review_snippet}
           </p>
         )}
 
         {/* Timestamp */}
-        <p className="text-xs text-stone-400 mt-1">
+        <p className="text-xs text-text-tertiary mt-1">
           {formatTime(item.created_at)}
         </p>
       </div>

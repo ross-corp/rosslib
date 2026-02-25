@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Nav from "@/components/nav";
 import BookScanner from "@/components/book-scanner";
 import { type StatusValue } from "@/components/shelf-picker";
 import { getUser, getToken } from "@/lib/auth";
@@ -47,18 +46,17 @@ export default async function ScanPage() {
 
   return (
     <div className="min-h-screen">
-      <Nav />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
-        <div className="mb-8 flex items-center gap-2 text-sm text-stone-400">
-          <Link href={`/${user.username}`} className="hover:text-stone-700 transition-colors">
+        <div className="mb-8 flex items-center gap-2 text-sm text-text-primary">
+          <Link href={`/${user.username}`} className="hover:text-text-primary transition-colors">
             {user.username}
           </Link>
           <span>/</span>
-          <span className="text-stone-600">Scan</span>
+          <span className="text-text-primary">Scan</span>
         </div>
 
-        <h1 className="text-2xl font-bold text-stone-900 mb-2">Scan a Book</h1>
-        <p className="text-sm text-stone-500 mb-8">
+        <h1 className="text-2xl font-bold text-text-primary mb-2">Scan a Book</h1>
+        <p className="text-sm text-text-primary mb-8">
           Scan an ISBN barcode on the back of a book to quickly look it up and add it to your library.
         </p>
 

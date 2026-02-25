@@ -29,14 +29,14 @@ export default function BookList({
   if (books.length === 0) return null;
 
   return (
-    <ul className="divide-y divide-stone-100">
+    <ul className="divide-y divide-border">
       {books.map((book) => {
         const workId = book.key.replace("/works/", "");
         return (
           <li key={book.key} className="flex items-center gap-3 py-4">
             <Link
               href={`/books/${workId}`}
-              className="flex gap-4 flex-1 min-w-0 hover:bg-stone-50 -mx-3 px-3 rounded transition-colors"
+              className="flex gap-4 flex-1 min-w-0 hover:bg-surface-2 -mx-3 px-3 rounded transition-colors"
             >
               {book.cover_url ? (
                 <img
@@ -44,23 +44,23 @@ export default function BookList({
                   alt={book.title}
                   width={48}
                   height={64}
-                  className="w-12 h-16 object-cover rounded shrink-0 bg-stone-100"
+                  className="w-12 h-16 object-cover rounded shrink-0 bg-surface-2"
                 />
               ) : (
-                <div className="w-12 h-16 bg-stone-100 rounded shrink-0" />
+                <div className="w-12 h-16 bg-surface-2 rounded shrink-0" />
               )}
               <div className="flex flex-col justify-center gap-0.5 min-w-0">
-                <span className="text-sm font-medium text-stone-900 truncate">
+                <span className="text-sm font-medium text-text-primary truncate">
                   {book.title}
                 </span>
                 {book.authors && book.authors.length > 0 && (
-                  <span className="text-xs text-stone-500">
+                  <span className="text-xs text-text-primary">
                     {book.authors.slice(0, 3).join(", ")}
                   </span>
                 )}
                 <div className="flex items-center gap-2 mt-0.5">
                   {book.publish_year && (
-                    <span className="text-xs text-stone-400">
+                    <span className="text-xs text-text-primary">
                       {book.publish_year}
                     </span>
                   )}
@@ -71,7 +71,7 @@ export default function BookList({
                     />
                   )}
                   {book.already_read_count > 0 && (
-                    <span className="text-xs text-stone-400">
+                    <span className="text-xs text-text-primary">
                       {book.already_read_count.toLocaleString()} reads
                     </span>
                   )}

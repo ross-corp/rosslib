@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Nav from "@/components/nav";
 import AuthorFollowButton from "@/components/author-follow-button";
 import { getToken } from "@/lib/auth";
 
@@ -76,7 +75,6 @@ export default async function AuthorPage({
 
   return (
     <div className="min-h-screen">
-      <Nav />
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
         {/* ── Author header ── */}
         <div className="flex gap-8 items-start mb-10">
@@ -85,18 +83,18 @@ export default async function AuthorPage({
             <img
               src={author.photo_url}
               alt={author.name}
-              className="w-32 h-40 shrink-0 rounded shadow-sm object-cover bg-stone-100"
+              className="w-32 h-40 shrink-0 rounded shadow-sm object-cover bg-surface-2"
               onError={undefined}
             />
           ) : (
-            <div className="w-32 h-40 shrink-0 bg-stone-100 rounded flex items-center justify-center text-3xl font-semibold text-stone-400">
+            <div className="w-32 h-40 shrink-0 bg-surface-2 rounded flex items-center justify-center text-3xl font-semibold text-text-primary">
               {author.name.charAt(0)}
             </div>
           )}
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold text-stone-900">
+              <h1 className="text-2xl font-bold text-text-primary">
                 {author.name}
               </h1>
               {token && (
@@ -109,19 +107,19 @@ export default async function AuthorPage({
             </div>
 
             {(author.birth_date || author.death_date) && (
-              <p className="text-sm text-stone-500 mb-3">
+              <p className="text-sm text-text-primary mb-3">
                 {author.birth_date ?? "?"}
                 {" \u2013 "}
                 {author.death_date ?? "present"}
               </p>
             )}
 
-            <p className="text-xs text-stone-400 mb-4">
+            <p className="text-xs text-text-primary mb-4">
               {author.work_count} work{author.work_count === 1 ? "" : "s"}
             </p>
 
             {author.bio && (
-              <p className="text-stone-700 text-sm leading-relaxed whitespace-pre-wrap">
+              <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">
                 {author.bio}
               </p>
             )}
@@ -134,7 +132,7 @@ export default async function AuthorPage({
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-stone-500 underline hover:text-stone-700 transition-colors"
+                    className="text-xs text-text-primary underline hover:text-text-primary transition-colors"
                   >
                     {link.title}
                   </a>
@@ -145,15 +143,15 @@ export default async function AuthorPage({
         </div>
 
         {/* ── Works ── */}
-        <section className="border-t border-stone-100 pt-8">
-          <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-6">
+        <section className="border-t border-border pt-8">
+          <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-6">
             {works.length > 0
               ? `Works (${author.work_count})`
               : "Works"}
           </h2>
 
           {works.length === 0 ? (
-            <p className="text-stone-400 text-sm">No works found.</p>
+            <p className="text-text-primary text-sm">No works found.</p>
           ) : (
             <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-4">
               {works.map((work) => (
@@ -166,16 +164,16 @@ export default async function AuthorPage({
                     <img
                       src={work.cover_url}
                       alt={work.title}
-                      className="w-full aspect-[2/3] object-cover rounded shadow-sm bg-stone-100 group-hover:shadow-md transition-shadow"
+                      className="w-full aspect-[2/3] object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
                     />
                   ) : (
-                    <div className="w-full aspect-[2/3] bg-stone-100 rounded flex items-center justify-center p-2">
-                      <span className="text-[10px] text-stone-400 text-center leading-tight line-clamp-3">
+                    <div className="w-full aspect-[2/3] bg-surface-2 rounded flex items-center justify-center p-2">
+                      <span className="text-[10px] text-text-primary text-center leading-tight line-clamp-3">
                         {work.title}
                       </span>
                     </div>
                   )}
-                  <p className="mt-1.5 text-xs text-stone-700 leading-tight line-clamp-2 group-hover:text-stone-900 transition-colors">
+                  <p className="mt-1.5 text-xs text-text-primary leading-tight line-clamp-2 group-hover:text-text-primary transition-colors">
                     {work.title}
                   </p>
                 </Link>

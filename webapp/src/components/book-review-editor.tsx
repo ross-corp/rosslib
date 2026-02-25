@@ -236,13 +236,13 @@ export default function BookReviewEditor({
     <div>
       {/* Inline star rating — always visible */}
       <div className="flex items-center gap-3">
-        <span className="text-xs text-stone-500">Your rating</span>
+        <span className="text-xs text-text-primary">Your rating</span>
         <StarRatingInput value={rating} onChange={handleRatingClick} disabled={saving} />
         {!expanded && !hasExisting && (
           <button
             type="button"
             onClick={() => setExpanded(true)}
-            className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+            className="text-xs text-text-primary hover:text-text-primary transition-colors"
           >
             Write a review
           </button>
@@ -256,15 +256,15 @@ export default function BookReviewEditor({
             /* Collapsed view of existing review */
             <div>
               {initialReviewText && (
-                <div className="text-sm text-stone-700 leading-relaxed line-clamp-3">
+                <div className="text-sm text-text-primary leading-relaxed line-clamp-3">
                   {initialSpoiler ? (
-                    <span className="text-stone-400 italic">Contains spoilers — </span>
+                    <span className="text-text-primary italic">Contains spoilers — </span>
                   ) : null}
                   <ReviewText text={initialReviewText} />
                 </div>
               )}
               {initialDateRead && (
-                <p className="text-xs text-stone-400 mt-1">
+                <p className="text-xs text-text-primary mt-1">
                   Read {new Date(initialDateRead).toLocaleDateString("en-US", {
                     month: "long",
                     day: "numeric",
@@ -273,7 +273,7 @@ export default function BookReviewEditor({
                 </p>
               )}
               {initialDateDnf && (
-                <p className="text-xs text-stone-400 mt-1">
+                <p className="text-xs text-text-primary mt-1">
                   Stopped {new Date(initialDateDnf).toLocaleDateString("en-US", {
                     month: "long",
                     day: "numeric",
@@ -284,7 +284,7 @@ export default function BookReviewEditor({
               <button
                 type="button"
                 onClick={() => setExpanded(true)}
-                className="text-xs text-stone-400 hover:text-stone-600 transition-colors mt-2"
+                className="text-xs text-text-primary hover:text-text-primary transition-colors mt-2"
               >
                 Edit review
               </button>
@@ -299,26 +299,26 @@ export default function BookReviewEditor({
                 disabled={saving}
                 placeholder="Write your review (optional). Type [[ to link a book."
                 rows={4}
-                className="w-full border border-stone-200 rounded px-3 py-2 text-sm text-stone-700 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400 resize-y disabled:opacity-50"
+                className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong resize-y disabled:opacity-50"
               />
 
               {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute left-0 right-0 z-10 bg-white border border-stone-200 rounded shadow-lg max-h-60 overflow-y-auto mt-1">
+                <div className="absolute left-0 right-0 z-10 bg-surface-0 border border-border rounded shadow-lg max-h-60 overflow-y-auto mt-1">
                   {suggestions.map((book) => (
                     <button
                       key={book.key}
                       type="button"
                       onClick={() => selectSuggestion(book)}
-                      className="w-full text-left px-3 py-2 hover:bg-stone-50 flex items-center gap-3 border-b border-stone-100 last:border-0"
+                      className="w-full text-left px-3 py-2 hover:bg-surface-2 flex items-center gap-3 border-b border-border last:border-0"
                     >
                        {book.cover_url ? (
-                         <img src={book.cover_url} alt="" className="w-8 h-12 object-cover rounded bg-stone-100" />
+                         <img src={book.cover_url} alt="" className="w-8 h-12 object-cover rounded bg-surface-2" />
                        ) : (
-                         <div className="w-8 h-12 bg-stone-100 rounded flex-shrink-0" />
+                         <div className="w-8 h-12 bg-surface-2 rounded flex-shrink-0" />
                        )}
                        <div>
-                         <div className="text-sm font-medium text-stone-900 line-clamp-1">{book.title}</div>
-                         <div className="text-xs text-stone-500 line-clamp-1">
+                         <div className="text-sm font-medium text-text-primary line-clamp-1">{book.title}</div>
+                         <div className="text-xs text-text-primary line-clamp-1">
                            {book.authors?.join(", ")}
                            {book.publish_year && ` · ${book.publish_year}`}
                          </div>
@@ -329,39 +329,39 @@ export default function BookReviewEditor({
               )}
 
               <div className="flex flex-wrap items-center gap-4 text-xs mt-3">
-                <label className="flex items-center gap-1.5 text-stone-500">
+                <label className="flex items-center gap-1.5 text-text-primary">
                   <input
                     type="checkbox"
                     checked={spoiler}
                     onChange={(e) => setSpoiler(e.target.checked)}
                     disabled={saving}
-                    className="rounded border-stone-300"
+                    className="rounded border-border"
                   />
                   Contains spoilers
                 </label>
 
                 {showDateRead && (
-                  <label className="flex items-center gap-1.5 text-stone-500">
+                  <label className="flex items-center gap-1.5 text-text-primary">
                     Date read
                     <input
                       type="date"
                       value={dateRead}
                       onChange={(e) => setDateRead(e.target.value)}
                       disabled={saving}
-                      className="border border-stone-200 rounded px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
+                      className="border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
                     />
                   </label>
                 )}
 
                 {showDateDnf && (
-                  <label className="flex items-center gap-1.5 text-stone-500">
+                  <label className="flex items-center gap-1.5 text-text-primary">
                     Date stopped
                     <input
                       type="date"
                       value={dateDnf}
                       onChange={(e) => setDateDnf(e.target.value)}
                       disabled={saving}
-                      className="border border-stone-200 rounded px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
+                      className="border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
                     />
                   </label>
                 )}
@@ -372,7 +372,7 @@ export default function BookReviewEditor({
                   type="button"
                   onClick={save}
                   disabled={saving || !hasChanges}
-                  className="text-xs px-3 py-1.5 rounded bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-surface-3 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {saving ? "Saving..." : "Save"}
                 </button>
@@ -387,7 +387,7 @@ export default function BookReviewEditor({
                     setExpanded(false);
                   }}
                   disabled={saving}
-                  className="text-xs text-stone-400 hover:text-stone-600 transition-colors disabled:opacity-50"
+                  className="text-xs text-text-primary hover:text-text-primary transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -402,7 +402,7 @@ export default function BookReviewEditor({
                   </button>
                 )}
                 {message && (
-                  <span className="text-xs text-stone-500 ml-auto">{message}</span>
+                  <span className="text-xs text-text-primary ml-auto">{message}</span>
                 )}
               </div>
             </div>
@@ -412,7 +412,7 @@ export default function BookReviewEditor({
 
       {/* Save feedback when not expanded */}
       {!expanded && message && (
-        <p className="text-xs text-stone-500 mt-1">{message}</p>
+        <p className="text-xs text-text-primary mt-1">{message}</p>
       )}
     </div>
   );

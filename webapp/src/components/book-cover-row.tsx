@@ -62,28 +62,28 @@ export default function BookCoverRow({
               />
             ) : (
               <div
-                className={`${sizeClasses[size]} rounded bg-stone-200 flex items-center justify-center`}
+                className={`${sizeClasses[size]} rounded bg-surface-2 flex items-center justify-center`}
               >
-                <span className="text-[10px] text-stone-400 text-center px-1 line-clamp-3">
+                <span className="text-[10px] text-text-tertiary text-center px-1 line-clamp-3">
                   {book.title}
                 </span>
               </div>
             )}
             {pct != null && (
               <div className="mt-1">
-                <div className="w-full h-1 bg-stone-100 rounded-full overflow-hidden">
+                <div className="w-full h-1 bg-surface-2 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-stone-400 rounded-full"
+                    className="h-full bg-text-tertiary rounded-full"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <p className="text-[10px] text-stone-400 mt-0.5 text-center">
+                <p className="text-[10px] text-text-tertiary mt-0.5 text-center">
                   {pct}%
                 </p>
               </div>
             )}
             {showTitle && (
-              <p className="mt-1 text-xs text-stone-600 truncate max-w-[80px] group-hover:text-stone-900">
+              <p className="mt-1 text-xs text-text-secondary truncate max-w-[80px] group-hover:text-text-primary">
                 {book.title}
               </p>
             )}
@@ -93,7 +93,7 @@ export default function BookCoverRow({
       {seeAllHref && (
         <Link
           href={seeAllHref}
-          className="shrink-0 text-xs text-stone-400 hover:text-stone-700 transition-colors self-center pl-1"
+          className="shrink-0 text-xs text-text-tertiary hover:text-text-secondary transition-colors self-center pl-1"
         >
           {seeAllLabel} &rarr;
         </Link>

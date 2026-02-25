@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Nav from "@/components/nav";
 import BookList from "@/components/book-list";
 import { type StatusValue } from "@/components/shelf-picker";
 import { getToken, getUser } from "@/lib/auth";
@@ -102,26 +101,25 @@ export default async function GenreDetailPage({
 
   return (
     <div className="min-h-screen">
-      <Nav />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
         <div className="mb-2">
           <Link
             href="/genres"
-            className="text-xs text-stone-400 hover:text-stone-700 transition-colors"
+            className="text-xs text-text-primary hover:text-text-primary transition-colors"
           >
             Genres
           </Link>
         </div>
 
-        <h1 className="text-2xl font-bold text-stone-900 mb-1">
+        <h1 className="text-2xl font-bold text-text-primary mb-1">
           {data.genre}
         </h1>
-        <p className="text-sm text-stone-400 mb-8">
+        <p className="text-sm text-text-primary mb-8">
           {data.total.toLocaleString()} book{data.total === 1 ? "" : "s"}
         </p>
 
         {data.results.length === 0 ? (
-          <p className="text-sm text-stone-400">
+          <p className="text-sm text-text-primary">
             No books found in this genre yet.
           </p>
         ) : (
@@ -138,20 +136,20 @@ export default async function GenreDetailPage({
             {page > 1 ? (
               <Link
                 href={`/genres/${slug}?page=${page - 1}`}
-                className="text-sm text-stone-600 hover:text-stone-900 transition-colors"
+                className="text-sm text-text-primary hover:text-text-primary transition-colors"
               >
                 &larr; Previous
               </Link>
             ) : (
               <span />
             )}
-            <span className="text-xs text-stone-400">
+            <span className="text-xs text-text-primary">
               Page {page} of {totalPages}
             </span>
             {hasNext && (
               <Link
                 href={`/genres/${slug}?page=${page + 1}`}
-                className="text-sm text-stone-600 hover:text-stone-900 transition-colors ml-auto"
+                className="text-sm text-text-primary hover:text-text-primary transition-colors ml-auto"
               >
                 Next &rarr;
               </Link>

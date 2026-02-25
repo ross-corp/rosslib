@@ -358,7 +358,7 @@ export default function LibraryManager({
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden max-w-7xl mx-auto w-full">
       {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
-      <aside className="w-48 shrink-0 border-r border-stone-200 overflow-y-auto py-3 flex flex-col gap-5">
+      <aside className="w-48 shrink-0 border-r border-border overflow-y-auto py-3 flex flex-col gap-5">
         {/* All Books */}
         <div>
           <SidebarItem
@@ -372,7 +372,7 @@ export default function LibraryManager({
         {/* Status values */}
         {statusValues.length > 0 && (
           <div>
-            <p className="px-4 mb-1 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
+            <p className="px-4 mb-1 text-[10px] font-semibold text-text-primary uppercase tracking-wider">
               Status
             </p>
             {statusValues.map((v) => (
@@ -422,8 +422,8 @@ export default function LibraryManager({
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Top bar */}
         {selectedCount > 0 ? (
-          <div className="border-b border-stone-200 bg-stone-50 px-5 py-2.5 flex items-center gap-3 flex-wrap shrink-0">
-            <span className="text-sm font-medium text-stone-700">
+          <div className="border-b border-border bg-surface-2 px-5 py-2.5 flex items-center gap-3 flex-wrap shrink-0">
+            <span className="text-sm font-medium text-text-primary">
               {selectedCount} {selectedCount === 1 ? "book" : "books"} selected
             </span>
 
@@ -437,17 +437,17 @@ export default function LibraryManager({
                   setShowTagsMenu(false);
                 }}
                 disabled={bulkWorking}
-                className="text-xs px-3 py-1.5 rounded border border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-800 disabled:opacity-50 transition-colors"
+                className="text-xs px-3 py-1.5 rounded border border-border text-text-primary hover:border-border-strong hover:text-text-primary disabled:opacity-50 transition-colors"
               >
                 Rate
               </button>
               {showRateMenu && (
-                <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-stone-200 rounded shadow-md flex gap-0.5 p-1.5">
+                <div className="absolute top-full left-0 mt-1 z-20 bg-surface-0 border border-border rounded shadow-md flex gap-0.5 p-1.5">
                   {[1, 2, 3, 4, 5].map((n) => (
                     <button
                       key={n}
                       onClick={() => massRate(n)}
-                      className="text-xl text-stone-300 hover:text-amber-500 transition-colors px-1"
+                      className="text-xl text-text-primary hover:text-amber-500 transition-colors px-1"
                     >
                       ★
                     </button>
@@ -467,17 +467,17 @@ export default function LibraryManager({
                     setShowTagsMenu(false);
                   }}
                   disabled={bulkWorking}
-                  className="text-xs px-3 py-1.5 rounded border border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-800 disabled:opacity-50 transition-colors"
+                  className="text-xs px-3 py-1.5 rounded border border-border text-text-primary hover:border-border-strong hover:text-text-primary disabled:opacity-50 transition-colors"
                 >
                   Change status
                 </button>
                 {showStatusMenu && (
-                  <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-stone-200 rounded shadow-md min-w-[160px]">
+                  <div className="absolute top-full left-0 mt-1 z-20 bg-surface-0 border border-border rounded shadow-md min-w-[160px]">
                     {changeStatusTargets.map((v) => (
                       <button
                         key={v.id}
                         onClick={() => massChangeStatus(v)}
-                        className="w-full text-left px-3 py-2 text-xs text-stone-700 hover:bg-stone-50 transition-colors"
+                        className="w-full text-left px-3 py-2 text-xs text-text-primary hover:bg-surface-2 transition-colors"
                       >
                         {v.name}
                       </button>
@@ -507,26 +507,26 @@ export default function LibraryManager({
                     setShowLabelsMenu(false);
                   }}
                   disabled={bulkWorking}
-                  className="text-xs px-3 py-1.5 rounded border border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-800 disabled:opacity-50 transition-colors"
+                  className="text-xs px-3 py-1.5 rounded border border-border text-text-primary hover:border-border-strong hover:text-text-primary disabled:opacity-50 transition-colors"
                 >
                   Tags
                 </button>
                 {showTagsMenu && (
-                  <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-stone-200 rounded shadow-md w-56 max-h-80 overflow-y-auto">
+                  <div className="absolute top-full left-0 mt-1 z-20 bg-surface-0 border border-border rounded shadow-md w-56 max-h-80 overflow-y-auto">
                     {tagCollections.map((t) => {
                       const label = t.name || t.slug.split("/").pop() || t.slug;
                       return (
-                        <div key={t.id} className="border-b border-stone-100 last:border-0 flex items-center">
+                        <div key={t.id} className="border-b border-border last:border-0 flex items-center">
                           <button
                             onClick={() => massAddTag(t)}
-                            className="flex-1 text-left px-3 py-2 text-xs text-stone-700 hover:bg-stone-50 transition-colors truncate"
+                            className="flex-1 text-left px-3 py-2 text-xs text-text-primary hover:bg-surface-2 transition-colors truncate"
                           >
                             {label}
                           </button>
                           <button
                             onClick={() => massRemoveTag(t)}
                             title="Remove from tag"
-                            className="px-2.5 py-2 text-sm text-stone-300 hover:text-red-400 transition-colors shrink-0 leading-none"
+                            className="px-2.5 py-2 text-sm text-text-primary hover:text-red-400 transition-colors shrink-0 leading-none"
                           >
                             ×
                           </button>
@@ -549,21 +549,21 @@ export default function LibraryManager({
                     setShowTagsMenu(false);
                   }}
                   disabled={bulkWorking}
-                  className="text-xs px-3 py-1.5 rounded border border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-800 disabled:opacity-50 transition-colors"
+                  className="text-xs px-3 py-1.5 rounded border border-border text-text-primary hover:border-border-strong hover:text-text-primary disabled:opacity-50 transition-colors"
                 >
                   Labels
                 </button>
                 {showLabelsMenu && (
-                  <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-stone-200 rounded shadow-md w-56 max-h-80 overflow-y-auto">
+                  <div className="absolute top-full left-0 mt-1 z-20 bg-surface-0 border border-border rounded shadow-md w-56 max-h-80 overflow-y-auto">
                     {tagKeys.map((key) => (
-                      <div key={key.id} className="border-b border-stone-100 last:border-0">
+                      <div key={key.id} className="border-b border-border last:border-0">
                         <div className="px-3 pt-2.5 pb-1 flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
+                          <span className="text-[10px] font-semibold text-text-primary uppercase tracking-wider">
                             {key.name}
                           </span>
                           <button
                             onClick={() => massClearLabel(key.id)}
-                            className="text-[10px] text-stone-300 hover:text-red-400 transition-colors shrink-0"
+                            className="text-[10px] text-text-primary hover:text-red-400 transition-colors shrink-0"
                           >
                             clear
                           </button>
@@ -573,13 +573,13 @@ export default function LibraryManager({
                             <button
                               key={val.id}
                               onClick={() => massSetLabel(key.id, val.id)}
-                              className="w-full text-left px-3 py-1.5 text-xs text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors"
+                              className="w-full text-left px-3 py-1.5 text-xs text-text-primary hover:bg-surface-2 hover:text-text-primary transition-colors"
                             >
                               {val.name}
                             </button>
                           ))}
                           {key.values.length === 0 && (
-                            <p className="px-3 py-1 text-xs text-stone-300">No values defined</p>
+                            <p className="px-3 py-1 text-xs text-text-primary">No values defined</p>
                           )}
                         </div>
                       </div>
@@ -594,28 +594,28 @@ export default function LibraryManager({
                 onClick={() =>
                   setSelectedIds(new Set(books.map((b) => b.book_id)))
                 }
-                className="text-xs text-stone-500 hover:text-stone-800 transition-colors"
+                className="text-xs text-text-primary hover:text-text-primary transition-colors"
               >
                 Select all
               </button>
               <button
                 onClick={() => setSelectedIds(new Set())}
-                className="text-xs text-stone-500 hover:text-stone-800 transition-colors"
+                className="text-xs text-text-primary hover:text-text-primary transition-colors"
               >
                 Clear
               </button>
             </div>
           </div>
         ) : (
-          <div className="border-b border-stone-200 px-5 py-2.5 flex items-center gap-3 shrink-0">
-            <span className="text-sm font-semibold text-stone-800">
+          <div className="border-b border-border px-5 py-2.5 flex items-center gap-3 shrink-0">
+            <span className="text-sm font-semibold text-text-primary">
               {filter.kind === "label"
                 ? `${filter.keyName}: ${filter.valueName}`
                 : filter.kind === "all"
                   ? "All Books"
                   : filter.name}
             </span>
-            <span className="text-xs text-stone-400">
+            <span className="text-xs text-text-primary">
               {books.length} {books.length === 1 ? "book" : "books"}
             </span>
           </div>
@@ -624,9 +624,9 @@ export default function LibraryManager({
         {/* Book grid */}
         <div className="flex-1 overflow-y-auto p-5">
           {loading ? (
-            <p className="text-sm text-stone-400">Loading...</p>
+            <p className="text-sm text-text-primary">Loading...</p>
           ) : books.length === 0 ? (
-            <p className="text-sm text-stone-400">No books here yet.</p>
+            <p className="text-sm text-text-primary">No books here yet.</p>
           ) : (
             <ul className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3">
               {books.map((book) => {
@@ -639,8 +639,8 @@ export default function LibraryManager({
                       onClick={() => toggleSelect(book.book_id)}
                       className={`absolute top-1 left-1 z-10 w-4 h-4 rounded border flex items-center justify-center transition-all ${
                         selected
-                          ? "bg-stone-800 border-stone-800 text-white opacity-100"
-                          : `bg-white border-stone-300 ${anySelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`
+                          ? "bg-accent border-accent text-white opacity-100"
+                          : `bg-surface-0 border-border ${anySelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`
                       }`}
                       aria-label={selected ? "Deselect" : "Select"}
                     >
@@ -662,7 +662,7 @@ export default function LibraryManager({
                       href={`/books/${book.open_library_id}`}
                       tabIndex={-1}
                       onClick={(e) => { if (anySelected) { e.preventDefault(); toggleSelect(book.book_id); } }}
-                      className={`block transition-all ${selected ? "ring-2 ring-stone-700 ring-offset-1 rounded" : ""}`}
+                      className={`block transition-all ${selected ? "ring-2 ring-accent ring-offset-1 rounded" : ""}`}
                     >
                       {book.cover_url ? (
                         <img
@@ -677,11 +677,11 @@ export default function LibraryManager({
                         />
                       ) : (
                         <div
-                          className={`w-full aspect-[2/3] bg-stone-100 rounded shadow-sm flex items-end p-1.5 transition-all ${
+                          className={`w-full aspect-[2/3] bg-surface-2 rounded shadow-sm flex items-end p-1.5 transition-all ${
                             selected ? "opacity-70" : "group-hover:shadow-md"
                           }`}
                         >
-                          <span className="text-[9px] text-stone-400 leading-tight line-clamp-3">
+                          <span className="text-[9px] text-text-primary leading-tight line-clamp-3">
                             {book.title}
                           </span>
                         </div>
@@ -698,7 +698,7 @@ export default function LibraryManager({
                           <span
                             key={n}
                             className={`text-[8px] leading-none ${
-                              n <= book.rating! ? "text-amber-500" : "text-stone-200"
+                              n <= book.rating! ? "text-amber-500" : "text-text-primary"
                             }`}
                           >
                             ★
@@ -738,18 +738,18 @@ function SidebarItem({
         onClick={onClick}
         className={`flex-1 text-left px-4 py-1.5 text-sm flex items-center justify-between transition-colors ${
           active
-            ? "bg-stone-100 text-stone-900 font-medium"
-            : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
+            ? "bg-surface-2 text-text-primary font-medium"
+            : "text-text-primary hover:bg-surface-2 hover:text-text-primary"
         }`}
       >
         <span className="truncate">{label}</span>
-        <span className="text-xs text-stone-400 ml-2 shrink-0">{count}</span>
+        <span className="text-xs text-text-primary ml-2 shrink-0">{count}</span>
       </button>
       {onDelete && (
         <button
           onClick={onDelete}
           title="Delete"
-          className="opacity-0 group-hover:opacity-100 pr-3 text-stone-300 hover:text-red-400 transition-all leading-none shrink-0"
+          className="opacity-0 group-hover:opacity-100 pr-3 text-text-primary hover:text-red-400 transition-all leading-none shrink-0"
         >
           ×
         </button>
@@ -772,7 +772,7 @@ function SidebarSection({
     <div>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-1 px-4 mb-0.5 text-[10px] font-semibold text-stone-400 uppercase tracking-wider hover:text-stone-600 transition-colors"
+        className="w-full flex items-center gap-1 px-4 mb-0.5 text-[10px] font-semibold text-text-primary uppercase tracking-wider hover:text-text-primary transition-colors"
       >
         <span
           className={`text-[13px] leading-none transition-transform inline-block ${
@@ -782,7 +782,7 @@ function SidebarSection({
           ›
         </span>
         <span className="ml-0.5">{label}</span>
-        <span className="ml-auto font-normal normal-case text-stone-300">{count}</span>
+        <span className="ml-auto font-normal normal-case text-text-primary">{count}</span>
       </button>
       {open && <div className="mb-1">{children}</div>}
     </div>
@@ -813,7 +813,7 @@ function TagTreeItem({
         <button
           onClick={() => setOpen((v) => !v)}
           tabIndex={hasChildren ? 0 : -1}
-          className={`w-4 h-full flex items-center justify-center text-stone-300 hover:text-stone-500 shrink-0 transition-transform ${
+          className={`w-4 h-full flex items-center justify-center text-text-primary hover:text-text-primary shrink-0 transition-transform ${
             open ? "rotate-90" : ""
           } ${!hasChildren ? "invisible pointer-events-none" : ""}`}
         >
@@ -823,12 +823,12 @@ function TagTreeItem({
           onClick={() => onNavigate(node.collection.slug, node.label)}
           className={`flex-1 flex items-center justify-between py-1 text-xs transition-colors ${
             isActive
-              ? "text-stone-900 font-medium"
-              : "text-stone-500 hover:text-stone-900"
+              ? "text-text-primary font-medium"
+              : "text-text-primary hover:text-text-primary"
           }`}
         >
           <span className="truncate">{node.label}</span>
-          <span className="text-[11px] text-stone-300 ml-2 shrink-0">
+          <span className="text-[11px] text-text-primary ml-2 shrink-0">
             {hasChildren ? node.children.length : node.collection.item_count}
           </span>
         </button>
@@ -836,7 +836,7 @@ function TagTreeItem({
           <button
             onClick={() => onDelete(node.collection)}
             title="Delete"
-            className="opacity-0 group-hover:opacity-100 pr-3 text-stone-300 hover:text-red-400 transition-all leading-none shrink-0 text-sm"
+            className="opacity-0 group-hover:opacity-100 pr-3 text-text-primary hover:text-red-400 transition-all leading-none shrink-0 text-sm"
           >
             ×
           </button>
@@ -877,16 +877,16 @@ function LabelKeyItem({
         <button
           onClick={() => setOpen((v) => !v)}
           tabIndex={hasValues ? 0 : -1}
-          className={`w-4 h-full flex items-center justify-center text-stone-300 hover:text-stone-500 shrink-0 transition-transform ${
+          className={`w-4 h-full flex items-center justify-center text-text-primary hover:text-text-primary shrink-0 transition-transform ${
             open ? "rotate-90" : ""
           } ${!hasValues ? "invisible pointer-events-none" : ""}`}
         >
           <span className="text-[12px] leading-none">›</span>
         </button>
-        <span className="flex-1 flex items-center justify-between pr-3 py-1 text-xs text-stone-500">
+        <span className="flex-1 flex items-center justify-between pr-3 py-1 text-xs text-text-primary">
           <span className="truncate">{tagKey.name}</span>
           {hasValues && (
-            <span className="text-[11px] text-stone-300 ml-2 shrink-0">
+            <span className="text-[11px] text-text-primary ml-2 shrink-0">
               {valueTree.length}
             </span>
           )}
@@ -935,7 +935,7 @@ function ValueTreeItem({
         <button
           onClick={() => setOpen((v) => !v)}
           tabIndex={hasChildren ? 0 : -1}
-          className={`w-4 h-full flex items-center justify-center text-stone-300 hover:text-stone-500 shrink-0 transition-transform ${
+          className={`w-4 h-full flex items-center justify-center text-text-primary hover:text-text-primary shrink-0 transition-transform ${
             open ? "rotate-90" : ""
           } ${!hasChildren ? "invisible pointer-events-none" : ""}`}
         >
@@ -947,13 +947,13 @@ function ValueTreeItem({
           }
           className={`flex-1 flex items-center justify-between pr-3 py-1 text-xs transition-colors ${
             isActive
-              ? "text-stone-900 font-medium"
-              : "text-stone-400 hover:text-stone-900"
+              ? "text-text-primary font-medium"
+              : "text-text-primary hover:text-text-primary"
           }`}
         >
           <span className="truncate">{node.label}</span>
           {hasChildren && (
-            <span className="text-[11px] text-stone-300 ml-2 shrink-0">
+            <span className="text-[11px] text-text-primary ml-2 shrink-0">
               {node.children.length}
             </span>
           )}

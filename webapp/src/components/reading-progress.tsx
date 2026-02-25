@@ -113,7 +113,7 @@ export default function ReadingProgress({
       {/* Progress bar */}
       {currentPercent != null && (
         <div className="mb-3">
-          <div className="flex items-center justify-between text-xs text-stone-400 mb-1">
+          <div className="flex items-center justify-between text-xs text-text-primary mb-1">
             <span>{currentPercent}% complete</span>
             {initialPages != null && effectiveTotal && (
               <span>
@@ -121,9 +121,9 @@ export default function ReadingProgress({
               </span>
             )}
           </div>
-          <div className="w-full h-1.5 bg-stone-100 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-surface-2 rounded-full overflow-hidden">
             <div
-              className="h-full bg-stone-400 rounded-full transition-all duration-300"
+              className="h-full bg-text-tertiary rounded-full transition-all duration-300"
               style={{ width: `${currentPercent}%` }}
             />
           </div>
@@ -132,14 +132,14 @@ export default function ReadingProgress({
 
       {/* Input */}
       <div className="flex items-center gap-2">
-        <div className="flex items-center border border-stone-200 rounded overflow-hidden text-xs">
+        <div className="flex items-center border border-border rounded overflow-hidden text-xs">
           <button
             type="button"
             onClick={() => setMode("page")}
             className={`px-2 py-1 transition-colors ${
               mode === "page"
-                ? "bg-stone-900 text-white"
-                : "text-stone-400 hover:text-stone-600"
+                ? "bg-accent text-white"
+                : "text-text-primary hover:text-text-primary"
             }`}
           >
             Page
@@ -149,8 +149,8 @@ export default function ReadingProgress({
             onClick={() => setMode("percent")}
             className={`px-2 py-1 transition-colors ${
               mode === "percent"
-                ? "bg-stone-900 text-white"
-                : "text-stone-400 hover:text-stone-600"
+                ? "bg-accent text-white"
+                : "text-text-primary hover:text-text-primary"
             }`}
           >
             %
@@ -168,10 +168,10 @@ export default function ReadingProgress({
               onKeyDown={(e) => e.key === "Enter" && saveProgress()}
               disabled={saving}
               placeholder="Page"
-              className="w-20 border border-stone-200 rounded px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
+              className="w-20 border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
             />
             {effectiveTotal && (
-              <span className="text-xs text-stone-400">/ {effectiveTotal}</span>
+              <span className="text-xs text-text-primary">/ {effectiveTotal}</span>
             )}
           </div>
         ) : (
@@ -185,9 +185,9 @@ export default function ReadingProgress({
               onKeyDown={(e) => e.key === "Enter" && saveProgress()}
               disabled={saving}
               placeholder="0"
-              className="w-16 border border-stone-200 rounded px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
+              className="w-16 border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
             />
-            <span className="text-xs text-stone-400">%</span>
+            <span className="text-xs text-text-primary">%</span>
           </div>
         )}
 
@@ -195,13 +195,13 @@ export default function ReadingProgress({
           type="button"
           onClick={saveProgress}
           disabled={saving}
-          className="text-xs px-2.5 py-1 rounded bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-50 transition-colors"
+          className="text-xs px-2.5 py-1 rounded bg-accent text-white hover:bg-surface-3 disabled:opacity-50 transition-colors"
         >
           {saving ? "..." : "Update"}
         </button>
 
         {message && (
-          <span className="text-xs text-stone-500">{message}</span>
+          <span className="text-xs text-text-primary">{message}</span>
         )}
       </div>
 
@@ -209,7 +209,7 @@ export default function ReadingProgress({
       <div className="mt-2">
         {editingDevice ? (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-stone-400">My edition has</span>
+            <span className="text-xs text-text-primary">My edition has</span>
             <input
               type="number"
               min={1}
@@ -218,14 +218,14 @@ export default function ReadingProgress({
               onKeyDown={(e) => e.key === "Enter" && saveDeviceTotalPages()}
               disabled={savingDevice}
               placeholder="pages"
-              className="w-20 border border-stone-200 rounded px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
+              className="w-20 border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
             />
-            <span className="text-xs text-stone-400">pages</span>
+            <span className="text-xs text-text-primary">pages</span>
             <button
               type="button"
               onClick={saveDeviceTotalPages}
               disabled={savingDevice}
-              className="text-xs text-stone-600 hover:text-stone-900 transition-colors"
+              className="text-xs text-text-primary hover:text-text-primary transition-colors"
             >
               {savingDevice ? "..." : "Save"}
             </button>
@@ -235,7 +235,7 @@ export default function ReadingProgress({
                 setEditingDevice(false);
                 setDeviceTotalPages(initialDeviceTotalPages?.toString() ?? "");
               }}
-              className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+              className="text-xs text-text-primary hover:text-text-primary transition-colors"
             >
               Cancel
             </button>
@@ -244,7 +244,7 @@ export default function ReadingProgress({
           <button
             type="button"
             onClick={() => setEditingDevice(true)}
-            className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+            className="text-xs text-text-primary hover:text-text-primary transition-colors"
           >
             {initialDeviceTotalPages
               ? `My edition: ${initialDeviceTotalPages} pages (edit)`
