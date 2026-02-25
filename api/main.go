@@ -23,6 +23,7 @@ func main() {
 		// ── Auth (public) ────────────────────────────────────────
 		se.Router.POST("/auth/login", handlers.Login(app))
 		se.Router.POST("/auth/register", handlers.Register(app))
+		se.Router.POST("/auth/google", handlers.GoogleAuth(app))
 
 		// ── Books (public) ───────────────────────────────────────
 		se.Router.GET("/books/search", handlers.SearchBooks(app))

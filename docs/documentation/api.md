@@ -36,13 +36,13 @@ Sign in or register via Google OAuth. Called by the webapp after exchanging a Go
 
 1. **Existing Google user** — finds user by `google_id`, issues JWT. Returns `200`.
 2. **Existing email user** — finds user by email, links `google_id` to the account, issues JWT. Returns `200`.
-3. **New user** — creates account with auto-derived username (from email prefix, with numeric suffix if taken), sets `display_name` from Google profile `name`, creates default shelves. Returns `201`.
+3. **New user** — creates account with auto-derived username (from email prefix, with numeric suffix if taken), sets `display_name` from Google profile `name`, sets a random password (user authenticates via Google only), creates default shelves and status tags. Returns `200`.
 
 The webapp handles the full OAuth flow:
 - `GET /api/auth/google` — redirects to Google consent screen
 - `GET /api/auth/google/callback` — exchanges code for tokens, calls `POST /auth/google`, sets cookie
 
-**Environment variables required:** `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_URL`.
+**Environment variables required (webapp):** `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_URL`. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in the repo root `.env` — `docker-compose.yml` maps `GOOGLE_CLIENT_ID` to `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
 
 ### `POST /auth/forgot-password`
 

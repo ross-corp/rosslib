@@ -90,6 +90,8 @@ webapp/src/app/
     ├── auth/login/route.ts
     ├── auth/register/route.ts
     ├── auth/logout/route.ts
+    ├── auth/google/route.ts              ← GET redirects to Google consent screen
+    ├── auth/google/callback/route.ts     ← GET exchanges code, calls API, sets cookies
     ├── auth/forgot-password/route.ts       ← POST request reset email
     ├── auth/reset-password/route.ts        ← POST reset password with token
     ├── users/me/route.ts
@@ -262,6 +264,8 @@ Client component providing tab navigation between "My Lists" and "Compare with a
 
 | Variable | Where used | Purpose |
 |---|---|---|
-| `API_URL` | Server-side only | Go API base URL (e.g. `http://localhost:8080`) |
+| `API_URL` | Server-side only | Go API base URL (e.g. `http://api:8090`) |
 | `NEXT_PUBLIC_API_URL` | Client-side | Not currently used; reserved |
-| `JWT_SECRET` | Go API only | Signs/verifies JWTs |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Client-side (build-time) | Google OAuth client ID; when set, shows "Continue with Google" button on login/register pages |
+| `GOOGLE_CLIENT_SECRET` | Server-side only | Google OAuth client secret; used by the callback route to exchange authorization codes for tokens |
+| `NEXT_PUBLIC_URL` | Server-side | Public base URL of the webapp (e.g. `http://localhost:3000`); used to construct Google OAuth redirect URIs and post-auth redirects |

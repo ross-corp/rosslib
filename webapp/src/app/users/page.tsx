@@ -7,19 +7,16 @@ type UserRow = {
   display_name: string | null;
 };
 
-type ListResponse = {
-  users: UserRow[];
-  page: number;
-  has_next: boolean;
-};
+const PER_PAGE = 20;
 
-async function fetchUsers(page: number): Promise<ListResponse> {
+async function fetchUsers(page: number): Promise<UserRow[]> {
   const res = await fetch(
     `${process.env.API_URL}/users?page=${page}`,
     { cache: "no-store" }
   );
-  if (!res.ok) return { users: [], page, has_next: false };
-  return res.json();
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
 }
 
 export default async function UsersPage({
@@ -29,7 +26,8 @@ export default async function UsersPage({
 }) {
   const { page: pageParam = "1" } = await searchParams;
   const page = Math.max(1, parseInt(pageParam, 10) || 1);
-  const { users, has_next } = await fetchUsers(page);
+  const users = await fetchUsers(page);
+  const has_next = users.length >= PER_PAGE;
 
   return (
     <div className="min-h-screen">

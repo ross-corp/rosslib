@@ -14,3 +14,13 @@ assets/
 infra/charts/**/charts/*.tgz
 infra/charts/**/charts/*.lock
 infra/charts/**/charts/*.txt
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Go binaries
+api/api
+api/server
+api/tmp/

@@ -84,6 +84,63 @@ Copy `.env.example` → `.env` before starting.
 
 MinIO runs on `:9000` (S3 API) and `:9001` (web console, login: `minioadmin`/`minioadmin`). The Go API creates the `rosslib` bucket and sets the avatars public-read policy on startup. Avatar URLs are served directly from `http://localhost:9000`.
 
+## Google OAuth Setup
+
+Google sign-in is optional. When `GOOGLE_CLIENT_ID` is not set, the "Continue with Google" button is hidden and the app works with email/password only.
+
+### 1. Create Google Cloud OAuth credentials
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) (free — no billing required)
+2. Create a project (or select an existing one)
+3. Navigate to **APIs & Services > OAuth consent screen**
+   - Choose "External" user type
+   - Fill in app name and your email (required fields only)
+4. Navigate to **APIs & Services > Credentials**
+5. Click **Create Credentials > OAuth 2.0 Client ID**
+   - Application type: **Web application**
+   - Authorized JavaScript origins: your app's base URL (e.g. `http://localhost:3000`)
+   - Authorized redirect URIs: `<base-url>/api/auth/google/callback` (e.g. `http://localhost:3000/api/auth/google/callback`)
+6. Copy the **Client ID** and **Client Secret**
+
+### 2. Configure environment variables
+
+Add to your `.env` file in the repo root:
+
+```
+GOOGLE_CLIENT_ID=<your-client-id>.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=<your-client-secret>
+NEXT_PUBLIC_URL=http://localhost:3000
+```
+
+`docker-compose.yml` maps these into the webapp container as `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `NEXT_PUBLIC_URL`.
+
+`NEXT_PUBLIC_GOOGLE_CLIENT_ID` is baked into the webapp at **build time** (Next.js inlines `NEXT_PUBLIC_*` vars), so you must rebuild after setting it:
+
+```bash
+docker compose build webapp && docker compose up -d
+```
+
+### 3. OAuth flow
+
+```
+Browser → GET /api/auth/google
+       → 307 redirect to Google consent screen
+       → User approves
+       → Google redirects to /api/auth/google/callback?code=...
+       → Callback exchanges code for Google tokens (server-side)
+       → Callback fetches Google user info (id, email, name)
+       → Callback calls POST /auth/google on the Go API
+       → API finds or creates user, returns JWT
+       → Callback sets `token` and `username` cookies on the redirect response
+       → 302 redirect to base URL (user is now logged in)
+```
+
+### Notes
+
+- The redirect URI must **exactly** match what's configured in GCP — including protocol, hostname, port, and path. No trailing slash.
+- If accessing the app via a non-localhost hostname (e.g. Tailscale), set `NEXT_PUBLIC_URL` to that hostname and add it to the GCP authorized origins and redirect URIs.
+- Google-only users have a random password set internally (PocketBase requires one on auth records). They can set a real password later via Settings to enable email+password login.
+
 ## CI/CD
 
 `.github/workflows/deploy.yml` — runs on push to `main`:

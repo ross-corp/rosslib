@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -68,15 +67,18 @@ export async function GET(req: Request) {
 
   const data = await apiRes.json();
 
-  // Set the JWT cookie.
-  const cookieStore = await cookies();
-  cookieStore.set("token", data.token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  // Build the redirect with Set-Cookie headers manually.
+  // NextResponse.redirect + response.cookies.set can silently drop cookies
+  // when the redirect target differs from the request origin.
+  const maxAge = 60 * 60 * 24 * 30;
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  const tokenCookie = `token=${data.token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}${secure}`;
+  const usernameCookie = `username=${data.username}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}${secure}`;
 
-  return NextResponse.redirect(baseUrl);
+  const headers = new Headers();
+  headers.append("Location", baseUrl);
+  headers.append("Set-Cookie", tokenCookie);
+  headers.append("Set-Cookie", usernameCookie);
+
+  return new Response(null, { status: 302, headers });
 }

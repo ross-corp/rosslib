@@ -11,10 +11,10 @@ Schema is applied idempotently at API startup via `db.Migrate` in `api/internal/
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | `gen_random_uuid()` |
-| username | varchar(40) unique | URL-safe, lowercase |
+| username | text | URL-safe; added via migration `1700000002_add_username.go` (not a built-in PocketBase auth field) |
 | email | varchar(255) unique | |
 | password_hash | text | nullable; bcrypt hash (null for Google OAuth-only accounts) |
-| google_id | varchar(255) | nullable; Google user ID for OAuth accounts; unique partial index (non-null) |
+| google_id | text | nullable; Google user ID for OAuth accounts; set when user signs in with Google |
 | display_name | varchar(100) | nullable |
 | bio | text | nullable |
 | avatar_url | text | nullable; S3 key |

@@ -123,7 +123,8 @@ async function searchUsers(q: string): Promise<UserResult[]> {
     { cache: "no-store" }
   );
   if (!res.ok) return [];
-  return res.json();
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
 }
 
 async function searchAuthors(q: string): Promise<AuthorSearchResponse> {
