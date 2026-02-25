@@ -4,8 +4,6 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## UNSORTED
 
-- [ ] add a DNF option with a date, so a book can be completed OR stopped on a date.
-
 ## Book Scanning
 
 - [ ] Book cover scan — take a picture of a cover, lookup ISBN for import

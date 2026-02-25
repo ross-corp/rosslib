@@ -103,6 +103,7 @@ Per-user book ownership. Replaces `collection_items` for user-book metadata (rat
 | review_text | text | nullable |
 | spoiler | boolean | default false |
 | date_read | timestamptz | nullable; when the user finished the book |
+| date_dnf | timestamptz | nullable; when the user stopped reading (DNF) |
 | date_added | timestamptz | default now(); original add date (preserves Goodreads history on import) |
 | progress_pages | integer | nullable; current page number |
 | progress_percent | smallint | nullable; 0–100 reading percentage |

@@ -33,6 +33,7 @@ type BookReview = {
   review_text: string;
   spoiler: boolean;
   date_read: string | null;
+  date_dnf: string | null;
   date_added: string;
   is_followed: boolean;
 };
@@ -45,6 +46,7 @@ type MyBookStatus = {
   review_text: string | null;
   spoiler: boolean;
   date_read: string | null;
+  date_dnf: string | null;
   progress_pages: number | null;
   progress_percent: number | null;
   device_total_pages: number | null;
@@ -281,6 +283,8 @@ export default async function BookPage({
               initialReviewText={myStatus.review_text}
               initialSpoiler={myStatus.spoiler}
               initialDateRead={myStatus.date_read}
+              initialDateDnf={myStatus.date_dnf}
+              statusSlug={myStatus.status_slug}
             />
           </section>
         )}
@@ -341,6 +345,11 @@ export default async function BookPage({
                       {review.date_read && (
                         <span className="text-xs text-stone-400">
                           Read {formatDate(review.date_read)}
+                        </span>
+                      )}
+                      {review.date_dnf && (
+                        <span className="text-xs text-stone-400">
+                          Stopped {formatDate(review.date_dnf)}
                         </span>
                       )}
                     </div>

@@ -998,7 +998,7 @@ func (h *Handler) ExportCSV(c *gin.Context) {
 	statusFilter := c.Query("status")
 
 	query := `SELECT COALESCE(tv.name, 'Unstatused'), b.title, b.authors, b.isbn13,
-	                  ub.rating, ub.review_text, ub.date_added, ub.date_read
+	                  ub.rating, ub.review_text, ub.date_added, ub.date_read, ub.date_dnf
 	           FROM user_books ub
 	           JOIN books b ON b.id = ub.book_id
 	           LEFT JOIN tag_keys tk ON tk.user_id = ub.user_id AND tk.slug = 'status'
@@ -1024,7 +1024,7 @@ func (h *Handler) ExportCSV(c *gin.Context) {
 	c.Header("Content-Disposition", `attachment; filename="rosslib-export.csv"`)
 
 	w := csv.NewWriter(c.Writer)
-	w.Write([]string{"Title", "Author", "ISBN13", "Status", "Rating", "Review", "Date Added", "Date Read"})
+	w.Write([]string{"Title", "Author", "ISBN13", "Status", "Rating", "Review", "Date Added", "Date Read", "Date DNF"})
 
 	for rows.Next() {
 		var (
@@ -1036,8 +1036,9 @@ func (h *Handler) ExportCSV(c *gin.Context) {
 			reviewText *string
 			dateAdded  *time.Time
 			dateRead   *time.Time
+			dateDNF    *time.Time
 		)
-		if err := rows.Scan(&statusName, &title, &authors, &isbn13, &rating, &reviewText, &dateAdded, &dateRead); err != nil {
+		if err := rows.Scan(&statusName, &title, &authors, &isbn13, &rating, &reviewText, &dateAdded, &dateRead, &dateDNF); err != nil {
 			break
 		}
 
@@ -1050,6 +1051,7 @@ func (h *Handler) ExportCSV(c *gin.Context) {
 			derefStr(reviewText),
 			formatDate(dateAdded),
 			formatDate(dateRead),
+			formatDate(dateDNF),
 		}
 		w.Write(record)
 	}

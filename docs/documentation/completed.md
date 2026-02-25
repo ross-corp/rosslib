@@ -79,6 +79,9 @@ Items completed and moved out of todo.md.
 - [x] Update progress on a book (page number or %). Stored as `progress_pages` + `progress_percent` on `user_books`. Progress bar on book detail page when "Currently Reading"; progress bars under covers on profile.
 - [x] Device page mapping — set custom page count for your edition/device (`device_total_pages` on `user_books`). Page-based progress updates calculate % from the custom total. Falls back to catalog `page_count` when unset.
 
+## DNF Date
+- [x] DNF date (`date_dnf` on `user_books`) — when a user marks a book as DNF, they can record the date they stopped reading. Mirrors `date_read` for Finished books. Exposed via `PATCH /me/books/:olId`, returned from status and review endpoints, displayed on book pages and review listings, included in CSV export.
+
 ## Feed
 - [x] Chronological feed of followed-user activity (add to collection, review, rate, thread, follow, started/finished book).
 - [x] Cursor-based pagination; no algorithmic ranking.

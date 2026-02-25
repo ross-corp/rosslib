@@ -191,6 +191,29 @@ func (h *Handler) UpdateBook(c *gin.Context) {
 		idx++
 	}
 
+	if v, ok := raw["date_dnf"]; ok {
+		var dateStr *string
+		if err := json.Unmarshal(v, &dateStr); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "date_dnf must be a string or null"})
+			return
+		}
+		var dateVal interface{}
+		if dateStr != nil && *dateStr != "" {
+			t, err := time.Parse(time.RFC3339, *dateStr)
+			if err != nil {
+				t, err = time.Parse("2006-01-02", *dateStr)
+				if err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "date_dnf must be RFC3339 or YYYY-MM-DD"})
+					return
+				}
+			}
+			dateVal = t
+		}
+		setClauses = append(setClauses, fmt.Sprintf("date_dnf = $%d", idx))
+		args = append(args, dateVal)
+		idx++
+	}
+
 	if v, ok := raw["progress_pages"]; ok {
 		var pages *int
 		if err := json.Unmarshal(v, &pages); err != nil {
@@ -318,23 +341,25 @@ func (h *Handler) GetMyBookStatus(c *gin.Context) {
 	olID := c.Param("olId")
 
 	type status struct {
-		StatusValueID   *string `json:"status_value_id"`
-		StatusValueName *string `json:"status_name"`
-		StatusValueSlug *string `json:"status_slug"`
-		Rating          *int    `json:"rating"`
-		ReviewText      *string `json:"review_text"`
-		Spoiler         bool    `json:"spoiler"`
-		DateRead        *string `json:"date_read"`
-		ProgressPages   *int    `json:"progress_pages"`
-		ProgressPercent *int    `json:"progress_percent"`
-		DeviceTotalPages *int   `json:"device_total_pages"`
+		StatusValueID    *string `json:"status_value_id"`
+		StatusValueName  *string `json:"status_name"`
+		StatusValueSlug  *string `json:"status_slug"`
+		Rating           *int    `json:"rating"`
+		ReviewText       *string `json:"review_text"`
+		Spoiler          bool    `json:"spoiler"`
+		DateRead         *string `json:"date_read"`
+		DateDNF          *string `json:"date_dnf"`
+		ProgressPages    *int    `json:"progress_pages"`
+		ProgressPercent  *int    `json:"progress_percent"`
+		DeviceTotalPages *int    `json:"device_total_pages"`
 	}
 
 	var s status
 	var dateRead *time.Time
+	var dateDNF *time.Time
 
 	err := h.pool.QueryRow(c.Request.Context(),
-		`SELECT ub.rating, ub.review_text, ub.spoiler, ub.date_read,
+		`SELECT ub.rating, ub.review_text, ub.spoiler, ub.date_read, ub.date_dnf,
 		        ub.progress_pages, ub.progress_percent, ub.device_total_pages,
 		        tv.id, tv.name, tv.slug
 		 FROM user_books ub
@@ -344,7 +369,7 @@ func (h *Handler) GetMyBookStatus(c *gin.Context) {
 		 LEFT JOIN tag_values tv ON tv.id = btv.tag_value_id
 		 WHERE ub.user_id = $1 AND b.open_library_id = $2`,
 		userID, olID,
-	).Scan(&s.Rating, &s.ReviewText, &s.Spoiler, &dateRead,
+	).Scan(&s.Rating, &s.ReviewText, &s.Spoiler, &dateRead, &dateDNF,
 		&s.ProgressPages, &s.ProgressPercent, &s.DeviceTotalPages,
 		&s.StatusValueID, &s.StatusValueName, &s.StatusValueSlug)
 	if err != nil {
@@ -359,6 +384,10 @@ func (h *Handler) GetMyBookStatus(c *gin.Context) {
 	if dateRead != nil {
 		ds := dateRead.Format(time.RFC3339)
 		s.DateRead = &ds
+	}
+	if dateDNF != nil {
+		ds := dateDNF.Format(time.RFC3339)
+		s.DateDNF = &ds
 	}
 
 	c.JSON(http.StatusOK, s)

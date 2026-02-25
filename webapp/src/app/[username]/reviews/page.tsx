@@ -14,6 +14,7 @@ type ReviewItem = {
   review_text: string;
   spoiler: boolean;
   date_read: string | null;
+  date_dnf: string | null;
   date_added: string;
 };
 
@@ -110,6 +111,11 @@ export default async function ReviewsPage({
                     {review.date_read && (
                       <span className="text-xs text-stone-400">
                         Read {formatDate(review.date_read)}
+                      </span>
+                    )}
+                    {review.date_dnf && (
+                      <span className="text-xs text-stone-400">
+                        Stopped {formatDate(review.date_dnf)}
                       </span>
                     )}
                   </div>

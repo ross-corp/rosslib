@@ -77,6 +77,7 @@ When a valid token is provided, reviews from users the caller follows are sorted
     "review_text": "Loved it.",
     "spoiler": false,
     "date_read": "2025-06-15T00:00:00Z",
+    "date_dnf": null,
     "date_added": "2025-06-20T14:32:10Z",
     "is_followed": true
   }
@@ -222,12 +223,13 @@ Returns all reviews (collection items with non-empty `review_text`) for a user, 
     "review_text": "A timeless classic.",
     "spoiler": false,
     "date_read": "2024-06-01T00:00:00Z",
+    "date_dnf": null,
     "date_added": "2024-06-02T00:00:00Z"
   }
 ]
 ```
 
-`authors`, `cover_url`, `rating`, and `date_read` may be null.
+`authors`, `cover_url`, `rating`, `date_read`, and `date_dnf` may be null.
 
 ### `POST /users/:username/follow`  *(auth required)*
 
@@ -500,7 +502,7 @@ Exports the authenticated user's library as a CSV download. Returns `Content-Typ
 **Query parameters:**
 - `shelf` *(optional)* — collection ID to export a single shelf. Omit to export all shelves.
 
-**CSV columns:** Title, Author, ISBN13, Collection, Rating, Review, Date Added, Date Read.
+**CSV columns:** Title, Author, ISBN13, Status, Rating, Review, Date Added, Date Read, Date DNF.
 
 ---
 

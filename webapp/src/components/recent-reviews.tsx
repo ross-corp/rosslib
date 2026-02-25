@@ -14,6 +14,7 @@ export type ReviewItem = {
   review_text: string;
   spoiler: boolean;
   date_read: string | null;
+  date_dnf: string | null;
   date_added: string;
 };
 

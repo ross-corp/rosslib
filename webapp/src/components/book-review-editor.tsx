@@ -9,6 +9,8 @@ type Props = {
   initialReviewText: string | null;
   initialSpoiler: boolean;
   initialDateRead: string | null;
+  initialDateDnf: string | null;
+  statusSlug: string | null;
 };
 
 export default function BookReviewEditor({
@@ -17,12 +19,17 @@ export default function BookReviewEditor({
   initialReviewText,
   initialSpoiler,
   initialDateRead,
+  initialDateDnf,
+  statusSlug,
 }: Props) {
   const [rating, setRating] = useState<number | null>(initialRating);
   const [reviewText, setReviewText] = useState(initialReviewText ?? "");
   const [spoiler, setSpoiler] = useState(initialSpoiler);
   const [dateRead, setDateRead] = useState(
     initialDateRead ? initialDateRead.slice(0, 10) : ""
+  );
+  const [dateDnf, setDateDnf] = useState(
+    initialDateDnf ? initialDateDnf.slice(0, 10) : ""
   );
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -33,7 +40,8 @@ export default function BookReviewEditor({
     rating !== initialRating ||
     reviewText !== (initialReviewText ?? "") ||
     spoiler !== initialSpoiler ||
-    dateRead !== (initialDateRead ? initialDateRead.slice(0, 10) : "");
+    dateRead !== (initialDateRead ? initialDateRead.slice(0, 10) : "") ||
+    dateDnf !== (initialDateDnf ? initialDateDnf.slice(0, 10) : "");
 
   // savedRating tracks what's persisted so we know if a star click is a change
   const [savedRating, setSavedRating] = useState<number | null>(initialRating);
@@ -79,6 +87,9 @@ export default function BookReviewEditor({
     if (dateRead !== (initialDateRead ? initialDateRead.slice(0, 10) : "")) {
       body.date_read = dateRead || null;
     }
+    if (dateDnf !== (initialDateDnf ? initialDateDnf.slice(0, 10) : "")) {
+      body.date_dnf = dateDnf || null;
+    }
 
     const ok = await patchFields(body);
     if (ok) {
@@ -105,6 +116,7 @@ export default function BookReviewEditor({
           review_text: null,
           spoiler: false,
           date_read: null,
+          date_dnf: null,
         }),
       }
     );
@@ -115,6 +127,7 @@ export default function BookReviewEditor({
       setReviewText("");
       setSpoiler(false);
       setDateRead("");
+      setDateDnf("");
       setExpanded(false);
       setMessage("Review cleared");
       setTimeout(() => setMessage(null), 2000);
@@ -122,6 +135,9 @@ export default function BookReviewEditor({
       setMessage("Failed to clear");
     }
   }
+
+  const showDateRead = statusSlug === "finished";
+  const showDateDnf = statusSlug === "dnf";
 
   return (
     <div>
@@ -163,6 +179,15 @@ export default function BookReviewEditor({
                   })}
                 </p>
               )}
+              {initialDateDnf && (
+                <p className="text-xs text-stone-400 mt-1">
+                  Stopped {new Date(initialDateDnf).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </p>
+              )}
               <button
                 type="button"
                 onClick={() => setExpanded(true)}
@@ -195,16 +220,31 @@ export default function BookReviewEditor({
                   Contains spoilers
                 </label>
 
-                <label className="flex items-center gap-1.5 text-stone-500">
-                  Date read
-                  <input
-                    type="date"
-                    value={dateRead}
-                    onChange={(e) => setDateRead(e.target.value)}
-                    disabled={saving}
-                    className="border border-stone-200 rounded px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
-                  />
-                </label>
+                {showDateRead && (
+                  <label className="flex items-center gap-1.5 text-stone-500">
+                    Date read
+                    <input
+                      type="date"
+                      value={dateRead}
+                      onChange={(e) => setDateRead(e.target.value)}
+                      disabled={saving}
+                      className="border border-stone-200 rounded px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
+                    />
+                  </label>
+                )}
+
+                {showDateDnf && (
+                  <label className="flex items-center gap-1.5 text-stone-500">
+                    Date stopped
+                    <input
+                      type="date"
+                      value={dateDnf}
+                      onChange={(e) => setDateDnf(e.target.value)}
+                      disabled={saving}
+                      className="border border-stone-200 rounded px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
+                    />
+                  </label>
+                )}
               </div>
 
               <div className="flex items-center gap-3">
@@ -223,6 +263,7 @@ export default function BookReviewEditor({
                     setReviewText(initialReviewText ?? "");
                     setSpoiler(initialSpoiler);
                     setDateRead(initialDateRead ? initialDateRead.slice(0, 10) : "");
+                    setDateDnf(initialDateDnf ? initialDateDnf.slice(0, 10) : "");
                     setExpanded(false);
                   }}
                   disabled={saving}

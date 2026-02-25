@@ -973,6 +973,7 @@ func (h *Handler) GetBookReviews(c *gin.Context) {
 		ReviewText  string  `json:"review_text"`
 		Spoiler     bool    `json:"spoiler"`
 		DateRead    *string `json:"date_read"`
+		DateDNF     *string `json:"date_dnf"`
 		DateAdded   string  `json:"date_added"`
 		IsFollowed  bool    `json:"is_followed"`
 	}
@@ -987,7 +988,7 @@ func (h *Handler) GetBookReviews(c *gin.Context) {
 
 	rows, err := h.pool.Query(c.Request.Context(),
 		`SELECT u.username, u.display_name, u.avatar_url,
-		        ub.rating, ub.review_text, ub.spoiler, ub.date_read, ub.date_added,
+		        ub.rating, ub.review_text, ub.spoiler, ub.date_read, ub.date_dnf, ub.date_added,
 		        (f.follower_id IS NOT NULL) AS is_followed
 		 FROM user_books ub
 		 JOIN books b ON b.id = ub.book_id
@@ -1011,10 +1012,11 @@ func (h *Handler) GetBookReviews(c *gin.Context) {
 	for rows.Next() {
 		var r review
 		var dateRead *time.Time
+		var dateDNF *time.Time
 		var dateAdded time.Time
 		if err := rows.Scan(
 			&r.Username, &r.DisplayName, &r.AvatarURL,
-			&r.Rating, &r.ReviewText, &r.Spoiler, &dateRead, &dateAdded,
+			&r.Rating, &r.ReviewText, &r.Spoiler, &dateRead, &dateDNF, &dateAdded,
 			&r.IsFollowed,
 		); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
@@ -1024,6 +1026,10 @@ func (h *Handler) GetBookReviews(c *gin.Context) {
 		if dateRead != nil {
 			s := dateRead.Format(time.RFC3339)
 			r.DateRead = &s
+		}
+		if dateDNF != nil {
+			s := dateDNF.Format(time.RFC3339)
+			r.DateDNF = &s
 		}
 		reviews = append(reviews, r)
 	}

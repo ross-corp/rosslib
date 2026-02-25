@@ -413,7 +413,7 @@ func (h *Handler) GetUserReviews(c *gin.Context) {
 	}
 
 	query := `SELECT b.id, b.open_library_id, b.title, b.cover_url, b.authors,
-		        ub.rating, ub.review_text, ub.spoiler, ub.date_read, ub.date_added
+		        ub.rating, ub.review_text, ub.spoiler, ub.date_read, ub.date_dnf, ub.date_added
 		 FROM user_books ub
 		 JOIN books b  ON b.id  = ub.book_id
 		 JOIN users u  ON u.id  = ub.user_id
@@ -448,6 +448,7 @@ func (h *Handler) GetUserReviews(c *gin.Context) {
 		ReviewText    string  `json:"review_text"`
 		Spoiler       bool    `json:"spoiler"`
 		DateRead      *string `json:"date_read"`
+		DateDNF       *string `json:"date_dnf"`
 		DateAdded     string  `json:"date_added"`
 	}
 
@@ -455,10 +456,11 @@ func (h *Handler) GetUserReviews(c *gin.Context) {
 	for rows.Next() {
 		var r reviewItem
 		var dateRead *time.Time
+		var dateDNF *time.Time
 		var dateAdded time.Time
 		if err := rows.Scan(
 			&r.BookID, &r.OpenLibraryID, &r.Title, &r.CoverURL, &r.Authors,
-			&r.Rating, &r.ReviewText, &r.Spoiler, &dateRead, &dateAdded,
+			&r.Rating, &r.ReviewText, &r.Spoiler, &dateRead, &dateDNF, &dateAdded,
 		); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			return
@@ -467,6 +469,10 @@ func (h *Handler) GetUserReviews(c *gin.Context) {
 		if dateRead != nil {
 			s := dateRead.Format(time.RFC3339)
 			r.DateRead = &s
+		}
+		if dateDNF != nil {
+			s := dateDNF.Format(time.RFC3339)
+			r.DateDNF = &s
 		}
 		reviews = append(reviews, r)
 	}
