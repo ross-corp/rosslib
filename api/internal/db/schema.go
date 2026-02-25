@@ -120,6 +120,14 @@ ALTER TABLE collections ADD COLUMN IF NOT EXISTS collection_type VARCHAR(20) NOT
 ALTER TABLE tag_keys ADD COLUMN IF NOT EXISTS mode VARCHAR(20) NOT NULL DEFAULT 'select_one';
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_ghost BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_moderator BOOLEAN NOT NULL DEFAULT false;
+
+-- ── Google OAuth support ─────────────────────────────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);
+-- Make password_hash nullable for OAuth-only users.
+ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+-- Unique index on google_id (partial, non-null only).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id) WHERE google_id IS NOT NULL;
 
 ALTER TABLE user_books ADD COLUMN IF NOT EXISTS progress_pages    INT;
 ALTER TABLE user_books ADD COLUMN IF NOT EXISTS progress_percent  SMALLINT;
@@ -300,6 +308,160 @@ WHERE NOT EXISTS (
 )
 ORDER BY btv.user_id, btv.book_id, ci.rating DESC NULLS LAST
 ON CONFLICT (user_id, book_id) DO NOTHING;
+
+-- ── Community links: book-to-book connections ────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS book_links (
+	id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	from_book_id UUID         NOT NULL REFERENCES books(id),
+	to_book_id   UUID         NOT NULL REFERENCES books(id),
+	user_id      UUID         NOT NULL REFERENCES users(id),
+	link_type    VARCHAR(50)  NOT NULL,
+	note         TEXT,
+	created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+	deleted_at   TIMESTAMPTZ,
+	UNIQUE(from_book_id, to_book_id, link_type, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_book_links_from ON book_links (from_book_id);
+CREATE INDEX IF NOT EXISTS idx_book_links_to   ON book_links (to_book_id);
+
+CREATE TABLE IF NOT EXISTS book_link_votes (
+	user_id      UUID        NOT NULL REFERENCES users(id),
+	book_link_id UUID        NOT NULL REFERENCES book_links(id) ON DELETE CASCADE,
+	created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	PRIMARY KEY (user_id, book_link_id)
+);
+
+-- ── Community link edit queue: proposed edits awaiting moderator review ───────
+
+CREATE TABLE IF NOT EXISTS book_link_edits (
+	id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	book_link_id    UUID         NOT NULL REFERENCES book_links(id) ON DELETE CASCADE,
+	user_id         UUID         NOT NULL REFERENCES users(id),
+	proposed_type   VARCHAR(50),
+	proposed_note   TEXT,
+	status          VARCHAR(20)  NOT NULL DEFAULT 'pending',
+	reviewer_id     UUID         REFERENCES users(id),
+	reviewer_comment TEXT,
+	created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+	reviewed_at     TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_book_link_edits_status  ON book_link_edits (status);
+CREATE INDEX IF NOT EXISTS idx_book_link_edits_link_id ON book_link_edits (book_link_id);
+
+-- ── Author follows: users following OL authors ──────────────────────────────
+
+CREATE TABLE IF NOT EXISTS author_follows (
+	user_id     UUID        NOT NULL REFERENCES users(id),
+	author_key  VARCHAR(50) NOT NULL,
+	author_name VARCHAR(500) NOT NULL DEFAULT '',
+	created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	PRIMARY KEY (user_id, author_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_author_follows_author_key ON author_follows (author_key);
+
+-- ── Author works snapshot: tracks known work count per author for new-pub detection
+
+CREATE TABLE IF NOT EXISTS author_works_snapshot (
+	author_key  VARCHAR(50) PRIMARY KEY,
+	work_count  INT         NOT NULL DEFAULT 0,
+	checked_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ── Notifications: per-user notifications (e.g. new publication by followed author)
+
+CREATE TABLE IF NOT EXISTS notifications (
+	id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	user_id     UUID         NOT NULL REFERENCES users(id),
+	notif_type  VARCHAR(50)  NOT NULL,
+	title       TEXT         NOT NULL,
+	body        TEXT,
+	metadata    JSONB,
+	read        BOOLEAN      NOT NULL DEFAULT false,
+	created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications (user_id, read, created_at DESC);
+
+-- ── Book follows: users subscribing to books for activity notifications ──────
+
+CREATE TABLE IF NOT EXISTS book_follows (
+	user_id    UUID        NOT NULL REFERENCES users(id),
+	book_id    UUID        NOT NULL REFERENCES books(id),
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	PRIMARY KEY (user_id, book_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_book_follows_book_id ON book_follows (book_id);
+
+-- ── Password reset tokens ───────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+	id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	user_id     UUID         NOT NULL REFERENCES users(id),
+	token_hash  TEXT         NOT NULL,
+	expires_at  TIMESTAMPTZ  NOT NULL,
+	used        BOOLEAN      NOT NULL DEFAULT false,
+	created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens (user_id);
+
+-- ── Author badge: link a user account to an Open Library author key ─────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS author_key VARCHAR(50);
+
+-- ── Genre ratings: per-user genre dimension scores on books ─────────────────
+
+CREATE TABLE IF NOT EXISTS genre_ratings (
+	id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	user_id    UUID         NOT NULL REFERENCES users(id),
+	book_id    UUID         NOT NULL REFERENCES books(id),
+	genre      VARCHAR(100) NOT NULL,
+	rating     SMALLINT     NOT NULL CHECK (rating >= 0 AND rating <= 10),
+	created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+	updated_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+	UNIQUE(user_id, book_id, genre)
+);
+
+CREATE INDEX IF NOT EXISTS idx_genre_ratings_book_id ON genre_ratings (book_id);
+
+-- ── Email verification ──────────────────────────────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+	id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	user_id     UUID         NOT NULL REFERENCES users(id),
+	token_hash  TEXT         NOT NULL,
+	expires_at  TIMESTAMPTZ  NOT NULL,
+	used        BOOLEAN      NOT NULL DEFAULT false,
+	created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_user_id ON email_verification_tokens (user_id);
+
+-- Mark existing Google OAuth users as verified (Google has already verified their email).
+UPDATE users SET email_verified = true WHERE google_id IS NOT NULL AND email_verified = false;
+
+-- ── Computed collections: stores operation definition for continuous (live) lists ──
+
+CREATE TABLE IF NOT EXISTS computed_collections (
+	id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	collection_id       UUID         NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+	operation           VARCHAR(50)  NOT NULL,
+	source_collection_a UUID         NOT NULL,
+	source_collection_b UUID,
+	source_username_b   VARCHAR(40),
+	source_slug_b       VARCHAR(255),
+	is_continuous       BOOLEAN      NOT NULL DEFAULT false,
+	last_computed_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+	created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+	UNIQUE(collection_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_computed_collections_collection_id ON computed_collections (collection_id);
 `
 
 func Migrate(pool *pgxpool.Pool) error {

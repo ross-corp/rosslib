@@ -13,11 +13,14 @@ Schema is applied idempotently at API startup via `db.Migrate` in `api/internal/
 | id | uuid PK | `gen_random_uuid()` |
 | username | varchar(40) unique | URL-safe, lowercase |
 | email | varchar(255) unique | |
-| password_hash | text | bcrypt |
+| password_hash | text | nullable; bcrypt hash (null for Google OAuth-only accounts) |
+| google_id | varchar(255) | nullable; Google user ID for OAuth accounts; unique partial index (non-null) |
 | display_name | varchar(100) | nullable |
 | bio | text | nullable |
 | avatar_url | text | nullable; S3 key |
 | is_private | boolean | default false |
+| is_moderator | boolean | default false; grants moderation privileges (e.g. deleting community links); managed via admin UI (`/admin`) |
+| author_key | varchar(50) | nullable; Open Library author ID (e.g. `OL23919A`); links user account to their author page; shows "Author" badge on profile; managed via admin UI |
 | created_at | timestamptz | |
 | deleted_at | timestamptz | soft delete |
 
@@ -221,7 +224,7 @@ Append-only event log for social feeds. Written fire-and-forget from handlers �
 |---|---|---|
 | id | uuid PK | `gen_random_uuid()` |
 | user_id | uuid FK → users | the actor |
-| activity_type | varchar(50) | `shelved`, `rated`, `reviewed`, `created_thread`, `followed_user` |
+| activity_type | varchar(50) | `shelved`, `rated`, `reviewed`, `created_thread`, `followed_user`, `followed_author`, `followed_book`, `started_book`, `finished_book`, `created_link` |
 | book_id | uuid FK → books | nullable |
 | target_user_id | uuid FK → users | nullable; for `followed_user` |
 | collection_id | uuid FK → collections | nullable; for `shelved` |
@@ -246,6 +249,192 @@ users ──< thread_comments >── threads
 users ──< activities >── books, users, collections, threads
 ```
 
+### `book_links`
+
+Community-submitted book-to-book connections. Any authenticated user can suggest a link between two books already in the local catalog. Links can be soft-deleted by the original author or by any user with `is_moderator = true`.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| from_book_id | uuid FK → books | source book |
+| to_book_id | uuid FK → books | target book |
+| user_id | uuid FK → users | who submitted the link |
+| link_type | varchar(50) | `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation` |
+| note | text | nullable; optional explanation of the connection |
+| created_at | timestamptz | |
+| deleted_at | timestamptz | soft delete |
+
+Unique constraint: `(from_book_id, to_book_id, link_type, user_id)` — each user can submit a given link type between two books once.
+
+Indexes: `from_book_id`, `to_book_id`.
+
+### `book_link_votes`
+
+Upvotes on community links. Sorted by vote count on book pages.
+
+| Column | Type | Notes |
+|---|---|---|
+| user_id | uuid FK → users | |
+| book_link_id | uuid FK → book_links (cascade) | |
+| created_at | timestamptz | |
+
+PK: `(user_id, book_link_id)` — one vote per user per link.
+
+### `book_link_edits`
+
+Proposed edits to community links. Any authenticated user can propose a change to a link's type or note. Moderators approve or reject edits from the admin panel. Approved edits are applied to the link immediately.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| book_link_id | uuid FK → book_links (cascade) | the link being edited |
+| user_id | uuid FK → users | who proposed the edit |
+| proposed_type | varchar(50) | nullable; new link_type if changed |
+| proposed_note | text | nullable; new note if changed |
+| status | varchar(20) | `'pending'`, `'approved'`, or `'rejected'` |
+| reviewer_id | uuid FK → users | nullable; moderator who reviewed |
+| reviewer_comment | text | nullable; optional reviewer note |
+| created_at | timestamptz | |
+| reviewed_at | timestamptz | nullable; when reviewed |
+
+Indexes: `status`, `book_link_id`.
+
+At least one of `proposed_type` or `proposed_note` must be non-null (enforced in application code). One pending edit per user per link (enforced in application code).
+
+### `author_follows`
+
+Users following Open Library authors. Authors are not stored locally — only the OL author key and a cached name are persisted.
+
+| Column | Type | Notes |
+|---|---|---|
+| user_id | uuid FK → users | |
+| author_key | varchar(50) | Open Library author ID (e.g. `OL23919A`) |
+| author_name | varchar(500) | cached display name; default `''` |
+| created_at | timestamptz | |
+
+PK: `(user_id, author_key)`
+Index: `author_key`
+
+### `author_works_snapshot`
+
+Tracks the last-known work count for each followed author. Used by the background poller to detect new publications. Seeded on first poll (no notification generated); subsequent polls compare against the snapshot.
+
+| Column | Type | Notes |
+|---|---|---|
+| author_key | varchar(50) PK | Open Library author ID |
+| work_count | integer | last-known number of works on OL |
+| checked_at | timestamptz | when the snapshot was last refreshed |
+
+### `book_follows`
+
+Users following specific books. Followers receive notifications when new threads, community links, or reviews are posted on the book.
+
+| Column | Type | Notes |
+|---|---|---|
+| user_id | uuid FK → users | |
+| book_id | uuid FK → books | |
+| created_at | timestamptz | |
+
+PK: `(user_id, book_id)`
+Index: `book_id`
+
+### `notifications`
+
+Per-user notification rows. Types include `new_publication` (author works poller), `book_new_thread`, `book_new_link`, and `book_new_review` (book follow notifications). The schema is generic for future notification types.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user_id | uuid FK → users | recipient |
+| notif_type | varchar(50) | e.g. `new_publication` |
+| title | text | short title (e.g. "New work by Author") |
+| body | text | nullable; longer description |
+| metadata | jsonb | nullable; extra context (author_key, author_name, new_count, new_titles) |
+| read | boolean | default false |
+| created_at | timestamptz | |
+
+Index: `(user_id, read, created_at DESC)` for efficient unread count and listing.
+
+---
+
+## Relationships
+
+```
+users ──< follows >── users
+users ──< user_books >── books
+users ──< collections ──< collection_items >── books  (tag collections)
+users ──< tag_keys ──< tag_values
+users ──< book_tag_values >── tag_values >── tag_keys  (includes Status labels)
+users ──< threads >── books
+users ──< thread_comments >── threads
+users ──< activities >── books, users, collections, threads
+users ──< book_links >── books  (from/to)
+users ──< book_link_votes >── book_links
+users ──< book_link_edits >── book_links  (proposed edits)
+users ──< author_follows     (OL author keys)
+users ──< book_follows >── books  (book subscriptions)
+users ──< notifications      (per-user notifications)
+users ──< password_reset_tokens  (password reset tokens)
+users ──< genre_ratings >── books  (per-user genre dimension scores)
+author_works_snapshot        (OL author key → work count snapshot)
+collections ──< computed_collections  (operation definition for live lists)
+```
+
+### `genre_ratings`
+
+Per-user genre dimension scores on books. Users rate how strongly a book fits each genre on a 0–10 scale. Aggregate averages are shown on book detail pages.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user_id | uuid FK → users | |
+| book_id | uuid FK → books | |
+| genre | varchar(100) | genre name (from predefined list) |
+| rating | smallint | 0–10; CHECK constraint enforced |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+
+Unique constraint: `(user_id, book_id, genre)` — one rating per user per book per genre.
+Index: `book_id` for efficient aggregate queries.
+
+Allowed genres (same as the predefined genre list): Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children.
+
+### `computed_collections`
+
+Stores the operation definition for computed (live) lists. When a user saves a set operation result as a continuous list, this table records which collections and operation were used. On each view, the operation is re-executed against current data.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| collection_id | uuid FK → collections | unique; the result shelf |
+| operation | varchar(50) | `union`, `intersection`, or `difference` |
+| source_collection_a | uuid | source collection A (always the user's own) |
+| source_collection_b | uuid | nullable; source collection B (for same-user operations) |
+| source_username_b | varchar(40) | nullable; other user's username (for cross-user operations) |
+| source_slug_b | varchar(255) | nullable; other user's collection slug (for cross-user operations) |
+| is_continuous | boolean | default false; if true, list auto-refreshes on each view |
+| last_computed_at | timestamptz | updated each time the list is dynamically recomputed |
+| created_at | timestamptz | |
+
+Index: `collection_id`
+
+For same-user operations, `source_collection_a` and `source_collection_b` are both set. For cross-user operations, `source_collection_a` is the user's own collection and the other user's collection is identified by `source_username_b` + `source_slug_b` (resolved on each view, respecting privacy).
+
+### `password_reset_tokens`
+
+Tokens for the forgot-password flow. Tokens are stored as SHA-256 hashes (not raw values). Single-use, expire after 1 hour. Previous unused tokens for a user are invalidated when a new one is requested.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user_id | uuid FK → users | |
+| token_hash | text | SHA-256 hash of the raw token sent in the email |
+| expires_at | timestamptz | 1 hour after creation |
+| used | boolean | default false; set to true after successful reset |
+| created_at | timestamptz | |
+
+Index: `user_id`
+
 ---
 
 ## Planned tables (not yet in schema.go)
@@ -259,10 +448,6 @@ Author records and the book↔author join table. Currently authors are stored as
 ### `reviews`
 
 Standalone review table. The current model keeps rating and review on `user_books` (one per user per book), which already enforces uniqueness. A dedicated reviews table may be useful if reviews gain features like upvotes, replies, or rich formatting.
-
-### `links`
-
-Community-submitted book-to-book connections (sequel, prequel, similar, etc.).
 
 ### `book_stats`
 

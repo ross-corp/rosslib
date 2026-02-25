@@ -10,11 +10,16 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/auth"
 	"github.com/tristansaldanha/rosslib/api/internal/books"
+	"github.com/tristansaldanha/rosslib/api/internal/email"
 	"github.com/tristansaldanha/rosslib/api/internal/collections"
 	"github.com/tristansaldanha/rosslib/api/internal/docs"
+	"github.com/tristansaldanha/rosslib/api/internal/genreratings"
 	"github.com/tristansaldanha/rosslib/api/internal/ghosts"
 	"github.com/tristansaldanha/rosslib/api/internal/imports"
+	"github.com/tristansaldanha/rosslib/api/internal/links"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/notifications"
+	"github.com/tristansaldanha/rosslib/api/internal/olhttp"
 	"github.com/tristansaldanha/rosslib/api/internal/search"
 	"github.com/tristansaldanha/rosslib/api/internal/storage"
 	"github.com/tristansaldanha/rosslib/api/internal/tags"
@@ -23,7 +28,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/users"
 )
 
-func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, searchClient *search.Client) http.Handler {
+func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, searchClient *search.Client, emailClient *email.Client, webappURL string) http.Handler {
 	r := gin.Default()
 
 	docs.Register(r)
@@ -48,13 +53,19 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 		})
 	})
 
-	authHandler := auth.NewHandler(pool, jwtSecret)
+	authHandler := auth.NewHandler(pool, jwtSecret, emailClient, webappURL)
 	r.POST("/auth/register", authHandler.Register)
 	r.POST("/auth/login", authHandler.Login)
+	r.POST("/auth/google", authHandler.GoogleLogin)
+	r.POST("/auth/forgot-password", authHandler.ForgotPassword)
+	r.POST("/auth/reset-password", authHandler.ResetPassword)
+	r.POST("/auth/verify-email", authHandler.VerifyEmail)
 
 	secret := []byte(jwtSecret)
 
-	booksHandler := books.NewHandler(pool, searchClient)
+	olClient := olhttp.DefaultClient()
+
+	booksHandler := books.NewHandler(pool, searchClient, olClient)
 	r.GET("/books/search", booksHandler.SearchBooks)
 	r.GET("/books/lookup", booksHandler.LookupBook)
 	r.GET("/authors/search", booksHandler.SearchAuthors)
@@ -62,7 +73,11 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	r.GET("/genres", booksHandler.GetGenres)
 	r.GET("/genres/:slug/books", booksHandler.GetGenreBooks)
 	r.GET("/books/:workId", booksHandler.GetBook)
+	r.GET("/books/:workId/editions", booksHandler.GetEditions)
 	r.GET("/books/:workId/reviews", middleware.OptionalAuth(secret), booksHandler.GetBookReviews)
+
+	genreRatingsHandler := genreratings.NewHandler(pool)
+	r.GET("/books/:workId/genre-ratings", genreRatingsHandler.GetBookGenreRatings)
 
 	usersHandler := users.NewHandler(pool, store)
 	r.GET("/users", usersHandler.SearchUsers)
@@ -84,23 +99,41 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	r.GET("/books/:workId/threads", threadsHandler.ListThreads)
 	r.GET("/threads/:threadId", threadsHandler.GetThread)
 
+	linksHandler := links.NewHandler(pool)
+	r.GET("/books/:workId/links", middleware.OptionalAuth(secret), linksHandler.ListLinks)
+
 	authed := r.Group("/")
 	authed.Use(middleware.Auth(secret))
+	authed.GET("/me/account", authHandler.GetAccountInfo)
+	authed.PUT("/me/password", authHandler.SetPassword)
+	authed.POST("/auth/resend-verification", authHandler.ResendVerification)
 	authed.GET("/me/feed", activityHandler.GetFeed)
 	authed.PATCH("/users/me", usersHandler.UpdateMe)
 	authed.POST("/me/avatar", usersHandler.UploadAvatar)
+	authed.POST("/authors/:authorKey/follow", booksHandler.FollowAuthor)
+	authed.DELETE("/authors/:authorKey/follow", booksHandler.UnfollowAuthor)
+	authed.GET("/authors/:authorKey/follow", booksHandler.GetAuthorFollowStatus)
+	authed.GET("/me/followed-authors", booksHandler.GetFollowedAuthors)
+	authed.POST("/books/:workId/follow", booksHandler.FollowBook)
+	authed.DELETE("/books/:workId/follow", booksHandler.UnfollowBook)
+	authed.GET("/books/:workId/follow", booksHandler.GetBookFollowStatus)
+	authed.GET("/me/followed-books", booksHandler.GetFollowedBooks)
 	authed.POST("/users/:username/follow", usersHandler.Follow)
 	authed.DELETE("/users/:username/follow", usersHandler.Unfollow)
 	authed.GET("/me/follow-requests", usersHandler.GetFollowRequests)
 	authed.POST("/me/follow-requests/:userId/accept", usersHandler.AcceptFollowRequest)
 	authed.DELETE("/me/follow-requests/:userId/reject", usersHandler.RejectFollowRequest)
-	importsHandler := imports.NewHandler(pool, searchClient)
+	importsHandler := imports.NewHandler(pool, searchClient, olClient)
 	authed.POST("/me/import/goodreads/preview", importsHandler.Preview)
 	authed.POST("/me/import/goodreads/commit", importsHandler.Commit)
 
 	authed.GET("/me/export/csv", collectionsHandler.ExportCSV)
 	authed.GET("/me/shelves", collectionsHandler.GetMyShelves)
 	authed.POST("/me/shelves", collectionsHandler.CreateShelf)
+	authed.POST("/me/shelves/set-operation", collectionsHandler.SetOperation)
+	authed.POST("/me/shelves/set-operation/save", collectionsHandler.SaveSetOperation)
+	authed.POST("/me/shelves/cross-user-compare", collectionsHandler.CrossUserCompare)
+	authed.POST("/me/shelves/cross-user-compare/save", collectionsHandler.SaveCrossUserCompare)
 	authed.PATCH("/me/shelves/:id", collectionsHandler.UpdateShelf)
 	authed.DELETE("/me/shelves/:id", collectionsHandler.DeleteShelf)
 	authed.POST("/shelves/:shelfId/books", collectionsHandler.AddBookToShelf)
@@ -124,16 +157,37 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	authed.PUT("/me/books/:olId/tags/:keyId", tagsHandler.SetBookTag)
 	authed.DELETE("/me/books/:olId/tags/:keyId", tagsHandler.UnsetBookTag)
 	authed.DELETE("/me/books/:olId/tags/:keyId/values/:valueId", tagsHandler.UnsetBookTagValue)
+	authed.GET("/me/books/:olId/genre-ratings", genreRatingsHandler.GetMyGenreRatings)
+	authed.PUT("/me/books/:olId/genre-ratings", genreRatingsHandler.SetGenreRatings)
 
 	authed.POST("/books/:workId/threads", threadsHandler.CreateThread)
 	authed.DELETE("/threads/:threadId", threadsHandler.DeleteThread)
 	authed.POST("/threads/:threadId/comments", threadsHandler.CreateComment)
 	authed.DELETE("/threads/:threadId/comments/:commentId", threadsHandler.DeleteComment)
 
+	authed.POST("/books/:workId/links", linksHandler.CreateLink)
+	authed.DELETE("/links/:linkId", linksHandler.DeleteLink)
+	authed.POST("/links/:linkId/vote", linksHandler.Vote)
+	authed.DELETE("/links/:linkId/vote", linksHandler.Unvote)
+	authed.POST("/links/:linkId/edits", linksHandler.ProposeEdit)
+
+	notifHandler := notifications.NewHandler(pool)
+	authed.GET("/me/notifications", notifHandler.GetNotifications)
+	authed.GET("/me/notifications/unread-count", notifHandler.GetUnreadCount)
+	authed.POST("/me/notifications/:notifId/read", notifHandler.MarkRead)
+	authed.POST("/me/notifications/read-all", notifHandler.MarkAllRead)
+
+	admin := authed.Group("/admin")
+	admin.Use(middleware.RequireModerator())
+	admin.GET("/users", usersHandler.ListAllUsers)
+	admin.PUT("/users/:userId/moderator", usersHandler.SetModerator)
+	admin.PUT("/users/:userId/author", usersHandler.SetAuthor)
+	admin.GET("/link-edits", linksHandler.ListEdits)
+	admin.PUT("/link-edits/:editId", linksHandler.ReviewEdit)
 	ghostsHandler := ghosts.NewHandler(pool)
-	authed.POST("/admin/ghosts/seed", ghostsHandler.Seed)
-	authed.POST("/admin/ghosts/simulate", ghostsHandler.Simulate)
-	authed.GET("/admin/ghosts/status", ghostsHandler.Status)
+	admin.POST("/ghosts/seed", ghostsHandler.Seed)
+	admin.POST("/ghosts/simulate", ghostsHandler.Simulate)
+	admin.GET("/ghosts/status", ghostsHandler.Status)
 
 	return r
 }

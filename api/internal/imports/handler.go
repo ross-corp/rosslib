@@ -21,12 +21,13 @@ import (
 )
 
 type Handler struct {
-	pool   *pgxpool.Pool
-	search *search.Client
+	pool     *pgxpool.Pool
+	search   *search.Client
+	olClient *http.Client
 }
 
-func NewHandler(pool *pgxpool.Pool, searchClient *search.Client) *Handler {
-	return &Handler{pool: pool, search: searchClient}
+func NewHandler(pool *pgxpool.Pool, searchClient *search.Client, olClient *http.Client) *Handler {
+	return &Handler{pool: pool, search: searchClient, olClient: olClient}
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -100,27 +101,6 @@ var defaultShelfMap = map[string]string{
 	"to-read":           "want-to-read",
 }
 
-// slugDisplayNames maps common Goodreads slugs to human-readable names.
-var slugDisplayNames = map[string]string{
-	"read":              "Read",
-	"currently-reading": "Currently Reading",
-	"want-to-read":      "Want to Read",
-	"owned-to-read":     "Owned to Read",
-	"dnf":               "Did Not Finish",
-}
-
-func slugToName(slug string) string {
-	if name, ok := slugDisplayNames[slug]; ok {
-		return name
-	}
-	parts := strings.Split(slug, "-")
-	for i, p := range parts {
-		if len(p) > 0 {
-			parts[i] = strings.ToUpper(p[:1]) + p[1:]
-		}
-	}
-	return strings.Join(parts, " ")
-}
 
 // ── CSV helpers ───────────────────────────────────────────────────────────────
 
@@ -163,7 +143,8 @@ func parseCSV(r io.Reader) ([]goodreadsRow, error) {
 		}
 
 		var rating int
-		fmt.Sscanf(record[7], "%d", &rating) // 0 if empty or unparseable
+		// 0 if empty or unparseable, error ignored intentionally
+		_, _ = fmt.Sscanf(record[7], "%d", &rating)
 
 		exclusiveRaw := strings.TrimSpace(record[18])
 		exclusiveSlug, ok := defaultShelfMap[exclusiveRaw]
@@ -221,7 +202,7 @@ type olSearchResp struct {
 	Docs []olDoc `json:"docs"`
 }
 
-func searchOL(ctx context.Context, title, author string, limit int) ([]BookCandidate, error) {
+func searchOL(ctx context.Context, olClient *http.Client, title, author string, limit int) ([]BookCandidate, error) {
 	params := url.Values{}
 	params.Set("title", title)
 	if author != "" {
@@ -234,7 +215,7 @@ func searchOL(ctx context.Context, title, author string, limit int) ([]BookCandi
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := olClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +287,7 @@ func (h *Handler) Preview(c *gin.Context) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			resultCh <- indexedResult{idx, buildPreviewRow(c.Request.Context(), r)}
+			resultCh <- indexedResult{idx, buildPreviewRow(c.Request.Context(), h.olClient, r)}
 		}(i, row)
 	}
 	wg.Wait()
@@ -335,7 +316,7 @@ func (h *Handler) Preview(c *gin.Context) {
 	})
 }
 
-func buildPreviewRow(ctx context.Context, r goodreadsRow) PreviewRow {
+func buildPreviewRow(ctx context.Context, olClient *http.Client, r goodreadsRow) PreviewRow {
 	pr := PreviewRow{
 		RowID:          r.RowID,
 		Title:          r.Title,
@@ -361,7 +342,7 @@ func buildPreviewRow(ctx context.Context, r goodreadsRow) PreviewRow {
 
 	// 1. Try ISBN13 lookup via Open Library (no DB write: nil pool).
 	if r.ISBN13 != "" {
-		res, err := books.LookupBookByISBN(ctx, nil, r.ISBN13)
+		res, err := books.LookupBookByISBN(ctx, nil, r.ISBN13, olClient)
 		if err == nil && res != nil {
 			c := BookCandidate{
 				OLId:     strings.TrimPrefix(res.Key, "/works/"),
@@ -377,7 +358,7 @@ func buildPreviewRow(ctx context.Context, r goodreadsRow) PreviewRow {
 	}
 
 	// 2. Fallback: title + author search.
-	candidates, err := searchOL(ctx, r.Title, r.Author, 5)
+	candidates, err := searchOL(ctx, olClient, r.Title, r.Author, 5)
 	if err != nil || len(candidates) == 0 {
 		pr.Status = "unmatched"
 		return pr

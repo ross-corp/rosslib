@@ -36,6 +36,8 @@ tags:
     description: Author search and detail
   - name: Genres
     description: Genre browsing
+  - name: Genre Ratings
+    description: Per-user genre dimension ratings on books (0–10 scale)
   - name: Users
     description: User profiles and social
   - name: Collections
@@ -50,6 +52,8 @@ tags:
     description: Activity feeds
   - name: Import/Export
     description: Goodreads import and CSV export
+  - name: Notifications
+    description: User notifications (new publications, etc.)
   - name: Admin
     description: Admin-only endpoints (ghost users)
 
@@ -74,6 +78,31 @@ components:
         ok:
           type: boolean
           example: true
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        notif_type:
+          type: string
+          description: "Notification type (e.g. new_publication)"
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+        read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
 
     AuthResponse:
       type: object
@@ -161,6 +190,41 @@ components:
           type: array
           items:
             type: string
+        edition_count:
+          type: integer
+        editions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Edition'
+
+    Edition:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Open Library edition key (bare ID, e.g. OL58959679M)
+        title:
+          type: string
+        publisher:
+          type: string
+          nullable: true
+        publish_date:
+          type: string
+        page_count:
+          type: integer
+          nullable: true
+        isbn:
+          type: string
+          nullable: true
+        cover_url:
+          type: string
+          nullable: true
+        format:
+          type: string
+          description: Physical format (e.g. Hardcover, Paperback, eBook)
+        language:
+          type: string
+          description: 3-letter language code (e.g. eng, spa)
 
     AuthorResult:
       type: object
@@ -363,6 +427,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ShelfDetailBook'
+        computed:
+          type: object
+          nullable: true
+          description: >
+            Present when this shelf was created from a set operation.
+            For continuous lists (is_continuous=true), books are re-computed
+            dynamically from the source collections on each view.
+          properties:
+            operation:
+              type: string
+              enum: [union, intersection, difference]
+            is_continuous:
+              type: boolean
+            last_computed_at:
+              type: string
+              format: date-time
 
     UserBookItem:
       type: object
@@ -554,7 +634,7 @@ components:
           format: uuid
         type:
           type: string
-          enum: [shelved, started_book, finished_book, rated, reviewed, created_thread, followed_user]
+          enum: [shelved, started_book, finished_book, rated, reviewed, created_thread, followed_user, followed_author, followed_book, created_link]
         created_at:
           type: string
           format: date-time
@@ -608,6 +688,26 @@ components:
         thread_title:
           type: string
           nullable: true
+        link_type:
+          type: string
+          nullable: true
+          description: Type of community link (sequel, prequel, companion, etc.)
+        to_book_ol_id:
+          type: string
+          nullable: true
+          description: Open Library ID of the target book for created_link activities
+        to_book_title:
+          type: string
+          nullable: true
+          description: Title of the target book for created_link activities
+        author_key:
+          type: string
+          nullable: true
+          description: Open Library author key for followed_author activities
+        author_name:
+          type: string
+          nullable: true
+          description: Author name for followed_author activities
 
     FeedResponse:
       type: object
@@ -764,6 +864,49 @@ components:
           type: integer
           nullable: true
 
+    AggregateGenreRating:
+      type: object
+      properties:
+        genre:
+          type: string
+          example: "Science fiction"
+        average:
+          type: number
+          format: float
+          example: 7.3
+        rater_count:
+          type: integer
+          example: 12
+
+    GenreRating:
+      type: object
+      properties:
+        genre:
+          type: string
+          example: "Science fiction"
+        rating:
+          type: integer
+          minimum: 0
+          maximum: 10
+          example: 8
+        updated_at:
+          type: string
+          format: date-time
+
+    GenreRatingInput:
+      type: object
+      required: [genre]
+      properties:
+        genre:
+          type: string
+          example: "Science fiction"
+        rating:
+          type: integer
+          minimum: 0
+          maximum: 10
+          nullable: true
+          description: "0 or null to remove the rating"
+
 paths:
   /health:
     get:
@@ -785,6 +928,9 @@ paths:
   /auth/register:
     post:
       summary: Register a new account
+      description: |
+        Creates a new user account and sends a verification email. The returned
+        JWT has `email_verified: false` until the user clicks the verification link.
       tags: [Auth]
       requestBody:
         required: true
@@ -849,6 +995,241 @@ paths:
                 $ref: '#/components/schemas/AuthResponse'
         "401":
           description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/google:
+    post:
+      summary: Sign in or register with Google OAuth
+      description: |
+        Accepts verified Google user info (google_id, email, name) from the webapp
+        after it has exchanged an authorization code for tokens. Finds an existing
+        user by google_id, links Google to an existing email-based account, or
+        creates a new account. Returns a JWT token.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [google_id, email]
+              properties:
+                google_id:
+                  type: string
+                  description: Google user ID
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+                  description: Display name from Google profile
+      responses:
+        "200":
+          description: Existing user signed in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        "201":
+          description: New account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/forgot-password:
+    post:
+      summary: Request a password reset
+      description: |
+        Sends a password reset email to the given address if an account exists.
+        Always returns 200 to avoid leaking whether an email is registered.
+        The reset link expires after 1 hour.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "200":
+          description: Reset email sent (or silently ignored if email not found)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  message:
+                    type: string
+
+  /auth/reset-password:
+    post:
+      summary: Reset password with token
+      description: |
+        Validates the reset token from the email link and sets a new password.
+        The token is single-use and expires after 1 hour.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token:
+                  type: string
+                  description: Reset token from the email link
+                new_password:
+                  type: string
+                  minLength: 8
+      responses:
+        "200":
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+        "400":
+          description: Invalid or expired token, or password too short
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/verify-email:
+    post:
+      summary: Verify email address
+      description: |
+        Validates the verification token from the email link and marks the user's
+        email as verified. Returns a fresh JWT with `email_verified: true`.
+        The token is single-use and expires after 24 hours.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  description: Verification token from the email link
+      responses:
+        "200":
+          description: Email verified successfully, returns fresh JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        "400":
+          description: Invalid or expired verification token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/resend-verification:
+    post:
+      summary: Resend verification email
+      description: |
+        Generates a new verification token and sends a verification email.
+        Requires authentication. Returns immediately; email is sent asynchronously.
+        No-ops if email is already verified.
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Verification email sent (or already verified)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  message:
+                    type: string
+
+  /me/account:
+    get:
+      summary: Get account info
+      description: Returns whether the current user has a password set, whether Google is linked, and whether email is verified.
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Account info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  has_password:
+                    type: boolean
+                  has_google:
+                    type: boolean
+                  email_verified:
+                    type: boolean
+
+  /me/password:
+    put:
+      summary: Set or change password
+      description: |
+        Sets a new password for the current user. If the user already has a password,
+        `current_password` is required. Google OAuth-only users can call this with
+        just `new_password` to enable email+password sign-in.
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new_password]
+              properties:
+                current_password:
+                  type: string
+                  description: Required if the user already has a password
+                new_password:
+                  type: string
+                  minLength: 8
+      responses:
+        "200":
+          description: Password set/changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+        "400":
+          description: Validation error (password too short, missing current password)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Current password is incorrect
           content:
             application/json:
               schema:
@@ -959,6 +1340,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /books/{workId}/editions:
+    get:
+      summary: List editions of a work
+      description: Returns editions from Open Library with cover, format, publisher, page count, ISBN, and language.
+      tags: [Books]
+      parameters:
+        - name: workId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Paginated list of editions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  editions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Edition'
+        "404":
+          description: Work not found
 
   /books/{workId}/reviews:
     get:
@@ -1198,6 +1617,195 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /authors/{authorKey}/follow:
+    get:
+      summary: Check if you follow an author
+      tags: [Authors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: authorKey
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Open Library author key (e.g. OL123A)"
+      responses:
+        "200":
+          description: Follow status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  following:
+                    type: boolean
+    post:
+      summary: Follow an author
+      tags: [Authors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: authorKey
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                author_name:
+                  type: string
+                  description: "Author display name (stored for feed display)"
+      responses:
+        "200":
+          description: Followed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+    delete:
+      summary: Unfollow an author
+      tags: [Authors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: authorKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Unfollowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+
+  /me/followed-authors:
+    get:
+      summary: List authors you follow
+      tags: [Authors]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Followed authors
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        author_key:
+                          type: string
+                        author_name:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+
+  /books/{workId}/follow:
+    get:
+      summary: Check if you follow a book
+      tags: [Books]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Follow status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  following:
+                    type: boolean
+    post:
+      summary: Follow a book
+      description: Subscribe to notifications when new threads, links, or reviews are posted on this book.
+      tags: [Books]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Followed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+    delete:
+      summary: Unfollow a book
+      tags: [Books]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Unfollowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+
+  /me/followed-books:
+    get:
+      summary: List books you follow
+      tags: [Books]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Followed books
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  books:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        open_library_id:
+                          type: string
+                        title:
+                          type: string
+                        cover_url:
+                          type: string
+                          nullable: true
+                        authors:
+                          type: string
+                          nullable: true
+                        created_at:
+                          type: string
+                          format: date-time
 
   /genres:
     get:
@@ -1894,6 +2502,298 @@ paths:
               schema:
                 $ref: '#/components/schemas/Ok'
 
+  /me/shelves/set-operation:
+    post:
+      summary: Compute set operation between two collections
+      description: >
+        Returns the union, intersection, or difference of two collections belonging to the authenticated user.
+        Union: books in either collection.
+        Intersection: books in both collections.
+        Difference: books in collection_a but not in collection_b.
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [collection_a, collection_b, operation]
+              properties:
+                collection_a:
+                  type: string
+                  format: uuid
+                  description: ID of the first collection
+                collection_b:
+                  type: string
+                  format: uuid
+                  description: ID of the second collection
+                operation:
+                  type: string
+                  enum: [union, intersection, difference]
+      responses:
+        "200":
+          description: Set operation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  operation:
+                    type: string
+                  collection_a:
+                    type: string
+                  collection_b:
+                    type: string
+                  result_count:
+                    type: integer
+                  books:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShelfDetailBook'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: One or both collections not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /me/shelves/set-operation/save:
+    post:
+      summary: Compute set operation and save result as a new collection
+      description: >
+        Computes the set operation and creates a new shelf containing the resulting books.
+        If is_continuous is true, the list auto-refreshes when viewed — the operation is
+        re-executed against the current source collections each time the shelf is fetched.
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [collection_a, collection_b, operation, name]
+              properties:
+                collection_a:
+                  type: string
+                  format: uuid
+                collection_b:
+                  type: string
+                  format: uuid
+                operation:
+                  type: string
+                  enum: [union, intersection, difference]
+                name:
+                  type: string
+                  maxLength: 255
+                  description: Name for the new collection
+                is_continuous:
+                  type: boolean
+                  default: false
+                  description: >
+                    If true, creates a live list that re-executes the operation on each view.
+                    If false (default), creates a static snapshot.
+      responses:
+        "201":
+          description: Collection created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  slug:
+                    type: string
+                  book_count:
+                    type: integer
+                  is_continuous:
+                    type: boolean
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: One or both collections not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "409":
+          description: Duplicate slug
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /me/shelves/cross-user-compare:
+    post:
+      summary: Compare your collection with another user's collection
+      description: >
+        Computes the union, intersection, or difference between one of your collections
+        and another user's public collection (identified by username and shelf slug).
+        Respects profile privacy — returns 403 for private profiles you don't follow.
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [my_collection, their_username, their_slug, operation]
+              properties:
+                my_collection:
+                  type: string
+                  format: uuid
+                  description: ID of your collection
+                their_username:
+                  type: string
+                  description: The other user's username
+                their_slug:
+                  type: string
+                  description: Slug of the other user's collection
+                operation:
+                  type: string
+                  enum: [union, intersection, difference]
+      responses:
+        "200":
+          description: Cross-user set operation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  operation:
+                    type: string
+                  my_collection:
+                    type: string
+                  their_username:
+                    type: string
+                  their_slug:
+                    type: string
+                  result_count:
+                    type: integer
+                  books:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShelfDetailBook'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: User's profile is private
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: User or collection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /me/shelves/cross-user-compare/save:
+    post:
+      summary: Compare with another user's collection and save the result
+      description: >
+        Computes the cross-user set operation and creates a new shelf containing the resulting books.
+        If is_continuous is true, the list auto-refreshes when viewed — the operation is
+        re-executed against the current source collections each time the shelf is fetched.
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [my_collection, their_username, their_slug, operation, name]
+              properties:
+                my_collection:
+                  type: string
+                  format: uuid
+                their_username:
+                  type: string
+                their_slug:
+                  type: string
+                operation:
+                  type: string
+                  enum: [union, intersection, difference]
+                name:
+                  type: string
+                  maxLength: 255
+                  description: Name for the new collection
+                is_continuous:
+                  type: boolean
+                  default: false
+                  description: >
+                    If true, creates a live list that re-executes the operation on each view.
+                    If false (default), creates a static snapshot.
+      responses:
+        "201":
+          description: Collection created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  slug:
+                    type: string
+                  book_count:
+                    type: integer
+                  is_continuous:
+                    type: boolean
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: User's profile is private
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: User or collection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "409":
+          description: Duplicate slug
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /shelves/{shelfId}/books:
     post:
       summary: Add a book to a shelf
@@ -2524,3 +3424,174 @@ paths:
               schema:
                 type: string
                 format: binary
+
+  # ── Notifications ────────────────────────────────────────────────────────────
+
+  /me/notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications
+      description: Returns paginated notifications for the current user, newest first.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: "RFC 3339 Nano timestamp for cursor-based pagination"
+      responses:
+        "200":
+          description: Notification list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Notification"
+                  next_cursor:
+                    type: string
+
+  /me/notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Get unread notification count
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+
+  /me/notifications/{notifId}/read:
+    post:
+      tags: [Notifications]
+      summary: Mark a notification as read
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notifId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ok"
+        "404":
+          description: Notification not found
+
+  /me/notifications/read-all:
+    post:
+      tags: [Notifications]
+      summary: Mark all notifications as read
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ok"
+
+  /books/{workId}/genre-ratings:
+    get:
+      tags: [Genre Ratings]
+      summary: Get aggregate genre ratings for a book
+      parameters:
+        - name: workId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: OL82592W
+      responses:
+        "200":
+          description: Aggregate genre ratings sorted by rater count
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AggregateGenreRating"
+
+  /me/books/{olId}/genre-ratings:
+    get:
+      tags: [Genre Ratings]
+      summary: Get your genre ratings for a book
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: olId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: OL82592W
+      responses:
+        "200":
+          description: Your genre ratings for this book
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GenreRating"
+    put:
+      tags: [Genre Ratings]
+      summary: Set your genre ratings for a book
+      description: |
+        Accepts an array of genre/rating pairs. Ratings of 0 or null remove the genre rating.
+        Valid genres: Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror,
+        Thriller, Biography, History, Poetry, Children.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: olId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: OL82592W
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/GenreRatingInput"
+      responses:
+        "200":
+          description: Ratings saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ok"
+        "400":
+          description: Invalid genre or rating
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"

@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/nav";
+import AuthorFollowButton from "@/components/author-follow-button";
+import { getToken } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -27,7 +29,7 @@ type AuthorDetail = {
   works: AuthorWork[] | null;
 };
 
-// ── Data fetcher ───────────────────────────────────────────────────────────────
+// ── Data fetchers ─────────────────────────────────────────────────────────────
 
 async function fetchAuthor(authorKey: string): Promise<AuthorDetail | null> {
   const res = await fetch(`${process.env.API_URL}/authors/${authorKey}`, {
@@ -35,6 +37,22 @@ async function fetchAuthor(authorKey: string): Promise<AuthorDetail | null> {
   });
   if (!res.ok) return null;
   return res.json();
+}
+
+async function fetchFollowStatus(
+  authorKey: string,
+  token: string
+): Promise<boolean> {
+  const res = await fetch(
+    `${process.env.API_URL}/authors/${authorKey}/follow`,
+    {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  if (!res.ok) return false;
+  const data = await res.json();
+  return data.following === true;
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
@@ -45,7 +63,12 @@ export default async function AuthorPage({
   params: Promise<{ authorKey: string }>;
 }) {
   const { authorKey } = await params;
-  const author = await fetchAuthor(authorKey);
+  const token = await getToken();
+
+  const [author, following] = await Promise.all([
+    fetchAuthor(authorKey),
+    token ? fetchFollowStatus(authorKey, token) : Promise.resolve(false),
+  ]);
 
   if (!author) notFound();
 
@@ -72,9 +95,18 @@ export default async function AuthorPage({
           )}
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-stone-900 mb-1">
-              {author.name}
-            </h1>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-2xl font-bold text-stone-900">
+                {author.name}
+              </h1>
+              {token && (
+                <AuthorFollowButton
+                  authorKey={authorKey}
+                  authorName={author.name}
+                  initialFollowing={following}
+                />
+              )}
+            </div>
 
             {(author.birth_date || author.death_date) && (
               <p className="text-sm text-stone-500 mb-3">

@@ -77,19 +77,26 @@ https://covers.openlibrary.org/a/olid/{key}-{size}.jpg
 
 Sizes: `S`, `M`, `L`. Availability is inconsistent — many authors have no photo.
 
-### Editions (for page count, publisher)
+### Editions
 
-**Endpoint:** `GET https://openlibrary.org/works/{workId}/editions.json?limit=5`
+**Endpoint:** `GET https://openlibrary.org/works/{workId}/editions.json?limit=N&offset=M`
 
-Returns editions for a work. We fetch up to 5 editions and pick the first one that has a publisher and/or page count.
+Returns editions for a work. We fetch up to 50 editions for the book detail page and return them to the client. The first edition with a publisher and/or page count is used for the work-level metadata.
 
-| Field            | Description                                  |
-|------------------|----------------------------------------------|
-| `publishers`     | Array of publisher names                     |
-| `number_of_pages`| Page count (integer, nullable)               |
-| `publish_date`   | Publication date string                      |
+| Field            | Description                                            |
+|------------------|--------------------------------------------------------|
+| `key`            | Edition key, e.g. `/books/OL58959679M`                |
+| `title`          | Edition-specific title                                 |
+| `publishers`     | Array of publisher names                               |
+| `number_of_pages`| Page count (integer, nullable)                         |
+| `publish_date`   | Publication date string                                |
+| `isbn_13`        | Array of ISBN-13s                                      |
+| `isbn_10`        | Array of ISBN-10s                                      |
+| `covers`         | Array of cover image IDs                               |
+| `physical_format`| Format string (e.g. "Hardcover", "paperback", "ebook")|
+| `languages`      | Array of `{ key: "/languages/eng" }` objects           |
 
-Used by `GetBook` to populate publisher and page count on the book detail page.
+Used by `GetBook` to populate publisher, page count, and the editions list on the book detail page. Also exposed via a standalone `GET /books/:workId/editions` endpoint for paginated browsing.
 
 ### rosslib API routes
 

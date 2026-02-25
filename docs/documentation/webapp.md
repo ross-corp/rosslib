@@ -68,6 +68,8 @@ webapp/src/app/
 ├── page.tsx                        home / landing
 ├── login/page.tsx
 ├── register/page.tsx
+├── forgot-password/page.tsx          forgot password (request reset link)
+├── reset-password/page.tsx           set new password (from email link)
 ├── search/page.tsx                 book + user search
 ├── users/page.tsx                  browse all users
 ├── books/[workId]/page.tsx         single book page
@@ -75,6 +77,9 @@ webapp/src/app/
 │   ├── page.tsx                    profile settings
 │   ├── import/page.tsx             Goodreads CSV import
 │   └── tags/page.tsx               label category management
+├── library/compare/page.tsx        compare lists (set operations)
+├── notifications/page.tsx          notification center
+├── admin/page.tsx                 admin panel (moderator only)
 ├── [username]/
 │   ├── page.tsx                    public profile
 │   ├── shelves/[slug]/page.tsx     shelf page (owner gets library manager)
@@ -84,9 +89,16 @@ webapp/src/app/
     ├── auth/login/route.ts
     ├── auth/register/route.ts
     ├── auth/logout/route.ts
+    ├── auth/forgot-password/route.ts       ← POST request reset email
+    ├── auth/reset-password/route.ts        ← POST reset password with token
     ├── users/me/route.ts
     ├── users/[username]/follow/route.ts
     ├── me/shelves/route.ts
+    ├── me/shelves/set-operation/route.ts
+    ├── me/shelves/set-operation/save/route.ts
+    ├── me/shelves/cross-user-compare/route.ts
+    ├── me/shelves/cross-user-compare/save/route.ts
+    ├── users/[username]/shelves/route.ts
     ├── me/tag-keys/route.ts
     ├── me/tag-keys/[keyId]/route.ts
     ├── me/tag-keys/[keyId]/values/route.ts
@@ -98,6 +110,22 @@ webapp/src/app/
     ├── me/import/goodreads/commit/route.ts
     ├── shelves/[shelfId]/books/route.ts
     ├── shelves/[shelfId]/books/[olId]/route.ts    ← GET, PATCH, DELETE
+    ├── books/[workId]/links/route.ts              ← GET, POST community links
+    ├── links/[linkId]/route.ts                    ← DELETE community link
+    ├── links/[linkId]/vote/route.ts               ← POST, DELETE vote on link
+    ├── links/[linkId]/edits/route.ts              ← POST propose link edit
+    ├── admin/users/route.ts                       ← GET admin user list
+    ├── admin/users/[userId]/moderator/route.ts    ← PUT grant/revoke moderator
+    ├── admin/link-edits/route.ts                  ← GET list link edits
+    ├── admin/link-edits/[editId]/route.ts         ← PUT approve/reject link edit
+    ├── books/[workId]/genre-ratings/route.ts         ← GET aggregate genre ratings
+    ├── me/books/[olId]/genre-ratings/route.ts       ← GET, PUT user genre ratings
+    ├── me/account/route.ts                         ← GET account info (has_password, has_google)
+    ├── me/password/route.ts                        ← PUT set/change password
+    ├── me/notifications/route.ts                  ← GET list notifications
+    ├── me/notifications/unread-count/route.ts     ← GET unread count
+    ├── me/notifications/read-all/route.ts         ← POST mark all read
+    ├── me/notifications/[notifId]/read/route.ts   ← POST mark one read
     └── users/[username]/
         ├── tags/[...path]/route.ts
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
@@ -157,9 +185,53 @@ Dropdown for managing label assignments on a single book. Lazily loads current a
 
 Dropdown for adding/moving/removing a single book from shelves. Used on search results and book pages.
 
+### `BookLinkList` (`components/book-link-list.tsx`)
+
+Client component for community links (related books) on book detail pages. Shows links grouped by relationship type (sequel, prequel, companion, similar, etc.), sorted by upvote count. Logged-in users can upvote/unvote links, suggest new ones via an inline form, and propose edits to existing links (edit pencil icon). Proposed edits are submitted for moderator review. Target book is specified by Open Library work ID.
+
+### `AdminUserList` (`components/admin-user-list.tsx`)
+
+Client component for the `/admin` page. Provides a searchable, paginated table of all users with inline moderator toggle buttons. Moderators see a filled "Moderator" button; non-moderators see a "Grant" button. Search is debounced (300ms) and queries by username, display name, or email.
+
+### `AdminLinkEdits` (`components/admin-link-edits.tsx`)
+
+Client component for the `/admin` page. Displays proposed community link edits with status filter tabs (pending/approved/rejected). Each edit shows the proposer, book pair, current vs. proposed values (type and note) side by side, and approve/reject buttons for pending edits. Reviewed edits show the reviewer name, date, and optional comment.
+
+### `ReviewText` (`components/review-text.tsx`)
+
+Renders review text with wikilink and markdown link support. Parses two inline link syntaxes:
+- `[[Book Title]]` — rendered as a link to `/search?q=Book%20Title`
+- `[Book Title](/books/OL123W)` — rendered as a direct link to the book page
+
+Used on book detail pages (community reviews), user reviews pages, recent reviews on profiles, and the collapsed review view in the book review editor. The companion `BookReviewEditor` component provides `[[` autocomplete that searches books and inserts markdown links.
+
+### `PasswordForm` (`components/password-form.tsx`)
+
+Client component rendered on the settings page below the profile form. Fetches `GET /api/me/account` on mount to determine whether the user has a password and/or Google linked, then shows the appropriate form: "Set password" for OAuth-only users, or "Change password" (with current password verification) for users who already have one. Calls `PUT /api/me/password`.
+
+### `NotificationBell` (`components/notification-bell.tsx`)
+
+Client component rendered in the nav bar for authenticated users. Polls `GET /api/me/notifications/unread-count` every 60 seconds and displays a bell icon with a red badge when unread notifications exist. Links to `/notifications`.
+
+### `GenreRatingEditor` (`components/genre-rating-editor.tsx`)
+
+Client component for genre dimension ratings on book detail pages. Shows aggregate community ratings as horizontal bar charts (genre name, progress bar, average/10, rater count). Logged-in users can expand an editor with 0–10 sliders for each of the 12 predefined genres (Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children). Setting a slider to 0 removes the rating. Saves via `PUT /api/me/books/:olId/genre-ratings` and refreshes aggregate data on save.
+
 ### `StarRating` (`components/star-rating.tsx`)
 
 Read-only star display used on shelf book cards.
+
+### `SetOperationForm` (`components/set-operation-form.tsx`)
+
+Client component on `/library/compare` "My Lists" tab. Two collection dropdown selectors, operation picker (union/intersection/difference) with descriptions, compare button, result book grid with covers and ratings, and "Save as new list" form. Calls `POST /api/me/shelves/set-operation` to compute and `POST /api/me/shelves/set-operation/save` to persist.
+
+### `CrossUserCompareForm` (`components/cross-user-compare-form.tsx`)
+
+Client component on `/library/compare` "Compare with a Friend" tab. Select one of your lists, enter a friend's username, load their public shelves, pick one of their lists, choose an operation, compare. Result grid with book covers and star ratings. "Save as new list" option. Calls `GET /api/users/:username/shelves` to fetch friend's shelves, `POST /api/me/shelves/cross-user-compare` to compute, and `POST /api/me/shelves/cross-user-compare/save` to persist.
+
+### `CompareTabs` (`components/compare-tabs.tsx`)
+
+Client component providing tab navigation between "My Lists" and "Compare with a Friend" modes on the compare page.
 
 ---
 

@@ -16,17 +16,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 	"github.com/tristansaldanha/rosslib/api/internal/search"
 )
 
 type Handler struct {
-	pool   *pgxpool.Pool
-	search *search.Client
+	pool     *pgxpool.Pool
+	search   *search.Client
+	olClient *http.Client
 }
 
-func NewHandler(pool *pgxpool.Pool, searchClient *search.Client) *Handler {
-	return &Handler{pool: pool, search: searchClient}
+func NewHandler(pool *pgxpool.Pool, searchClient *search.Client, olClient *http.Client) *Handler {
+	return &Handler{pool: pool, search: searchClient, olClient: olClient}
 }
 
 // ── Open Library API types ────────────────────────────────────────────────────
@@ -81,12 +83,22 @@ type olAuthor struct {
 }
 
 type olEdition struct {
-	Publishers   []string `json:"publishers"`
-	NumberOfPages *int    `json:"number_of_pages"`
-	PublishDate  string   `json:"publish_date"`
+	Key            string `json:"key"`
+	Title          string `json:"title"`
+	Publishers     []string `json:"publishers"`
+	NumberOfPages  *int     `json:"number_of_pages"`
+	PublishDate    string   `json:"publish_date"`
+	ISBN13         []string `json:"isbn_13"`
+	ISBN10         []string `json:"isbn_10"`
+	Covers         []int    `json:"covers"`
+	PhysicalFormat string   `json:"physical_format"`
+	Languages      []struct {
+		Key string `json:"key"`
+	} `json:"languages"`
 }
 
 type olEditionsResponse struct {
+	Size    int         `json:"size"`
 	Entries []olEdition `json:"entries"`
 }
 
@@ -109,21 +121,36 @@ type BookResult struct {
 	Subjects         []string `json:"subjects"`
 }
 
+// Edition is a single edition of a work returned to clients.
+type Edition struct {
+	Key            string  `json:"key"`
+	Title          string  `json:"title"`
+	Publisher      *string `json:"publisher"`
+	PublishDate    string  `json:"publish_date"`
+	PageCount      *int    `json:"page_count"`
+	ISBN           *string `json:"isbn"`
+	CoverURL       *string `json:"cover_url"`
+	Format         string  `json:"format"`
+	Language       string  `json:"language"`
+}
+
 // BookDetail is the full book detail shape returned to clients.
 type BookDetail struct {
-	Key               string   `json:"key"`
-	Title             string   `json:"title"`
-	Authors           []string `json:"authors"`
-	Description       *string  `json:"description"`
-	CoverURL          *string  `json:"cover_url"`
-	AverageRating     *float64 `json:"average_rating"`
-	RatingCount       int      `json:"rating_count"`
-	LocalReadsCount   int      `json:"local_reads_count"`
-	LocalWantToRead   int      `json:"local_want_to_read_count"`
-	Publisher         *string  `json:"publisher"`
-	PageCount         *int     `json:"page_count"`
-	FirstPublishYear  *int     `json:"first_publish_year"`
-	Subjects          []string `json:"subjects"`
+	Key               string    `json:"key"`
+	Title             string    `json:"title"`
+	Authors           []string  `json:"authors"`
+	Description       *string   `json:"description"`
+	CoverURL          *string   `json:"cover_url"`
+	AverageRating     *float64  `json:"average_rating"`
+	RatingCount       int       `json:"rating_count"`
+	LocalReadsCount   int       `json:"local_reads_count"`
+	LocalWantToRead   int       `json:"local_want_to_read_count"`
+	Publisher         *string   `json:"publisher"`
+	PageCount         *int      `json:"page_count"`
+	FirstPublishYear  *int      `json:"first_publish_year"`
+	Subjects          []string  `json:"subjects"`
+	EditionCount      int       `json:"edition_count"`
+	Editions          []Edition `json:"editions"`
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -220,7 +247,7 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 		if language != "" {
 			apiURL += "&language=" + url.QueryEscape(language)
 		}
-		resp, err := http.Get(apiURL) //nolint:noctx // intentional: inherits server timeout
+		resp, err := h.olClient.Get(apiURL) //nolint:noctx
 		if err != nil {
 			olCh <- olResult{err: err}
 			return
@@ -422,7 +449,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 
 	workURL := fmt.Sprintf("%s/works/%s.json", olBaseURL, workID)
 	ratingsURL := fmt.Sprintf("%s/works/%s/ratings.json", olBaseURL, workID)
-	editionsURL := fmt.Sprintf("%s/works/%s/editions.json?limit=5", olBaseURL, workID)
+	editionsURL := fmt.Sprintf("%s/works/%s/editions.json?limit=50", olBaseURL, workID)
 
 	// Fetch work, ratings, and editions concurrently.
 	type workResult struct {
@@ -443,7 +470,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 	editionsCh := make(chan editionsResult, 1)
 
 	go func() {
-		resp, err := http.Get(workURL) //nolint:noctx
+		resp, err := h.olClient.Get(workURL) //nolint:noctx
 		if err != nil {
 			workCh <- workResult{err: err}
 			return
@@ -463,7 +490,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 	}()
 
 	go func() {
-		resp, err := http.Get(ratingsURL) //nolint:noctx
+		resp, err := h.olClient.Get(ratingsURL) //nolint:noctx
 		if err != nil {
 			ratingsCh <- ratingsResult{}
 			return
@@ -476,7 +503,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 	}()
 
 	go func() {
-		resp, err := http.Get(editionsURL) //nolint:noctx
+		resp, err := h.olClient.Get(editionsURL) //nolint:noctx
 		if err != nil {
 			editionsCh <- editionsResult{}
 			return
@@ -513,7 +540,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 		go func(idx int, key string) {
 			defer wg.Done()
 			authorURL := fmt.Sprintf("%s%s.json", olBaseURL, key)
-			resp, err := http.Get(authorURL) //nolint:noctx
+			resp, err := h.olClient.Get(authorURL) //nolint:noctx
 			if err != nil {
 				return
 			}
@@ -555,11 +582,12 @@ func (h *Handler) GetBook(c *gin.Context) {
 	// Parse description (can be a plain string or {"type":..., "value":...}).
 	if len(work.Description) > 0 {
 		var desc string
-		if err := json.Unmarshal(work.Description, &desc); err == nil {
+		if json.Unmarshal(work.Description, &desc) == nil {
 			detail.Description = &desc
 		} else {
 			var obj olDescription
-			if err := json.Unmarshal(work.Description, &obj); err == nil && obj.Value != "" {
+			// Unused variable 'err' would be caught here, so we ignore it
+			if json.Unmarshal(work.Description, &obj) == nil && obj.Value != "" {
 				detail.Description = &obj.Value
 			}
 		}
@@ -571,8 +599,10 @@ func (h *Handler) GetBook(c *gin.Context) {
 		detail.CoverURL = &coverURL
 	}
 
-	// Extract edition metadata (publisher, page count) from the best edition.
+	// Extract edition metadata (publisher, page count) from the best edition
+	// and build the full editions list.
 	if er.err == nil {
+		detail.EditionCount = er.editions.Size
 		for _, ed := range er.editions.Entries {
 			if detail.Publisher == nil && len(ed.Publishers) > 0 {
 				detail.Publisher = &ed.Publishers[0]
@@ -580,16 +610,15 @@ func (h *Handler) GetBook(c *gin.Context) {
 			if detail.PageCount == nil && ed.NumberOfPages != nil && *ed.NumberOfPages > 0 {
 				detail.PageCount = ed.NumberOfPages
 			}
-			if detail.Publisher != nil && detail.PageCount != nil {
-				break
-			}
 		}
+		detail.Editions = convertEditions(er.editions.Entries)
 	}
 
 	// Extract first publish year from the work's first edition publish date.
 	// We check the local DB first; if not stored, try parsing from edition data.
 	if h.pool != nil {
 		var pubYear *int
+		// We ignore error here since it's just enriching data
 		_ = h.pool.QueryRow(c.Request.Context(),
 			`SELECT publication_year FROM books WHERE open_library_id = $1`,
 			workID,
@@ -601,6 +630,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 
 	// Query local DB for read and want-to-read counts from user_books + status labels.
 	if h.pool != nil {
+		// We ignore error here since it's just enriching data
 		_ = h.pool.QueryRow(c.Request.Context(),
 			`SELECT
 			    COUNT(*) FILTER (WHERE tv.slug = 'finished')      AS reads_count,
@@ -618,6 +648,93 @@ func (h *Handler) GetBook(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, detail)
+}
+
+// ── Edition helpers ──────────────────────────────────────────────────────────
+
+// convertEditions maps raw OL edition entries to our client-facing Edition type.
+func convertEditions(entries []olEdition) []Edition {
+	editions := make([]Edition, 0, len(entries))
+	for _, ed := range entries {
+		e := Edition{
+			Key:         strings.TrimPrefix(ed.Key, "/books/"),
+			Title:       ed.Title,
+			PublishDate: ed.PublishDate,
+			PageCount:   ed.NumberOfPages,
+			Format:      ed.PhysicalFormat,
+		}
+		if len(ed.Publishers) > 0 {
+			e.Publisher = &ed.Publishers[0]
+		}
+		if len(ed.ISBN13) > 0 {
+			e.ISBN = &ed.ISBN13[0]
+		} else if len(ed.ISBN10) > 0 {
+			e.ISBN = &ed.ISBN10[0]
+		}
+		if len(ed.Covers) > 0 && ed.Covers[0] > 0 {
+			coverURL := fmt.Sprintf(olCoverMedURL, ed.Covers[0])
+			e.CoverURL = &coverURL
+		}
+		if len(ed.Languages) > 0 {
+			e.Language = strings.TrimPrefix(ed.Languages[0].Key, "/languages/")
+		}
+		editions = append(editions, e)
+	}
+	return editions
+}
+
+// GetEditions returns all editions for a work from Open Library.
+//
+// GET /books/:workId/editions?limit=50&offset=0
+func (h *Handler) GetEditions(c *gin.Context) {
+	workID := c.Param("workId")
+	if workID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "workId is required"})
+		return
+	}
+
+	limit := 50
+	if v := c.Query("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 100 {
+			limit = n
+		}
+	}
+	offset := 0
+	if v := c.Query("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+
+	apiURL := fmt.Sprintf("%s/works/%s/editions.json?limit=%d&offset=%d", olBaseURL, workID, limit, offset)
+	resp, err := h.olClient.Get(apiURL) //nolint:noctx
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to reach book service"})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		c.JSON(http.StatusNotFound, gin.H{"error": "work not found"})
+		return
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	var olResp olEditionsResponse
+	if err := json.Unmarshal(body, &olResp); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"total":    olResp.Size,
+		"editions": convertEditions(olResp.Entries),
+	})
 }
 
 // ── Genre browsing ───────────────────────────────────────────────────────────
@@ -813,7 +930,7 @@ func (h *Handler) GetGenreBooks(c *gin.Context) {
 // returns the normalised BookResult. It is a package-level function so the
 // import handler can call it directly without going through HTTP.
 // An optional search.Client can be passed to index the book in Meilisearch.
-func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string, searchClients ...*search.Client) (*BookResult, error) {
+func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string, olClient *http.Client, searchClients ...*search.Client) (*BookResult, error) {
 	// Strip everything that isn't a digit or trailing X (ISBN-10 check digit).
 	clean := strings.Map(func(r rune) rune {
 		if r >= '0' && r <= '9' || r == 'X' || r == 'x' {
@@ -832,7 +949,7 @@ func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string, sear
 		olSearchFields,
 	)
 
-	resp, err := http.Get(apiURL) //nolint:noctx
+	resp, err := olClient.Get(apiURL) //nolint:noctx
 	if err != nil {
 		return nil, fmt.Errorf("reach OL: %w", err)
 	}
@@ -1047,7 +1164,7 @@ func (h *Handler) LookupBook(c *gin.Context) {
 		return
 	}
 
-	result, err := LookupBookByISBN(c.Request.Context(), h.pool, isbn, h.search)
+	result, err := LookupBookByISBN(c.Request.Context(), h.pool, isbn, h.olClient, h.search)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to reach book service"})
 		return
@@ -1113,7 +1230,7 @@ func (h *Handler) SearchAuthors(c *gin.Context) {
 		searchLimit,
 	)
 
-	resp, err := http.Get(apiURL) //nolint:noctx // intentional: inherits server timeout
+	resp, err := h.olClient.Get(apiURL) //nolint:noctx
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to reach author search service"})
 		return
@@ -1241,7 +1358,7 @@ func (h *Handler) GetAuthor(c *gin.Context) {
 	worksCh := make(chan worksResult, 1)
 
 	go func() {
-		resp, err := http.Get(authorURL) //nolint:noctx
+		resp, err := h.olClient.Get(authorURL) //nolint:noctx
 		if err != nil {
 			authorCh <- authorResult{err: err}
 			return
@@ -1261,7 +1378,7 @@ func (h *Handler) GetAuthor(c *gin.Context) {
 	}()
 
 	go func() {
-		resp, err := http.Get(worksURL) //nolint:noctx
+		resp, err := h.olClient.Get(worksURL) //nolint:noctx
 		if err != nil {
 			worksCh <- worksResult{}
 			return
@@ -1296,11 +1413,12 @@ func (h *Handler) GetAuthor(c *gin.Context) {
 	// Parse bio (can be a plain string or {"type":..., "value":...}).
 	if len(raw.Bio) > 0 {
 		var bio string
-		if err := json.Unmarshal(raw.Bio, &bio); err == nil {
+		if json.Unmarshal(raw.Bio, &bio) == nil {
 			detail.Bio = &bio
 		} else {
 			var obj olDescription
-			if err := json.Unmarshal(raw.Bio, &obj); err == nil && obj.Value != "" {
+			// Unused variable 'err' would be caught here, so we ignore it
+			if json.Unmarshal(raw.Bio, &obj) == nil && obj.Value != "" {
 				detail.Bio = &obj.Value
 			}
 		}
@@ -1313,7 +1431,7 @@ func (h *Handler) GetAuthor(c *gin.Context) {
 
 	// Links.
 	for _, l := range raw.Links {
-		detail.Links = append(detail.Links, AuthorLink{Title: l.Title, URL: l.URL})
+		detail.Links = append(detail.Links, AuthorLink(l))
 	}
 
 	// Works.
@@ -1331,4 +1449,250 @@ func (h *Handler) GetAuthor(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, detail)
+}
+
+// ── Author follows ──────────────────────────────────────────────────────────
+
+// FollowAuthor creates an author follow for the current user.
+//
+// POST /authors/:authorKey/follow
+func (h *Handler) FollowAuthor(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	authorKey := c.Param("authorKey")
+
+	var body struct {
+		AuthorName string `json:"author_name"`
+	}
+	_ = c.ShouldBindJSON(&body)
+
+	_, err := h.pool.Exec(c.Request.Context(),
+		`INSERT INTO author_follows (user_id, author_key, author_name)
+		 VALUES ($1, $2, $3)
+		 ON CONFLICT (user_id, author_key) DO UPDATE SET author_name = EXCLUDED.author_name`,
+		userID, authorKey, body.AuthorName,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	activity.Record(c.Request.Context(), h.pool, userID, "followed_author",
+		nil, nil, nil, nil, map[string]string{
+			"author_key":  authorKey,
+			"author_name": body.AuthorName,
+		})
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// UnfollowAuthor removes an author follow for the current user.
+//
+// DELETE /authors/:authorKey/follow
+func (h *Handler) UnfollowAuthor(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	authorKey := c.Param("authorKey")
+
+	_, err := h.pool.Exec(c.Request.Context(),
+		`DELETE FROM author_follows WHERE user_id = $1 AND author_key = $2`,
+		userID, authorKey,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// GetAuthorFollowStatus checks whether the current user follows an author.
+//
+// GET /authors/:authorKey/follow
+func (h *Handler) GetAuthorFollowStatus(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	authorKey := c.Param("authorKey")
+
+	var exists bool
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT EXISTS(SELECT 1 FROM author_follows WHERE user_id = $1 AND author_key = $2)`,
+		userID, authorKey,
+	).Scan(&exists)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"following": exists})
+}
+
+// ── Book follows ────────────────────────────────────────────────────────────
+
+// FollowBook creates a book follow for the current user.
+//
+// POST /books/:workId/follow
+func (h *Handler) FollowBook(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	workID := c.Param("workId")
+
+	var bookID string
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT id FROM books WHERE open_library_id = $1`, workID,
+	).Scan(&bookID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "book not found in local catalog"})
+		return
+	}
+
+	_, err = h.pool.Exec(c.Request.Context(),
+		`INSERT INTO book_follows (user_id, book_id)
+		 VALUES ($1, $2)
+		 ON CONFLICT (user_id, book_id) DO NOTHING`,
+		userID, bookID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	var bookTitle string
+	_ = h.pool.QueryRow(c.Request.Context(),
+		`SELECT title FROM books WHERE id = $1`, bookID,
+	).Scan(&bookTitle)
+
+	activity.Record(c.Request.Context(), h.pool, userID, "followed_book",
+		&bookID, nil, nil, nil, map[string]string{
+			"book_ol_id": workID,
+			"book_title": bookTitle,
+		})
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// UnfollowBook removes a book follow for the current user.
+//
+// DELETE /books/:workId/follow
+func (h *Handler) UnfollowBook(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	workID := c.Param("workId")
+
+	_, err := h.pool.Exec(c.Request.Context(),
+		`DELETE FROM book_follows
+		 USING books b
+		 WHERE book_follows.book_id = b.id
+		   AND book_follows.user_id = $1
+		   AND b.open_library_id = $2`,
+		userID, workID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// GetBookFollowStatus checks whether the current user follows a book.
+//
+// GET /books/:workId/follow
+func (h *Handler) GetBookFollowStatus(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	workID := c.Param("workId")
+
+	var exists bool
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT EXISTS(
+			SELECT 1 FROM book_follows bf
+			JOIN books b ON b.id = bf.book_id
+			WHERE bf.user_id = $1 AND b.open_library_id = $2
+		)`,
+		userID, workID,
+	).Scan(&exists)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"following": exists})
+}
+
+type followedBook struct {
+	OpenLibraryID string  `json:"open_library_id"`
+	Title         string  `json:"title"`
+	CoverURL      *string `json:"cover_url"`
+	Authors       *string `json:"authors"`
+	CreatedAt     string  `json:"created_at"`
+}
+
+// GetFollowedBooks returns the list of books followed by the current user.
+//
+// GET /me/followed-books
+func (h *Handler) GetFollowedBooks(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+
+	rows, err := h.pool.Query(c.Request.Context(),
+		`SELECT b.open_library_id, b.title, b.cover_url, b.authors, bf.created_at
+		 FROM book_follows bf
+		 JOIN books b ON b.id = bf.book_id
+		 WHERE bf.user_id = $1
+		 ORDER BY bf.created_at DESC`,
+		userID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	books := []followedBook{}
+	for rows.Next() {
+		var fb followedBook
+		var t time.Time
+		if err := rows.Scan(&fb.OpenLibraryID, &fb.Title, &fb.CoverURL, &fb.Authors, &t); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		fb.CreatedAt = t.Format(time.RFC3339)
+		books = append(books, fb)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"books": books})
+}
+
+type followedAuthor struct {
+	AuthorKey  string `json:"author_key"`
+	AuthorName string `json:"author_name"`
+	CreatedAt  string `json:"created_at"`
+}
+
+// GetFollowedAuthors returns the list of authors followed by the current user.
+//
+// GET /me/followed-authors
+func (h *Handler) GetFollowedAuthors(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+
+	rows, err := h.pool.Query(c.Request.Context(),
+		`SELECT author_key, author_name, created_at
+		 FROM author_follows
+		 WHERE user_id = $1
+		 ORDER BY created_at DESC`,
+		userID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	authors := []followedAuthor{}
+	for rows.Next() {
+		var a followedAuthor
+		var t time.Time
+		if err := rows.Scan(&a.AuthorKey, &a.AuthorName, &t); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		a.CreatedAt = t.Format(time.RFC3339)
+		authors = append(authors, a)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"authors": authors})
 }
