@@ -377,6 +377,7 @@ users ──< notifications      (per-user notifications)
 users ──< password_reset_tokens  (password reset tokens)
 users ──< genre_ratings >── books  (per-user genre dimension scores)
 author_works_snapshot        (OL author key → work count snapshot)
+collections ──< computed_collections  (operation definition for live lists)
 ```
 
 ### `genre_ratings`
@@ -397,6 +398,27 @@ Unique constraint: `(user_id, book_id, genre)` — one rating per user per book 
 Index: `book_id` for efficient aggregate queries.
 
 Allowed genres (same as the predefined genre list): Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children.
+
+### `computed_collections`
+
+Stores the operation definition for computed (live) lists. When a user saves a set operation result as a continuous list, this table records which collections and operation were used. On each view, the operation is re-executed against current data.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| collection_id | uuid FK → collections | unique; the result shelf |
+| operation | varchar(50) | `union`, `intersection`, or `difference` |
+| source_collection_a | uuid | source collection A (always the user's own) |
+| source_collection_b | uuid | nullable; source collection B (for same-user operations) |
+| source_username_b | varchar(40) | nullable; other user's username (for cross-user operations) |
+| source_slug_b | varchar(255) | nullable; other user's collection slug (for cross-user operations) |
+| is_continuous | boolean | default false; if true, list auto-refreshes on each view |
+| last_computed_at | timestamptz | updated each time the list is dynamically recomputed |
+| created_at | timestamptz | |
+
+Index: `collection_id`
+
+For same-user operations, `source_collection_a` and `source_collection_b` are both set. For cross-user operations, `source_collection_a` is the user's own collection and the other user's collection is identified by `source_username_b` + `source_slug_b` (resolved on each view, respecting privacy).
 
 ### `password_reset_tokens`
 

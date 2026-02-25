@@ -96,6 +96,16 @@ type shelfDetailBook struct {
 	Rating        *int    `json:"rating"`
 }
 
+type computedInfo struct {
+	Operation      string  `json:"operation"`
+	IsContinuous   bool    `json:"is_continuous"`
+	LastComputedAt string  `json:"last_computed_at"`
+	SourceA        *string `json:"source_a,omitempty"`
+	SourceB        *string `json:"source_b,omitempty"`
+	SourceUsernameB *string `json:"source_username_b,omitempty"`
+	SourceSlugB     *string `json:"source_slug_b,omitempty"`
+}
+
 type shelfDetailResponse struct {
 	ID             string            `json:"id"`
 	Name           string            `json:"name"`
@@ -103,6 +113,7 @@ type shelfDetailResponse struct {
 	ExclusiveGroup string            `json:"exclusive_group"`
 	CollectionType string            `json:"collection_type"`
 	Books          []shelfDetailBook `json:"books"`
+	Computed       *computedInfo     `json:"computed,omitempty"`
 }
 
 type shelfResponse struct {
@@ -113,6 +124,7 @@ type shelfResponse struct {
 	CollectionType string            `json:"collection_type"`
 	ItemCount      int               `json:"item_count"`
 	Books          []shelfDetailBook `json:"books,omitempty"`
+	IsContinuous   bool              `json:"is_continuous,omitempty"`
 }
 
 type myShelfResponse struct {
@@ -144,12 +156,14 @@ func (h *Handler) GetUserShelves(c *gin.Context) {
 	}
 
 	rows, err := h.pool.Query(c.Request.Context(),
-		`SELECT c.id, c.name, c.slug, COALESCE(c.exclusive_group, ''), c.collection_type, COUNT(ci.id) AS item_count
+		`SELECT c.id, c.name, c.slug, COALESCE(c.exclusive_group, ''), c.collection_type, COUNT(ci.id) AS item_count,
+		        COALESCE(cc.is_continuous, false)
 		 FROM collections c
 		 JOIN users u ON u.id = c.user_id
 		 LEFT JOIN collection_items ci ON ci.collection_id = c.id
+		 LEFT JOIN computed_collections cc ON cc.collection_id = c.id
 		 WHERE u.username = $1 AND u.deleted_at IS NULL
-		 GROUP BY c.id, c.name, c.slug, c.exclusive_group, c.collection_type
+		 GROUP BY c.id, c.name, c.slug, c.exclusive_group, c.collection_type, cc.is_continuous
 		 ORDER BY c.created_at`,
 		username,
 	)
@@ -164,7 +178,7 @@ func (h *Handler) GetUserShelves(c *gin.Context) {
 	idToIdx := map[string]int{}
 	for rows.Next() {
 		var s shelfResponse
-		if err := rows.Scan(&s.ID, &s.Name, &s.Slug, &s.ExclusiveGroup, &s.CollectionType, &s.ItemCount); err != nil {
+		if err := rows.Scan(&s.ID, &s.Name, &s.Slug, &s.ExclusiveGroup, &s.CollectionType, &s.ItemCount, &s.IsContinuous); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			return
 		}
@@ -442,6 +456,7 @@ func (h *Handler) AddBookToShelf(c *gin.Context) {
 
 // GetShelfBySlug - GET /users/:username/shelves/:slug
 // Public, but gated for private profiles.
+// For continuous computed lists, re-executes the set operation against current data.
 func (h *Handler) GetShelfBySlug(c *gin.Context) {
 	username := c.Param("username")
 	slug := c.Param("slug")
@@ -464,6 +479,54 @@ func (h *Handler) GetShelfBySlug(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "shelf not found"})
 		return
+	}
+
+	// Check if this is a continuous computed list
+	var cc struct {
+		operation      string
+		isContinuous   bool
+		lastComputedAt time.Time
+		sourceA        *string
+		sourceB        *string
+		sourceUserB    *string
+		sourceSlugB    *string
+	}
+	ccErr := h.pool.QueryRow(c.Request.Context(),
+		`SELECT operation, is_continuous, last_computed_at,
+		        source_collection_a::text, source_collection_b::text,
+		        source_username_b, source_slug_b
+		 FROM computed_collections WHERE collection_id = $1`,
+		shelf.ID,
+	).Scan(&cc.operation, &cc.isContinuous, &cc.lastComputedAt,
+		&cc.sourceA, &cc.sourceB, &cc.sourceUserB, &cc.sourceSlugB)
+
+	if ccErr == nil {
+		shelf.Computed = &computedInfo{
+			Operation:       cc.operation,
+			IsContinuous:    cc.isContinuous,
+			LastComputedAt:  cc.lastComputedAt.Format(time.RFC3339),
+			SourceA:         cc.sourceA,
+			SourceB:         cc.sourceB,
+			SourceUsernameB: cc.sourceUserB,
+			SourceSlugB:     cc.sourceSlugB,
+		}
+	}
+
+	// For continuous computed lists, re-execute the operation dynamically
+	if ccErr == nil && cc.isContinuous {
+		books, refreshErr := h.recomputeBooks(c.Request.Context(), cc.operation, cc.sourceA, cc.sourceB, cc.sourceUserB, cc.sourceSlugB, currentUserID)
+		if refreshErr == nil {
+			shelf.Books = books
+			// Update last_computed_at
+			_, _ = h.pool.Exec(c.Request.Context(),
+				`UPDATE computed_collections SET last_computed_at = NOW() WHERE collection_id = $1`,
+				shelf.ID,
+			)
+			shelf.Computed.LastComputedAt = time.Now().Format(time.RFC3339)
+			c.JSON(http.StatusOK, shelf)
+			return
+		}
+		// Fall through to static data on error
 	}
 
 	query := `SELECT b.id, b.open_library_id, b.title, b.cover_url, ci.added_at, ci.rating
@@ -500,6 +563,87 @@ func (h *Handler) GetShelfBySlug(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, shelf)
+}
+
+// recomputeBooks executes a set operation dynamically against current collection data.
+func (h *Handler) recomputeBooks(ctx context.Context, operation string, sourceA, sourceB, sourceUserB, sourceSlugB *string, viewerID string) ([]shelfDetailBook, error) {
+	if sourceA == nil {
+		return nil, fmt.Errorf("source_a is required")
+	}
+
+	collA := *sourceA
+	var collB string
+
+	if sourceB != nil && *sourceB != "" {
+		// Same-user operation: both collections are UUIDs
+		collB = *sourceB
+	} else if sourceUserB != nil && sourceSlugB != nil {
+		// Cross-user operation: resolve the other user's collection
+		theirUserID, _, canView := privacy.CanViewProfile(ctx, h.pool, *sourceUserB, viewerID)
+		if theirUserID == "" || !canView {
+			return nil, fmt.Errorf("cannot access other user's collection")
+		}
+		err := h.pool.QueryRow(ctx,
+			`SELECT id FROM collections WHERE user_id = $1 AND slug = $2`,
+			theirUserID, *sourceSlugB,
+		).Scan(&collB)
+		if err != nil {
+			return nil, fmt.Errorf("other user's collection not found")
+		}
+	} else {
+		return nil, fmt.Errorf("no valid source B")
+	}
+
+	var query string
+	var args []interface{}
+	switch operation {
+	case "union":
+		query = `SELECT DISTINCT ON (b.id) b.id, b.open_library_id, b.title, b.cover_url, ci.added_at, ci.rating
+			FROM collection_items ci
+			JOIN books b ON b.id = ci.book_id
+			WHERE ci.collection_id = ANY($1)
+			ORDER BY b.id, ci.added_at DESC`
+		args = []interface{}{[]string{collA, collB}}
+	case "intersection":
+		query = `SELECT b.id, b.open_library_id, b.title, b.cover_url, ci_a.added_at, ci_a.rating
+			FROM collection_items ci_a
+			JOIN collection_items ci_b ON ci_a.book_id = ci_b.book_id
+			JOIN books b ON b.id = ci_a.book_id
+			WHERE ci_a.collection_id = $1 AND ci_b.collection_id = $2
+			ORDER BY ci_a.added_at DESC`
+		args = []interface{}{collA, collB}
+	case "difference":
+		query = `SELECT b.id, b.open_library_id, b.title, b.cover_url, ci.added_at, ci.rating
+			FROM collection_items ci
+			JOIN books b ON b.id = ci.book_id
+			WHERE ci.collection_id = $1
+			  AND NOT EXISTS (
+				SELECT 1 FROM collection_items ci2
+				WHERE ci2.collection_id = $2 AND ci2.book_id = ci.book_id
+			  )
+			ORDER BY ci.added_at DESC`
+		args = []interface{}{collA, collB}
+	default:
+		return nil, fmt.Errorf("unknown operation: %s", operation)
+	}
+
+	rows, err := h.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	books := []shelfDetailBook{}
+	for rows.Next() {
+		var book shelfDetailBook
+		var addedAt time.Time
+		if err := rows.Scan(&book.BookID, &book.OpenLibraryID, &book.Title, &book.CoverURL, &addedAt, &book.Rating); err != nil {
+			return nil, err
+		}
+		book.AddedAt = addedAt.Format(time.RFC3339)
+		books = append(books, book)
+	}
+	return books, nil
 }
 
 // GetTagBooks - GET /users/:username/tags/*path
@@ -1163,14 +1307,17 @@ func (h *Handler) SetOperation(c *gin.Context) {
 
 // SaveSetOperation - POST /me/shelves/set-operation/save (authed)
 // Computes the set operation and saves the result as a new collection.
+// If is_continuous is true, stores the operation definition so the list
+// auto-refreshes when viewed.
 func (h *Handler) SaveSetOperation(c *gin.Context) {
 	userID := c.GetString(middleware.UserIDKey)
 
 	var req struct {
-		CollectionA string `json:"collection_a" binding:"required"`
-		CollectionB string `json:"collection_b" binding:"required"`
-		Operation   string `json:"operation"    binding:"required"`
-		Name        string `json:"name"         binding:"required,max=255"`
+		CollectionA  string `json:"collection_a" binding:"required"`
+		CollectionB  string `json:"collection_b" binding:"required"`
+		Operation    string `json:"operation"    binding:"required"`
+		Name         string `json:"name"         binding:"required,max=255"`
+		IsContinuous bool   `json:"is_continuous"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -1283,16 +1430,30 @@ func (h *Handler) SaveSetOperation(c *gin.Context) {
 		}
 	}
 
+	// Store the operation definition for continuous (live) lists
+	if req.IsContinuous {
+		_, err = tx.Exec(c.Request.Context(),
+			`INSERT INTO computed_collections (collection_id, operation, source_collection_a, source_collection_b, is_continuous)
+			 VALUES ($1, $2, $3, $4, true)`,
+			newCollID, req.Operation, req.CollectionA, req.CollectionB,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+	}
+
 	if err := tx.Commit(c.Request.Context()); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"id":         newCollID,
-		"name":       req.Name,
-		"slug":       slug,
-		"book_count": len(bookIDs),
+		"id":            newCollID,
+		"name":          req.Name,
+		"slug":          slug,
+		"book_count":    len(bookIDs),
+		"is_continuous": req.IsContinuous,
 	})
 }
 
@@ -1434,12 +1595,15 @@ func (h *Handler) CrossUserCompare(c *gin.Context) {
 
 // SaveCrossUserCompare - POST /me/shelves/cross-user-compare/save (authed)
 // Computes the cross-user set operation and saves the result as a new collection.
+// If is_continuous is true, stores the operation definition so the list
+// auto-refreshes when viewed.
 func (h *Handler) SaveCrossUserCompare(c *gin.Context) {
 	userID := c.GetString(middleware.UserIDKey)
 
 	var req struct {
 		crossUserCompareRequest
-		Name string `json:"name" binding:"required,max=255"`
+		Name         string `json:"name" binding:"required,max=255"`
+		IsContinuous bool   `json:"is_continuous"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -1545,16 +1709,30 @@ func (h *Handler) SaveCrossUserCompare(c *gin.Context) {
 		}
 	}
 
+	// Store the operation definition for continuous (live) lists
+	if req.IsContinuous {
+		_, err = tx.Exec(c.Request.Context(),
+			`INSERT INTO computed_collections (collection_id, operation, source_collection_a, source_username_b, source_slug_b, is_continuous)
+			 VALUES ($1, $2, $3, $4, $5, true)`,
+			newCollID, req.Operation, myCollID, req.TheirUsername, req.TheirSlug,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+	}
+
 	if err := tx.Commit(c.Request.Context()); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"id":         newCollID,
-		"name":       req.Name,
-		"slug":       slug,
-		"book_count": len(bookIDs),
+		"id":            newCollID,
+		"name":          req.Name,
+		"slug":          slug,
+		"book_count":    len(bookIDs),
+		"is_continuous": req.IsContinuous,
 	})
 }
 

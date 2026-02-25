@@ -518,14 +518,15 @@ Returns `{ operation, collection_a, collection_b, result_count, books[] }`.
 
 ### `POST /me/shelves/set-operation/save`  *(auth required)*
 
-Same as above, but also saves the result as a new shelf. Accepts an additional `name` field. Returns `{ id, name, slug, book_count }`.
+Same as above, but also saves the result as a new shelf. Accepts an additional `name` field. Returns `{ id, name, slug, book_count, is_continuous }`. If `is_continuous` is true, the list auto-refreshes when viewed — the operation is re-executed against the current source collections each time `GET /users/:username/shelves/:slug` is called.
 
 ```json
 {
   "collection_a": "<uuid>",
   "collection_b": "<uuid>",
   "operation": "union",
-  "name": "Combined Reading"
+  "name": "Combined Reading",
+  "is_continuous": true
 }
 ```
 
@@ -546,7 +547,7 @@ Returns `{ operation, my_collection, their_username, their_slug, result_count, b
 
 ### `POST /me/shelves/cross-user-compare/save`  *(auth required)*
 
-Same as above, but also saves the result as a new shelf. Accepts an additional `name` field. Returns `{ id, name, slug, book_count }`.
+Same as above, but also saves the result as a new shelf. Accepts an additional `name` field. Returns `{ id, name, slug, book_count, is_continuous }`. If `is_continuous` is true, the list auto-refreshes when viewed, resolving the other user's collection by stored username+slug on each view (respecting privacy).
 
 ```json
 {
@@ -554,7 +555,8 @@ Same as above, but also saves the result as a new shelf. Accepts an additional `
   "their_username": "alice",
   "their_slug": "want-to-read",
   "operation": "intersection",
-  "name": "Books Alice wants that I've read"
+  "name": "Books Alice wants that I've read",
+  "is_continuous": true
 }
 ```
 

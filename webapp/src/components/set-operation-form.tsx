@@ -56,6 +56,7 @@ export default function SetOperationForm({
   const [saveName, setSaveName] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedSlug, setSavedSlug] = useState("");
+  const [isContinuous, setIsContinuous] = useState(false);
 
   const canCompute = collectionA && collectionB && collectionA !== collectionB;
 
@@ -105,6 +106,7 @@ export default function SetOperationForm({
           collection_b: collectionB,
           operation,
           name: saveName.trim(),
+          is_continuous: isContinuous,
         }),
       });
       const data = await res.json();
@@ -299,21 +301,32 @@ export default function SetOperationForm({
                     </Link>
                   </p>
                 ) : (
-                  <div className="flex gap-2 items-center">
-                    <input
-                      type="text"
-                      value={saveName}
-                      onChange={(e) => setSaveName(e.target.value)}
-                      placeholder="New list name..."
-                      className="px-3 py-1.5 text-sm border border-stone-200 rounded bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900 w-64"
-                    />
-                    <button
-                      onClick={saveAsNewList}
-                      disabled={!saveName.trim() || saving}
-                      className="px-3 py-1.5 text-sm bg-stone-900 text-white rounded hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {saving ? "Saving..." : "Save"}
-                    </button>
+                  <div className="space-y-3">
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        value={saveName}
+                        onChange={(e) => setSaveName(e.target.value)}
+                        placeholder="New list name..."
+                        className="px-3 py-1.5 text-sm border border-stone-200 rounded bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900 w-64"
+                      />
+                      <button
+                        onClick={saveAsNewList}
+                        disabled={!saveName.trim() || saving}
+                        className="px-3 py-1.5 text-sm bg-stone-900 text-white rounded hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {saving ? "Saving..." : "Save"}
+                      </button>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm text-stone-600 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isContinuous}
+                        onChange={(e) => setIsContinuous(e.target.checked)}
+                        className="rounded border-stone-300 text-stone-900 focus:ring-stone-900"
+                      />
+                      Keep updated — list auto-refreshes when source lists change
+                    </label>
                   </div>
                 )}
               </div>

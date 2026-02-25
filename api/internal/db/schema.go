@@ -444,6 +444,24 @@ CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_user_id ON email_verifi
 
 -- Mark existing Google OAuth users as verified (Google has already verified their email).
 UPDATE users SET email_verified = true WHERE google_id IS NOT NULL AND email_verified = false;
+
+-- ── Computed collections: stores operation definition for continuous (live) lists ──
+
+CREATE TABLE IF NOT EXISTS computed_collections (
+	id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	collection_id       UUID         NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+	operation           VARCHAR(50)  NOT NULL,
+	source_collection_a UUID         NOT NULL,
+	source_collection_b UUID,
+	source_username_b   VARCHAR(40),
+	source_slug_b       VARCHAR(255),
+	is_continuous       BOOLEAN      NOT NULL DEFAULT false,
+	last_computed_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+	created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+	UNIQUE(collection_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_computed_collections_collection_id ON computed_collections (collection_id);
 `
 
 func Migrate(pool *pgxpool.Pool) error {

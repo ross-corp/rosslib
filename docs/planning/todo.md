@@ -18,13 +18,7 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## Computed Lists
 
-- [ ] Continuous vs. one-time computed lists
-
 ## Sublists / Hierarchical Tags
-
-- [ ] Sub-labels within a list that form a hierarchy (e.g. "Science Fiction" > "Space Opera", "Hard SF", "Cyberpunk")
-- [ ] Sub-labels are tags on list items, not separate lists
-- [ ] Display as nested groupings on the list page
 
 ## Discussion Threads
 
