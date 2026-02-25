@@ -41,40 +41,10 @@ export default async function SettingsPage() {
           <h1 className="text-2xl font-bold text-text-primary">Profile</h1>
           <div className="flex items-center gap-4">
             <Link
-              href="/settings/follow-requests"
-              className="text-sm text-text-primary hover:text-text-primary transition-colors"
-            >
-              Follow requests
-            </Link>
-            <Link
-              href="/settings/tags"
-              className="text-sm text-text-primary hover:text-text-primary transition-colors"
-            >
-              Tag categories
-            </Link>
-            <Link
-              href="/scan"
-              className="text-sm text-text-primary hover:text-text-primary transition-colors"
-            >
-              Scan ISBN
-            </Link>
-            <Link
-              href="/settings/import"
-              className="text-sm text-text-primary hover:text-text-primary transition-colors"
-            >
-              Import from Goodreads
-            </Link>
-            <Link
               href="/settings/export"
               className="text-sm text-text-primary hover:text-text-primary transition-colors"
             >
               Export to CSV
-            </Link>
-            <Link
-              href="/library/compare"
-              className="text-sm text-text-primary hover:text-text-primary transition-colors"
-            >
-              Compare lists
             </Link>
             <Link
               href="/settings/ghost-activity"

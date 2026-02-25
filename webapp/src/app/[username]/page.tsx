@@ -187,7 +187,7 @@ export default async function UserPage({
   return (
     <>
       {/* Header */}
-      <div className="mb-10">
+      <div className="mb-10 relative">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
             {profile.avatar_url ? (
@@ -234,12 +234,44 @@ export default async function UserPage({
             </div>
           </div>
           {isOwnProfile ? (
-            <Link
-              href="/settings"
-              className="btn-secondary"
-            >
-              Edit profile
-            </Link>
+            <div className="absolute top-0 right-0 flex flex-col items-end gap-1">
+              <Link
+                href="/settings"
+                className="btn-secondary"
+              >
+                Edit profile
+              </Link>
+              <Link
+                href="/settings/follow-requests"
+                className="text-sm text-text-tertiary hover:text-text-primary transition-colors"
+              >
+                Follow requests
+              </Link>
+              <Link
+                href="/settings/tags"
+                className="text-sm text-text-tertiary hover:text-text-primary transition-colors"
+              >
+                Tag categories
+              </Link>
+              <Link
+                href="/scan"
+                className="text-sm text-text-tertiary hover:text-text-primary transition-colors"
+              >
+                Scan ISBN
+              </Link>
+              <Link
+                href="/settings/import"
+                className="text-sm text-text-tertiary hover:text-text-primary transition-colors"
+              >
+                Import from Goodreads
+              </Link>
+              <Link
+                href="/library/compare"
+                className="text-sm text-text-tertiary hover:text-text-primary transition-colors"
+              >
+                Compare lists
+              </Link>
+            </div>
           ) : currentUser ? (
             <FollowButton
               username={profile.username}
@@ -288,6 +320,7 @@ export default async function UserPage({
         <p className="text-xs text-text-tertiary mt-1">
           Member since {memberSince}
         </p>
+
       </div>
 
       {isRestricted && (
