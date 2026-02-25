@@ -114,77 +114,77 @@ func init() {
 			return err
 		}
 
-        // 6. Tag Keys
-        tagKeys := core.NewBaseCollection("tag_keys")
-        tagKeys.Fields.Add(&core.RelationField{
-            Name: "user",
-            CollectionId: "users",
-            CascadeDelete: true,
-            MaxSelect: 1,
-            Required: true,
-        })
-        tagKeys.Fields.Add(&core.TextField{Name: "name", Required: true})
-        tagKeys.Fields.Add(&core.TextField{Name: "slug", Required: true})
-        tagKeys.Fields.Add(&core.SelectField{
-            Name: "mode",
-            Values: []string{"select_one", "select_multiple"},
-            MaxSelect: 1,
-        })
-        tagKeys.AddIndex("idx_tag_keys_user_slug", true, "user,slug", "")
-        if err := app.Save(tagKeys); err != nil {
-            return err
-        }
+		// 6. Tag Keys
+		tagKeys := core.NewBaseCollection("tag_keys")
+		tagKeys.Fields.Add(&core.RelationField{
+			Name:          "user",
+			CollectionId:  "users",
+			CascadeDelete: true,
+			MaxSelect:     1,
+			Required:      true,
+		})
+		tagKeys.Fields.Add(&core.TextField{Name: "name", Required: true})
+		tagKeys.Fields.Add(&core.TextField{Name: "slug", Required: true})
+		tagKeys.Fields.Add(&core.SelectField{
+			Name:      "mode",
+			Values:    []string{"select_one", "select_multiple"},
+			MaxSelect: 1,
+		})
+		tagKeys.AddIndex("idx_tag_keys_user_slug", true, "user,slug", "")
+		if err := app.Save(tagKeys); err != nil {
+			return err
+		}
 
-        // 7. Tag Values
-        tagValues := core.NewBaseCollection("tag_values")
-        tagValues.Fields.Add(&core.RelationField{
-            Name: "tag_key",
-            CollectionId: "tag_keys",
-            CascadeDelete: true,
-            MaxSelect: 1,
-            Required: true,
-        })
-        tagValues.Fields.Add(&core.TextField{Name: "name", Required: true})
-        tagValues.Fields.Add(&core.TextField{Name: "slug", Required: true})
-        tagValues.AddIndex("idx_tag_values_key_slug", true, "tag_key,slug", "")
-        if err := app.Save(tagValues); err != nil {
-            return err
-        }
+		// 7. Tag Values
+		tagValues := core.NewBaseCollection("tag_values")
+		tagValues.Fields.Add(&core.RelationField{
+			Name:          "tag_key",
+			CollectionId:  "tag_keys",
+			CascadeDelete: true,
+			MaxSelect:     1,
+			Required:      true,
+		})
+		tagValues.Fields.Add(&core.TextField{Name: "name", Required: true})
+		tagValues.Fields.Add(&core.TextField{Name: "slug", Required: true})
+		tagValues.AddIndex("idx_tag_values_key_slug", true, "tag_key,slug", "")
+		if err := app.Save(tagValues); err != nil {
+			return err
+		}
 
-        // 8. Book Tag Values
-        bookTagValues := core.NewBaseCollection("book_tag_values")
-        bookTagValues.Fields.Add(&core.RelationField{
-            Name: "user",
-            CollectionId: "users",
-            CascadeDelete: true,
-            MaxSelect: 1,
-            Required: true,
-        })
-        bookTagValues.Fields.Add(&core.RelationField{
-            Name: "book",
-            CollectionId: "books",
-            CascadeDelete: true,
-            MaxSelect: 1,
-            Required: true,
-        })
-        bookTagValues.Fields.Add(&core.RelationField{
-            Name: "tag_key",
-            CollectionId: "tag_keys",
-            CascadeDelete: true,
-            MaxSelect: 1,
-            Required: true,
-        })
-        bookTagValues.Fields.Add(&core.RelationField{
-            Name: "tag_value",
-            CollectionId: "tag_values",
-            CascadeDelete: true,
-            MaxSelect: 1,
-            Required: true,
-        })
-        bookTagValues.AddIndex("idx_btv_user_book_key", true, "user,book,tag_key", "")
-        if err := app.Save(bookTagValues); err != nil {
-            return err
-        }
+		// 8. Book Tag Values
+		bookTagValues := core.NewBaseCollection("book_tag_values")
+		bookTagValues.Fields.Add(&core.RelationField{
+			Name:          "user",
+			CollectionId:  "users",
+			CascadeDelete: true,
+			MaxSelect:     1,
+			Required:      true,
+		})
+		bookTagValues.Fields.Add(&core.RelationField{
+			Name:          "book",
+			CollectionId:  "books",
+			CascadeDelete: true,
+			MaxSelect:     1,
+			Required:      true,
+		})
+		bookTagValues.Fields.Add(&core.RelationField{
+			Name:          "tag_key",
+			CollectionId:  "tag_keys",
+			CascadeDelete: true,
+			MaxSelect:     1,
+			Required:      true,
+		})
+		bookTagValues.Fields.Add(&core.RelationField{
+			Name:          "tag_value",
+			CollectionId:  "tag_values",
+			CascadeDelete: true,
+			MaxSelect:     1,
+			Required:      true,
+		})
+		bookTagValues.AddIndex("idx_btv_user_book_key", true, "user,book,tag_key", "")
+		if err := app.Save(bookTagValues); err != nil {
+			return err
+		}
 
 		return nil
 	}, func(app core.App) error {
