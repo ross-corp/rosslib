@@ -378,6 +378,17 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications (user_id, read, created_at DESC);
+
+-- ── Book follows: users subscribing to books for activity notifications ──────
+
+CREATE TABLE IF NOT EXISTS book_follows (
+	user_id    UUID        NOT NULL REFERENCES users(id),
+	book_id    UUID        NOT NULL REFERENCES books(id),
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	PRIMARY KEY (user_id, book_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_book_follows_book_id ON book_follows (book_id);
 `
 
 func Migrate(pool *pgxpool.Pool) error {

@@ -1520,6 +1520,139 @@ func (h *Handler) GetAuthorFollowStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"following": exists})
 }
 
+// ── Book follows ────────────────────────────────────────────────────────────
+
+// FollowBook creates a book follow for the current user.
+//
+// POST /books/:workId/follow
+func (h *Handler) FollowBook(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	workID := c.Param("workId")
+
+	var bookID string
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT id FROM books WHERE open_library_id = $1`, workID,
+	).Scan(&bookID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "book not found in local catalog"})
+		return
+	}
+
+	_, err = h.pool.Exec(c.Request.Context(),
+		`INSERT INTO book_follows (user_id, book_id)
+		 VALUES ($1, $2)
+		 ON CONFLICT (user_id, book_id) DO NOTHING`,
+		userID, bookID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	var bookTitle string
+	_ = h.pool.QueryRow(c.Request.Context(),
+		`SELECT title FROM books WHERE id = $1`, bookID,
+	).Scan(&bookTitle)
+
+	activity.Record(c.Request.Context(), h.pool, userID, "followed_book",
+		&bookID, nil, nil, nil, map[string]string{
+			"book_ol_id": workID,
+			"book_title": bookTitle,
+		})
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// UnfollowBook removes a book follow for the current user.
+//
+// DELETE /books/:workId/follow
+func (h *Handler) UnfollowBook(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	workID := c.Param("workId")
+
+	_, err := h.pool.Exec(c.Request.Context(),
+		`DELETE FROM book_follows
+		 USING books b
+		 WHERE book_follows.book_id = b.id
+		   AND book_follows.user_id = $1
+		   AND b.open_library_id = $2`,
+		userID, workID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// GetBookFollowStatus checks whether the current user follows a book.
+//
+// GET /books/:workId/follow
+func (h *Handler) GetBookFollowStatus(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	workID := c.Param("workId")
+
+	var exists bool
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT EXISTS(
+			SELECT 1 FROM book_follows bf
+			JOIN books b ON b.id = bf.book_id
+			WHERE bf.user_id = $1 AND b.open_library_id = $2
+		)`,
+		userID, workID,
+	).Scan(&exists)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"following": exists})
+}
+
+type followedBook struct {
+	OpenLibraryID string  `json:"open_library_id"`
+	Title         string  `json:"title"`
+	CoverURL      *string `json:"cover_url"`
+	Authors       *string `json:"authors"`
+	CreatedAt     string  `json:"created_at"`
+}
+
+// GetFollowedBooks returns the list of books followed by the current user.
+//
+// GET /me/followed-books
+func (h *Handler) GetFollowedBooks(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+
+	rows, err := h.pool.Query(c.Request.Context(),
+		`SELECT b.open_library_id, b.title, b.cover_url, b.authors, bf.created_at
+		 FROM book_follows bf
+		 JOIN books b ON b.id = bf.book_id
+		 WHERE bf.user_id = $1
+		 ORDER BY bf.created_at DESC`,
+		userID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	books := []followedBook{}
+	for rows.Next() {
+		var fb followedBook
+		var t time.Time
+		if err := rows.Scan(&fb.OpenLibraryID, &fb.Title, &fb.CoverURL, &fb.Authors, &t); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		fb.CreatedAt = t.Format(time.RFC3339)
+		books = append(books, fb)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"books": books})
+}
+
 type followedAuthor struct {
 	AuthorKey  string `json:"author_key"`
 	AuthorName string `json:"author_name"`

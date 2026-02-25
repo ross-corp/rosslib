@@ -9,6 +9,7 @@ import ThreadList from "@/components/thread-list";
 import ReviewText from "@/components/review-text";
 import EditionList from "@/components/edition-list";
 import BookLinkList from "@/components/book-link-list";
+import BookFollowButton from "@/components/book-follow-button";
 import { getUser, getToken } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -173,6 +174,19 @@ async function fetchMyBookStatus(
   return res.json();
 }
 
+async function fetchBookFollowStatus(
+  token: string,
+  workId: string
+): Promise<boolean> {
+  const res = await fetch(`${process.env.API_URL}/books/${workId}/follow`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return false;
+  const data = await res.json();
+  return data.following === true;
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function renderStars(rating: number): string {
@@ -199,7 +213,7 @@ export default async function BookPage({
   const { workId } = await params;
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [book, reviews, threads, bookLinks, tagKeys, myStatus] = await Promise.all([
+  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook] = await Promise.all([
     fetchBook(workId),
     fetchBookReviews(workId, token ?? undefined),
     fetchThreads(workId),
@@ -208,6 +222,9 @@ export default async function BookPage({
     currentUser && token
       ? fetchMyBookStatus(token, workId)
       : Promise.resolve(null),
+    currentUser && token
+      ? fetchBookFollowStatus(token, workId)
+      : Promise.resolve(false),
   ]);
 
   if (!book) notFound();
@@ -283,16 +300,22 @@ export default async function BookPage({
               </div>
             )}
 
-            {/* Status picker */}
-            {statusValues.length > 0 && statusKeyId && (
-              <div className="mb-4">
-                <StatusPicker
-                  openLibraryId={workId}
-                  title={book.title}
-                  coverUrl={book.cover_url}
-                  statusValues={statusValues}
-                  statusKeyId={statusKeyId}
-                  currentStatusValueId={myStatus?.status_value_id ?? null}
+            {/* Status picker + follow */}
+            {currentUser && (
+              <div className="flex items-center gap-3 mb-4">
+                {statusValues.length > 0 && statusKeyId && (
+                  <StatusPicker
+                    openLibraryId={workId}
+                    title={book.title}
+                    coverUrl={book.cover_url}
+                    statusValues={statusValues}
+                    statusKeyId={statusKeyId}
+                    currentStatusValueId={myStatus?.status_value_id ?? null}
+                  />
+                )}
+                <BookFollowButton
+                  workId={workId}
+                  initialFollowing={isFollowingBook}
                 />
               </div>
             )}

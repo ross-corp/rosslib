@@ -192,6 +192,22 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
           )}
         </>
       );
+    case "followed_book":
+      return (
+        <>
+          followed{" "}
+          {item.book ? (
+            <Link
+              href={`/books/${item.book.open_library_id}`}
+              className="font-medium text-stone-900 hover:underline"
+            >
+              {item.book.title}
+            </Link>
+          ) : (
+            "a book"
+          )}
+        </>
+      );
     case "created_link":
       return (
         <>

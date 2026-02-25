@@ -616,7 +616,7 @@ components:
           format: uuid
         type:
           type: string
-          enum: [shelved, started_book, finished_book, rated, reviewed, created_thread, followed_user, followed_author, created_link]
+          enum: [shelved, started_book, finished_book, rated, reviewed, created_thread, followed_user, followed_author, followed_book, created_link]
         created_at:
           type: string
           format: date-time
@@ -1411,6 +1411,99 @@ paths:
                           type: string
                         author_name:
                           type: string
+                        created_at:
+                          type: string
+                          format: date-time
+
+  /books/{workId}/follow:
+    get:
+      summary: Check if you follow a book
+      tags: [Books]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Follow status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  following:
+                    type: boolean
+    post:
+      summary: Follow a book
+      description: Subscribe to notifications when new threads, links, or reviews are posted on this book.
+      tags: [Books]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Followed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+    delete:
+      summary: Unfollow a book
+      tags: [Books]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Unfollowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+
+  /me/followed-books:
+    get:
+      summary: List books you follow
+      tags: [Books]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Followed books
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  books:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        open_library_id:
+                          type: string
+                        title:
+                          type: string
+                        cover_url:
+                          type: string
+                          nullable: true
+                        authors:
+                          type: string
+                          nullable: true
                         created_at:
                           type: string
                           format: date-time

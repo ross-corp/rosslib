@@ -1,6 +1,8 @@
 package notifications
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -9,6 +11,41 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 )
+
+// NotifyBookFollowers sends a notification to all users who follow a book,
+// excluding the actor who triggered the event. This is fire-and-forget:
+// errors are silently ignored so notification creation never blocks a
+// primary operation.
+func NotifyBookFollowers(ctx context.Context, pool *pgxpool.Pool, bookID, actorID, notifType, title, body string, metadata map[string]string) {
+	rows, err := pool.Query(ctx,
+		`SELECT user_id FROM book_follows WHERE book_id = $1 AND user_id != $2`,
+		bookID, actorID,
+	)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	var meta interface{}
+	if len(metadata) > 0 {
+		b, err := json.Marshal(metadata)
+		if err == nil {
+			meta = b
+		}
+	}
+
+	for rows.Next() {
+		var userID string
+		if err := rows.Scan(&userID); err != nil {
+			continue
+		}
+		_, _ = pool.Exec(ctx,
+			`INSERT INTO notifications (user_id, notif_type, title, body, metadata)
+			 VALUES ($1, $2, $3, $4, $5)`,
+			userID, notifType, title, body, meta,
+		)
+	}
+}
 
 type Handler struct {
 	pool *pgxpool.Pool

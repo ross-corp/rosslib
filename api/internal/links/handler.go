@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/notifications"
 )
 
 var validLinkTypes = map[string]bool{
@@ -200,6 +201,18 @@ func (h *Handler) CreateLink(c *gin.Context) {
 			"to_book_ol_id":  body.ToWorkID,
 			"to_book_title":  toBookTitle,
 		})
+
+	// Notify followers of the source book about the new link.
+	var fromBookTitle string
+	_ = h.pool.QueryRow(c.Request.Context(),
+		`SELECT title FROM books WHERE id = $1`, fromBookID,
+	).Scan(&fromBookTitle)
+	go notifications.NotifyBookFollowers(c.Request.Context(), h.pool, fromBookID, userID,
+		"book_new_link",
+		"New "+body.LinkType+" link on "+fromBookTitle,
+		"Linked to "+toBookTitle,
+		map[string]string{"book_ol_id": workID, "book_title": fromBookTitle, "link_type": body.LinkType, "to_book_title": toBookTitle},
+	)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"id":         linkID,

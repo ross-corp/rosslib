@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/notifications"
 	"github.com/tristansaldanha/rosslib/api/internal/privacy"
 	"github.com/tristansaldanha/rosslib/api/internal/search"
 	"github.com/tristansaldanha/rosslib/api/internal/tags"
@@ -275,15 +276,36 @@ func (h *Handler) UpdateBook(c *gin.Context) {
 	}
 
 	// Record activity for rating/review updates.
-	if _, hasRating := raw["rating"]; hasRating {
-		var bookID string
-		_ = h.pool.QueryRow(c.Request.Context(),
-			`SELECT id FROM books WHERE open_library_id = $1`, olID,
-		).Scan(&bookID)
-		if bookID != "" {
-			meta := map[string]string{}
-			meta["rating"] = strings.Trim(string(raw["rating"]), "\"")
-			activity.Record(c.Request.Context(), h.pool, userID, "rated", &bookID, nil, nil, nil, meta)
+	var bookID string
+	_ = h.pool.QueryRow(c.Request.Context(),
+		`SELECT id FROM books WHERE open_library_id = $1`, olID,
+	).Scan(&bookID)
+
+	if _, hasRating := raw["rating"]; hasRating && bookID != "" {
+		meta := map[string]string{}
+		meta["rating"] = strings.Trim(string(raw["rating"]), "\"")
+		activity.Record(c.Request.Context(), h.pool, userID, "rated", &bookID, nil, nil, nil, meta)
+	}
+
+	// Notify followers of this book about new reviews.
+	if _, hasReview := raw["review_text"]; hasReview && bookID != "" {
+		var reviewText *string
+		_ = json.Unmarshal(raw["review_text"], &reviewText)
+		if reviewText != nil && *reviewText != "" {
+			var bookTitle string
+			_ = h.pool.QueryRow(c.Request.Context(),
+				`SELECT title FROM books WHERE id = $1`, bookID,
+			).Scan(&bookTitle)
+			snippet := *reviewText
+			if len(snippet) > 100 {
+				snippet = snippet[:100] + "..."
+			}
+			go notifications.NotifyBookFollowers(c.Request.Context(), h.pool, bookID, userID,
+				"book_new_review",
+				"New review on "+bookTitle,
+				snippet,
+				map[string]string{"book_ol_id": olID, "book_title": bookTitle},
+			)
 		}
 	}
 

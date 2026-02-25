@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/notifications"
 )
 
 type Handler struct {
@@ -210,6 +211,18 @@ func (h *Handler) CreateThread(c *gin.Context) {
 
 	activity.Record(c.Request.Context(), h.pool, userID, "created_thread", &bookID, nil, nil, &threadID,
 		map[string]string{"thread_title": body.Title})
+
+	// Notify followers of this book about the new discussion thread.
+	var bookTitle string
+	_ = h.pool.QueryRow(c.Request.Context(),
+		`SELECT title FROM books WHERE id = $1`, bookID,
+	).Scan(&bookTitle)
+	go notifications.NotifyBookFollowers(c.Request.Context(), h.pool, bookID, userID,
+		"book_new_thread",
+		"New discussion on "+bookTitle,
+		"\""+body.Title+"\"",
+		map[string]string{"book_ol_id": workID, "book_title": bookTitle, "thread_title": body.Title},
+	)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"id":         threadID,

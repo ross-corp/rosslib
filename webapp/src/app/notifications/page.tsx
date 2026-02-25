@@ -64,8 +64,9 @@ export default async function NotificationsPage({
         {data.notifications.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-stone-500 text-sm">
-              No notifications yet. Follow some authors to get notified about
-              new publications.
+              No notifications yet. Follow authors to get notified about
+              new publications, or follow books to hear about new discussions,
+              links, and reviews.
             </p>
             <Link
               href="/feed"
@@ -101,6 +102,7 @@ export default async function NotificationsPage({
 
 function NotificationCard({ notif }: { notif: Notification }) {
   const authorKey = notif.metadata?.author_key;
+  const bookOlId = notif.metadata?.book_ol_id;
 
   return (
     <div
@@ -131,6 +133,14 @@ function NotificationCard({ notif }: { notif: Notification }) {
               className="text-xs text-stone-500 hover:text-stone-900 hover:underline"
             >
               View author
+            </Link>
+          )}
+          {bookOlId && (
+            <Link
+              href={`/books/${bookOlId}`}
+              className="text-xs text-stone-500 hover:text-stone-900 hover:underline"
+            >
+              View book
             </Link>
           )}
         </div>
