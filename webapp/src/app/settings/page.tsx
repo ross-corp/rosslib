@@ -55,6 +55,12 @@ export default async function SettingsPage() {
               Tag categories
             </Link>
             <Link
+              href="/scan"
+              className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
+            >
+              Scan ISBN
+            </Link>
+            <Link
               href="/settings/import"
               className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
             >

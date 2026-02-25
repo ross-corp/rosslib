@@ -68,6 +68,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	booksHandler := books.NewHandler(pool, searchClient, olClient)
 	r.GET("/books/search", booksHandler.SearchBooks)
 	r.GET("/books/lookup", booksHandler.LookupBook)
+	r.POST("/books/scan", booksHandler.ScanBarcode)
 	r.GET("/authors/search", booksHandler.SearchAuthors)
 	r.GET("/authors/:authorKey", booksHandler.GetAuthor)
 	r.GET("/genres", booksHandler.GetGenres)

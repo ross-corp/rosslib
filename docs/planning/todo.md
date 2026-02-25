@@ -6,8 +6,8 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## Book Scanning
 
-- [ ] Book cover scan — take a picture of a cover, lookup ISBN for import
-- [ ] Bookshelf scan — same idea but for many books at once (10-20 on a shelf)
+- [ ] Bookshelf scan — scan many books at once (10-20 on a shelf); batch mode for book scanner
+- [ ] Improve barcode detection — try multiple barcode formats, rotation/crop preprocessing
 
 ## User Accounts
 

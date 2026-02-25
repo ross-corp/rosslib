@@ -128,6 +128,26 @@ Optional `year_min` and `year_max` filter results by publication year. Meilisear
 
 Looks up a single book by ISBN via Open Library. Upserts the result into the local `books` table and returns it. Returns 404 if not found.
 
+### `POST /books/scan`
+
+Accepts a `multipart/form-data` image upload (field name `image`). Decodes the image, detects an EAN-13 barcode (ISBN), looks up the book via Open Library, upserts it locally, and returns the result. Supported formats: JPEG, PNG, GIF.
+
+Returns `422` if no barcode is detected (with a `hint` field), `404` if the ISBN is detected but no book matches, and `200` on success:
+
+```json
+{
+  "isbn": "9780261103573",
+  "book": {
+    "key": "/works/OL27448W",
+    "title": "The Lord of the Rings",
+    "authors": ["J.R.R. Tolkien"],
+    "publish_year": 1954,
+    "cover_url": "https://covers.openlibrary.org/b/id/...-M.jpg",
+    ...
+  }
+}
+```
+
 ### `GET /books/:workId`
 
 Returns a book from the local `books` table by its bare OL work ID (e.g. `OL82592W`). 404 if not in the local catalog yet.

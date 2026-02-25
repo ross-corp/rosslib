@@ -77,6 +77,7 @@ webapp/src/app/
 │   ├── page.tsx                    profile settings
 │   ├── import/page.tsx             Goodreads CSV import
 │   └── tags/page.tsx               label category management
+├── scan/page.tsx                   ISBN barcode scanner
 ├── library/compare/page.tsx        compare lists (set operations)
 ├── notifications/page.tsx          notification center
 ├── admin/page.tsx                 admin panel (moderator only)
@@ -118,6 +119,8 @@ webapp/src/app/
     ├── admin/users/[userId]/moderator/route.ts    ← PUT grant/revoke moderator
     ├── admin/link-edits/route.ts                  ← GET list link edits
     ├── admin/link-edits/[editId]/route.ts         ← PUT approve/reject link edit
+    ├── books/scan/route.ts                            ← POST barcode scan
+    ├── books/lookup/route.ts                          ← GET ISBN lookup
     ├── books/[workId]/genre-ratings/route.ts         ← GET aggregate genre ratings
     ├── me/books/[olId]/genre-ratings/route.ts       ← GET, PUT user genre ratings
     ├── me/account/route.ts                         ← GET account info (has_password, has_google)
@@ -216,6 +219,10 @@ Client component rendered in the nav bar for authenticated users. Polls `GET /ap
 ### `GenreRatingEditor` (`components/genre-rating-editor.tsx`)
 
 Client component for genre dimension ratings on book detail pages. Shows aggregate community ratings as horizontal bar charts (genre name, progress bar, average/10, rater count). Logged-in users can expand an editor with 0–10 sliders for each of the 12 predefined genres (Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children). Setting a slider to 0 removes the rating. Saves via `PUT /api/me/books/:olId/genre-ratings` and refreshes aggregate data on save.
+
+### `BookScanner` (`components/book-scanner.tsx`)
+
+Client component for the `/scan` page. Three input modes: Camera (uses browser `BarcodeDetector` API for real-time EAN-13 scanning on supported devices), Upload (sends image to `POST /api/books/scan` for server-side barcode detection via gozxing), and Enter ISBN (manual input via `GET /api/books/lookup`). Detected books are displayed with cover, metadata, and a StatusPicker for quick library addition. Supports scanning multiple books in a session with a history list.
 
 ### `StarRating` (`components/star-rating.tsx`)
 

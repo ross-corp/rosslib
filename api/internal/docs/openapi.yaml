@@ -1347,6 +1347,68 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /books/scan:
+    post:
+      summary: Scan an image for an ISBN barcode
+      description: |
+        Accepts an uploaded image, detects an EAN-13 barcode (ISBN),
+        looks up the book via Open Library, upserts it into the local catalog,
+        and returns the result. Supported image formats: JPEG, PNG, GIF.
+      tags: [Books]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Photo of a book barcode
+      responses:
+        "200":
+          description: Barcode detected and book found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isbn:
+                    type: string
+                    description: Detected ISBN
+                  book:
+                    $ref: '#/components/schemas/BookResult'
+        "400":
+          description: Missing or unreadable image
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: ISBN detected but no matching book found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  isbn:
+                    type: string
+        "422":
+          description: No barcode detected in image
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  hint:
+                    type: string
+
   /books/{workId}:
     get:
       summary: Get book details
