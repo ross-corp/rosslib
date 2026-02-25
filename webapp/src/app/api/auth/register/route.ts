@@ -25,5 +25,13 @@ export async function POST(req: Request) {
     maxAge: 60 * 60 * 24 * 30,
   });
 
+  cookieStore.set("username", data.username, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+
   return NextResponse.json({ username: data.username, user_id: data.user_id });
 }
