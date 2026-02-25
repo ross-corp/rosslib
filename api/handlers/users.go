@@ -32,10 +32,16 @@ func SearchUsers(app core.App) func(e *core.RequestEvent) error {
 
 		var results []map[string]any
 		for _, r := range records {
+			var avatarURL *string
+			if av := r.GetString("avatar"); av != "" {
+				url := "/api/files/" + r.Collection().Id + "/" + r.Id + "/" + av
+				avatarURL = &url
+			}
 			results = append(results, map[string]any{
 				"user_id":      r.Id,
 				"username":     r.GetString("username"),
 				"display_name": r.GetString("display_name"),
+				"avatar_url":   avatarURL,
 			})
 		}
 		if results == nil {

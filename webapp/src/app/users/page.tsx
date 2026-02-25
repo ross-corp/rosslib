@@ -4,6 +4,7 @@ type UserRow = {
   user_id: string;
   username: string;
   display_name: string | null;
+  avatar_url: string | null;
 };
 
 const PER_PAGE = 20;
@@ -49,16 +50,31 @@ export default async function UsersPage({
               <li key={user.user_id}>
                 <Link
                   href={`/${user.username}`}
-                  className="flex flex-col py-3 hover:bg-surface-2 -mx-3 px-3 rounded transition-colors"
+                  className="flex items-center gap-3 py-3 hover:bg-surface-2 -mx-3 px-3 rounded transition-colors"
                 >
-                  <span className="text-sm font-medium text-text-primary">
-                    {user.display_name || user.username}
-                  </span>
-                  {user.display_name && (
-                    <span className="text-xs text-text-primary mt-0.5">
-                      @{user.username}
-                    </span>
+                  {user.avatar_url ? (
+                    <img
+                      src={user.avatar_url}
+                      alt=""
+                      className="w-9 h-9 rounded-full object-cover bg-surface-2 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center shrink-0">
+                      <span className="text-text-tertiary text-sm font-medium select-none">
+                        {(user.display_name || user.username)[0].toUpperCase()}
+                      </span>
+                    </div>
                   )}
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-text-primary">
+                      {user.display_name || user.username}
+                    </span>
+                    {user.display_name && (
+                      <span className="text-xs text-text-tertiary mt-0.5">
+                        @{user.username}
+                      </span>
+                    )}
+                  </div>
                 </Link>
               </li>
             ))}
