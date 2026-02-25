@@ -17,7 +17,6 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## Social
 
-- [ ] Author follow: new publication notifications (poll OL for new works by followed authors)
 - [ ] Follow works, see sequels / new discussions / links
 - [ ] Represent users who are also authors (badges)
 

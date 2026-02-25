@@ -50,6 +50,8 @@ tags:
     description: Activity feeds
   - name: Import/Export
     description: Goodreads import and CSV export
+  - name: Notifications
+    description: User notifications (new publications, etc.)
   - name: Admin
     description: Admin-only endpoints (ghost users)
 
@@ -74,6 +76,31 @@ components:
         ok:
           type: boolean
           example: true
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        notif_type:
+          type: string
+          description: "Notification type (e.g. new_publication)"
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+        read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
 
     AuthResponse:
       type: object
@@ -2713,3 +2740,87 @@ paths:
               schema:
                 type: string
                 format: binary
+
+  # ── Notifications ────────────────────────────────────────────────────────────
+
+  /me/notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications
+      description: Returns paginated notifications for the current user, newest first.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: "RFC 3339 Nano timestamp for cursor-based pagination"
+      responses:
+        "200":
+          description: Notification list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Notification"
+                  next_cursor:
+                    type: string
+
+  /me/notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Get unread notification count
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+
+  /me/notifications/{notifId}/read:
+    post:
+      tags: [Notifications]
+      summary: Mark a notification as read
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notifId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ok"
+        "404":
+          description: Notification not found
+
+  /me/notifications/read-all:
+    post:
+      tags: [Notifications]
+      summary: Mark all notifications as read
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ok"

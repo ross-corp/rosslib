@@ -792,6 +792,69 @@ Approve or reject a pending community link edit. Approved edits are applied to t
 
 ---
 
+## Notifications
+
+### `GET /me/notifications`  *(auth required)*
+
+Returns paginated notifications for the current user, newest first. Cursor-based pagination.
+
+**Query parameters:**
+- `cursor` *(optional)* — RFC3339Nano timestamp from `next_cursor` to fetch the next page.
+
+```json
+{
+  "notifications": [
+    {
+      "id": "...",
+      "notif_type": "new_publication",
+      "title": "New work by Brandon Sanderson",
+      "body": "Brandon Sanderson published a new work: Wind and Truth",
+      "metadata": {
+        "author_key": "OL1394865A",
+        "author_name": "Brandon Sanderson",
+        "new_count": "1",
+        "new_titles": "Wind and Truth"
+      },
+      "read": false,
+      "created_at": "2026-02-25T14:00:00.000000Z"
+    }
+  ],
+  "next_cursor": "2026-02-24T13:00:00.000000Z"
+}
+```
+
+### `GET /me/notifications/unread-count`  *(auth required)*
+
+Returns the count of unread notifications.
+
+```json
+{ "count": 3 }
+```
+
+### `POST /me/notifications/:notifId/read`  *(auth required)*
+
+Mark a single notification as read. Returns `{ "ok": true }`. Returns 404 if the notification doesn't exist or doesn't belong to the user.
+
+### `POST /me/notifications/read-all`  *(auth required)*
+
+Mark all unread notifications as read. Returns `{ "ok": true }`.
+
+---
+
+## Background: Author Publication Poller
+
+A background goroutine (`notifications.StartPoller`) runs every 6 hours. It:
+
+1. Queries `author_follows` for all distinct followed author keys.
+2. For each author, fetches the current work count from `https://openlibrary.org/authors/{key}/works.json`.
+3. Compares against the stored snapshot in `author_works_snapshot`.
+4. If the count has increased, creates a `new_publication` notification for each follower of that author.
+5. On first poll for an author, the snapshot is seeded without generating notifications (to avoid flooding users when they first follow an author).
+
+The poller uses the shared rate-limited OL HTTP client and respects the server's context for graceful shutdown.
+
+---
+
 ## Health
 
 ### `GET /health`

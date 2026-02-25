@@ -75,6 +75,7 @@ webapp/src/app/
 │   ├── page.tsx                    profile settings
 │   ├── import/page.tsx             Goodreads CSV import
 │   └── tags/page.tsx               label category management
+├── notifications/page.tsx          notification center
 ├── admin/page.tsx                 admin panel (moderator only)
 ├── [username]/
 │   ├── page.tsx                    public profile
@@ -107,6 +108,10 @@ webapp/src/app/
     ├── admin/users/[userId]/moderator/route.ts    ← PUT grant/revoke moderator
     ├── admin/link-edits/route.ts                  ← GET list link edits
     ├── admin/link-edits/[editId]/route.ts         ← PUT approve/reject link edit
+    ├── me/notifications/route.ts                  ← GET list notifications
+    ├── me/notifications/unread-count/route.ts     ← GET unread count
+    ├── me/notifications/read-all/route.ts         ← POST mark all read
+    ├── me/notifications/[notifId]/read/route.ts   ← POST mark one read
     └── users/[username]/
         ├── tags/[...path]/route.ts
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
@@ -185,6 +190,10 @@ Renders review text with wikilink and markdown link support. Parses two inline l
 - `[Book Title](/books/OL123W)` — rendered as a direct link to the book page
 
 Used on book detail pages (community reviews), user reviews pages, recent reviews on profiles, and the collapsed review view in the book review editor. The companion `BookReviewEditor` component provides `[[` autocomplete that searches books and inserts markdown links.
+
+### `NotificationBell` (`components/notification-bell.tsx`)
+
+Client component rendered in the nav bar for authenticated users. Polls `GET /api/me/notifications/unread-count` every 60 seconds and displays a bell icon with a red badge when unread notifications exist. Links to `/notifications`.
 
 ### `StarRating` (`components/star-rating.tsx`)
 

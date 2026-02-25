@@ -355,6 +355,29 @@ CREATE TABLE IF NOT EXISTS author_follows (
 );
 
 CREATE INDEX IF NOT EXISTS idx_author_follows_author_key ON author_follows (author_key);
+
+-- ── Author works snapshot: tracks known work count per author for new-pub detection
+
+CREATE TABLE IF NOT EXISTS author_works_snapshot (
+	author_key  VARCHAR(50) PRIMARY KEY,
+	work_count  INT         NOT NULL DEFAULT 0,
+	checked_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ── Notifications: per-user notifications (e.g. new publication by followed author)
+
+CREATE TABLE IF NOT EXISTS notifications (
+	id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	user_id     UUID         NOT NULL REFERENCES users(id),
+	notif_type  VARCHAR(50)  NOT NULL,
+	title       TEXT         NOT NULL,
+	body        TEXT,
+	metadata    JSONB,
+	read        BOOLEAN      NOT NULL DEFAULT false,
+	created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications (user_id, read, created_at DESC);
 `
 
 func Migrate(pool *pgxpool.Pool) error {

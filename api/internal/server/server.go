@@ -16,6 +16,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/imports"
 	"github.com/tristansaldanha/rosslib/api/internal/links"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
+	"github.com/tristansaldanha/rosslib/api/internal/notifications"
 	"github.com/tristansaldanha/rosslib/api/internal/olhttp"
 	"github.com/tristansaldanha/rosslib/api/internal/search"
 	"github.com/tristansaldanha/rosslib/api/internal/storage"
@@ -147,6 +148,12 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	authed.POST("/links/:linkId/vote", linksHandler.Vote)
 	authed.DELETE("/links/:linkId/vote", linksHandler.Unvote)
 	authed.POST("/links/:linkId/edits", linksHandler.ProposeEdit)
+
+	notifHandler := notifications.NewHandler(pool)
+	authed.GET("/me/notifications", notifHandler.GetNotifications)
+	authed.GET("/me/notifications/unread-count", notifHandler.GetUnreadCount)
+	authed.POST("/me/notifications/:notifId/read", notifHandler.MarkRead)
+	authed.POST("/me/notifications/read-all", notifHandler.MarkAllRead)
 
 	admin := authed.Group("/admin")
 	admin.Use(middleware.RequireModerator())

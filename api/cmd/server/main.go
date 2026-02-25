@@ -11,6 +11,8 @@ import (
 
 	"github.com/tristansaldanha/rosslib/api/internal/config"
 	"github.com/tristansaldanha/rosslib/api/internal/db"
+	"github.com/tristansaldanha/rosslib/api/internal/notifications"
+	"github.com/tristansaldanha/rosslib/api/internal/olhttp"
 	"github.com/tristansaldanha/rosslib/api/internal/search"
 	"github.com/tristansaldanha/rosslib/api/internal/server"
 	"github.com/tristansaldanha/rosslib/api/internal/storage"
@@ -58,6 +60,11 @@ func main() {
 
 	router := server.NewRouter(pool, cfg.JWTSecret, store, searchClient)
 
+	// Start background poller for new publications by followed authors.
+	pollerCtx, pollerCancel := context.WithCancel(context.Background())
+	defer pollerCancel()
+	notifications.StartPoller(pollerCtx, pool, olhttp.DefaultClient())
+
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
 		Handler: router,
@@ -75,6 +82,7 @@ func main() {
 	<-quit
 
 	log.Println("shutting down server...")
+	pollerCancel()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

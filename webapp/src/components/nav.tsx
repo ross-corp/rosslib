@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getUser } from "@/lib/auth";
+import NotificationBell from "@/components/notification-bell";
 
 export default async function Nav() {
   const user = await getUser();
@@ -42,6 +43,7 @@ export default async function Nav() {
               >
                 Feed
               </Link>
+              <NotificationBell />
               {user.is_moderator && (
                 <Link
                   href="/admin"
