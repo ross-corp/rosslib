@@ -35,11 +35,11 @@ func init() {
 		// 3. Create 'collections' collection
 		collections := core.NewBaseCollection("collections")
 		collections.Fields.Add(&core.RelationField{
-			Name: "user",
-			CollectionId: "users",
+			Name:          "user",
+			CollectionId:  users.Id,
 			CascadeDelete: true,
-			MaxSelect: 1,
-			Required: true,
+			MaxSelect:     1,
+			Required:      true,
 		})
 		collections.Fields.Add(&core.TextField{Name: "name", Required: true})
 		collections.Fields.Add(&core.TextField{Name: "slug", Required: true})
@@ -59,25 +59,25 @@ func init() {
 		// 4. Create 'collection_items' collection
 		collectionItems := core.NewBaseCollection("collection_items")
 		collectionItems.Fields.Add(&core.RelationField{
-			Name: "collection",
-			CollectionId: "collections",
+			Name:          "collection",
+			CollectionId:  collections.Id,
 			CascadeDelete: true,
-			MaxSelect: 1,
-			Required: true,
+			MaxSelect:     1,
+			Required:      true,
 		})
 		collectionItems.Fields.Add(&core.RelationField{
-			Name: "book",
-			CollectionId: "books",
-			CascadeDelete: true, // Maybe restrict? But usually cascade is fine.
-			MaxSelect: 1,
-			Required: true,
+			Name:          "book",
+			CollectionId:  books.Id,
+			CascadeDelete: true,
+			MaxSelect:     1,
+			Required:      true,
 		})
 		collectionItems.Fields.Add(&core.RelationField{
-			Name: "user",
-			CollectionId: "users",
+			Name:          "user",
+			CollectionId:  users.Id,
 			CascadeDelete: true,
-			MaxSelect: 1,
-			Required: true,
+			MaxSelect:     1,
+			Required:      true,
 		})
 		collectionItems.Fields.Add(&core.NumberField{Name: "rating"})
 		collectionItems.Fields.Add(&core.TextField{Name: "review_text"})
@@ -91,18 +91,18 @@ func init() {
 		// 5. Create 'follows' collection
 		follows := core.NewBaseCollection("follows")
 		follows.Fields.Add(&core.RelationField{
-			Name: "follower",
-			CollectionId: "users",
+			Name:          "follower",
+			CollectionId:  users.Id,
 			CascadeDelete: true,
-			MaxSelect: 1,
-			Required: true,
+			MaxSelect:     1,
+			Required:      true,
 		})
 		follows.Fields.Add(&core.RelationField{
-			Name: "followee",
-			CollectionId: "users",
+			Name:          "followee",
+			CollectionId:  users.Id,
 			CascadeDelete: true,
-			MaxSelect: 1,
-			Required: true,
+			MaxSelect:     1,
+			Required:      true,
 		})
 		follows.Fields.Add(&core.SelectField{
 			Name: "status",
@@ -118,7 +118,7 @@ func init() {
 		tagKeys := core.NewBaseCollection("tag_keys")
 		tagKeys.Fields.Add(&core.RelationField{
 			Name:          "user",
-			CollectionId:  "users",
+			CollectionId:  users.Id,
 			CascadeDelete: true,
 			MaxSelect:     1,
 			Required:      true,
@@ -139,7 +139,7 @@ func init() {
 		tagValues := core.NewBaseCollection("tag_values")
 		tagValues.Fields.Add(&core.RelationField{
 			Name:          "tag_key",
-			CollectionId:  "tag_keys",
+			CollectionId:  tagKeys.Id,
 			CascadeDelete: true,
 			MaxSelect:     1,
 			Required:      true,
@@ -155,28 +155,28 @@ func init() {
 		bookTagValues := core.NewBaseCollection("book_tag_values")
 		bookTagValues.Fields.Add(&core.RelationField{
 			Name:          "user",
-			CollectionId:  "users",
+			CollectionId:  users.Id,
 			CascadeDelete: true,
 			MaxSelect:     1,
 			Required:      true,
 		})
 		bookTagValues.Fields.Add(&core.RelationField{
 			Name:          "book",
-			CollectionId:  "books",
+			CollectionId:  books.Id,
 			CascadeDelete: true,
 			MaxSelect:     1,
 			Required:      true,
 		})
 		bookTagValues.Fields.Add(&core.RelationField{
 			Name:          "tag_key",
-			CollectionId:  "tag_keys",
+			CollectionId:  tagKeys.Id,
 			CascadeDelete: true,
 			MaxSelect:     1,
 			Required:      true,
 		})
 		bookTagValues.Fields.Add(&core.RelationField{
 			Name:          "tag_value",
-			CollectionId:  "tag_values",
+			CollectionId:  tagValues.Id,
 			CascadeDelete: true,
 			MaxSelect:     1,
 			Required:      true,

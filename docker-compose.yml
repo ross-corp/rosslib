@@ -3,7 +3,7 @@ services:
     build:
       context: ./api
     ports:
-      - "8090:8090"
+      - "8091:8090"
     volumes:
       - pb_data:/app/pb_data
     healthcheck:
@@ -19,7 +19,7 @@ services:
       - "3000:3000"
     environment:
       API_URL: http://api:8090
-      NEXT_PUBLIC_API_URL: http://localhost:8090
+      NEXT_PUBLIC_API_URL: http://localhost:8091
     volumes:
       - ./webapp:/app
       - /app/node_modules

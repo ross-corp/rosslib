@@ -7,6 +7,16 @@ import (
 
 func init() {
 	m.Register(func(app core.App) error {
+		// --- Look up collections created in previous migration ---
+		books, err := app.FindCollectionByNameOrId("books")
+		if err != nil {
+			return err
+		}
+		collectionsCol, err := app.FindCollectionByNameOrId("collections")
+		if err != nil {
+			return err
+		}
+
 		// --- Update existing collections ---
 
 		// Update users: add display_name, is_moderator, is_ghost, google_id, author_key, email_verified, avatar
@@ -54,7 +64,7 @@ func init() {
 		})
 		userBooks.Fields.Add(&core.RelationField{
 			Name:          "book",
-			CollectionId:  "books",
+			CollectionId:  books.Id,
 			CascadeDelete: true,
 			MaxSelect:     1,
 			Required:      true,
@@ -76,7 +86,7 @@ func init() {
 		threads := core.NewBaseCollection("threads")
 		threads.Fields.Add(&core.RelationField{
 			Name:          "book",
-			CollectionId:  "books",
+			CollectionId:  books.Id,
 			CascadeDelete: true,
 			MaxSelect:     1,
 			Required:      true,
@@ -133,7 +143,7 @@ func init() {
 		activities.Fields.Add(&core.TextField{Name: "activity_type", Required: true})
 		activities.Fields.Add(&core.RelationField{
 			Name:         "book",
-			CollectionId: "books",
+			CollectionId: books.Id,
 			MaxSelect:    1,
 		})
 		activities.Fields.Add(&core.RelationField{
@@ -143,7 +153,7 @@ func init() {
 		})
 		activities.Fields.Add(&core.RelationField{
 			Name:         "collection_ref",
-			CollectionId: "collections",
+			CollectionId: collectionsCol.Id,
 			MaxSelect:    1,
 		})
 		activities.Fields.Add(&core.RelationField{
@@ -152,7 +162,7 @@ func init() {
 			MaxSelect:    1,
 		})
 		activities.Fields.Add(&core.JSONField{Name: "metadata"})
-		activities.AddIndex("idx_activities_user_created", false, "user,created", "")
+		activities.AddIndex("idx_activities_user", false, "user", "")
 		if err := app.Save(activities); err != nil {
 			return err
 		}
@@ -161,7 +171,7 @@ func init() {
 		bookStats := core.NewBaseCollection("book_stats")
 		bookStats.Fields.Add(&core.RelationField{
 			Name:          "book",
-			CollectionId:  "books",
+			CollectionId:  books.Id,
 			CascadeDelete: true,
 			MaxSelect:     1,
 			Required:      true,
@@ -203,7 +213,7 @@ func init() {
 		})
 		bookFollows.Fields.Add(&core.RelationField{
 			Name:          "book",
-			CollectionId:  "books",
+			CollectionId:  books.Id,
 			CascadeDelete: true,
 			MaxSelect:     1,
 			Required:      true,
@@ -243,7 +253,7 @@ func init() {
 		})
 		genreRatings.Fields.Add(&core.RelationField{
 			Name:          "book",
-			CollectionId:  "books",
+			CollectionId:  books.Id,
 			CascadeDelete: true,
 			MaxSelect:     1,
 			Required:      true,
@@ -259,14 +269,14 @@ func init() {
 		bookLinks := core.NewBaseCollection("book_links")
 		bookLinks.Fields.Add(&core.RelationField{
 			Name:          "from_book",
-			CollectionId:  "books",
+			CollectionId:  books.Id,
 			CascadeDelete: true,
 			MaxSelect:     1,
 			Required:      true,
 		})
 		bookLinks.Fields.Add(&core.RelationField{
 			Name:          "to_book",
-			CollectionId:  "books",
+			CollectionId:  books.Id,
 			CascadeDelete: true,
 			MaxSelect:     1,
 			Required:      true,

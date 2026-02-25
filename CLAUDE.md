@@ -6,37 +6,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Rosslib is a Goodreads alternative. It has two services:
 
-- `api/` — Go REST API (Gin framework) on `:8080`
+- `api/` — Go API built on PocketBase, runs on `:8090` (mapped to `:8091` on host)
 - `webapp/` — Next.js 15 frontend on `:3000`
 
-Backing services: PostgreSQL, Redis, Meilisearch, MinIO (S3-compatible object store). Managed infrastructure on a single AWS EC2 instance via Terraform (`infra/`).
+No external backing services needed — PocketBase bundles SQLite, auth, and file storage.
 
 ## Local Dev
 
 ```bash
-cp .env.example .env
-docker compose up          # starts postgres, redis, meilisearch, minio
-cd api && go run .         # Go API on :8080 (or use `air` for hot reload)
-cd webapp && npm run dev   # Next.js on :3000
+task restart                # build & start both services via docker compose
+docker compose logs -f      # watch logs
 ```
 
-The `docker-compose.yml` also includes `api` and `webapp` services if you want to run everything in Docker. For active development, run the API and webapp directly.
+- API: `http://localhost:8091` (host) / `http://api:8090` (inter-container)
+- PocketBase admin: `http://localhost:8091/_/`
+- Webapp: `http://localhost:3000`
+
+Data is persisted in the `pb_data` Docker volume.
 
 ## Commands
 
-### API (Go)
+### API (Go / PocketBase)
 
 ```bash
 cd api
-go run .          # run the server
-go test ./...     # run all tests
 go build .        # build binary
+go test ./...     # run all tests
 ```
 
-Hot reload with `air` (config at `api/.air.toml`):
-```bash
-cd api && air
-```
+The API runs inside Docker via `docker compose`. The Dockerfile builds a static binary and runs `./pocketbase serve --http=0.0.0.0:8090`.
 
 ### Webapp (Next.js)
 
@@ -50,21 +48,31 @@ npx tsc --noEmit  # typecheck
 
 ## Architecture
 
-### API Structure (`api/internal/`)
+### API Structure (`api/`)
 
-Each package follows a handler pattern — `NewHandler(pool)` returns a struct with methods registered as Gin route handlers. The `pool` is a `pgxpool.Pool` (pgx v5) passed through from `main`.
+PocketBase-based API. Routes are registered in `main.go` with three groups:
+- **Public** — book search/lookup, user profiles, threads (GET)
+- **Authenticated** — user operations (account, books, tags, shelves, follows, feed, export); uses `apis.RequireAuth()`
+- **Admin** — moderator-only (ghost management, link edit review)
 
-- `auth/` — registration, login, Google OAuth, JWT issuance (30-day `httpOnly` cookie named `token`)
-- `books/` — book search (Meilisearch + Open Library hybrid), lookup proxy; upserts into local `books` table
-- `search/` — Meilisearch client wrapper; indexes books on startup and upsert
-- `collections/` — shelves CRUD; enforces mutual exclusivity within `exclusive_group`
-- `imports/` — Goodreads CSV import (preview + commit); 5-worker goroutine pool for OL lookups
-- `users/` — profile, follow/unfollow, user search
-- `middleware/` — `Auth(secret)` (required) and `OptionalAuth(secret)` Gin middlewares
-- `db/` — `db.go` (connection pool), `schema.go` (idempotent `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE ADD COLUMN IF NOT EXISTS` run at startup via `db.Migrate`)
-- `server/` — route registration in `NewRouter`
+Handler files in `api/handlers/`:
+- `auth.go` — login, registration
+- `books.go` — search, lookup, details, editions, stats, ratings
+- `userbooks.go` — user book management (add, update, delete, status)
+- `users.go` — profiles, search, reviews, shelves, activity
+- `collections.go` — shelves/collections CRUD
+- `tags.go` — tag key/value management
+- `threads.go` — discussion threads and comments
+- `links.go` — book links and voting
+- `imports.go` — Goodreads CSV import
+- `notifications.go` — notification handling
+- `activity.go` — activity tracking
+- `genreratings.go` — genre-based ratings
+- `ghosts.go` — ghost user seeding/simulation
+- `middleware.go` — auth middleware
+- `helpers.go` — utility functions
 
-Routes are split into public and `authed` groups (the latter uses `middleware.Auth`).
+Migrations in `api/migrations/` define the PocketBase collections (schema).
 
 ### Webapp Structure (`webapp/src/`)
 
@@ -72,50 +80,26 @@ Routes are split into public and `authed` groups (the latter uses `middleware.Au
   - `[username]/` — public profile; `[username]/shelves/[slug]` for shelf pages
   - `api/` — Next.js route handlers that proxy to the Go API (forwarding the `token` cookie)
   - `search/`, `login/`, `register/`, `settings/`, `users/`, `books/`
-- `components/` — shared React components (`nav.tsx`, `import-form.tsx`, `shelf-book-grid.tsx`, `shelf-picker.tsx`, etc.)
+- `components/` — shared React components
 - `lib/auth.ts` — server-side JWT decode from cookie (`getUser()`, `getToken()`)
 
-The webapp proxies API calls through its own Next.js route handlers (`app/api/`), so the browser never talks directly to `:8080`.
+The webapp proxies API calls through its own Next.js route handlers (`app/api/`), so the browser never talks directly to the API.
 
-### Data Model (key tables)
+### Data Model (key collections)
 
-- `users` — accounts; bcrypt passwords (nullable for Google OAuth-only); optional `google_id`; `email_verified` (bool, default false; true for Google OAuth); soft-delete via `deleted_at`
-- `books` — global catalog keyed by `open_library_id` (bare OL work ID, e.g. `OL82592W`); upserted on first add
-- `collections` — named lists per user; `is_exclusive` + `exclusive_group` enforce mutual exclusivity (the three default shelves share `exclusive_group = 'read_status'`)
-- `collection_items` — books in collections; holds `rating`, `review_text`, `spoiler`, `date_read`, `date_added`
-- `follows` — asymmetric social graph; `status` is `'active'` or `'pending'`
-
-Schema is applied idempotently at API startup via `db.Migrate`. No migration tool — new columns use `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
+- `users` — PocketBase auth collection; extended with `bio`, `is_private`, `display_name`, `avatar`, etc.
+- `books` — global catalog keyed by `open_library_id`
+- `collections` — named lists per user; `is_exclusive` + `exclusive_group` enforce mutual exclusivity
+- `collection_items` — books in collections; holds `rating`, `review_text`, `spoiler`, `date_read`
+- `user_books` — per-user book state (rating, review, progress, dates)
+- `follows` — asymmetric social graph (`active` / `pending`)
+- `tag_keys` / `tag_values` / `book_tag_values` — user-defined tagging system
+- `threads` / `thread_comments` — book discussion threads
+- `book_links` / `book_link_votes` / `book_link_edits` — community book relationships
 
 ### Environment Variables
 
-Defined in `.env` (copy from `.env.example`):
-
-| Variable | Purpose |
-|---|---|
-| `POSTGRES_USER/PASSWORD/DB` | PostgreSQL credentials |
-| `MEILI_MASTER_KEY` | Meilisearch master key |
-| `MEILI_URL` | Meilisearch endpoint (default `http://localhost:7700`) |
-| `JWT_SECRET` | Signs JWTs |
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID (API) |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth client ID (webapp, enables Google sign-in buttons) |
-| `NEXT_PUBLIC_URL` | Webapp public URL for OAuth redirects (default `http://localhost:3000`) |
-| `SMTP_HOST` | SMTP server hostname (optional; leave blank to disable reset emails) |
-| `SMTP_PORT` | SMTP server port (default `587`) |
-| `SMTP_USER` | SMTP username |
-| `SMTP_PASSWORD` | SMTP password |
-| `SMTP_FROM` | Sender email address for reset emails |
-| `WEBAPP_URL` | Webapp public URL used by the API for password reset links (default `http://localhost:3000`) |
-
-The API reads `DATABASE_URL`, `REDIS_URL`, `PORT`, `JWT_SECRET`, `MEILI_URL`, `MEILI_MASTER_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, and `WEBAPP_URL` from environment. The webapp reads `API_URL` (server-side), `NEXT_PUBLIC_API_URL` (browser-side), `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `NEXT_PUBLIC_URL`.
-
-## CI/CD
-
-`.github/workflows/deploy.yml` runs on push to `main`:
-1. `test` — `go test ./...`, `tsc --noEmit`, `npm run lint` (also on PRs)
-2. `build-push` — builds images, pushes to GHCR tagged with commit SHA + `latest`
-3. `deploy` — copies `docker-compose.prod.yml` to EC2, pulls images, restarts
+The webapp reads `API_URL` (server-side, default `http://api:8090`) and `NEXT_PUBLIC_API_URL` (browser-side, default `http://localhost:8091`). These are set in `docker-compose.yml`.
 
 ## Docs
 
