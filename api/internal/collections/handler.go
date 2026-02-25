@@ -1059,6 +1059,243 @@ func (h *Handler) ExportCSV(c *gin.Context) {
 	w.Flush()
 }
 
+// ── Set Operations ────────────────────────────────────────────────────────────
+
+type setOperationRequest struct {
+	CollectionA string `json:"collection_a" binding:"required"`
+	CollectionB string `json:"collection_b" binding:"required"`
+	Operation   string `json:"operation"    binding:"required"` // "union", "intersection", "difference"
+}
+
+type setOperationResponse struct {
+	Operation   string            `json:"operation"`
+	CollectionA string            `json:"collection_a"`
+	CollectionB string            `json:"collection_b"`
+	ResultCount int               `json:"result_count"`
+	Books       []shelfDetailBook `json:"books"`
+}
+
+// SetOperation - POST /me/shelves/set-operation (authed)
+// Computes union, intersection, or difference between two of the user's collections.
+func (h *Handler) SetOperation(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+
+	var req setOperationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.Operation != "union" && req.Operation != "intersection" && req.Operation != "difference" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "operation must be 'union', 'intersection', or 'difference'"})
+		return
+	}
+
+	// Verify both collections belong to the user
+	var countOwned int
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT COUNT(*) FROM collections WHERE id = ANY($1) AND user_id = $2`,
+		[]string{req.CollectionA, req.CollectionB}, userID,
+	).Scan(&countOwned)
+	if err != nil || countOwned < 2 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "one or both collections not found"})
+		return
+	}
+
+	var query string
+	var args []interface{}
+	switch req.Operation {
+	case "union":
+		query = `SELECT DISTINCT ON (b.id) b.id, b.open_library_id, b.title, b.cover_url, ci.added_at, ci.rating
+			FROM collection_items ci
+			JOIN books b ON b.id = ci.book_id
+			WHERE ci.collection_id = ANY($1)
+			ORDER BY b.id, ci.added_at DESC`
+		args = []interface{}{[]string{req.CollectionA, req.CollectionB}}
+	case "intersection":
+		query = `SELECT b.id, b.open_library_id, b.title, b.cover_url, ci_a.added_at, ci_a.rating
+			FROM collection_items ci_a
+			JOIN collection_items ci_b ON ci_a.book_id = ci_b.book_id
+			JOIN books b ON b.id = ci_a.book_id
+			WHERE ci_a.collection_id = $1 AND ci_b.collection_id = $2
+			ORDER BY ci_a.added_at DESC`
+		args = []interface{}{req.CollectionA, req.CollectionB}
+	case "difference":
+		query = `SELECT b.id, b.open_library_id, b.title, b.cover_url, ci.added_at, ci.rating
+			FROM collection_items ci
+			JOIN books b ON b.id = ci.book_id
+			WHERE ci.collection_id = $1
+			  AND NOT EXISTS (
+				SELECT 1 FROM collection_items ci2
+				WHERE ci2.collection_id = $2 AND ci2.book_id = ci.book_id
+			  )
+			ORDER BY ci.added_at DESC`
+		args = []interface{}{req.CollectionA, req.CollectionB}
+	}
+
+	rows, queryErr := h.pool.Query(c.Request.Context(), query, args...)
+	if queryErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	books := []shelfDetailBook{}
+	for rows.Next() {
+		var book shelfDetailBook
+		var addedAt time.Time
+		if err := rows.Scan(&book.BookID, &book.OpenLibraryID, &book.Title, &book.CoverURL, &addedAt, &book.Rating); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		book.AddedAt = addedAt.Format(time.RFC3339)
+		books = append(books, book)
+	}
+
+	c.JSON(http.StatusOK, setOperationResponse{
+		Operation:   req.Operation,
+		CollectionA: req.CollectionA,
+		CollectionB: req.CollectionB,
+		ResultCount: len(books),
+		Books:       books,
+	})
+}
+
+// SaveSetOperation - POST /me/shelves/set-operation/save (authed)
+// Computes the set operation and saves the result as a new collection.
+func (h *Handler) SaveSetOperation(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+
+	var req struct {
+		CollectionA string `json:"collection_a" binding:"required"`
+		CollectionB string `json:"collection_b" binding:"required"`
+		Operation   string `json:"operation"    binding:"required"`
+		Name        string `json:"name"         binding:"required,max=255"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.Operation != "union" && req.Operation != "intersection" && req.Operation != "difference" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "operation must be 'union', 'intersection', or 'difference'"})
+		return
+	}
+
+	// Verify both collections belong to the user
+	var countOwned int
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT COUNT(*) FROM collections WHERE id = ANY($1) AND user_id = $2`,
+		[]string{req.CollectionA, req.CollectionB}, userID,
+	).Scan(&countOwned)
+	if err != nil || countOwned < 2 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "one or both collections not found"})
+		return
+	}
+
+	slug := slugify(req.Name)
+	if slug == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name produces an empty slug"})
+		return
+	}
+
+	var existing int
+	_ = h.pool.QueryRow(c.Request.Context(),
+		`SELECT COUNT(*) FROM collections WHERE user_id = $1 AND slug = $2`,
+		userID, slug,
+	).Scan(&existing)
+	if existing > 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "a shelf with that name already exists"})
+		return
+	}
+
+	// Get book IDs via set operation
+	var bookQuery string
+	var bookArgs []interface{}
+	switch req.Operation {
+	case "union":
+		bookQuery = `SELECT DISTINCT ci.book_id
+			FROM collection_items ci
+			WHERE ci.collection_id = ANY($1)`
+		bookArgs = []interface{}{[]string{req.CollectionA, req.CollectionB}}
+	case "intersection":
+		bookQuery = `SELECT ci_a.book_id
+			FROM collection_items ci_a
+			JOIN collection_items ci_b ON ci_a.book_id = ci_b.book_id
+			WHERE ci_a.collection_id = $1 AND ci_b.collection_id = $2`
+		bookArgs = []interface{}{req.CollectionA, req.CollectionB}
+	case "difference":
+		bookQuery = `SELECT ci.book_id
+			FROM collection_items ci
+			WHERE ci.collection_id = $1
+			  AND NOT EXISTS (
+				SELECT 1 FROM collection_items ci2
+				WHERE ci2.collection_id = $2 AND ci2.book_id = ci.book_id
+			  )`
+		bookArgs = []interface{}{req.CollectionA, req.CollectionB}
+	}
+
+	var bookIDs []string
+	bookRows, queryErr := h.pool.Query(c.Request.Context(), bookQuery, bookArgs...)
+	if queryErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	for bookRows.Next() {
+		var id string
+		if err := bookRows.Scan(&id); err != nil {
+			bookRows.Close()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		bookIDs = append(bookIDs, id)
+	}
+	bookRows.Close()
+
+	// Create the new collection and add all books in a transaction
+	tx, err := h.pool.Begin(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer tx.Rollback(c.Request.Context()) //nolint:errcheck
+
+	var newCollID string
+	err = tx.QueryRow(c.Request.Context(),
+		`INSERT INTO collections (user_id, name, slug, is_exclusive, collection_type)
+		 VALUES ($1, $2, $3, false, 'shelf')
+		 RETURNING id`,
+		userID, req.Name, slug,
+	).Scan(&newCollID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	for _, bookID := range bookIDs {
+		_, err = tx.Exec(c.Request.Context(),
+			`INSERT INTO collection_items (collection_id, book_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+			newCollID, bookID,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+	}
+
+	if err := tx.Commit(c.Request.Context()); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"id":         newCollID,
+		"name":       req.Name,
+		"slug":       slug,
+		"book_count": len(bookIDs),
+	})
+}
+
 func derefStr(s *string) string {
 	if s == nil {
 		return ""

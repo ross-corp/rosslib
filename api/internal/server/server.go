@@ -128,6 +128,8 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	authed.GET("/me/export/csv", collectionsHandler.ExportCSV)
 	authed.GET("/me/shelves", collectionsHandler.GetMyShelves)
 	authed.POST("/me/shelves", collectionsHandler.CreateShelf)
+	authed.POST("/me/shelves/set-operation", collectionsHandler.SetOperation)
+	authed.POST("/me/shelves/set-operation/save", collectionsHandler.SaveSetOperation)
 	authed.PATCH("/me/shelves/:id", collectionsHandler.UpdateShelf)
 	authed.DELETE("/me/shelves/:id", collectionsHandler.DeleteShelf)
 	authed.POST("/shelves/:shelfId/books", collectionsHandler.AddBookToShelf)

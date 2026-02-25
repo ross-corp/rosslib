@@ -2425,6 +2425,134 @@ paths:
               schema:
                 $ref: '#/components/schemas/Ok'
 
+  /me/shelves/set-operation:
+    post:
+      summary: Compute set operation between two collections
+      description: >
+        Returns the union, intersection, or difference of two collections belonging to the authenticated user.
+        Union: books in either collection.
+        Intersection: books in both collections.
+        Difference: books in collection_a but not in collection_b.
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [collection_a, collection_b, operation]
+              properties:
+                collection_a:
+                  type: string
+                  format: uuid
+                  description: ID of the first collection
+                collection_b:
+                  type: string
+                  format: uuid
+                  description: ID of the second collection
+                operation:
+                  type: string
+                  enum: [union, intersection, difference]
+      responses:
+        "200":
+          description: Set operation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  operation:
+                    type: string
+                  collection_a:
+                    type: string
+                  collection_b:
+                    type: string
+                  result_count:
+                    type: integer
+                  books:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShelfDetailBook'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: One or both collections not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /me/shelves/set-operation/save:
+    post:
+      summary: Compute set operation and save result as a new collection
+      description: >
+        Computes the set operation and creates a new shelf containing the resulting books.
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [collection_a, collection_b, operation, name]
+              properties:
+                collection_a:
+                  type: string
+                  format: uuid
+                collection_b:
+                  type: string
+                  format: uuid
+                operation:
+                  type: string
+                  enum: [union, intersection, difference]
+                name:
+                  type: string
+                  maxLength: 255
+                  description: Name for the new collection
+      responses:
+        "201":
+          description: Collection created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  slug:
+                    type: string
+                  book_count:
+                    type: integer
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: One or both collections not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "409":
+          description: Duplicate slug
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /shelves/{shelfId}/books:
     post:
       summary: Add a book to a shelf

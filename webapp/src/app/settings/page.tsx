@@ -66,6 +66,12 @@ export default async function SettingsPage() {
               Export to CSV
             </Link>
             <Link
+              href="/library/compare"
+              className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
+            >
+              Compare lists
+            </Link>
+            <Link
               href="/settings/ghost-activity"
               className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
             >

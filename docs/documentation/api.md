@@ -502,6 +502,33 @@ Rename or toggle visibility. Accepts `{ name?, is_public? }`.
 
 Delete a custom shelf. Returns 403 if `exclusive_group = 'read_status'` (default shelves cannot be deleted).
 
+### `POST /me/shelves/set-operation`  *(auth required)*
+
+Compute a set operation (union, intersection, or difference) between two collections. Both must belong to the authenticated user.
+
+```json
+{
+  "collection_a": "<uuid>",
+  "collection_b": "<uuid>",
+  "operation": "intersection"
+}
+```
+
+Returns `{ operation, collection_a, collection_b, result_count, books[] }`.
+
+### `POST /me/shelves/set-operation/save`  *(auth required)*
+
+Same as above, but also saves the result as a new shelf. Accepts an additional `name` field. Returns `{ id, name, slug, book_count }`.
+
+```json
+{
+  "collection_a": "<uuid>",
+  "collection_b": "<uuid>",
+  "operation": "union",
+  "name": "Combined Reading"
+}
+```
+
 ### `POST /shelves/:shelfId/books`  *(auth required)*
 
 Add a book to a shelf. Upserts the book into the global `books` catalog. For exclusive shelves, removes the book from all other shelves in the same `exclusive_group` for this user.

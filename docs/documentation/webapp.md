@@ -77,6 +77,7 @@ webapp/src/app/
 │   ├── page.tsx                    profile settings
 │   ├── import/page.tsx             Goodreads CSV import
 │   └── tags/page.tsx               label category management
+├── library/compare/page.tsx        compare lists (set operations)
 ├── notifications/page.tsx          notification center
 ├── admin/page.tsx                 admin panel (moderator only)
 ├── [username]/
@@ -93,6 +94,8 @@ webapp/src/app/
     ├── users/me/route.ts
     ├── users/[username]/follow/route.ts
     ├── me/shelves/route.ts
+    ├── me/shelves/set-operation/route.ts
+    ├── me/shelves/set-operation/save/route.ts
     ├── me/tag-keys/route.ts
     ├── me/tag-keys/[keyId]/route.ts
     ├── me/tag-keys/[keyId]/values/route.ts
@@ -214,6 +217,10 @@ Client component for genre dimension ratings on book detail pages. Shows aggrega
 ### `StarRating` (`components/star-rating.tsx`)
 
 Read-only star display used on shelf book cards.
+
+### `SetOperationForm` (`components/set-operation-form.tsx`)
+
+Client component on `/library/compare`. Two collection dropdown selectors, operation picker (union/intersection/difference) with descriptions, compare button, result book grid with covers and ratings, and "Save as new list" form. Calls `POST /api/me/shelves/set-operation` to compute and `POST /api/me/shelves/set-operation/save` to persist.
 
 ---
 
