@@ -1,8 +1,6 @@
 # Features
 
-Backlog of all things we need #todo
-
-Once we're further along we'll move to GH projects. this is fine for now
+Backlog of all things we need #todo which are small enough to knock out at random with little additional thinking. note that this doc can get thrashed by AI so watch out
 
 ## UNSORTED
 
