@@ -187,6 +187,34 @@ Proxies to Open Library's author search API. Returns up to 20 results.
 
 `birth_date`, `death_date`, `top_work`, `top_subjects`, and `photo_url` may be null.
 
+### `POST /authors/:authorKey/follow`  *(auth required)*
+
+Follow an author. Accepts optional `{ "author_name": "..." }` to cache the display name.
+
+### `DELETE /authors/:authorKey/follow`  *(auth required)*
+
+Unfollow an author.
+
+### `GET /authors/:authorKey/follow`  *(auth required)*
+
+Check if you follow an author. Returns `{ "following": true/false }`.
+
+### `GET /me/followed-authors`  *(auth required)*
+
+List authors you follow.
+
+```json
+{
+  "authors": [
+    {
+      "author_key": "OL26320A",
+      "author_name": "J.R.R. Tolkien",
+      "created_at": "2026-02-25T14:00:00Z"
+    }
+  ]
+}
+```
+
 ---
 
 ## Users
@@ -585,9 +613,9 @@ Returns a chronological feed of activities from users the authenticated user fol
 }
 ```
 
-**Activity types:** `shelved`, `started_book`, `finished_book`, `rated`, `reviewed`, `created_thread`, `followed_user`, `created_link`.
+**Activity types:** `shelved`, `started_book`, `finished_book`, `rated`, `reviewed`, `created_thread`, `followed_user`, `followed_author`, `created_link`.
 
-Fields are conditional on type — `book` is null for `followed_user`, `target_user` is null for book-related activities, etc. `created_link` includes `link_type`, `to_book_ol_id`, and `to_book_title` for the target book.
+Fields are conditional on type — `book` is null for `followed_user`, `target_user` is null for book-related activities, etc. `created_link` includes `link_type`, `to_book_ol_id`, and `to_book_title` for the target book. `followed_author` includes `author_key` and `author_name` in the response.
 
 ### `GET /users/:username/activity`
 

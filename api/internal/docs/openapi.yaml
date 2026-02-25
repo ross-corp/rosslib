@@ -589,7 +589,7 @@ components:
           format: uuid
         type:
           type: string
-          enum: [shelved, started_book, finished_book, rated, reviewed, created_thread, followed_user, created_link]
+          enum: [shelved, started_book, finished_book, rated, reviewed, created_thread, followed_user, followed_author, created_link]
         created_at:
           type: string
           format: date-time
@@ -655,6 +655,14 @@ components:
           type: string
           nullable: true
           description: Title of the target book for created_link activities
+        author_key:
+          type: string
+          nullable: true
+          description: Open Library author key for followed_author activities
+        author_name:
+          type: string
+          nullable: true
+          description: Author name for followed_author activities
 
     FeedResponse:
       type: object
@@ -1283,6 +1291,102 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /authors/{authorKey}/follow:
+    get:
+      summary: Check if you follow an author
+      tags: [Authors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: authorKey
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Open Library author key (e.g. OL123A)"
+      responses:
+        "200":
+          description: Follow status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  following:
+                    type: boolean
+    post:
+      summary: Follow an author
+      tags: [Authors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: authorKey
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                author_name:
+                  type: string
+                  description: "Author display name (stored for feed display)"
+      responses:
+        "200":
+          description: Followed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+    delete:
+      summary: Unfollow an author
+      tags: [Authors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: authorKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Unfollowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+
+  /me/followed-authors:
+    get:
+      summary: List authors you follow
+      tags: [Authors]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Followed authors
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        author_key:
+                          type: string
+                        author_name:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
 
   /genres:
     get:

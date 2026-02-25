@@ -27,6 +27,8 @@ export type ActivityItem = {
   link_type?: string;
   to_book_ol_id?: string;
   to_book_title?: string;
+  author_key?: string;
+  author_name?: string;
 };
 
 export type FeedResponse = {
@@ -171,6 +173,22 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
             >
               {item.target_user.display_name || item.target_user.username}
             </Link>
+          )}
+        </>
+      );
+    case "followed_author":
+      return (
+        <>
+          followed author{" "}
+          {item.author_key ? (
+            <Link
+              href={`/authors/${item.author_key}`}
+              className="font-medium text-stone-900 hover:underline"
+            >
+              {item.author_name || item.author_key}
+            </Link>
+          ) : (
+            "an author"
           )}
         </>
       );

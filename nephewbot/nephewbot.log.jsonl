@@ -9,3 +9,6 @@
 {"timestamp":"2026-02-25T00:00:01-08:00","status":"ok","session_id":"75830377-65e6-42fe-89cf-dee565467295","summary":"Done! Here's a summary of what was completed:"}
 {"timestamp":"2026-02-25T00:03:58-08:00","status":"ok","session_id":"3cfa226a-4b50-4c85-b808-2b5ca26584d7","summary":"The plan is ready for your review. It adds a moderation queue to community links:"}
 {"timestamp":"2026-02-25T00:09:10-08:00","status":"ok","session_id":"49005966-c4c4-4f92-9c77-6df822b35441","summary":"Done. Here's a summary of what was implemented:"}
+{"timestamp":"2026-02-25T00:17:58-08:00","status":"ok","session_id":"c6b0a24c-408b-4a36-8659-dd069df5484a","summary":"Done. Here's what was implemented:"}
+{"timestamp":"2026-02-25T00:22:16-08:00","status":"ok","session_id":"59701a44-d185-4808-a0f9-fca2402d9eb2","summary":"The plan implements the **Genre Ratings** TODO item — users rate books on genre dimensions (1-10 scale) across 12 predefined genres (Fiction, Fantasy, Horror, etc.). The feature adds:"}
+{"timestamp":"2026-02-25T02:00:01-08:00","status":"ok","session_id":"3468fddb-4b14-4bfa-8d0d-1c7b78c23dc1","summary":""}

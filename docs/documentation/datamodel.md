@@ -222,7 +222,7 @@ Append-only event log for social feeds. Written fire-and-forget from handlers �
 |---|---|---|
 | id | uuid PK | `gen_random_uuid()` |
 | user_id | uuid FK → users | the actor |
-| activity_type | varchar(50) | `shelved`, `rated`, `reviewed`, `created_thread`, `followed_user` |
+| activity_type | varchar(50) | `shelved`, `rated`, `reviewed`, `created_thread`, `followed_user`, `followed_author`, `started_book`, `finished_book`, `created_link` |
 | book_id | uuid FK → books | nullable |
 | target_user_id | uuid FK → users | nullable; for `followed_user` |
 | collection_id | uuid FK → collections | nullable; for `shelved` |
@@ -299,6 +299,20 @@ Indexes: `status`, `book_link_id`.
 
 At least one of `proposed_type` or `proposed_note` must be non-null (enforced in application code). One pending edit per user per link (enforced in application code).
 
+### `author_follows`
+
+Users following Open Library authors. Authors are not stored locally — only the OL author key and a cached name are persisted.
+
+| Column | Type | Notes |
+|---|---|---|
+| user_id | uuid FK → users | |
+| author_key | varchar(50) | Open Library author ID (e.g. `OL23919A`) |
+| author_name | varchar(500) | cached display name; default `''` |
+| created_at | timestamptz | |
+
+PK: `(user_id, author_key)`
+Index: `author_key`
+
 ---
 
 ## Relationships
@@ -315,6 +329,7 @@ users ──< activities >── books, users, collections, threads
 users ──< book_links >── books  (from/to)
 users ──< book_link_votes >── book_links
 users ──< book_link_edits >── book_links  (proposed edits)
+users ──< author_follows     (OL author keys)
 ```
 
 ---

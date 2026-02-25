@@ -16,6 +16,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tristansaldanha/rosslib/api/internal/activity"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 	"github.com/tristansaldanha/rosslib/api/internal/search"
 )
@@ -1444,4 +1445,117 @@ func (h *Handler) GetAuthor(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, detail)
+}
+
+// ── Author follows ──────────────────────────────────────────────────────────
+
+// FollowAuthor creates an author follow for the current user.
+//
+// POST /authors/:authorKey/follow
+func (h *Handler) FollowAuthor(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	authorKey := c.Param("authorKey")
+
+	var body struct {
+		AuthorName string `json:"author_name"`
+	}
+	_ = c.ShouldBindJSON(&body)
+
+	_, err := h.pool.Exec(c.Request.Context(),
+		`INSERT INTO author_follows (user_id, author_key, author_name)
+		 VALUES ($1, $2, $3)
+		 ON CONFLICT (user_id, author_key) DO UPDATE SET author_name = EXCLUDED.author_name`,
+		userID, authorKey, body.AuthorName,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	activity.Record(c.Request.Context(), h.pool, userID, "followed_author",
+		nil, nil, nil, nil, map[string]string{
+			"author_key":  authorKey,
+			"author_name": body.AuthorName,
+		})
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// UnfollowAuthor removes an author follow for the current user.
+//
+// DELETE /authors/:authorKey/follow
+func (h *Handler) UnfollowAuthor(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	authorKey := c.Param("authorKey")
+
+	_, err := h.pool.Exec(c.Request.Context(),
+		`DELETE FROM author_follows WHERE user_id = $1 AND author_key = $2`,
+		userID, authorKey,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// GetAuthorFollowStatus checks whether the current user follows an author.
+//
+// GET /authors/:authorKey/follow
+func (h *Handler) GetAuthorFollowStatus(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	authorKey := c.Param("authorKey")
+
+	var exists bool
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT EXISTS(SELECT 1 FROM author_follows WHERE user_id = $1 AND author_key = $2)`,
+		userID, authorKey,
+	).Scan(&exists)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"following": exists})
+}
+
+type followedAuthor struct {
+	AuthorKey  string `json:"author_key"`
+	AuthorName string `json:"author_name"`
+	CreatedAt  string `json:"created_at"`
+}
+
+// GetFollowedAuthors returns the list of authors followed by the current user.
+//
+// GET /me/followed-authors
+func (h *Handler) GetFollowedAuthors(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+
+	rows, err := h.pool.Query(c.Request.Context(),
+		`SELECT author_key, author_name, created_at
+		 FROM author_follows
+		 WHERE user_id = $1
+		 ORDER BY created_at DESC`,
+		userID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	authors := []followedAuthor{}
+	for rows.Next() {
+		var a followedAuthor
+		var t time.Time
+		if err := rows.Scan(&a.AuthorKey, &a.AuthorName, &t); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		a.CreatedAt = t.Format(time.RFC3339)
+		authors = append(authors, a)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"authors": authors})
 }

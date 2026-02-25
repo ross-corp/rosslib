@@ -343,6 +343,18 @@ CREATE TABLE IF NOT EXISTS book_link_edits (
 
 CREATE INDEX IF NOT EXISTS idx_book_link_edits_status  ON book_link_edits (status);
 CREATE INDEX IF NOT EXISTS idx_book_link_edits_link_id ON book_link_edits (book_link_id);
+
+-- ── Author follows: users following OL authors ──────────────────────────────
+
+CREATE TABLE IF NOT EXISTS author_follows (
+	user_id     UUID        NOT NULL REFERENCES users(id),
+	author_key  VARCHAR(50) NOT NULL,
+	author_name VARCHAR(500) NOT NULL DEFAULT '',
+	created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	PRIMARY KEY (user_id, author_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_author_follows_author_key ON author_follows (author_key);
 `
 
 func Migrate(pool *pgxpool.Pool) error {

@@ -65,6 +65,8 @@ type activityItem struct {
 	LinkType     *string       `json:"link_type,omitempty"`
 	ToBookOLID   *string       `json:"to_book_ol_id,omitempty"`
 	ToBookTitle  *string       `json:"to_book_title,omitempty"`
+	AuthorKey    *string       `json:"author_key,omitempty"`
+	AuthorName   *string       `json:"author_name,omitempty"`
 }
 
 type feedResponse struct {
@@ -183,6 +185,12 @@ func (h *Handler) GetFeed(c *gin.Context) {
 			}
 			if v, ok := meta["to_book_title"]; ok {
 				item.ToBookTitle = &v
+			}
+			if v, ok := meta["author_key"]; ok {
+				item.AuthorKey = &v
+			}
+			if v, ok := meta["author_name"]; ok {
+				item.AuthorName = &v
 			}
 		}
 
@@ -320,6 +328,12 @@ func (h *Handler) GetUserActivity(c *gin.Context) {
 			}
 			if v, ok := meta["to_book_title"]; ok {
 				item.ToBookTitle = &v
+			}
+			if v, ok := meta["author_key"]; ok {
+				item.AuthorKey = &v
+			}
+			if v, ok := meta["author_name"]; ok {
+				item.AuthorName = &v
 			}
 		}
 
