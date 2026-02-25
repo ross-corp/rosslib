@@ -5,8 +5,8 @@ on:
     branches: [main]
 
 env:
-  API_IMAGE: ghcr.io/tristansaldanha/rosslib/api
-  WEBAPP_IMAGE: ghcr.io/tristansaldanha/rosslib/webapp
+  API_IMAGE: ghcr.io/ross-corp/rosslib/api
+  WEBAPP_IMAGE: ghcr.io/ross-corp/rosslib/webapp
 
 jobs:
   build-push:

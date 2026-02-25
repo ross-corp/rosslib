@@ -35,7 +35,7 @@ services:
     restart: unless-stopped
 
   api:
-    image: ghcr.io/tristansaldanha/rosslib/api:${IMAGE_TAG:-latest}
+    image: ghcr.io/ross-corp/rosslib/api:${IMAGE_TAG:-latest}
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
       REDIS_URL: redis://redis:6379
@@ -49,7 +49,7 @@ services:
     restart: unless-stopped
 
   webapp:
-    image: ghcr.io/tristansaldanha/rosslib/webapp:${IMAGE_TAG:-latest}
+    image: ghcr.io/ross-corp/rosslib/webapp:${IMAGE_TAG:-latest}
     environment:
       API_URL: http://api:8080
       NEXT_PUBLIC_API_URL: https://${DOMAIN}
