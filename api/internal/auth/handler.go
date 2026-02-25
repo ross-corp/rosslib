@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
@@ -75,13 +76,15 @@ func (h *Handler) Register(c *gin.Context) {
 	}
 	defer tx.Rollback(c.Request.Context()) //nolint:errcheck
 
+	emailAddr := strings.ToLower(strings.TrimSpace(req.Email))
+
 	var userID, username string
 	var isModerator bool
 	err = tx.QueryRow(c.Request.Context(),
-		`INSERT INTO users (username, email, password_hash)
-		 VALUES ($1, $2, $3)
+		`INSERT INTO users (username, email, password_hash, email_verified)
+		 VALUES ($1, $2, $3, false)
 		 RETURNING id, username, is_moderator`,
-		req.Username, strings.ToLower(strings.TrimSpace(req.Email)), string(hash),
+		req.Username, emailAddr, string(hash),
 	).Scan(&userID, &username, &isModerator)
 	if err != nil {
 		if strings.Contains(err.Error(), "unique") {
@@ -114,7 +117,10 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	token, err := h.signToken(userID, username, isModerator)
+	// Send verification email (fire-and-forget).
+	go h.sendVerificationEmail(userID, emailAddr)
+
+	token, err := h.signToken(userID, username, isModerator, false)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
@@ -132,11 +138,11 @@ func (h *Handler) Login(c *gin.Context) {
 
 	var userID, username string
 	var hash sql.NullString
-	var isModerator bool
+	var isModerator, emailVerified bool
 	err := h.pool.QueryRow(c.Request.Context(),
-		`SELECT id, username, password_hash, is_moderator FROM users WHERE email = $1 AND deleted_at IS NULL`,
+		`SELECT id, username, password_hash, is_moderator, email_verified FROM users WHERE email = $1 AND deleted_at IS NULL`,
 		strings.ToLower(strings.TrimSpace(req.Email)),
-	).Scan(&userID, &username, &hash, &isModerator)
+	).Scan(&userID, &username, &hash, &isModerator, &emailVerified)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid email or password"})
 		return
@@ -152,7 +158,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.signToken(userID, username, isModerator)
+	token, err := h.signToken(userID, username, isModerator, emailVerified)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
@@ -177,15 +183,15 @@ func (h *Handler) GoogleLogin(c *gin.Context) {
 
 	// Try to find existing user by google_id.
 	var userID, username string
-	var isModerator bool
+	var isModerator, emailVerified bool
 	err := h.pool.QueryRow(c.Request.Context(),
-		`SELECT id, username, is_moderator FROM users WHERE google_id = $1 AND deleted_at IS NULL`,
+		`SELECT id, username, is_moderator, email_verified FROM users WHERE google_id = $1 AND deleted_at IS NULL`,
 		req.GoogleID,
-	).Scan(&userID, &username, &isModerator)
+	).Scan(&userID, &username, &isModerator, &emailVerified)
 
 	if err == nil {
 		// Existing Google user — issue token.
-		token, err := h.signToken(userID, username, isModerator)
+		token, err := h.signToken(userID, username, isModerator, emailVerified)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			return
@@ -196,19 +202,19 @@ func (h *Handler) GoogleLogin(c *gin.Context) {
 
 	// Check if a user with this email already exists (link Google to existing account).
 	err = h.pool.QueryRow(c.Request.Context(),
-		`SELECT id, username, is_moderator FROM users WHERE email = $1 AND deleted_at IS NULL`,
+		`SELECT id, username, is_moderator, email_verified FROM users WHERE email = $1 AND deleted_at IS NULL`,
 		req.Email,
-	).Scan(&userID, &username, &isModerator)
+	).Scan(&userID, &username, &isModerator, &emailVerified)
 
 	if err == nil {
-		// Link Google ID to existing email-based account.
+		// Link Google ID to existing email-based account and mark email as verified.
 		_, err = h.pool.Exec(c.Request.Context(),
-			`UPDATE users SET google_id = $1 WHERE id = $2`, req.GoogleID, userID)
+			`UPDATE users SET google_id = $1, email_verified = true WHERE id = $2`, req.GoogleID, userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			return
 		}
-		token, err := h.signToken(userID, username, isModerator)
+		token, err := h.signToken(userID, username, isModerator, true)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			return
@@ -238,8 +244,8 @@ func (h *Handler) GoogleLogin(c *gin.Context) {
 	candidateUsername := baseUsername
 	for i := 1; ; i++ {
 		err = tx.QueryRow(c.Request.Context(),
-			`INSERT INTO users (username, email, google_id, display_name)
-			 VALUES ($1, $2, $3, $4)
+			`INSERT INTO users (username, email, google_id, display_name, email_verified)
+			 VALUES ($1, $2, $3, $4, true)
 			 RETURNING id, username, is_moderator`,
 			candidateUsername, req.Email, req.GoogleID, req.Name,
 		).Scan(&userID, &username, &isModerator)
@@ -285,7 +291,7 @@ func (h *Handler) GoogleLogin(c *gin.Context) {
 		return
 	}
 
-	token, err := h.signToken(userID, username, isModerator)
+	token, err := h.signToken(userID, username, isModerator, true)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
@@ -303,10 +309,11 @@ func (h *Handler) GetAccountInfo(c *gin.Context) {
 	var hasGoogle bool
 	var hash sql.NullString
 	var googleID sql.NullString
+	var emailVerified bool
 	err := h.pool.QueryRow(c.Request.Context(),
-		`SELECT password_hash, google_id FROM users WHERE id = $1 AND deleted_at IS NULL`,
+		`SELECT password_hash, google_id, email_verified FROM users WHERE id = $1 AND deleted_at IS NULL`,
 		userID,
-	).Scan(&hash, &googleID)
+	).Scan(&hash, &googleID, &emailVerified)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
@@ -316,8 +323,9 @@ func (h *Handler) GetAccountInfo(c *gin.Context) {
 	hasGoogle = googleID.Valid && googleID.String != ""
 
 	c.JSON(http.StatusOK, gin.H{
-		"has_password": hasPassword,
-		"has_google":   hasGoogle,
+		"has_password":   hasPassword,
+		"has_google":     hasGoogle,
+		"email_verified": emailVerified,
 	})
 }
 
@@ -526,13 +534,159 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
-func (h *Handler) signToken(userID, username string, isModerator bool) (string, error) {
+func (h *Handler) signToken(userID, username string, isModerator, emailVerified bool) (string, error) {
 	claims := jwt.MapClaims{
-		"sub":          userID,
-		"username":     username,
-		"is_moderator": isModerator,
-		"exp":          time.Now().Add(30 * 24 * time.Hour).Unix(),
-		"iat":          time.Now().Unix(),
+		"sub":            userID,
+		"username":       username,
+		"is_moderator":   isModerator,
+		"email_verified": emailVerified,
+		"exp":            time.Now().Add(30 * 24 * time.Hour).Unix(),
+		"iat":            time.Now().Unix(),
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(h.jwtSecret)
+}
+
+// sendVerificationEmail generates a verification token and sends the email.
+// Intended to be called as a goroutine (fire-and-forget).
+func (h *Handler) sendVerificationEmail(userID, emailAddr string) {
+	if h.emailClient == nil {
+		log.Printf("verification email for %s skipped — SMTP not configured", emailAddr)
+		return
+	}
+
+	ctx := context.Background()
+
+	// Invalidate any existing unused tokens.
+	_, _ = h.pool.Exec(ctx,
+		`UPDATE email_verification_tokens SET used = true WHERE user_id = $1 AND used = false`, userID)
+
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		log.Printf("failed to generate verification token for %s: %v", emailAddr, err)
+		return
+	}
+	rawToken := hex.EncodeToString(tokenBytes)
+
+	tokenHash := sha256.Sum256([]byte(rawToken))
+	tokenHashHex := hex.EncodeToString(tokenHash[:])
+
+	expiresAt := time.Now().Add(24 * time.Hour)
+	_, err := h.pool.Exec(ctx,
+		`INSERT INTO email_verification_tokens (user_id, token_hash, expires_at)
+		 VALUES ($1, $2, $3)`,
+		userID, tokenHashHex, expiresAt,
+	)
+	if err != nil {
+		log.Printf("failed to store verification token for %s: %v", emailAddr, err)
+		return
+	}
+
+	verifyURL := fmt.Sprintf("%s/verify-email?token=%s", h.webappURL, rawToken)
+	if err := h.emailClient.SendVerification(emailAddr, verifyURL); err != nil {
+		log.Printf("failed to send verification email to %s: %v", emailAddr, err)
+	}
+}
+
+// VerifyEmail - POST /auth/verify-email
+// Validates the verification token and marks the user's email as verified.
+func (h *Handler) VerifyEmail(c *gin.Context) {
+	var req struct {
+		Token string `json:"token" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "token is required"})
+		return
+	}
+
+	tokenHash := sha256.Sum256([]byte(req.Token))
+	tokenHashHex := hex.EncodeToString(tokenHash[:])
+
+	var tokenID, userID string
+	var expiresAt time.Time
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT id, user_id, expires_at FROM email_verification_tokens
+		 WHERE token_hash = $1 AND used = false`,
+		tokenHashHex,
+	).Scan(&tokenID, &userID, &expiresAt)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or expired verification link"})
+		return
+	}
+
+	if time.Now().After(expiresAt) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or expired verification link"})
+		return
+	}
+
+	tx, err := h.pool.Begin(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer tx.Rollback(c.Request.Context()) //nolint:errcheck
+
+	_, err = tx.Exec(c.Request.Context(),
+		`UPDATE users SET email_verified = true WHERE id = $1`, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	_, err = tx.Exec(c.Request.Context(),
+		`UPDATE email_verification_tokens SET used = true WHERE id = $1`, tokenID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	if err = tx.Commit(c.Request.Context()); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	// Issue a fresh token with email_verified = true.
+	var username string
+	var isModerator bool
+	err = h.pool.QueryRow(c.Request.Context(),
+		`SELECT username, is_moderator FROM users WHERE id = $1`, userID,
+	).Scan(&username, &isModerator)
+	if err != nil {
+		// Verified, but can't issue token — they'll get one on next login.
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+		return
+	}
+
+	token, err := h.signToken(userID, username, isModerator, true)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+		return
+	}
+
+	c.JSON(http.StatusOK, authResponse{Token: token, UserID: userID, Username: username})
+}
+
+// ResendVerification - POST /auth/resend-verification (authed)
+// Generates a new verification token and sends the email.
+func (h *Handler) ResendVerification(c *gin.Context) {
+	userID := c.GetString("user_id")
+
+	var emailAddr string
+	var emailVerified bool
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT email, email_verified FROM users WHERE id = $1 AND deleted_at IS NULL`,
+		userID,
+	).Scan(&emailAddr, &emailVerified)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	if emailVerified {
+		c.JSON(http.StatusOK, gin.H{"ok": true, "message": "Email is already verified."})
+		return
+	}
+
+	go h.sendVerificationEmail(userID, emailAddr)
+
+	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "Verification email sent."})
 }

@@ -8,6 +8,8 @@ export default function RegisterPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [registered, setRegistered] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
   const googleEnabled = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -16,9 +18,10 @@ export default function RegisterPage() {
     setLoading(true);
 
     const form = e.currentTarget;
+    const emailValue = (form.elements.namedItem("email") as HTMLInputElement).value;
     const data = {
       username: (form.elements.namedItem("username") as HTMLInputElement).value,
-      email: (form.elements.namedItem("email") as HTMLInputElement).value,
+      email: emailValue,
       password: (form.elements.namedItem("password") as HTMLInputElement).value,
     };
 
@@ -36,8 +39,41 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push("/");
-    router.refresh();
+    setRegisteredEmail(emailValue);
+    setRegistered(true);
+  }
+
+  if (registered) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-4">
+        <div className="w-full max-w-sm text-center">
+          <Link href="/" className="font-semibold text-stone-900 text-xl">
+            rosslib
+          </Link>
+          <h1 className="mt-6 text-2xl font-bold text-stone-900">
+            Check your email
+          </h1>
+          <p className="mt-3 text-sm text-stone-500">
+            We sent a verification link to{" "}
+            <span className="font-medium text-stone-700">{registeredEmail}</span>.
+            Click the link to verify your email and get full access.
+          </p>
+          <p className="mt-4 text-xs text-stone-400">
+            {"Didn't"} receive it? Check your spam folder, or{" "}
+            <button
+              onClick={() => {
+                router.push("/");
+                router.refresh();
+              }}
+              className="text-stone-900 font-medium hover:underline"
+            >
+              continue to rosslib
+            </button>{" "}
+            and resend from your settings page.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

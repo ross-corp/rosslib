@@ -427,6 +427,23 @@ CREATE TABLE IF NOT EXISTS genre_ratings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_genre_ratings_book_id ON genre_ratings (book_id);
+
+-- ── Email verification ──────────────────────────────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+	id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+	user_id     UUID         NOT NULL REFERENCES users(id),
+	token_hash  TEXT         NOT NULL,
+	expires_at  TIMESTAMPTZ  NOT NULL,
+	used        BOOLEAN      NOT NULL DEFAULT false,
+	created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_user_id ON email_verification_tokens (user_id);
+
+-- Mark existing Google OAuth users as verified (Google has already verified their email).
+UPDATE users SET email_verified = true WHERE google_id IS NOT NULL AND email_verified = false;
 `
 
 func Migrate(pool *pgxpool.Pool) error {

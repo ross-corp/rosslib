@@ -11,8 +11,6 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## User Accounts
 
-- [ ] Email verification before full access (?)
-
 
 ## Social
 

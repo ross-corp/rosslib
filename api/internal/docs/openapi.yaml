@@ -912,6 +912,9 @@ paths:
   /auth/register:
     post:
       summary: Register a new account
+      description: |
+        Creates a new user account and sends a verification email. The returned
+        JWT has `email_verified: false` until the user clicks the verification link.
       tags: [Auth]
       requestBody:
         required: true
@@ -1094,10 +1097,66 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /auth/verify-email:
+    post:
+      summary: Verify email address
+      description: |
+        Validates the verification token from the email link and marks the user's
+        email as verified. Returns a fresh JWT with `email_verified: true`.
+        The token is single-use and expires after 24 hours.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  description: Verification token from the email link
+      responses:
+        "200":
+          description: Email verified successfully, returns fresh JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        "400":
+          description: Invalid or expired verification token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/resend-verification:
+    post:
+      summary: Resend verification email
+      description: |
+        Generates a new verification token and sends a verification email.
+        Requires authentication. Returns immediately; email is sent asynchronously.
+        No-ops if email is already verified.
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Verification email sent (or already verified)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  message:
+                    type: string
+
   /me/account:
     get:
       summary: Get account info
-      description: Returns whether the current user has a password set and whether Google is linked.
+      description: Returns whether the current user has a password set, whether Google is linked, and whether email is verified.
       tags: [Auth]
       security:
         - bearerAuth: []
@@ -1112,6 +1171,8 @@ paths:
                   has_password:
                     type: boolean
                   has_google:
+                    type: boolean
+                  email_verified:
                     type: boolean
 
   /me/password:

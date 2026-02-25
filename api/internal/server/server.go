@@ -59,6 +59,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	r.POST("/auth/google", authHandler.GoogleLogin)
 	r.POST("/auth/forgot-password", authHandler.ForgotPassword)
 	r.POST("/auth/reset-password", authHandler.ResetPassword)
+	r.POST("/auth/verify-email", authHandler.VerifyEmail)
 
 	secret := []byte(jwtSecret)
 
@@ -105,6 +106,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	authed.Use(middleware.Auth(secret))
 	authed.GET("/me/account", authHandler.GetAccountInfo)
 	authed.PUT("/me/password", authHandler.SetPassword)
+	authed.POST("/auth/resend-verification", authHandler.ResendVerification)
 	authed.GET("/me/feed", activityHandler.GetFeed)
 	authed.PATCH("/users/me", usersHandler.UpdateMe)
 	authed.POST("/me/avatar", usersHandler.UploadAvatar)

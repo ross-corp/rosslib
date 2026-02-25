@@ -79,7 +79,7 @@ The webapp proxies API calls through its own Next.js route handlers (`app/api/`)
 
 ### Data Model (key tables)
 
-- `users` — accounts; bcrypt passwords (nullable for Google OAuth-only); optional `google_id`; soft-delete via `deleted_at`
+- `users` — accounts; bcrypt passwords (nullable for Google OAuth-only); optional `google_id`; `email_verified` (bool, default false; true for Google OAuth); soft-delete via `deleted_at`
 - `books` — global catalog keyed by `open_library_id` (bare OL work ID, e.g. `OL82592W`); upserted on first add
 - `collections` — named lists per user; `is_exclusive` + `exclusive_group` enforce mutual exclusivity (the three default shelves share `exclusive_group = 'read_status'`)
 - `collection_items` — books in collections; holds `rating`, `review_text`, `spoiler`, `date_read`, `date_added`

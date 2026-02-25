@@ -41,3 +41,22 @@ If you didn't request this, you can safely ignore this email.`, resetURL)
 
 	return smtp.SendMail(addr, auth, c.from, []string{to}, []byte(msg))
 }
+
+func (c *Client) SendVerification(to, verifyURL string) error {
+	subject := "Verify your Rosslib email"
+	body := fmt.Sprintf(`Welcome to Rosslib!
+
+Click the link below to verify your email address. This link expires in 24 hours.
+
+%s
+
+If you didn't create this account, you can safely ignore this email.`, verifyURL)
+
+	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n%s",
+		c.from, to, subject, body)
+
+	addr := c.host + ":" + c.port
+	auth := smtp.PlainAuth("", c.user, c.password, c.host)
+
+	return smtp.SendMail(addr, auth, c.from, []string{to}, []byte(msg))
+}
