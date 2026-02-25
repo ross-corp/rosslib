@@ -62,6 +62,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	r.GET("/genres", booksHandler.GetGenres)
 	r.GET("/genres/:slug/books", booksHandler.GetGenreBooks)
 	r.GET("/books/:workId", booksHandler.GetBook)
+	r.GET("/books/:workId/editions", booksHandler.GetEditions)
 	r.GET("/books/:workId/reviews", middleware.OptionalAuth(secret), booksHandler.GetBookReviews)
 
 	usersHandler := users.NewHandler(pool, store)

@@ -23,7 +23,6 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## Search & Book Pages
 
-- [ ] Edition handling
 - [ ] Community links to related works on book pages
 
 ## Computed Lists

@@ -86,5 +86,10 @@ Items completed and moved out of todo.md.
 - [x] Chronological feed of followed-user activity (add to collection, review, rate, thread, follow, started/finished book).
 - [x] Cursor-based pagination; no algorithmic ranking.
 
+## Edition Handling
+- [x] Edition listing on book detail pages. `GET /books/:workId` now returns `editions` array (up to 50) and `edition_count` from Open Library. Each edition includes key, title, publisher, publish date, page count, ISBN, cover, format, and language.
+- [x] Standalone `GET /books/:workId/editions?limit=50&offset=0` endpoint for paginated edition browsing.
+- [x] Editions section on book detail page with collapsible list — shows 5 by default, expandable to all loaded, with "load more" for works with 50+ editions. Each edition card shows cover thumbnail, title, format badge, publisher, date, page count, language, and ISBN.
+
 ## API Docs
 - [x] OpenAPI 3.0 spec (`api/internal/docs/openapi.yaml`) documenting all ~60 routes with request/response schemas. Served at `GET /docs/openapi.yaml`. Interactive Swagger UI at `GET /docs` (CDN-hosted Swagger UI bundle). Spec embedded in the binary via `go:embed`.

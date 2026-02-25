@@ -63,6 +63,31 @@ Looks up a single book by ISBN via Open Library. Upserts the result into the loc
 
 Returns a book from the local `books` table by its bare OL work ID (e.g. `OL82592W`). 404 if not in the local catalog yet.
 
+### `GET /books/:workId/editions?limit=50&offset=0`
+
+Returns editions for a work from Open Library. Each edition includes cover, format, publisher, page count, ISBN, and language. Paginated via `limit` and `offset`.
+
+```json
+{
+  "total": 251,
+  "editions": [
+    {
+      "key": "OL58959679M",
+      "title": "The Lord of the Rings",
+      "publisher": "HarperCollins",
+      "publish_date": "20 December 2021",
+      "page_count": 1376,
+      "isbn": "9786555112511",
+      "cover_url": "https://covers.openlibrary.org/b/id/15024346-M.jpg",
+      "format": "Hardcover",
+      "language": "por"
+    }
+  ]
+}
+```
+
+`publisher`, `page_count`, `isbn`, and `cover_url` may be null. `format` and `language` may be empty strings when the data is unavailable. Editions are also included inline in the `GET /books/:workId` response (up to 50, with `edition_count` for the total).
+
 ### `GET /books/:workId/reviews`  *(optional auth)*
 
 Returns all community reviews for a book. Each user appears at most once (most recent review).

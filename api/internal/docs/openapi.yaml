@@ -161,6 +161,41 @@ components:
           type: array
           items:
             type: string
+        edition_count:
+          type: integer
+        editions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Edition'
+
+    Edition:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Open Library edition key (bare ID, e.g. OL58959679M)
+        title:
+          type: string
+        publisher:
+          type: string
+          nullable: true
+        publish_date:
+          type: string
+        page_count:
+          type: integer
+          nullable: true
+        isbn:
+          type: string
+          nullable: true
+        cover_url:
+          type: string
+          nullable: true
+        format:
+          type: string
+          description: Physical format (e.g. Hardcover, Paperback, eBook)
+        language:
+          type: string
+          description: 3-letter language code (e.g. eng, spa)
 
     AuthorResult:
       type: object
@@ -959,6 +994,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /books/{workId}/editions:
+    get:
+      summary: List editions of a work
+      description: Returns editions from Open Library with cover, format, publisher, page count, ISBN, and language.
+      tags: [Books]
+      parameters:
+        - name: workId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Paginated list of editions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  editions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Edition'
+        "404":
+          description: Work not found
 
   /books/{workId}/reviews:
     get:

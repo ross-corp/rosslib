@@ -7,9 +7,22 @@ import BookReviewEditor from "@/components/book-review-editor";
 import ReadingProgress from "@/components/reading-progress";
 import ThreadList from "@/components/thread-list";
 import ReviewText from "@/components/review-text";
+import EditionList from "@/components/edition-list";
 import { getUser, getToken } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
+
+type BookEdition = {
+  key: string;
+  title: string;
+  publisher: string | null;
+  publish_date: string;
+  page_count: number | null;
+  isbn: string | null;
+  cover_url: string | null;
+  format: string;
+  language: string;
+};
 
 type BookDetail = {
   key: string;
@@ -24,6 +37,8 @@ type BookDetail = {
   publisher: string | null;
   page_count: number | null;
   first_publish_year: number | null;
+  edition_count: number;
+  editions: BookEdition[] | null;
 };
 
 type BookReview = {
@@ -382,6 +397,20 @@ export default async function BookPage({
             </div>
           )}
         </section>
+
+        {/* ── Editions ── */}
+        {book.editions && book.editions.length > 0 && (
+          <section className="border-t border-stone-100 pt-8 mt-10">
+            <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
+              Editions{book.edition_count > 0 && ` (${book.edition_count})`}
+            </h2>
+            <EditionList
+              editions={book.editions}
+              totalEditions={book.edition_count}
+              workId={workId}
+            />
+          </section>
+        )}
 
         {/* ── Discussion threads ── */}
         <section className="border-t border-stone-100 pt-8 mt-10">

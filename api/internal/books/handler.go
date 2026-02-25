@@ -81,12 +81,22 @@ type olAuthor struct {
 }
 
 type olEdition struct {
-	Publishers   []string `json:"publishers"`
-	NumberOfPages *int    `json:"number_of_pages"`
-	PublishDate  string   `json:"publish_date"`
+	Key            string `json:"key"`
+	Title          string `json:"title"`
+	Publishers     []string `json:"publishers"`
+	NumberOfPages  *int     `json:"number_of_pages"`
+	PublishDate    string   `json:"publish_date"`
+	ISBN13         []string `json:"isbn_13"`
+	ISBN10         []string `json:"isbn_10"`
+	Covers         []int    `json:"covers"`
+	PhysicalFormat string   `json:"physical_format"`
+	Languages      []struct {
+		Key string `json:"key"`
+	} `json:"languages"`
 }
 
 type olEditionsResponse struct {
+	Size    int         `json:"size"`
 	Entries []olEdition `json:"entries"`
 }
 
@@ -109,21 +119,36 @@ type BookResult struct {
 	Subjects         []string `json:"subjects"`
 }
 
+// Edition is a single edition of a work returned to clients.
+type Edition struct {
+	Key            string  `json:"key"`
+	Title          string  `json:"title"`
+	Publisher      *string `json:"publisher"`
+	PublishDate    string  `json:"publish_date"`
+	PageCount      *int    `json:"page_count"`
+	ISBN           *string `json:"isbn"`
+	CoverURL       *string `json:"cover_url"`
+	Format         string  `json:"format"`
+	Language       string  `json:"language"`
+}
+
 // BookDetail is the full book detail shape returned to clients.
 type BookDetail struct {
-	Key               string   `json:"key"`
-	Title             string   `json:"title"`
-	Authors           []string `json:"authors"`
-	Description       *string  `json:"description"`
-	CoverURL          *string  `json:"cover_url"`
-	AverageRating     *float64 `json:"average_rating"`
-	RatingCount       int      `json:"rating_count"`
-	LocalReadsCount   int      `json:"local_reads_count"`
-	LocalWantToRead   int      `json:"local_want_to_read_count"`
-	Publisher         *string  `json:"publisher"`
-	PageCount         *int     `json:"page_count"`
-	FirstPublishYear  *int     `json:"first_publish_year"`
-	Subjects          []string `json:"subjects"`
+	Key               string    `json:"key"`
+	Title             string    `json:"title"`
+	Authors           []string  `json:"authors"`
+	Description       *string   `json:"description"`
+	CoverURL          *string   `json:"cover_url"`
+	AverageRating     *float64  `json:"average_rating"`
+	RatingCount       int       `json:"rating_count"`
+	LocalReadsCount   int       `json:"local_reads_count"`
+	LocalWantToRead   int       `json:"local_want_to_read_count"`
+	Publisher         *string   `json:"publisher"`
+	PageCount         *int      `json:"page_count"`
+	FirstPublishYear  *int      `json:"first_publish_year"`
+	Subjects          []string  `json:"subjects"`
+	EditionCount      int       `json:"edition_count"`
+	Editions          []Edition `json:"editions"`
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -422,7 +447,7 @@ func (h *Handler) GetBook(c *gin.Context) {
 
 	workURL := fmt.Sprintf("%s/works/%s.json", olBaseURL, workID)
 	ratingsURL := fmt.Sprintf("%s/works/%s/ratings.json", olBaseURL, workID)
-	editionsURL := fmt.Sprintf("%s/works/%s/editions.json?limit=5", olBaseURL, workID)
+	editionsURL := fmt.Sprintf("%s/works/%s/editions.json?limit=50", olBaseURL, workID)
 
 	// Fetch work, ratings, and editions concurrently.
 	type workResult struct {
@@ -571,8 +596,10 @@ func (h *Handler) GetBook(c *gin.Context) {
 		detail.CoverURL = &coverURL
 	}
 
-	// Extract edition metadata (publisher, page count) from the best edition.
+	// Extract edition metadata (publisher, page count) from the best edition
+	// and build the full editions list.
 	if er.err == nil {
+		detail.EditionCount = er.editions.Size
 		for _, ed := range er.editions.Entries {
 			if detail.Publisher == nil && len(ed.Publishers) > 0 {
 				detail.Publisher = &ed.Publishers[0]
@@ -580,10 +607,8 @@ func (h *Handler) GetBook(c *gin.Context) {
 			if detail.PageCount == nil && ed.NumberOfPages != nil && *ed.NumberOfPages > 0 {
 				detail.PageCount = ed.NumberOfPages
 			}
-			if detail.Publisher != nil && detail.PageCount != nil {
-				break
-			}
 		}
+		detail.Editions = convertEditions(er.editions.Entries)
 	}
 
 	// Extract first publish year from the work's first edition publish date.
@@ -618,6 +643,93 @@ func (h *Handler) GetBook(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, detail)
+}
+
+// ── Edition helpers ──────────────────────────────────────────────────────────
+
+// convertEditions maps raw OL edition entries to our client-facing Edition type.
+func convertEditions(entries []olEdition) []Edition {
+	editions := make([]Edition, 0, len(entries))
+	for _, ed := range entries {
+		e := Edition{
+			Key:         strings.TrimPrefix(ed.Key, "/books/"),
+			Title:       ed.Title,
+			PublishDate: ed.PublishDate,
+			PageCount:   ed.NumberOfPages,
+			Format:      ed.PhysicalFormat,
+		}
+		if len(ed.Publishers) > 0 {
+			e.Publisher = &ed.Publishers[0]
+		}
+		if len(ed.ISBN13) > 0 {
+			e.ISBN = &ed.ISBN13[0]
+		} else if len(ed.ISBN10) > 0 {
+			e.ISBN = &ed.ISBN10[0]
+		}
+		if len(ed.Covers) > 0 && ed.Covers[0] > 0 {
+			coverURL := fmt.Sprintf(olCoverMedURL, ed.Covers[0])
+			e.CoverURL = &coverURL
+		}
+		if len(ed.Languages) > 0 {
+			e.Language = strings.TrimPrefix(ed.Languages[0].Key, "/languages/")
+		}
+		editions = append(editions, e)
+	}
+	return editions
+}
+
+// GetEditions returns all editions for a work from Open Library.
+//
+// GET /books/:workId/editions?limit=50&offset=0
+func (h *Handler) GetEditions(c *gin.Context) {
+	workID := c.Param("workId")
+	if workID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "workId is required"})
+		return
+	}
+
+	limit := 50
+	if v := c.Query("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 100 {
+			limit = n
+		}
+	}
+	offset := 0
+	if v := c.Query("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+
+	apiURL := fmt.Sprintf("%s/works/%s/editions.json?limit=%d&offset=%d", olBaseURL, workID, limit, offset)
+	resp, err := http.Get(apiURL) //nolint:noctx
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to reach book service"})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		c.JSON(http.StatusNotFound, gin.H{"error": "work not found"})
+		return
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	var olResp olEditionsResponse
+	if err := json.Unmarshal(body, &olResp); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"total":    olResp.Size,
+		"editions": convertEditions(olResp.Entries),
+	})
 }
 
 // ── Genre browsing ───────────────────────────────────────────────────────────
