@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tristansaldanha/rosslib/api/internal/bookstats"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 	"github.com/tristansaldanha/rosslib/api/internal/privacy"
 )
@@ -486,6 +487,11 @@ func (h *Handler) SetBookTag(c *gin.Context) {
 		return
 	}
 
+	// Refresh book stats when a status tag changes (affects reads/want-to-read counts).
+	if keySlug == "status" {
+		go bookstats.Refresh(context.Background(), h.pool, bookID)
+	}
+
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -510,6 +516,15 @@ func (h *Handler) UnsetBookTag(c *gin.Context) {
 		return
 	}
 
+	// Refresh book stats if this was a status key change.
+	var keySlug string
+	_ = h.pool.QueryRow(c.Request.Context(),
+		`SELECT slug FROM tag_keys WHERE id = $1`, keyID,
+	).Scan(&keySlug)
+	if keySlug == "status" {
+		go bookstats.RefreshByOLID(context.Background(), h.pool, olID)
+	}
+
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -519,6 +534,7 @@ func (h *Handler) UnsetBookTag(c *gin.Context) {
 func (h *Handler) UnsetBookTagValue(c *gin.Context) {
 	userID := c.GetString(middleware.UserIDKey)
 	olID := c.Param("olId")
+	keyID := c.Param("keyId")
 	valueID := c.Param("valueId")
 
 	_, err := h.pool.Exec(c.Request.Context(),
@@ -533,6 +549,15 @@ func (h *Handler) UnsetBookTagValue(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
+	}
+
+	// Refresh book stats if this was a status key change.
+	var keySlug string
+	_ = h.pool.QueryRow(c.Request.Context(),
+		`SELECT slug FROM tag_keys WHERE id = $1`, keyID,
+	).Scan(&keySlug)
+	if keySlug == "status" {
+		go bookstats.RefreshByOLID(context.Background(), h.pool, olID)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})

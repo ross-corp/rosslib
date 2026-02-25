@@ -79,6 +79,27 @@ components:
           type: boolean
           example: true
 
+    BookStats:
+      type: object
+      properties:
+        reads_count:
+          type: integer
+          description: Number of users who have finished this book
+        want_to_read_count:
+          type: integer
+          description: Number of users who want to read this book
+        average_rating:
+          type: number
+          nullable: true
+          description: Average user rating (1-5 scale), null if no ratings
+        rating_count:
+          type: integer
+          description: Number of users who have rated this book
+        review_count:
+          type: integer
+          description: Number of users who have written a review
+      required: [reads_count, want_to_read_count, rating_count, review_count]
+
     Notification:
       type: object
       properties:
@@ -3567,6 +3588,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Ok"
+
+  /books/{workId}/stats:
+    get:
+      tags: [Books]
+      summary: Get precomputed aggregate stats for a book
+      description: |
+        Returns cached aggregate stats from the book_stats table. Stats are
+        updated asynchronously when users change statuses, ratings, or reviews.
+      parameters:
+        - name: workId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: OL82592W
+      responses:
+        "200":
+          description: Aggregate book stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookStats"
+        "404":
+          description: Book not found in local catalog
 
   /books/{workId}/genre-ratings:
     get:

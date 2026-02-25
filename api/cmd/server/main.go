@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/tristansaldanha/rosslib/api/internal/bookstats"
 	"github.com/tristansaldanha/rosslib/api/internal/config"
 	"github.com/tristansaldanha/rosslib/api/internal/db"
 	"github.com/tristansaldanha/rosslib/api/internal/email"
@@ -58,6 +59,9 @@ func main() {
 			}
 		}()
 	}
+
+	// Backfill precomputed book stats in the background.
+	go bookstats.BackfillAll(context.Background(), pool)
 
 	var emailClient *email.Client
 	if cfg.SMTPHost != "" {

@@ -378,6 +378,7 @@ users ──< password_reset_tokens  (password reset tokens)
 users ──< genre_ratings >── books  (per-user genre dimension scores)
 author_works_snapshot        (OL author key → work count snapshot)
 collections ──< computed_collections  (operation definition for live lists)
+books ──< book_stats               (precomputed aggregate stats)
 ```
 
 ### `genre_ratings`
@@ -435,6 +436,24 @@ Tokens for the forgot-password flow. Tokens are stored as SHA-256 hashes (not ra
 
 Index: `user_id`
 
+### `book_stats`
+
+Precomputed aggregate stats per book. Avoids expensive multi-join COUNT/AVG queries on hot paths (book detail page, etc.). Stats are refreshed asynchronously via fire-and-forget goroutines whenever a user changes a book's status, rating, or review. Backfilled for all books at API startup.
+
+| Column | Type | Notes |
+|---|---|---|
+| book_id | uuid PK FK → books | one row per book |
+| reads_count | int | users with "finished" status; default 0 |
+| want_to_read_count | int | users with "want-to-read" status; default 0 |
+| rating_sum | bigint | sum of all user ratings (1–5); default 0 |
+| rating_count | int | number of users who rated; default 0 |
+| review_count | int | number of users with non-empty review_text; default 0 |
+| updated_at | timestamptz | last refresh time |
+
+Average rating is computed as `rating_sum / rating_count` at query time.
+
+API: `GET /books/:workId/stats` returns all cached stats. `GET /books/:workId` reads `reads_count` and `want_to_read_count` from this table instead of running the expensive aggregate query.
+
 ---
 
 ## Planned tables (not yet in schema.go)
@@ -448,10 +467,6 @@ Author records and the book↔author join table. Currently authors are stored as
 ### `reviews`
 
 Standalone review table. The current model keeps rating and review on `user_books` (one per user per book), which already enforces uniqueness. A dedicated reviews table may be useful if reviews gain features like upvotes, replies, or rich formatting.
-
-### `book_stats`
-
-Precomputed aggregate stats (read count, average rating) to avoid expensive COUNT queries on hot paths.
 
 ### `book_edits`
 

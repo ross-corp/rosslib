@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/books"
+	"github.com/tristansaldanha/rosslib/api/internal/bookstats"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 	"github.com/tristansaldanha/rosslib/api/internal/search"
 	"github.com/tristansaldanha/rosslib/api/internal/tags"
@@ -538,6 +539,9 @@ func commitRow(ctx context.Context, pool *pgxpool.Pool, searchClient *search.Cli
 			return fmt.Errorf("set status label: %w", err)
 		}
 	}
+
+	// Refresh precomputed book stats.
+	go bookstats.Refresh(context.Background(), pool, bookID)
 
 	return nil
 }

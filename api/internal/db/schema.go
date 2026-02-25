@@ -464,6 +464,18 @@ CREATE TABLE IF NOT EXISTS computed_collections (
 );
 
 CREATE INDEX IF NOT EXISTS idx_computed_collections_collection_id ON computed_collections (collection_id);
+
+-- ── Book stats: precomputed aggregate stats per book ────────────────────────
+
+CREATE TABLE IF NOT EXISTS book_stats (
+	book_id            UUID         PRIMARY KEY REFERENCES books(id),
+	reads_count        INT          NOT NULL DEFAULT 0,
+	want_to_read_count INT          NOT NULL DEFAULT 0,
+	rating_sum         BIGINT       NOT NULL DEFAULT 0,
+	rating_count       INT          NOT NULL DEFAULT 0,
+	review_count       INT          NOT NULL DEFAULT 0,
+	updated_at         TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
 `
 
 func Migrate(pool *pgxpool.Pool) error {

@@ -157,6 +157,22 @@ Returns editions for a work from Open Library. Each edition includes cover, form
 
 `publisher`, `page_count`, `isbn`, and `cover_url` may be null. `format` and `language` may be empty strings when the data is unavailable. Editions are also included inline in the `GET /books/:workId` response (up to 50, with `edition_count` for the total).
 
+### `GET /books/:workId/stats`
+
+Returns precomputed aggregate stats for a book from the `book_stats` cache table. Stats are refreshed asynchronously when users change statuses, ratings, or reviews.
+
+```json
+{
+  "reads_count": 42,
+  "want_to_read_count": 15,
+  "average_rating": 4.2,
+  "rating_count": 30,
+  "review_count": 8
+}
+```
+
+`average_rating` is null when no users have rated the book. Returns 404 if the book is not in the local catalog.
+
 ### `GET /books/:workId/reviews`  *(optional auth)*
 
 Returns all community reviews for a book. Each user appears at most once (most recent review).

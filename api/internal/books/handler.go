@@ -628,21 +628,13 @@ func (h *Handler) GetBook(c *gin.Context) {
 		}
 	}
 
-	// Query local DB for read and want-to-read counts from user_books + status labels.
+	// Query precomputed book stats for read and want-to-read counts.
 	if h.pool != nil {
-		// We ignore error here since it's just enriching data
 		_ = h.pool.QueryRow(c.Request.Context(),
-			`SELECT
-			    COUNT(*) FILTER (WHERE tv.slug = 'finished')      AS reads_count,
-			    COUNT(*) FILTER (WHERE tv.slug = 'want-to-read')  AS want_count
-			 FROM user_books ub
-			 JOIN books b ON b.id = ub.book_id
-			 JOIN users u ON u.id = ub.user_id
-			 JOIN tag_keys tk ON tk.user_id = ub.user_id AND tk.slug = 'status'
-			 JOIN book_tag_values btv ON btv.user_id = ub.user_id AND btv.book_id = ub.book_id AND btv.tag_key_id = tk.id
-			 JOIN tag_values tv ON tv.id = btv.tag_value_id
-			 WHERE b.open_library_id = $1
-			   AND u.deleted_at IS NULL`,
+			`SELECT COALESCE(bs.reads_count, 0), COALESCE(bs.want_to_read_count, 0)
+			 FROM books b
+			 LEFT JOIN book_stats bs ON bs.book_id = b.id
+			 WHERE b.open_library_id = $1`,
 			workID,
 		).Scan(&detail.LocalReadsCount, &detail.LocalWantToRead)
 	}
@@ -1072,6 +1064,49 @@ func LookupBookByISBN(ctx context.Context, pool *pgxpool.Pool, isbn string, olCl
 	}
 
 	return result, nil
+}
+
+// GetBookStats returns precomputed aggregate stats for a book.
+//
+// GET /books/:workId/stats
+func (h *Handler) GetBookStats(c *gin.Context) {
+	workID := c.Param("workId")
+	if workID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "workId is required"})
+		return
+	}
+
+	var readsCount, wantToReadCount, ratingCount, reviewCount int
+	var ratingSum int64
+	err := h.pool.QueryRow(c.Request.Context(),
+		`SELECT COALESCE(bs.reads_count, 0),
+		        COALESCE(bs.want_to_read_count, 0),
+		        COALESCE(bs.rating_sum, 0),
+		        COALESCE(bs.rating_count, 0),
+		        COALESCE(bs.review_count, 0)
+		 FROM books b
+		 LEFT JOIN book_stats bs ON bs.book_id = b.id
+		 WHERE b.open_library_id = $1`,
+		workID,
+	).Scan(&readsCount, &wantToReadCount, &ratingSum, &ratingCount, &reviewCount)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "book not found"})
+		return
+	}
+
+	var avgRating *float64
+	if ratingCount > 0 {
+		avg := float64(ratingSum) / float64(ratingCount)
+		avgRating = &avg
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"reads_count":        readsCount,
+		"want_to_read_count": wantToReadCount,
+		"average_rating":     avgRating,
+		"rating_count":       ratingCount,
+		"review_count":       reviewCount,
+	})
 }
 
 // GetBookReviews returns all community reviews for a book from the local database.

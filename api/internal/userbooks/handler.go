@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tristansaldanha/rosslib/api/internal/activity"
+	"github.com/tristansaldanha/rosslib/api/internal/bookstats"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
 	"github.com/tristansaldanha/rosslib/api/internal/notifications"
 	"github.com/tristansaldanha/rosslib/api/internal/privacy"
@@ -91,11 +92,13 @@ func (h *Handler) AddBook(c *gin.Context) {
 	if req.StatusValueID != nil && *req.StatusValueID != "" {
 		if err := h.setStatusLabel(c.Request.Context(), userID, bookID, req.OpenLibraryID, *req.StatusValueID); err != nil {
 			// Non-fatal: book is added, status just wasn't set.
+			go bookstats.Refresh(context.Background(), h.pool, bookID)
 			c.JSON(http.StatusOK, gin.H{"ok": true, "warning": "book added but status not set"})
 			return
 		}
 	}
 
+	go bookstats.Refresh(context.Background(), h.pool, bookID)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -287,6 +290,11 @@ func (h *Handler) UpdateBook(c *gin.Context) {
 		activity.Record(c.Request.Context(), h.pool, userID, "rated", &bookID, nil, nil, nil, meta)
 	}
 
+	// Refresh precomputed book stats (rating/review may have changed).
+	if bookID != "" {
+		go bookstats.Refresh(context.Background(), h.pool, bookID)
+	}
+
 	// Notify followers of this book about new reviews.
 	if _, hasReview := raw["review_text"]; hasReview && bookID != "" {
 		var reviewText *string
@@ -351,6 +359,10 @@ func (h *Handler) RemoveBook(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
+	}
+
+	if bookID != "" {
+		go bookstats.Refresh(context.Background(), h.pool, bookID)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})
@@ -689,6 +701,9 @@ func (h *Handler) setStatusLabel(ctx context.Context, userID, bookID, olID, stat
 		activity.Record(ctx, h.pool, userID, activityType, &bookID, nil, nil, nil,
 			map[string]string{"status_name": statusName})
 	}
+
+	// Refresh precomputed book stats after status change.
+	go bookstats.Refresh(context.Background(), h.pool, bookID)
 
 	return nil
 }
