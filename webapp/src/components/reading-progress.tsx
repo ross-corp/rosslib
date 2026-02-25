@@ -7,6 +7,7 @@ type Props = {
   initialPages: number | null;
   initialPercent: number | null;
   pageCount: number | null;
+  initialDeviceTotalPages: number | null;
 };
 
 export default function ReadingProgress({
@@ -14,6 +15,7 @@ export default function ReadingProgress({
   initialPages,
   initialPercent,
   pageCount,
+  initialDeviceTotalPages,
 }: Props) {
   const [mode, setMode] = useState<"page" | "percent">(
     initialPages != null ? "page" : "percent"
@@ -23,10 +25,19 @@ export default function ReadingProgress({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  const [deviceTotalPages, setDeviceTotalPages] = useState(
+    initialDeviceTotalPages?.toString() ?? ""
+  );
+  const [editingDevice, setEditingDevice] = useState(false);
+  const [savingDevice, setSavingDevice] = useState(false);
+
+  // Effective total pages: prefer user's device page count, fall back to catalog
+  const effectiveTotal = initialDeviceTotalPages ?? pageCount;
+
   const currentPercent =
     initialPercent ??
-    (initialPages != null && pageCount
-      ? Math.min(100, Math.round((initialPages / pageCount) * 100))
+    (initialPages != null && effectiveTotal
+      ? Math.min(100, Math.round((initialPages / effectiveTotal) * 100))
       : null);
 
   async function saveProgress() {
@@ -42,9 +53,9 @@ export default function ReadingProgress({
         return;
       }
       body.progress_pages = p;
-      // Auto-calculate percent if page count is known
-      if (p != null && pageCount) {
-        body.progress_percent = Math.min(100, Math.round((p / pageCount) * 100));
+      // Auto-calculate percent using effective total
+      if (p != null && effectiveTotal) {
+        body.progress_percent = Math.min(100, Math.round((p / effectiveTotal) * 100));
       }
     } else {
       const pct = percent === "" ? null : parseInt(percent, 10);
@@ -72,6 +83,31 @@ export default function ReadingProgress({
     }
   }
 
+  async function saveDeviceTotalPages() {
+    setSavingDevice(true);
+    const dtp = deviceTotalPages === "" ? null : parseInt(deviceTotalPages, 10);
+    if (dtp !== null && (isNaN(dtp) || dtp < 1)) {
+      setMessage("Must be at least 1");
+      setSavingDevice(false);
+      return;
+    }
+
+    const res = await fetch(`/api/me/books/${openLibraryId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ device_total_pages: dtp }),
+    });
+
+    setSavingDevice(false);
+    if (res.ok) {
+      setEditingDevice(false);
+      // Reload to reflect new percentage calculations
+      window.location.reload();
+    } else {
+      setMessage("Failed to save");
+    }
+  }
+
   return (
     <div>
       {/* Progress bar */}
@@ -79,9 +115,9 @@ export default function ReadingProgress({
         <div className="mb-3">
           <div className="flex items-center justify-between text-xs text-stone-400 mb-1">
             <span>{currentPercent}% complete</span>
-            {initialPages != null && pageCount && (
+            {initialPages != null && effectiveTotal && (
               <span>
-                p. {initialPages} of {pageCount}
+                p. {initialPages} of {effectiveTotal}
               </span>
             )}
           </div>
@@ -126,7 +162,7 @@ export default function ReadingProgress({
             <input
               type="number"
               min={0}
-              max={pageCount ?? undefined}
+              max={effectiveTotal ?? undefined}
               value={pages}
               onChange={(e) => setPages(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && saveProgress()}
@@ -134,8 +170,8 @@ export default function ReadingProgress({
               placeholder="Page"
               className="w-20 border border-stone-200 rounded px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
             />
-            {pageCount && (
-              <span className="text-xs text-stone-400">/ {pageCount}</span>
+            {effectiveTotal && (
+              <span className="text-xs text-stone-400">/ {effectiveTotal}</span>
             )}
           </div>
         ) : (
@@ -166,6 +202,54 @@ export default function ReadingProgress({
 
         {message && (
           <span className="text-xs text-stone-500">{message}</span>
+        )}
+      </div>
+
+      {/* Device page count setting */}
+      <div className="mt-2">
+        {editingDevice ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-stone-400">My edition has</span>
+            <input
+              type="number"
+              min={1}
+              value={deviceTotalPages}
+              onChange={(e) => setDeviceTotalPages(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && saveDeviceTotalPages()}
+              disabled={savingDevice}
+              placeholder="pages"
+              className="w-20 border border-stone-200 rounded px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50"
+            />
+            <span className="text-xs text-stone-400">pages</span>
+            <button
+              type="button"
+              onClick={saveDeviceTotalPages}
+              disabled={savingDevice}
+              className="text-xs text-stone-600 hover:text-stone-900 transition-colors"
+            >
+              {savingDevice ? "..." : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingDevice(false);
+                setDeviceTotalPages(initialDeviceTotalPages?.toString() ?? "");
+              }}
+              className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditingDevice(true)}
+            className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+          >
+            {initialDeviceTotalPages
+              ? `My edition: ${initialDeviceTotalPages} pages (edit)`
+              : "Set my edition's page count"}
+          </button>
         )}
       </div>
     </div>

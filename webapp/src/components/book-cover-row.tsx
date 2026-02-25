@@ -9,6 +9,7 @@ type Book = {
   progress_pages?: number | null;
   progress_percent?: number | null;
   page_count?: number | null;
+  device_total_pages?: number | null;
 };
 
 const sizeClasses = {
@@ -19,8 +20,9 @@ const sizeClasses = {
 
 function getProgressPercent(book: Book): number | null {
   if (book.progress_percent != null) return book.progress_percent;
-  if (book.progress_pages != null && book.page_count) {
-    return Math.min(100, Math.round((book.progress_pages / book.page_count) * 100));
+  const total = book.device_total_pages ?? book.page_count;
+  if (book.progress_pages != null && total) {
+    return Math.min(100, Math.round((book.progress_pages / total) * 100));
   }
   return null;
 }

@@ -4,10 +4,6 @@ Backlog of all things we need #todo
 
 Once we're further along we'll move to GH projects. this is fine for now
 
-## Reading Progress
-
-- [ ] Map page lengths to device — enter "this book is 900 pages on my phone", then progress updates ("I'm at page 460") get calculated into a %
-
 ## Book Scanning
 
 - [ ] Book cover scan — take a picture of a cover, lookup ISBN for import

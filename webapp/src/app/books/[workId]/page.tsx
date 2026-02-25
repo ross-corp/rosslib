@@ -47,6 +47,7 @@ type MyBookStatus = {
   date_read: string | null;
   progress_pages: number | null;
   progress_percent: number | null;
+  device_total_pages: number | null;
 };
 
 type BookThread = {
@@ -255,6 +256,7 @@ export default async function BookPage({
                   initialPages={myStatus.progress_pages}
                   initialPercent={myStatus.progress_percent}
                   pageCount={book.page_count}
+                  initialDeviceTotalPages={myStatus.device_total_pages}
                 />
               </div>
             )}

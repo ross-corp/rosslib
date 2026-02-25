@@ -75,6 +75,7 @@ Items completed and moved out of todo.md.
 
 ## Reading Progress
 - [x] Update progress on a book (page number or %). Stored as `progress_pages` + `progress_percent` on `user_books`. Progress bar on book detail page when "Currently Reading"; progress bars under covers on profile.
+- [x] Device page mapping — set custom page count for your edition/device (`device_total_pages` on `user_books`). Page-based progress updates calculate % from the custom total. Falls back to catalog `page_count` when unset.
 
 ## Feed
 - [x] Chronological feed of followed-user activity (add to collection, review, rate, thread, follow, started/finished book).
