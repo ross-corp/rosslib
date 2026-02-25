@@ -122,6 +122,13 @@ ALTER TABLE tag_keys ADD COLUMN IF NOT EXISTS mode VARCHAR(20) NOT NULL DEFAULT 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_ghost BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_moderator BOOLEAN NOT NULL DEFAULT false;
 
+-- ── Google OAuth support ─────────────────────────────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);
+-- Make password_hash nullable for OAuth-only users.
+ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+-- Unique index on google_id (partial, non-null only).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id) WHERE google_id IS NOT NULL;
+
 ALTER TABLE user_books ADD COLUMN IF NOT EXISTS progress_pages    INT;
 ALTER TABLE user_books ADD COLUMN IF NOT EXISTS progress_percent  SMALLINT;
 ALTER TABLE user_books ADD COLUMN IF NOT EXISTS device_total_pages INT;

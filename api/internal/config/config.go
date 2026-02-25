@@ -3,17 +3,19 @@ package config
 import "os"
 
 type Config struct {
-	DatabaseURL    string
-	RedisURL       string
-	Port           string
-	JWTSecret      string
-	MinIOEndpoint  string
-	MinIOAccessKey string
-	MinIOSecretKey string
-	MinIOBucket    string
-	MinIOPublicURL string
-	MeiliURL       string
-	MeiliMasterKey string
+	DatabaseURL        string
+	RedisURL           string
+	Port               string
+	JWTSecret          string
+	MinIOEndpoint      string
+	MinIOAccessKey     string
+	MinIOSecretKey     string
+	MinIOBucket        string
+	MinIOPublicURL     string
+	MeiliURL           string
+	MeiliMasterKey     string
+	GoogleClientID     string
+	GoogleClientSecret string
 }
 
 func Load() Config {
@@ -35,8 +37,10 @@ func Load() Config {
 		MinIOSecretKey: getEnv("MINIO_SECRET_KEY", "minioadmin"),
 		MinIOBucket:    getEnv("MINIO_BUCKET", "rosslib"),
 		MinIOPublicURL: getEnv("MINIO_PUBLIC_URL", "http://localhost:9000"),
-		MeiliURL:       getEnv("MEILI_URL", "http://localhost:7700"),
-		MeiliMasterKey: getEnv("MEILI_MASTER_KEY", "masterKey"),
+		MeiliURL:           getEnv("MEILI_URL", "http://localhost:7700"),
+		MeiliMasterKey:     getEnv("MEILI_MASTER_KEY", "masterKey"),
+		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 	}
 }
 

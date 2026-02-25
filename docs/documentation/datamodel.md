@@ -13,7 +13,8 @@ Schema is applied idempotently at API startup via `db.Migrate` in `api/internal/
 | id | uuid PK | `gen_random_uuid()` |
 | username | varchar(40) unique | URL-safe, lowercase |
 | email | varchar(255) unique | |
-| password_hash | text | bcrypt |
+| password_hash | text | nullable; bcrypt hash (null for Google OAuth-only accounts) |
+| google_id | varchar(255) | nullable; Google user ID for OAuth accounts; unique partial index (non-null) |
 | display_name | varchar(100) | nullable |
 | bio | text | nullable |
 | avatar_url | text | nullable; S3 key |

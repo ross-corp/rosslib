@@ -54,7 +54,7 @@ npx tsc --noEmit  # typecheck
 
 Each package follows a handler pattern — `NewHandler(pool)` returns a struct with methods registered as Gin route handlers. The `pool` is a `pgxpool.Pool` (pgx v5) passed through from `main`.
 
-- `auth/` — registration, login, JWT issuance (30-day `httpOnly` cookie named `token`)
+- `auth/` — registration, login, Google OAuth, JWT issuance (30-day `httpOnly` cookie named `token`)
 - `books/` — book search (Meilisearch + Open Library hybrid), lookup proxy; upserts into local `books` table
 - `search/` — Meilisearch client wrapper; indexes books on startup and upsert
 - `collections/` — shelves CRUD; enforces mutual exclusivity within `exclusive_group`
@@ -79,7 +79,7 @@ The webapp proxies API calls through its own Next.js route handlers (`app/api/`)
 
 ### Data Model (key tables)
 
-- `users` — accounts; bcrypt passwords; soft-delete via `deleted_at`
+- `users` — accounts; bcrypt passwords (nullable for Google OAuth-only); optional `google_id`; soft-delete via `deleted_at`
 - `books` — global catalog keyed by `open_library_id` (bare OL work ID, e.g. `OL82592W`); upserted on first add
 - `collections` — named lists per user; `is_exclusive` + `exclusive_group` enforce mutual exclusivity (the three default shelves share `exclusive_group = 'read_status'`)
 - `collection_items` — books in collections; holds `rating`, `review_text`, `spoiler`, `date_read`, `date_added`
@@ -97,8 +97,12 @@ Defined in `.env` (copy from `.env.example`):
 | `MEILI_MASTER_KEY` | Meilisearch master key |
 | `MEILI_URL` | Meilisearch endpoint (default `http://localhost:7700`) |
 | `JWT_SECRET` | Signs JWTs |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID (API) |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth client ID (webapp, enables Google sign-in buttons) |
+| `NEXT_PUBLIC_URL` | Webapp public URL for OAuth redirects (default `http://localhost:3000`) |
 
-The API reads `DATABASE_URL`, `REDIS_URL`, `PORT`, `JWT_SECRET`, `MEILI_URL`, and `MEILI_MASTER_KEY` from environment. The webapp reads `API_URL` (server-side) and `NEXT_PUBLIC_API_URL` (browser-side).
+The API reads `DATABASE_URL`, `REDIS_URL`, `PORT`, `JWT_SECRET`, `MEILI_URL`, `MEILI_MASTER_KEY`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET` from environment. The webapp reads `API_URL` (server-side), `NEXT_PUBLIC_API_URL` (browser-side), `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `NEXT_PUBLIC_URL`.
 
 ## CI/CD
 

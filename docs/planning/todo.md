@@ -11,9 +11,9 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## User Accounts
 
-- [ ] OAuth via Google
 - [ ] Email verification before full access (?)
 - [ ] Password reset via email link
+- [ ] Allow Google OAuth users to set a password (link accounts both ways)
 
 ## Social
 

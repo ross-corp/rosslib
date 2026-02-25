@@ -54,6 +54,7 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	authHandler := auth.NewHandler(pool, jwtSecret)
 	r.POST("/auth/register", authHandler.Register)
 	r.POST("/auth/login", authHandler.Login)
+	r.POST("/auth/google", authHandler.GoogleLogin)
 
 	secret := []byte(jwtSecret)
 

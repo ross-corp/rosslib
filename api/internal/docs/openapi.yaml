@@ -936,6 +936,52 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /auth/google:
+    post:
+      summary: Sign in or register with Google OAuth
+      description: |
+        Accepts verified Google user info (google_id, email, name) from the webapp
+        after it has exchanged an authorization code for tokens. Finds an existing
+        user by google_id, links Google to an existing email-based account, or
+        creates a new account. Returns a JWT token.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [google_id, email]
+              properties:
+                google_id:
+                  type: string
+                  description: Google user ID
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+                  description: Display name from Google profile
+      responses:
+        "200":
+          description: Existing user signed in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        "201":
+          description: New account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /books/search:
     get:
       summary: Search for books
