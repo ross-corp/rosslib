@@ -6,3 +6,42 @@ tasks:
     cmds:
       - docker compose down
       - docker compose up --build -d
+
+  cluster:create:
+    desc: Create a local Kubernetes cluster using Kind
+    cmds:
+      - kind create cluster --name rosslib-dev
+    status:
+      - kind get clusters | grep -q rosslib-dev
+
+  cluster:delete:
+    desc: Delete the local Kubernetes cluster
+    cmds:
+      - kind delete cluster --name rosslib-dev
+
+  helm:dep-update:
+    desc: Update Helm dependencies
+    dir: infra/charts/rosslib
+    cmds:
+      - helm dependency update
+
+  helm:install:
+    desc: Install or upgrade the Rosslib Helm chart
+    deps: [helm:dep-update]
+    cmds:
+      - helm upgrade --install rosslib infra/charts/rosslib --values infra/charts/rosslib/values.yaml --create-namespace --namespace rosslib
+
+  dev:up:
+    desc: Spin up the local development environment (cluster + chart)
+    deps: [cluster:create]
+    cmds:
+      - task: helm:install
+      - cmd: echo "Environment is up! You can use 'kubectl port-forward' to access services."
+      - cmd: echo "  Webapp - kubectl port-forward -n rosslib svc/rosslib-webapp 3000:3000"
+      - cmd: echo "  API    - kubectl port-forward -n rosslib svc/rosslib-api 8080:8080"
+      - cmd: echo "  RustFS - kubectl port-forward -n rosslib svc/rosslib-rustfs-svc 9000:9000 9001:9001"
+
+  dev:down:
+    desc: Tear down the local development environment
+    cmds:
+      - task: cluster:delete
