@@ -42,6 +42,14 @@ export default async function Nav() {
               >
                 Feed
               </Link>
+              {user.is_moderator && (
+                <Link
+                  href="/admin"
+                  className="text-sm text-stone-500 hover:text-stone-900 px-3 py-1.5 rounded transition-colors hidden sm:inline-flex"
+                >
+                  Admin
+                </Link>
+              )}
               <Link
                 href={`/${user.username}`}
                 className="text-sm text-stone-600 hover:text-stone-900 px-3 py-1.5 rounded transition-colors"

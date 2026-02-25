@@ -480,6 +480,97 @@ func (h *Handler) GetUserReviews(c *gin.Context) {
 	c.JSON(http.StatusOK, reviews)
 }
 
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
+type adminUserRow struct {
+	UserID      string  `json:"user_id"`
+	Username    string  `json:"username"`
+	DisplayName *string `json:"display_name"`
+	Email       string  `json:"email"`
+	IsModerator bool    `json:"is_moderator"`
+}
+
+// ListAllUsers - GET /admin/users (moderator only)
+func (h *Handler) ListAllUsers(c *gin.Context) {
+	q := c.Query("q")
+	page := 1
+	if p, err := strconv.Atoi(c.Query("page")); err == nil && p > 1 {
+		page = p
+	}
+	offset := (page - 1) * pageSize
+
+	var query string
+	var args []interface{}
+	if q != "" {
+		query = `SELECT id, username, display_name, email, is_moderator
+			 FROM users
+			 WHERE deleted_at IS NULL
+			   AND (username ILIKE '%' || $1 || '%' OR display_name ILIKE '%' || $1 || '%' OR email ILIKE '%' || $1 || '%')
+			 ORDER BY username
+			 LIMIT $2 OFFSET $3`
+		args = []interface{}{q, pageSize + 1, offset}
+	} else {
+		query = `SELECT id, username, display_name, email, is_moderator
+			 FROM users
+			 WHERE deleted_at IS NULL
+			 ORDER BY username
+			 LIMIT $1 OFFSET $2`
+		args = []interface{}{pageSize + 1, offset}
+	}
+
+	rows, err := h.pool.Query(c.Request.Context(), query, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	defer rows.Close()
+
+	users := []adminUserRow{}
+	for rows.Next() {
+		var u adminUserRow
+		if err := rows.Scan(&u.UserID, &u.Username, &u.DisplayName, &u.Email, &u.IsModerator); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		users = append(users, u)
+	}
+
+	hasNext := len(users) > pageSize
+	if hasNext {
+		users = users[:pageSize]
+	}
+
+	c.JSON(http.StatusOK, gin.H{"users": users, "page": page, "has_next": hasNext})
+}
+
+// SetModerator - PUT /admin/users/:userId/moderator (moderator only)
+func (h *Handler) SetModerator(c *gin.Context) {
+	targetUserID := c.Param("userId")
+
+	var req struct {
+		IsModerator bool `json:"is_moderator"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	result, err := h.pool.Exec(c.Request.Context(),
+		`UPDATE users SET is_moderator = $1 WHERE id = $2 AND deleted_at IS NULL`,
+		req.IsModerator, targetUserID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	if result.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true, "is_moderator": req.IsModerator})
+}
+
 func (h *Handler) UploadAvatar(c *gin.Context) {
 	if h.store == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "storage not configured"})

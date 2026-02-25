@@ -75,6 +75,7 @@ webapp/src/app/
 │   ├── page.tsx                    profile settings
 │   ├── import/page.tsx             Goodreads CSV import
 │   └── tags/page.tsx               label category management
+├── admin/page.tsx                 admin panel (moderator only)
 ├── [username]/
 │   ├── page.tsx                    public profile
 │   ├── shelves/[slug]/page.tsx     shelf page (owner gets library manager)
@@ -101,6 +102,8 @@ webapp/src/app/
     ├── books/[workId]/links/route.ts              ← GET, POST community links
     ├── links/[linkId]/route.ts                    ← DELETE community link
     ├── links/[linkId]/vote/route.ts               ← POST, DELETE vote on link
+    ├── admin/users/route.ts                       ← GET admin user list
+    ├── admin/users/[userId]/moderator/route.ts    ← PUT grant/revoke moderator
     └── users/[username]/
         ├── tags/[...path]/route.ts
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
@@ -163,6 +166,10 @@ Dropdown for adding/moving/removing a single book from shelves. Used on search r
 ### `BookLinkList` (`components/book-link-list.tsx`)
 
 Client component for community links (related books) on book detail pages. Shows links grouped by relationship type (sequel, prequel, companion, similar, etc.), sorted by upvote count. Logged-in users can upvote/unvote links and suggest new ones via an inline form. Target book is specified by Open Library work ID.
+
+### `AdminUserList` (`components/admin-user-list.tsx`)
+
+Client component for the `/admin` page. Provides a searchable, paginated table of all users with inline moderator toggle buttons. Moderators see a filled "Moderator" button; non-moderators see a "Grant" button. Search is debounced (300ms) and queries by username, display name, or email.
 
 ### `StarRating` (`components/star-rating.tsx`)
 

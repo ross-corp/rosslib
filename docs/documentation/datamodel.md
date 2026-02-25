@@ -18,7 +18,7 @@ Schema is applied idempotently at API startup via `db.Migrate` in `api/internal/
 | bio | text | nullable |
 | avatar_url | text | nullable; S3 key |
 | is_private | boolean | default false |
-| is_moderator | boolean | default false; grants moderation privileges (e.g. deleting community links) |
+| is_moderator | boolean | default false; grants moderation privileges (e.g. deleting community links); managed via admin UI (`/admin`) |
 | created_at | timestamptz | |
 | deleted_at | timestamptz | soft delete |
 

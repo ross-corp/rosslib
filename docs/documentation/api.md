@@ -663,6 +663,45 @@ Remove upvote. Returns 204.
 
 ---
 
+## Admin  *(moderator required)*
+
+All `/admin/*` routes require authentication **and** `is_moderator = true` on the JWT. Non-moderators receive `403 Forbidden`.
+
+### `GET /admin/users?q=<query>&page=<n>`
+
+List all users with moderator status. Supports search by username, display name, or email. Paginated (20 per page).
+
+```json
+{
+  "users": [
+    {
+      "user_id": "...",
+      "username": "alice",
+      "display_name": "Alice",
+      "email": "alice@example.com",
+      "is_moderator": false
+    }
+  ],
+  "page": 1,
+  "has_next": true
+}
+```
+
+### `PUT /admin/users/:userId/moderator`
+
+Grant or revoke moderator status for a user. The change takes effect on the user's next login (JWT must be re-issued).
+
+```json
+{ "is_moderator": true }
+```
+
+```
+200 { "ok": true, "is_moderator": true }
+404 { "error": "user not found" }
+```
+
+---
+
 ## Health
 
 ### `GET /health`

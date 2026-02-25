@@ -143,10 +143,14 @@ func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, sear
 	authed.POST("/links/:linkId/vote", linksHandler.Vote)
 	authed.DELETE("/links/:linkId/vote", linksHandler.Unvote)
 
+	admin := authed.Group("/admin")
+	admin.Use(middleware.RequireModerator())
+	admin.GET("/users", usersHandler.ListAllUsers)
+	admin.PUT("/users/:userId/moderator", usersHandler.SetModerator)
 	ghostsHandler := ghosts.NewHandler(pool)
-	authed.POST("/admin/ghosts/seed", ghostsHandler.Seed)
-	authed.POST("/admin/ghosts/simulate", ghostsHandler.Simulate)
-	authed.GET("/admin/ghosts/status", ghostsHandler.Status)
+	admin.POST("/ghosts/seed", ghostsHandler.Seed)
+	admin.POST("/ghosts/simulate", ghostsHandler.Simulate)
+	admin.GET("/ghosts/status", ghostsHandler.Status)
 
 	return r
 }

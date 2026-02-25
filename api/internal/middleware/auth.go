@@ -44,6 +44,17 @@ func OptionalAuth(jwtSecret []byte) gin.HandlerFunc {
 	}
 }
 
+func RequireModerator() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		isMod, _ := c.Get(IsModeratorKey)
+		if isMod != true {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "moderator access required"})
+			return
+		}
+		c.Next()
+	}
+}
+
 func parseToken(c *gin.Context, secret []byte) (jwt.MapClaims, bool) {
 	h := c.GetHeader("Authorization")
 	if !strings.HasPrefix(h, "Bearer ") {
