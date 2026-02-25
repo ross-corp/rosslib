@@ -6,6 +6,7 @@ import StatusPicker, { type StatusValue } from "@/components/shelf-picker";
 import BookReviewEditor from "@/components/book-review-editor";
 import ReadingProgress from "@/components/reading-progress";
 import ThreadList from "@/components/thread-list";
+import ReviewText from "@/components/review-text";
 import { getUser, getToken } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -361,14 +362,14 @@ export default async function BookPage({
                           <summary className="text-xs text-stone-400 cursor-pointer select-none hover:text-stone-600 transition-colors">
                             Show review (contains spoilers)
                           </summary>
-                          <p className="mt-2 text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">
-                            {review.review_text}
-                          </p>
+                          <div className="mt-2 text-sm text-stone-700 leading-relaxed">
+                            <ReviewText text={review.review_text} />
+                          </div>
                         </details>
                       ) : (
-                        <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">
-                          {review.review_text}
-                        </p>
+                        <div className="text-sm text-stone-700 leading-relaxed">
+                          <ReviewText text={review.review_text} />
+                        </div>
                       )}
                     </div>
 

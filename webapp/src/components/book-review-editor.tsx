@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import StarRatingInput from "@/components/star-rating-input";
+import ReviewText from "@/components/review-text";
+
+type BookSuggestion = {
+  key: string;
+  title: string;
+  cover_url: string | null;
+  authors: string[] | null;
+  publish_year: number | null;
+};
 
 type Props = {
   openLibraryId: string;
@@ -35,6 +44,13 @@ export default function BookReviewEditor({
   const [expanded, setExpanded] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  // Autocomplete state
+  const [suggestions, setSuggestions] = useState<BookSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionQuery, setSuggestionQuery] = useState("");
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   const hasExisting = initialRating != null || (initialReviewText != null && initialReviewText !== "");
   const hasChanges =
     rating !== initialRating ||
@@ -61,6 +77,83 @@ export default function BookReviewEditor({
 
     setSaving(false);
     return res.ok;
+  }
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, []);
+
+  async function handleReviewChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const val = e.target.value;
+    setReviewText(val);
+
+    const cursor = e.target.selectionEnd;
+    const lastOpen = val.lastIndexOf("[[", cursor);
+
+    // If we found [[ and it's not closed/interrupted before the cursor
+    if (lastOpen !== -1) {
+      const textAfter = val.slice(lastOpen + 2, cursor);
+      if (!textAfter.includes("]]") && !textAfter.includes("\n") && !textAfter.includes("|")) {
+        setSuggestionQuery(textAfter);
+        setShowSuggestions(true);
+
+        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = setTimeout(() => {
+          fetchSuggestions(textAfter);
+        }, 300);
+        return;
+      }
+    }
+    setShowSuggestions(false);
+  }
+
+  async function fetchSuggestions(q: string) {
+    if (q.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/books/search?q=${encodeURIComponent(q)}`);
+      if (res.ok) {
+        const data = await res.json();
+        // Filter out the current book to avoid self-reference if desired,
+        // but allowing it is also fine.
+        setSuggestions(data.results.slice(0, 5));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function selectSuggestion(book: BookSuggestion) {
+    if (!textareaRef.current) return;
+
+    const val = reviewText;
+    const cursor = textareaRef.current.selectionEnd;
+    const lastOpen = val.lastIndexOf("[[", cursor);
+
+    if (lastOpen !== -1) {
+      const bareOLID = book.key.replace("/works/", "");
+      // Insert [Title](/books/OLID)
+      const link = `[${book.title}](/books/${bareOLID})`;
+
+      const newVal = val.slice(0, lastOpen) + link + val.slice(cursor);
+      setReviewText(newVal);
+      setShowSuggestions(false);
+      setSuggestions([]);
+
+      // Restore focus and move cursor after the link
+      setTimeout(() => {
+        if (textareaRef.current) {
+            textareaRef.current.focus();
+            const newCursor = lastOpen + link.length;
+            textareaRef.current.setSelectionRange(newCursor, newCursor);
+        }
+      }, 0);
+    }
   }
 
   async function handleRatingClick(newRating: number | null) {
@@ -163,12 +256,12 @@ export default function BookReviewEditor({
             /* Collapsed view of existing review */
             <div>
               {initialReviewText && (
-                <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap line-clamp-3">
+                <div className="text-sm text-stone-700 leading-relaxed line-clamp-3">
                   {initialSpoiler ? (
                     <span className="text-stone-400 italic">Contains spoilers — </span>
                   ) : null}
-                  {initialReviewText}
-                </p>
+                  <ReviewText text={initialReviewText} />
+                </div>
               )}
               {initialDateRead && (
                 <p className="text-xs text-stone-400 mt-1">
@@ -198,17 +291,44 @@ export default function BookReviewEditor({
             </div>
           ) : (
             /* Edit form */
-            <>
+            <div className="relative">
               <textarea
+                ref={textareaRef}
                 value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
+                onChange={handleReviewChange}
                 disabled={saving}
-                placeholder="Write your review (optional)"
+                placeholder="Write your review (optional). Type [[ to link a book."
                 rows={4}
                 className="w-full border border-stone-200 rounded px-3 py-2 text-sm text-stone-700 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400 resize-y disabled:opacity-50"
               />
 
-              <div className="flex flex-wrap items-center gap-4 text-xs">
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute left-0 right-0 z-10 bg-white border border-stone-200 rounded shadow-lg max-h-60 overflow-y-auto mt-1">
+                  {suggestions.map((book) => (
+                    <button
+                      key={book.key}
+                      type="button"
+                      onClick={() => selectSuggestion(book)}
+                      className="w-full text-left px-3 py-2 hover:bg-stone-50 flex items-center gap-3 border-b border-stone-100 last:border-0"
+                    >
+                       {book.cover_url ? (
+                         <img src={book.cover_url} alt="" className="w-8 h-12 object-cover rounded bg-stone-100" />
+                       ) : (
+                         <div className="w-8 h-12 bg-stone-100 rounded flex-shrink-0" />
+                       )}
+                       <div>
+                         <div className="text-sm font-medium text-stone-900 line-clamp-1">{book.title}</div>
+                         <div className="text-xs text-stone-500 line-clamp-1">
+                           {book.authors?.join(", ")}
+                           {book.publish_year && ` · ${book.publish_year}`}
+                         </div>
+                       </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-4 text-xs mt-3">
                 <label className="flex items-center gap-1.5 text-stone-500">
                   <input
                     type="checkbox"
@@ -285,7 +405,7 @@ export default function BookReviewEditor({
                   <span className="text-xs text-stone-500 ml-auto">{message}</span>
                 )}
               </div>
-            </>
+            </div>
           )}
         </div>
       )}
