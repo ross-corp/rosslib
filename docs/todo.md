@@ -97,7 +97,7 @@ Once we're further along we'll move to GH projects. this is fine for now
   - [x] ISBN-direct lookup via Open Library — `GET /books/lookup?isbn=<isbn>` endpoint that searches OL by ISBN, upserts into the local `books` table (using bare OL ID e.g. `OL82592W`), and returns the book. Used as primary lookup during Goodreads import; falls back to title+author search when no ISBN match.
   - [ ] Faceted filters: genre, language.
   - [x] Published year range filter — `year_min` / `year_max` query params on `GET /books/search`; Meilisearch + Open Library filtered concurrently; year range inputs on search page.
-  - [ ] Results ranked by relevance, with popular books surfaced higher.
+  - [x] Results ranked by relevance, with popular books surfaced higher — default sort blends search-engine position with OL popularity signals (read count, rating quality, edition count); local results enriched with OL data during deduplication.
 - [ ] Book pages
   - [x] Metadata: title, author(s), cover, description (from Open Library).
   - [x] Aggregate stats: average rating (from Open Library).

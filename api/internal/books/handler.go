@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"sort"
@@ -224,6 +225,7 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 
 	// Build a set of OL IDs from local results to deduplicate.
 	seen := map[string]bool{}
+	localIdx := map[string]int{} // OL key → index in results slice
 	results := make([]BookResult, 0, searchLimit)
 
 	// Add local (Meilisearch) results first.
@@ -250,6 +252,7 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 				isbn = []string{doc.ISBN13}
 			}
 
+			localIdx[olKey] = len(results)
 			results = append(results, BookResult{
 				Key:         olKey,
 				Title:       doc.Title,
@@ -262,9 +265,17 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 	}
 
 	// Append Open Library results that aren't already in local results.
+	// When a local result is also found in OL, enrich it with popularity data.
 	if or.err == nil {
 		for _, doc := range or.resp.Docs {
 			if seen[doc.Key] {
+				// Enrich the local result with OL popularity data.
+				if idx, ok := localIdx[doc.Key]; ok {
+					results[idx].EditionCount = doc.EditionCount
+					results[idx].AverageRating = doc.RatingsAverage
+					results[idx].RatingCount = doc.RatingsCount
+					results[idx].AlreadyReadCount = doc.AlreadyReadCount
+				}
 				continue
 			}
 			if len(results) >= searchLimit {
@@ -305,7 +316,7 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 		}
 	}
 
-	// Apply sort if requested.
+	// Apply sort.
 	switch sortBy {
 	case "reads":
 		sort.Slice(results, func(i, j int) bool {
@@ -323,6 +334,20 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 			}
 			return ai > aj
 		})
+	default:
+		// Blend search relevance with popularity to surface popular books higher.
+		// Each result gets a score combining its position-based relevance (from the
+		// search engine ordering) with a popularity component derived from OL signals.
+		n := float64(len(results))
+		if n > 1 {
+			sort.SliceStable(results, func(i, j int) bool {
+				si := blendedScore(i, n)
+				sj := blendedScore(j, n)
+				si += popularityScore(results[i])
+				sj += popularityScore(results[j])
+				return si > sj
+			})
+		}
 	}
 
 	total := len(results)
@@ -334,6 +359,35 @@ func (h *Handler) SearchBooks(c *gin.Context) {
 		"total":   total,
 		"results": results,
 	})
+}
+
+// blendedScore returns a position-based relevance component (0–1).
+// Lower position index = higher relevance.
+func blendedScore(position int, total float64) float64 {
+	return (1.0 - float64(position)/total) * 0.6
+}
+
+// popularityScore computes a 0–0.4 popularity bonus from OL signals.
+func popularityScore(b BookResult) float64 {
+	pop := 0.0
+	// Read count is the strongest signal of a book's popularity.
+	if b.AlreadyReadCount > 0 {
+		pop += math.Log10(float64(1+b.AlreadyReadCount)) * 0.5
+	}
+	// Average rating weighted by number of ratings (quality signal).
+	if b.AverageRating != nil && b.RatingCount > 0 {
+		pop += (*b.AverageRating / 5.0) * math.Log10(float64(1+b.RatingCount)) * 0.3
+	}
+	// Edition count as a proxy for cultural significance.
+	if b.EditionCount > 0 {
+		pop += math.Log10(float64(1+b.EditionCount)) * 0.2
+	}
+	// Normalize to roughly 0–1 range (log10(1M) ≈ 6, so max raw ≈ 6*0.5+1*6*0.3+0.2*6 ≈ 6).
+	pop /= 6.0
+	if pop > 1.0 {
+		pop = 1.0
+	}
+	return pop * 0.4
 }
 
 // GetBook fetches full details for a single work from Open Library.
