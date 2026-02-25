@@ -120,6 +120,9 @@ ALTER TABLE tag_keys ADD COLUMN IF NOT EXISTS mode VARCHAR(20) NOT NULL DEFAULT 
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_ghost BOOLEAN NOT NULL DEFAULT false;
 
+ALTER TABLE user_books ADD COLUMN IF NOT EXISTS progress_pages  INT;
+ALTER TABLE user_books ADD COLUMN IF NOT EXISTS progress_percent SMALLINT;
+
 -- Widen tag_values.slug to support nested paths like "history/engineering".
 ALTER TABLE tag_values ALTER COLUMN slug TYPE VARCHAR(255);
 

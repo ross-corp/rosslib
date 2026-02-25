@@ -73,6 +73,9 @@ Items completed and moved out of todo.md.
 ## CSV Export
 - [x] `GET /me/export/csv` — streams CSV with optional shelf filter. Export UI at `/settings/export`.
 
+## Reading Progress
+- [x] Update progress on a book (page number or %). Stored as `progress_pages` + `progress_percent` on `user_books`. Progress bar on book detail page when "Currently Reading"; progress bars under covers on profile.
+
 ## Feed
 - [x] Chronological feed of followed-user activity (add to collection, review, rate, thread, follow, started/finished book).
 - [x] Cursor-based pagination; no algorithmic ranking.

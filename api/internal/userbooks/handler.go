@@ -191,6 +191,36 @@ func (h *Handler) UpdateBook(c *gin.Context) {
 		idx++
 	}
 
+	if v, ok := raw["progress_pages"]; ok {
+		var pages *int
+		if err := json.Unmarshal(v, &pages); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "progress_pages must be an integer or null"})
+			return
+		}
+		if pages != nil && *pages < 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "progress_pages must be non-negative"})
+			return
+		}
+		setClauses = append(setClauses, fmt.Sprintf("progress_pages = $%d", idx))
+		args = append(args, pages)
+		idx++
+	}
+
+	if v, ok := raw["progress_percent"]; ok {
+		var pct *int
+		if err := json.Unmarshal(v, &pct); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "progress_percent must be an integer or null"})
+			return
+		}
+		if pct != nil && (*pct < 0 || *pct > 100) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "progress_percent must be between 0 and 100"})
+			return
+		}
+		setClauses = append(setClauses, fmt.Sprintf("progress_percent = $%d", idx))
+		args = append(args, pct)
+		idx++
+	}
+
 	if len(setClauses) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no recognised fields to update"})
 		return
@@ -280,6 +310,8 @@ func (h *Handler) GetMyBookStatus(c *gin.Context) {
 		ReviewText      *string `json:"review_text"`
 		Spoiler         bool    `json:"spoiler"`
 		DateRead        *string `json:"date_read"`
+		ProgressPages   *int    `json:"progress_pages"`
+		ProgressPercent *int    `json:"progress_percent"`
 	}
 
 	var s status
@@ -287,6 +319,7 @@ func (h *Handler) GetMyBookStatus(c *gin.Context) {
 
 	err := h.pool.QueryRow(c.Request.Context(),
 		`SELECT ub.rating, ub.review_text, ub.spoiler, ub.date_read,
+		        ub.progress_pages, ub.progress_percent,
 		        tv.id, tv.name, tv.slug
 		 FROM user_books ub
 		 JOIN books b ON b.id = ub.book_id
@@ -296,6 +329,7 @@ func (h *Handler) GetMyBookStatus(c *gin.Context) {
 		 WHERE ub.user_id = $1 AND b.open_library_id = $2`,
 		userID, olID,
 	).Scan(&s.Rating, &s.ReviewText, &s.Spoiler, &dateRead,
+		&s.ProgressPages, &s.ProgressPercent,
 		&s.StatusValueID, &s.StatusValueName, &s.StatusValueSlug)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -351,13 +385,16 @@ func (h *Handler) GetStatusMap(c *gin.Context) {
 // ── GetUserBooks — GET /users/:username/books ─────────────────────────────────
 
 type userBookItem struct {
-	BookID        string  `json:"book_id"`
-	OpenLibraryID string  `json:"open_library_id"`
-	Title         string  `json:"title"`
-	CoverURL      *string `json:"cover_url"`
-	Authors       *string `json:"authors"`
-	Rating        *int    `json:"rating"`
-	AddedAt       string  `json:"added_at"`
+	BookID          string  `json:"book_id"`
+	OpenLibraryID   string  `json:"open_library_id"`
+	Title           string  `json:"title"`
+	CoverURL        *string `json:"cover_url"`
+	Authors         *string `json:"authors"`
+	Rating          *int    `json:"rating"`
+	AddedAt         string  `json:"added_at"`
+	ProgressPages   *int    `json:"progress_pages,omitempty"`
+	ProgressPercent *int    `json:"progress_percent,omitempty"`
+	PageCount       *int    `json:"page_count,omitempty"`
 }
 
 type statusGroup struct {
@@ -388,7 +425,9 @@ func (h *Handler) GetUserBooks(c *gin.Context) {
 		}
 
 		rows, err := h.pool.Query(c.Request.Context(),
-			`SELECT b.id, b.open_library_id, b.title, b.cover_url, b.authors, ub.rating, ub.date_added
+			`SELECT b.id, b.open_library_id, b.title, b.cover_url, b.authors,
+			        ub.rating, ub.date_added,
+			        ub.progress_pages, ub.progress_percent, b.page_count
 			 FROM user_books ub
 			 JOIN books b ON b.id = ub.book_id
 			 JOIN users u ON u.id = ub.user_id
@@ -410,7 +449,7 @@ func (h *Handler) GetUserBooks(c *gin.Context) {
 		for rows.Next() {
 			var book userBookItem
 			var addedAt time.Time
-			if err := rows.Scan(&book.BookID, &book.OpenLibraryID, &book.Title, &book.CoverURL, &book.Authors, &book.Rating, &addedAt); err != nil {
+			if err := rows.Scan(&book.BookID, &book.OpenLibraryID, &book.Title, &book.CoverURL, &book.Authors, &book.Rating, &addedAt, &book.ProgressPages, &book.ProgressPercent, &book.PageCount); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
@@ -472,7 +511,9 @@ func (h *Handler) GetUserBooks(c *gin.Context) {
 
 				// Fetch preview books for this status
 				bookRows, err := h.pool.Query(c.Request.Context(),
-					`SELECT b.id, b.open_library_id, b.title, b.cover_url, b.authors, ub.rating, ub.date_added
+					`SELECT b.id, b.open_library_id, b.title, b.cover_url, b.authors,
+					        ub.rating, ub.date_added,
+					        ub.progress_pages, ub.progress_percent, b.page_count
 					 FROM user_books ub
 					 JOIN books b ON b.id = ub.book_id
 					 JOIN book_tag_values btv ON btv.user_id = ub.user_id AND btv.book_id = b.id AND btv.tag_value_id = $1
@@ -485,7 +526,7 @@ func (h *Handler) GetUserBooks(c *gin.Context) {
 					for bookRows.Next() {
 						var book userBookItem
 						var addedAt time.Time
-						if err := bookRows.Scan(&book.BookID, &book.OpenLibraryID, &book.Title, &book.CoverURL, &book.Authors, &book.Rating, &addedAt); err != nil {
+						if err := bookRows.Scan(&book.BookID, &book.OpenLibraryID, &book.Title, &book.CoverURL, &book.Authors, &book.Rating, &addedAt, &book.ProgressPages, &book.ProgressPercent, &book.PageCount); err != nil {
 							break
 						}
 						book.AddedAt = addedAt.Format(time.RFC3339)

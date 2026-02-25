@@ -18,6 +18,9 @@ type StatusBook = {
   cover_url: string | null;
   rating: number | null;
   added_at: string;
+  progress_pages?: number | null;
+  progress_percent?: number | null;
+  page_count?: number | null;
 };
 
 type StatusGroup = {
@@ -280,6 +283,7 @@ export default async function UserPage({
                     <BookCoverRow
                       books={currentlyReadingStatus.books}
                       size="lg"
+                      showProgress
                       seeAllHref={
                         currentlyReadingStatus.count >
                         currentlyReadingStatus.books.length

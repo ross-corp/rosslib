@@ -6,7 +6,6 @@ Once we're further along we'll move to GH projects. this is fine for now
 
 ## Reading Progress
 
-- [ ] Update progress on a book (page number or %)
 - [ ] Map page lengths to device — enter "this book is 900 pages on my phone", then progress updates ("I'm at page 460") get calculated into a %
 
 ## Book Scanning

@@ -4,6 +4,7 @@ import Nav from "@/components/nav";
 import StarRating from "@/components/star-rating";
 import StatusPicker, { type StatusValue } from "@/components/shelf-picker";
 import BookReviewEditor from "@/components/book-review-editor";
+import ReadingProgress from "@/components/reading-progress";
 import ThreadList from "@/components/thread-list";
 import { getUser, getToken } from "@/lib/auth";
 
@@ -44,6 +45,8 @@ type MyBookStatus = {
   review_text: string | null;
   spoiler: boolean;
   date_read: string | null;
+  progress_pages: number | null;
+  progress_percent: number | null;
 };
 
 type BookThread = {
@@ -240,6 +243,18 @@ export default async function BookPage({
                   statusValues={statusValues}
                   statusKeyId={statusKeyId}
                   currentStatusValueId={myStatus?.status_value_id ?? null}
+                />
+              </div>
+            )}
+
+            {/* Reading progress (only when Currently Reading) */}
+            {myStatus?.status_slug === "currently-reading" && (
+              <div className="mb-4">
+                <ReadingProgress
+                  openLibraryId={workId}
+                  initialPages={myStatus.progress_pages}
+                  initialPercent={myStatus.progress_percent}
+                  pageCount={book.page_count}
                 />
               </div>
             )}

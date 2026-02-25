@@ -103,6 +103,8 @@ Per-user book ownership. Replaces `collection_items` for user-book metadata (rat
 | spoiler | boolean | default false |
 | date_read | timestamptz | nullable; when the user finished the book |
 | date_added | timestamptz | default now(); original add date (preserves Goodreads history on import) |
+| progress_pages | integer | nullable; current page number |
+| progress_percent | smallint | nullable; 0–100 reading percentage |
 | created_at | timestamptz | |
 
 Unique constraint: `(user_id, book_id)`

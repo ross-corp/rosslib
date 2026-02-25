@@ -6,6 +6,9 @@ type Book = {
   title: string;
   cover_url: string | null;
   rating?: number | null;
+  progress_pages?: number | null;
+  progress_percent?: number | null;
+  page_count?: number | null;
 };
 
 const sizeClasses = {
@@ -14,16 +17,26 @@ const sizeClasses = {
   lg: "w-20 h-[120px]",
 } as const;
 
+function getProgressPercent(book: Book): number | null {
+  if (book.progress_percent != null) return book.progress_percent;
+  if (book.progress_pages != null && book.page_count) {
+    return Math.min(100, Math.round((book.progress_pages / book.page_count) * 100));
+  }
+  return null;
+}
+
 export default function BookCoverRow({
   books,
   size = "md",
   showTitle = false,
+  showProgress = false,
   seeAllHref,
   seeAllLabel = "See all",
 }: {
   books: Book[];
   size?: "sm" | "md" | "lg";
   showTitle?: boolean;
+  showProgress?: boolean;
   seeAllHref?: string;
   seeAllLabel?: string;
 }) {
@@ -31,34 +44,50 @@ export default function BookCoverRow({
 
   return (
     <div className="flex items-end gap-3 overflow-x-auto pb-2 scrollbar-hide">
-      {books.map((book) => (
-        <Link
-          key={book.book_id}
-          href={`/books/${book.open_library_id}`}
-          className="shrink-0 group"
-        >
-          {book.cover_url ? (
-            <img
-              src={book.cover_url}
-              alt={book.title}
-              className={`${sizeClasses[size]} object-cover rounded shadow-sm group-hover:shadow-md transition-shadow`}
-            />
-          ) : (
-            <div
-              className={`${sizeClasses[size]} rounded bg-stone-200 flex items-center justify-center`}
-            >
-              <span className="text-[10px] text-stone-400 text-center px-1 line-clamp-3">
+      {books.map((book) => {
+        const pct = showProgress ? getProgressPercent(book) : null;
+        return (
+          <Link
+            key={book.book_id}
+            href={`/books/${book.open_library_id}`}
+            className="shrink-0 group"
+          >
+            {book.cover_url ? (
+              <img
+                src={book.cover_url}
+                alt={book.title}
+                className={`${sizeClasses[size]} object-cover rounded shadow-sm group-hover:shadow-md transition-shadow`}
+              />
+            ) : (
+              <div
+                className={`${sizeClasses[size]} rounded bg-stone-200 flex items-center justify-center`}
+              >
+                <span className="text-[10px] text-stone-400 text-center px-1 line-clamp-3">
+                  {book.title}
+                </span>
+              </div>
+            )}
+            {pct != null && (
+              <div className="mt-1">
+                <div className="w-full h-1 bg-stone-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-stone-400 rounded-full"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-stone-400 mt-0.5 text-center">
+                  {pct}%
+                </p>
+              </div>
+            )}
+            {showTitle && (
+              <p className="mt-1 text-xs text-stone-600 truncate max-w-[80px] group-hover:text-stone-900">
                 {book.title}
-              </span>
-            </div>
-          )}
-          {showTitle && (
-            <p className="mt-1 text-xs text-stone-600 truncate max-w-[80px] group-hover:text-stone-900">
-              {book.title}
-            </p>
-          )}
-        </Link>
-      ))}
+              </p>
+            )}
+          </Link>
+        );
+      })}
       {seeAllHref && (
         <Link
           href={seeAllHref}
