@@ -63,8 +63,7 @@ Backlog of all things we need #todo which are small enough to knock out at rando
 
 ## API
 
-- [ ] Swagger docs / route documentation so users can write CLIs or tools
-  - [ ] Rate-limit upstream-proxied routes to avoid getting banned from book DBs
+- [ ] Rate-limit upstream-proxied routes to avoid getting banned from book DBs
 
 ## Import / Export
 

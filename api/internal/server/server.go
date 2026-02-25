@@ -11,6 +11,7 @@ import (
 	"github.com/tristansaldanha/rosslib/api/internal/auth"
 	"github.com/tristansaldanha/rosslib/api/internal/books"
 	"github.com/tristansaldanha/rosslib/api/internal/collections"
+	"github.com/tristansaldanha/rosslib/api/internal/docs"
 	"github.com/tristansaldanha/rosslib/api/internal/ghosts"
 	"github.com/tristansaldanha/rosslib/api/internal/imports"
 	"github.com/tristansaldanha/rosslib/api/internal/middleware"
@@ -24,6 +25,8 @@ import (
 
 func NewRouter(pool *pgxpool.Pool, jwtSecret string, store *storage.Client, searchClient *search.Client) http.Handler {
 	r := gin.Default()
+
+	docs.Register(r)
 
 	r.GET("/health", func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)

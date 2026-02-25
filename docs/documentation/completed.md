@@ -85,3 +85,6 @@ Items completed and moved out of todo.md.
 ## Feed
 - [x] Chronological feed of followed-user activity (add to collection, review, rate, thread, follow, started/finished book).
 - [x] Cursor-based pagination; no algorithmic ranking.
+
+## API Docs
+- [x] OpenAPI 3.0 spec (`api/internal/docs/openapi.yaml`) documenting all ~60 routes with request/response schemas. Served at `GET /docs/openapi.yaml`. Interactive Swagger UI at `GET /docs` (CDN-hosted Swagger UI bundle). Spec embedded in the binary via `go:embed`.
