@@ -53,7 +53,7 @@ export default async function ComparePage() {
           Compare Lists
         </h1>
         <p className="text-sm text-stone-500 mb-8">
-          Find books that appear in both lists, combine lists, or see what's
+          Find books that appear in both lists, combine lists, or see what&apos;s
           unique to one list. Save the result as a new list.
         </p>
 

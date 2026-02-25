@@ -138,6 +138,7 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/google"
               className="w-full flex items-center justify-center gap-2 border border-stone-300 rounded py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors"

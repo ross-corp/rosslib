@@ -112,7 +112,7 @@ export default function BookScanner({
       }
       setCameraActive(true);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line
       const detector = new (window as any).BarcodeDetector({
         formats: ["ean_13", "ean_8"],
       });
@@ -120,7 +120,7 @@ export default function BookScanner({
       scanIntervalRef.current = setInterval(async () => {
         if (!videoRef.current || videoRef.current.readyState < 2) return;
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          // eslint-disable-next-line
           const barcodes: any[] = await detector.detect(videoRef.current);
           for (const barcode of barcodes) {
             const isbn = barcode.rawValue;
