@@ -88,6 +88,7 @@ func PreviewGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 
 		results := make([]previewRow, len(csvRows))
 		ol := newOLClient()
+		gb := newGBClient()
 
 		var wg sync.WaitGroup
 		sem := make(chan struct{}, 5)
@@ -270,6 +271,11 @@ func PreviewGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 							}
 						}
 					}
+				}
+
+				// 7. Google Books fallback — search GB, then map result back to OL
+				if !found {
+					olID, matchTitle, coverURL, authors, found = googleBooksLookup(gb, ol, isbn, cleanGoodreadsTitle(pr.Title), cleanGoodreadsAuthor(pr.Author))
 				}
 
 				if found {
