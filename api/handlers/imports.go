@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -167,7 +168,27 @@ func PreviewGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 				var olID, matchTitle, coverURL string
 				var authors []string
 
+				// 1. Check local DB by ISBN (skip external API if we already have it)
 				if isbn != "" {
+					existing, localErr := app.FindRecordsByFilter("books",
+						"isbn13 = {:isbn}",
+						"", 1, 0,
+						map[string]any{"isbn": isbn},
+					)
+					if localErr == nil && len(existing) > 0 {
+						rec := existing[0]
+						olID = rec.GetString("open_library_id")
+						matchTitle = rec.GetString("title")
+						coverURL = rec.GetString("cover_url")
+						if a := rec.GetString("authors"); a != "" {
+							authors = strings.Split(a, ", ")
+						}
+						found = olID != ""
+					}
+				}
+
+				// 2. OL direct ISBN endpoint
+				if isbn != "" && !found {
 					data, err := ol.get(fmt.Sprintf("/isbn/%s.json", isbn))
 					if err == nil {
 						if works, ok := data["works"].([]any); ok && len(works) > 0 {
@@ -189,28 +210,62 @@ func PreviewGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 					}
 				}
 
-				// Fallback: search by title
-				if !found && pr.Title != "" {
-					data, err := ol.get(fmt.Sprintf("/search.json?title=%s&limit=1", pr.Title))
+				// 3. OL search by ISBN (searches across all editions via search index)
+				if isbn != "" && !found {
+					data, err := ol.get(fmt.Sprintf("/search.json?isbn=%s&fields=key,title,author_name,first_publish_year,cover_i&limit=1", url.QueryEscape(isbn)))
 					if err == nil {
-						if docs, ok := data["docs"].([]any); ok && len(docs) > 0 {
-							if doc, ok := docs[0].(map[string]any); ok {
-								if key, ok := doc["key"].(string); ok {
-									olID = strings.TrimPrefix(key, "/works/")
-									found = true
-								}
-								if t, ok := doc["title"].(string); ok {
-									matchTitle = t
-								}
-								if coverI, ok := doc["cover_i"].(float64); ok && coverI > 0 {
-									coverURL = fmt.Sprintf("https://covers.openlibrary.org/b/id/%.0f-M.jpg", coverI)
-								}
-								if authorNames, ok := doc["author_name"].([]any); ok {
-									for _, a := range authorNames {
-										if name, ok := a.(string); ok {
-											authors = append(authors, name)
-										}
-									}
+						olID, matchTitle, coverURL, authors, found = extractOLSearchResult(data)
+					}
+				}
+
+				// 4. OL search by cleaned title+author
+				// Goodreads titles often include junk: series info "(Series, #N)",
+				// subtitles "Title: Subtitle", format tags "[Hardcover]",
+				// embedded author "by Author Name (2005)", pipe separators, etc.
+				if !found && pr.Title != "" {
+					cleaned := cleanGoodreadsTitle(pr.Title)
+					cleanedAuthor := cleanGoodreadsAuthor(pr.Author)
+					q := "title=" + url.QueryEscape(cleaned)
+					if cleanedAuthor != "" {
+						q += "&author=" + url.QueryEscape(cleanedAuthor)
+					}
+					data, err := ol.get(fmt.Sprintf("/search.json?%s&fields=key,title,author_name,first_publish_year,cover_i&limit=1", q))
+					if err == nil {
+						olID, matchTitle, coverURL, authors, found = extractOLSearchResult(data)
+					}
+				}
+
+				// 5. OL search by cleaned title only (author may be wrong/missing)
+				// Also strips author name from front of title
+				// ("Arthur C. Clark Expedition to Earth" → "Expedition to Earth")
+				if !found && pr.Title != "" {
+					cleaned := cleanGoodreadsTitle(pr.Title)
+					cleaned = stripAuthorPrefix(cleaned, pr.Author)
+					data, err := ol.get(fmt.Sprintf("/search.json?title=%s&fields=key,title,author_name,first_publish_year,cover_i&limit=1", url.QueryEscape(cleaned)))
+					if err == nil {
+						id, mt, cu, au, ok := extractOLSearchResult(data)
+						if ok && titleMatchesResult(cleaned, mt) {
+							olID, matchTitle, coverURL, authors, found = id, mt, cu, au, ok
+						}
+					}
+				}
+
+				// 6. Last resort: strip comma-subtitles and retry
+				if !found && pr.Title != "" {
+					cleaned := cleanGoodreadsTitle(pr.Title)
+					if idx := strings.Index(cleaned, ","); idx > 0 {
+						shortened := strings.TrimSpace(cleaned[:idx])
+						if len(shortened) > 3 {
+							cleanedAuthor := cleanGoodreadsAuthor(pr.Author)
+							q := "title=" + url.QueryEscape(shortened)
+							if cleanedAuthor != "" {
+								q += "&author=" + url.QueryEscape(cleanedAuthor)
+							}
+							data, err := ol.get(fmt.Sprintf("/search.json?%s&fields=key,title,author_name,first_publish_year,cover_i&limit=1", q))
+							if err == nil {
+								id, mt, cu, au, ok := extractOLSearchResult(data)
+								if ok && titleMatchesResult(shortened, mt) {
+									olID, matchTitle, coverURL, authors, found = id, mt, cu, au, ok
 								}
 							}
 						}
@@ -500,4 +555,273 @@ func mapGoodreadsShelf(shelf string) string {
 	default:
 		return ""
 	}
+}
+
+// cleanGoodreadsTitle strips junk that Goodreads CSV titles commonly include.
+//
+// Examples:
+//
+//	"Children of Ruin (Children of Time, #2)" → "Children of Ruin"
+//	"Skunk Works: A Personal Memoir of My Years at Lockheed" → "Skunk Works"
+//	"Red Harvest by Dashiell Hammett (July 17 1989)" → "Red Harvest"
+//	"All Men Are Brothers by Gandhi,Mohandas K.. [2005] Paperback" → "All Men Are Brothers"
+//	"Man Plus (S.F. MASTERWORKS) by Pohl, Frederik New Edition (2000)" → "Man Plus"
+//	"Survival in Auschwitz[SURVIVAL IN AUSCHWITZ][Paperback]" → "Survival in Auschwitz"
+//	"The Wealth of Nations/Books I-III" → "The Wealth of Nations"
+//	"Destinies, Feb 1980 | The Science Fiction Magazine" → "Destinies"
+//	"[(The Soul of a Butterfly)] [by: Muhammad Ali]" → "The Soul of a Butterfly"
+func cleanGoodreadsTitle(title string) string {
+	// Strip [ and ] characters but keep inner content. This handles both
+	// metadata tags like [Hardcover] and decorative brackets like [(Title)].
+	// The inner content (format words, repeated titles, etc.) is cleaned
+	// by the later steps.
+	title = strings.NewReplacer("[", "", "]", "").Replace(title)
+	title = strings.TrimSpace(title)
+
+	// Strip everything from " by " or " by:" onward (embedded author/edition info).
+	// Only strip if " by" appears after at least two words so we don't break
+	// titles like "Stand by Me".
+	lower := strings.ToLower(title)
+	for _, sep := range []string{" by ", " by:"} {
+		if idx := strings.Index(lower, sep); idx > 0 {
+			before := strings.TrimSpace(title[:idx])
+			if strings.Contains(before, " ") {
+				title = before
+				break
+			}
+		}
+	}
+
+	// Strip leading "By Author Name " prefix when title starts with "By "
+	// and the real title follows. Detect by checking if stripping "By <words>"
+	// still leaves a multi-word remainder.
+	if strings.HasPrefix(title, "By ") {
+		rest := title[3:]
+		for _, sep := range []string{" The ", " A ", " An "} {
+			if idx := strings.Index(rest, sep); idx > 0 {
+				candidate := strings.TrimSpace(rest[idx:])
+				if len(candidate) > 3 {
+					title = candidate
+					break
+				}
+			}
+		}
+	}
+
+	// Strip trailing parenthetical content: "(Series Name, #N)", "(2000)", etc.
+	// Repeat to handle nested cases like "Title (A) by Author (2000)"
+	for {
+		idx := strings.LastIndex(title, "(")
+		if idx <= 0 {
+			break
+		}
+		title = strings.TrimSpace(title[:idx])
+	}
+
+	// Strip wrapping parens left over from decorative brackets: "(Title)" → "Title"
+	if strings.HasPrefix(title, "(") && strings.HasSuffix(title, ")") {
+		title = title[1 : len(title)-1]
+	}
+
+	// Strip " | " pipe-separated subtitles
+	if idx := strings.Index(title, " | "); idx > 0 {
+		title = strings.TrimSpace(title[:idx])
+	}
+	if idx := strings.Index(title, "|"); idx > 0 {
+		title = strings.TrimSpace(title[:idx])
+	}
+
+	// Strip "/subtitle" (but not mid-word slashes)
+	if idx := strings.Index(title, "/"); idx > 0 {
+		title = strings.TrimSpace(title[:idx])
+	}
+
+	// Strip subtitle after colon
+	if idx := strings.Index(title, ":"); idx > 0 {
+		title = strings.TrimSpace(title[:idx])
+	}
+
+	// Strip trailing junk words: "Paperback", "Hardcover", "Mass Market", edition years
+	for {
+		trimmed := strings.TrimRight(title, " .,")
+		changed := false
+		for _, suffix := range []string{"Paperback", "Hardcover", "Mass Market"} {
+			if strings.HasSuffix(trimmed, suffix) {
+				trimmed = strings.TrimSpace(trimmed[:len(trimmed)-len(suffix)])
+				changed = true
+			}
+		}
+		title = trimmed
+		if !changed {
+			break
+		}
+	}
+
+	return strings.TrimSpace(title)
+}
+
+// cleanGoodreadsAuthor returns a cleaned author name suitable for OL search,
+// or empty string if the author should be skipped (unknown, mangled, etc.).
+func cleanGoodreadsAuthor(author string) string {
+	author = strings.TrimSpace(author)
+	if author == "" {
+		return ""
+	}
+
+	lower := strings.ToLower(author)
+
+	// Skip placeholder/unknown authors
+	if lower == "unknown author" || lower == "unknown" || lower == "various" || lower == "anonymous" {
+		return ""
+	}
+
+	// Skip mangled multi-author with semicolons ("Leo ; Bradbury Margulies")
+	if strings.Contains(author, ";") {
+		return ""
+	}
+
+	// Skip concatenated names with no space ("PrimoLevi") — real names have spaces
+	if !strings.Contains(author, " ") && len(author) > 1 {
+		return ""
+	}
+
+	// Strip single-letter middle initials: "Balaji S. Srinivasan" → "Balaji Srinivasan"
+	// OL often doesn't index middle initials.
+	parts := strings.Fields(author)
+	var cleaned []string
+	for _, p := range parts {
+		trimmed := strings.TrimRight(p, ".")
+		if len(trimmed) == 1 && trimmed == strings.ToUpper(trimmed) {
+			continue // skip single-letter initials
+		}
+		cleaned = append(cleaned, p)
+	}
+	if len(cleaned) > 0 {
+		author = strings.Join(cleaned, " ")
+	}
+
+	return author
+}
+
+// stripAuthorPrefix removes author name from the beginning of a title.
+// Goodreads sometimes produces titles like "Arthur C. Clark Expedition to Earth"
+// where the author name is prepended to the actual title.
+func stripAuthorPrefix(title, author string) string {
+	if author == "" || len(title) <= len(author) {
+		return title
+	}
+
+	// Normalize for comparison: lowercase, strip periods/commas
+	norm := func(s string) string {
+		s = strings.ToLower(s)
+		s = strings.ReplaceAll(s, ".", "")
+		s = strings.ReplaceAll(s, ",", "")
+		return s
+	}
+
+	normTitle := norm(title)
+	normAuthor := norm(author)
+
+	if strings.HasPrefix(normTitle, normAuthor) {
+		rest := strings.TrimSpace(title[len(author):])
+		if len(rest) > 3 {
+			return rest
+		}
+	}
+
+	// Try matching just the first and last name words against the title prefix.
+	// Handles misspellings like "Arthur C. Clark" (title) vs "Arthur C. Clarke" (author)
+	// by comparing word-by-word and stopping when the author name diverges.
+	titleWords := strings.Fields(norm(title))
+	authorWords := strings.Fields(normAuthor)
+	if len(authorWords) >= 2 && len(titleWords) > len(authorWords) {
+		firstName := authorWords[0]
+		lastName := authorWords[len(authorWords)-1]
+
+		// Check if title starts with first name
+		if titleWords[0] == firstName {
+			// Scan forward to find where last name approximately appears
+			for i := 1; i < len(titleWords) && i <= len(authorWords)+1; i++ {
+				w := titleWords[i]
+				// Match last name with some tolerance (prefix match for misspellings)
+				if len(w) >= 3 && len(lastName) >= 3 &&
+					(strings.HasPrefix(w, lastName[:3]) || strings.HasPrefix(lastName, w[:3])) {
+					// Everything after this word is the real title
+					// Reconstruct from original title by counting words
+					origWords := strings.Fields(title)
+					if i+1 < len(origWords) {
+						rest := strings.Join(origWords[i+1:], " ")
+						if len(rest) > 3 {
+							return rest
+						}
+					}
+					break
+				}
+			}
+		}
+	}
+
+	return title
+}
+
+// titleMatchesResult checks if an OL search result title is a reasonable match
+// for the search query. Used to reject false positives from aggressive search steps.
+func titleMatchesResult(searchTitle, resultTitle string) bool {
+	s := strings.ToLower(searchTitle)
+	r := strings.ToLower(resultTitle)
+
+	// Direct containment either way
+	if strings.Contains(r, s) || strings.Contains(s, r) {
+		return true
+	}
+
+	// Check if most significant words overlap
+	skip := map[string]bool{"the": true, "a": true, "an": true, "of": true, "and": true, "in": true, "to": true, "for": true}
+	searchWords := map[string]bool{}
+	for _, w := range strings.Fields(s) {
+		if !skip[w] && len(w) > 2 {
+			searchWords[w] = true
+		}
+	}
+	if len(searchWords) == 0 {
+		return false
+	}
+	matches := 0
+	for _, w := range strings.Fields(r) {
+		if searchWords[strings.ToLower(w)] {
+			matches++
+		}
+	}
+	return matches > 0 && float64(matches)/float64(len(searchWords)) >= 0.5
+}
+
+// extractOLSearchResult pulls work ID, title, cover, and authors from an
+// Open Library /search.json response.
+func extractOLSearchResult(data map[string]any) (olID, matchTitle, coverURL string, authors []string, found bool) {
+	docs, ok := data["docs"].([]any)
+	if !ok || len(docs) == 0 {
+		return
+	}
+	doc, ok := docs[0].(map[string]any)
+	if !ok {
+		return
+	}
+	if key, ok := doc["key"].(string); ok {
+		olID = strings.TrimPrefix(key, "/works/")
+		found = true
+	}
+	if t, ok := doc["title"].(string); ok {
+		matchTitle = t
+	}
+	if coverI, ok := doc["cover_i"].(float64); ok && coverI > 0 {
+		coverURL = fmt.Sprintf("https://covers.openlibrary.org/b/id/%.0f-M.jpg", coverI)
+	}
+	if authorNames, ok := doc["author_name"].([]any); ok {
+		for _, a := range authorNames {
+			if name, ok := a.(string); ok {
+				authors = append(authors, name)
+			}
+		}
+	}
+	return
 }
