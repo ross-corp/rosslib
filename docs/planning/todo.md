@@ -2,10 +2,6 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination.
 
-## account tools
-
-- [ ] Add a "Delete all my data" button on the settings page. API endpoint `DELETE /me/account/data` should remove all of a user's `user_books`, `collection_items`, `genre_ratings`, `book_tag_values`, `tag_values`, `tag_keys`, `collections`, `threads`, `thread_comments`, `follows`, `book_follows`, `author_follows`, and `notifications`. Does NOT delete the user account itself. Frontend: confirmation dialog ("This will remove all your books, reviews, tags, and follows. This cannot be undone.") on the settings page. Useful for testing.
-
 ## imports
 
 - [ ] Add a "Create label" option to the Goodreads import shelf mapping. Currently the import preview (`import-form.tsx`) only offers "Tag" and "Skip" for each Goodreads shelf. Add a third option: "Create label" — when selected, show an inline form where the user types a label name. Multiple shelves can be assigned to the same label (each shelf becomes a value under that label key). Also add an "Add to existing label" option that shows a dropdown of the user's existing label keys. On import commit, create the label key (via tag_keys) and assign the appropriate tag_values, then tag each imported book with its shelf's label value.
@@ -33,3 +29,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 ## Pending PRs
 
 <!-- nephewbot moves tasks here when it opens a PR. Move to docs/planning/completed.md after merging. -->
+- [Add delete-all-data endpoint and settings UI](https://github.com/ross-corp/rosslib/pull/37) — DELETE /me/account/data removes all user data; settings page gets Danger Zone with typed confirmation

@@ -126,6 +126,7 @@ webapp/src/app/
     ├── books/[workId]/genre-ratings/route.ts         ← GET aggregate genre ratings
     ├── me/books/[olId]/genre-ratings/route.ts       ← GET, PUT user genre ratings
     ├── me/account/route.ts                         ← GET account info (has_password, has_google)
+    ├── me/account/data/route.ts                   ← DELETE all user data
     ├── me/password/route.ts                        ← PUT set/change password
     ├── me/notifications/route.ts                  ← GET list notifications
     ├── me/notifications/unread-count/route.ts     ← GET unread count
@@ -213,6 +214,10 @@ Used on book detail pages (community reviews), user reviews pages, recent review
 ### `PasswordForm` (`components/password-form.tsx`)
 
 Client component rendered on the settings page below the profile form. Fetches `GET /api/me/account` on mount to determine whether the user has a password and/or Google linked, then shows the appropriate form: "Set password" for OAuth-only users, or "Change password" (with current password verification) for users who already have one. Calls `PUT /api/me/password`.
+
+### `DeleteDataForm` (`components/delete-data-form.tsx`)
+
+Client component rendered on the settings page below the password form in a "Danger zone" section. Shows a red "Delete all my data" button. Clicking it reveals a confirmation form where the user must type "delete my data" to proceed. Calls `DELETE /api/me/account/data` which removes all user-owned records (books, reviews, tags, shelves, follows, threads, notifications, etc.) but keeps the account. On success, redirects to the home page.
 
 ### `NotificationBell` (`components/notification-bell.tsx`)
 

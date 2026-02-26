@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import DeleteDataForm from "@/components/delete-data-form";
 import EmailVerificationBanner from "@/components/email-verification-banner";
 import PasswordForm from "@/components/password-form";
 import SettingsForm from "@/components/settings-form";
@@ -66,6 +67,8 @@ export default async function SettingsPage() {
         />
 
         <PasswordForm />
+
+        <DeleteDataForm />
       </main>
     </div>
   );

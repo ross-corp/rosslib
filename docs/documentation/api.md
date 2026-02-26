@@ -95,6 +95,17 @@ Set or change the user's password. If the user already has a password, `current_
 401 { "error": "current password is incorrect" }
 ```
 
+### `DELETE /me/account/data`  *(auth required)*
+
+Permanently deletes all data owned by the authenticated user: user_books, collection_items, collections, tag_keys, tag_values, book_tag_values, genre_ratings, threads, thread_comments, follows, author_follows, book_follows, notifications, activities, book_links, book_link_votes, and book_link_edits. The user account itself is **not** deleted.
+
+**Request body:** none
+
+```
+200 { "message": "All data deleted" }
+401 { "error": "Authentication required" }
+```
+
 ---
 
 ## Books
