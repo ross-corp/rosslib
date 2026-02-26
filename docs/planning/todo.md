@@ -2,10 +2,6 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination.
 
-## caching
-
-- [ ] Add a server-side response cache for Open Library API calls. Create a simple in-memory TTL cache (sync.Map or similar) keyed by the full OL request URL. Cache successful responses for 24 hours. Apply it to the shared OL HTTP client (the rate-limited client in `api/handlers/helpers.go` or the `olhttp` package). This avoids redundant lookups when multiple users search for or view the same book. Log cache hit/miss rates at startup interval (e.g. every hour). No frontend changes needed.
-
 ## import improvements
 
 - [ ] Add a fallback catalog API (Google Books or similar) for Goodreads import. The current import uses Open Library exclusively. After the recent title/author cleaning improvements, the remaining misses are entries genuinely absent from OL: periodical/magazine issues (e.g. *Destinies* magazine), niche regional textbooks, and academic journals. Adding Google Books as a fallback after all OL attempts fail would cover many of these. The challenge is mapping Google Books results back to OL work IDs (since rosslib uses OL IDs as canonical identifiers) — either search OL by the title/author Google returns, or support books without OL IDs as local-only entries. Requires: a `googleBooksLookup(isbn, title, author)` helper in `api/handlers/helpers.go`, an optional `GOOGLE_BOOKS_API_KEY` env var (free tier: 1,000 req/day), and integration into the import preview lookup chain as a new step between the OL ISBN search and the title+author fallback.
@@ -22,3 +18,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add computed lists section to user profile page](https://github.com/ross-corp/rosslib/pull/45) — Computed lists section on profile with operation badges and Live indicator; migration adds computed list fields to collections schema
 - [Add quick-add button for books on other users' pages](https://github.com/ross-corp/rosslib/pull/46) — QuickAddButton overlay on book covers in shelf grids and profile book rows for visitors; one-click "Want to Read" with dropdown for other statuses
 - [Add bug report and feature request forms](https://github.com/ross-corp/rosslib/pull/47) — /feedback page with tabbed form; feedback PocketBase collection; admin Feedback section with status toggle
+- [Add in-memory TTL cache for Open Library API](https://github.com/ross-corp/rosslib/pull/48) — 24h sync.Map cache on singleton OL client; hourly stats logging and expired entry eviction
