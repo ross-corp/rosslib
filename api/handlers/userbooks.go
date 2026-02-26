@@ -315,6 +315,34 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// SetBookStatus handles PUT /me/books/{olId}/status
+func SetBookStatus(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+		olID := e.Request.PathValue("olId")
+		data := struct {
+			Slug string `json:"slug"`
+		}{}
+		if err := e.BindBody(&data); err != nil || data.Slug == "" {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "slug is required"})
+		}
+
+		books, _ := app.FindRecordsByFilter("books",
+			"open_library_id = {:id}", "", 1, 0,
+			map[string]any{"id": olID},
+		)
+		if len(books) == 0 {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Book not found"})
+		}
+
+		setStatusTag(app, user.Id, books[0].Id, data.Slug)
+		return e.JSON(http.StatusOK, map[string]any{"ok": true})
+	}
+}
+
 // GetStatusMap handles GET /me/books/status-map
 func GetStatusMap(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {

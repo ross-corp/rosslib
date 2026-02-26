@@ -18,3 +18,26 @@ export async function GET(
   const data = await res.json();
   return NextResponse.json(data, { status: res.status });
 }
+
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ olId: string }> }
+) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  if (!token) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const { olId } = await params;
+  const body = await req.text();
+  const res = await fetch(`${process.env.API_URL}/me/books/${olId}/status`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body,
+  });
+
+  const data = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}

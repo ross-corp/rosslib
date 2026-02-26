@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import ShelfBookGrid from "@/components/shelf-book-grid";
 import LibraryManager, { ShelfSummary } from "@/components/library-manager";
-import { getUser, getToken } from "@/lib/auth";
+import { getUser } from "@/lib/auth";
 import { TagKey } from "@/components/book-tag-picker";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -75,11 +75,11 @@ async function fetchUserShelves(username: string): Promise<ShelfSummary[]> {
   return res.json();
 }
 
-async function fetchTagKeys(token: string): Promise<TagKey[]> {
-  const res = await fetch(`${process.env.API_URL}/me/tag-keys`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
+async function fetchTagKeys(username: string): Promise<TagKey[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/users/${username}/tag-keys`,
+    { cache: "no-store" }
+  );
   if (!res.ok) return [];
   return res.json();
 }
@@ -115,7 +115,7 @@ export default async function ShelfPage({
   params: Promise<{ username: string; slug: string }>;
 }) {
   const { username, slug } = await params;
-  const [currentUser, token] = await Promise.all([getUser(), getToken()]);
+  const currentUser = await getUser();
   const isOwner = currentUser?.username === username;
 
   const isStatusSlug = STATUS_SLUGS.has(slug);
@@ -124,7 +124,7 @@ export default async function ShelfPage({
     isStatusSlug ? Promise.resolve(null) : fetchShelf(username, slug),
     isStatusSlug ? fetchStatusBooks(username, slug) : Promise.resolve(null),
     fetchUserShelves(username),
-    isOwner && token ? fetchTagKeys(token) : Promise.resolve([] as TagKey[]),
+    isOwner ? fetchTagKeys(username) : Promise.resolve([] as TagKey[]),
     isOwner ? fetchUserBooksSummary(username) : Promise.resolve({ statuses: [], unstatused_count: 0 } as UserBooksResponse),
   ]);
 

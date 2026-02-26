@@ -122,24 +122,20 @@ export default function LibraryManager({
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
-  const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showRateMenu, setShowRateMenu] = useState(false);
   const [showLabelsMenu, setShowLabelsMenu] = useState(false);
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const [showTagsMenu, setShowTagsMenu] = useState(false);
   const [localShelves, setLocalShelves] = useState(allShelves);
 
   // ── Navigation ───────────────────────────────────────────────────────────────
 
-  // Extract status key from tagKeys
-  const statusKey = tagKeys.find((k) => k.slug === "status") ?? null;
-  const statusValues = statusKey?.values ?? [];
-  const statusKeyId = statusKey?.id ?? null;
-  const nonStatusTagKeys = tagKeys.filter((k) => k.slug !== "status");
+  const nonStatusTagKeys = tagKeys;
 
   function closeMenus() {
-    setShowStatusMenu(false);
     setShowRateMenu(false);
     setShowLabelsMenu(false);
+    setHoveredKey(null);
     setShowTagsMenu(false);
   }
 
@@ -233,22 +229,22 @@ export default function LibraryManager({
     setBulkWorking(false);
   }
 
-  async function massChangeStatus(value: { id: string; name: string; slug: string }) {
-    if (!statusKeyId) return;
+  async function massChangeStatus(slug: string) {
     setBulkWorking(true);
-    setShowStatusMenu(false);
+    setShowLabelsMenu(false);
+    setHoveredKey(null);
     const targets = books.filter((b) => selectedIds.has(b.book_id));
     await Promise.all(
       targets.map((b) =>
-        fetch(`/api/me/books/${b.open_library_id}/tags/${statusKeyId}`, {
+        fetch(`/api/me/books/${b.open_library_id}/status`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ value_id: value.id }),
+          body: JSON.stringify({ slug }),
         })
       )
     );
     // If viewing a specific status, remove moved books from view
-    if (filter.kind === "status" && filter.slug !== value.slug) {
+    if (filter.kind === "status" && filter.slug !== slug) {
       setBooks((prev) => prev.filter((b) => !selectedIds.has(b.book_id)));
     }
     setSelectedIds(new Set());
@@ -356,11 +352,6 @@ export default function LibraryManager({
   const tagCollections = localShelves.filter((s) => s.collection_type === "tag");
   const tagTree = buildTagTree(tagCollections);
 
-  // Status values to show in "Change status" menu (exclude current if viewing a status)
-  const changeStatusTargets = statusValues.filter(
-    (v) => !(filter.kind === "status" && filter.slug === v.slug)
-  );
-
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
@@ -445,7 +436,6 @@ export default function LibraryManager({
               <button
                 onClick={() => {
                   setShowRateMenu((v) => !v);
-                  setShowStatusMenu(false);
                   setShowLabelsMenu(false);
                   setShowTagsMenu(false);
                 }}
@@ -469,31 +459,90 @@ export default function LibraryManager({
               )}
             </div>
 
-            {/* Change status dropdown */}
-            {changeStatusTargets.length > 0 && (
+            {/* Unified Labels dropdown (Status + tag keys) */}
+            {(statusList.length > 0 || nonStatusTagKeys.length > 0) && (
               <div className="relative">
                 <button
                   onClick={() => {
-                    setShowStatusMenu((v) => !v);
+                    setShowLabelsMenu((v) => !v);
+                    setHoveredKey(null);
                     setShowRateMenu(false);
-                    setShowLabelsMenu(false);
                     setShowTagsMenu(false);
                   }}
                   disabled={bulkWorking}
                   className="text-xs px-3 py-1.5 rounded border border-border text-text-primary hover:border-border-strong hover:text-text-primary disabled:opacity-50 transition-colors"
                 >
-                  Change status
+                  Labels
                 </button>
-                {showStatusMenu && (
+                {showLabelsMenu && (
                   <div className="absolute top-full left-0 mt-1 z-20 bg-surface-0 border border-border rounded shadow-md min-w-[160px]">
-                    {changeStatusTargets.map((v) => (
-                      <button
-                        key={v.id}
-                        onClick={() => massChangeStatus(v)}
-                        className="w-full text-left px-3 py-2 text-xs text-text-primary hover:bg-surface-2 transition-colors"
+                    {/* Status key */}
+                    {statusList.length > 0 && (
+                      <div
+                        className="relative border-b border-border last:border-0"
+                        onMouseEnter={() => setHoveredKey("_status")}
                       >
-                        {v.name}
-                      </button>
+                        <div className="px-3 py-2 text-xs text-text-primary hover:bg-surface-2 transition-colors cursor-default flex items-center justify-between">
+                          <span>Status</span>
+                          <span className="text-[10px] text-text-primary ml-3">›</span>
+                        </div>
+                        {hoveredKey === "_status" && (
+                          <div className="absolute left-full top-0 ml-0 z-30 bg-surface-0 border border-border rounded shadow-md min-w-[140px]">
+                            {statusList.map((s) => (
+                              <button
+                                key={s.slug}
+                                onClick={() => massChangeStatus(s.slug)}
+                                className="w-full text-left px-3 py-2 text-xs text-text-primary hover:bg-surface-2 transition-colors"
+                              >
+                                {s.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {/* Other label keys */}
+                    {nonStatusTagKeys.map((key) => (
+                      <div
+                        key={key.id}
+                        className="relative border-b border-border last:border-0"
+                        onMouseEnter={() => setHoveredKey(key.id)}
+                      >
+                        <div className="px-3 py-2 text-xs text-text-primary hover:bg-surface-2 transition-colors cursor-default flex items-center justify-between">
+                          <span>{key.name}</span>
+                          <span className="text-[10px] text-text-primary ml-3">›</span>
+                        </div>
+                        {hoveredKey === key.id && (
+                          <div className="absolute left-full top-0 ml-0 z-30 bg-surface-0 border border-border rounded shadow-md min-w-[140px]">
+                            {key.values.map((val) => (
+                              <button
+                                key={val.id}
+                                onClick={() => {
+                                  massSetLabel(key.id, val.id);
+                                  setShowLabelsMenu(false);
+                                  setHoveredKey(null);
+                                }}
+                                className="w-full text-left px-3 py-2 text-xs text-text-primary hover:bg-surface-2 transition-colors"
+                              >
+                                {val.name}
+                              </button>
+                            ))}
+                            {key.values.length === 0 && (
+                              <p className="px-3 py-2 text-xs text-text-primary">No values</p>
+                            )}
+                            <button
+                              onClick={() => {
+                                massClearLabel(key.id);
+                                setShowLabelsMenu(false);
+                                setHoveredKey(null);
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-surface-2 transition-colors border-t border-border"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -516,7 +565,6 @@ export default function LibraryManager({
                   onClick={() => {
                     setShowTagsMenu((v) => !v);
                     setShowRateMenu(false);
-                    setShowStatusMenu(false);
                     setShowLabelsMenu(false);
                   }}
                   disabled={bulkWorking}
@@ -546,57 +594,6 @@ export default function LibraryManager({
                         </div>
                       );
                     })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Labels — available in all views */}
-            {nonStatusTagKeys.length > 0 && (
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    setShowLabelsMenu((v) => !v);
-                    setShowRateMenu(false);
-                    setShowStatusMenu(false);
-                    setShowTagsMenu(false);
-                  }}
-                  disabled={bulkWorking}
-                  className="text-xs px-3 py-1.5 rounded border border-border text-text-primary hover:border-border-strong hover:text-text-primary disabled:opacity-50 transition-colors"
-                >
-                  Labels
-                </button>
-                {showLabelsMenu && (
-                  <div className="absolute top-full left-0 mt-1 z-20 bg-surface-0 border border-border rounded shadow-md w-56 max-h-80 overflow-y-auto">
-                    {tagKeys.map((key) => (
-                      <div key={key.id} className="border-b border-border last:border-0">
-                        <div className="px-3 pt-2.5 pb-1 flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-semibold text-text-primary uppercase tracking-wider">
-                            {key.name}
-                          </span>
-                          <button
-                            onClick={() => massClearLabel(key.id)}
-                            className="text-[10px] text-text-primary hover:text-red-400 transition-colors shrink-0"
-                          >
-                            clear
-                          </button>
-                        </div>
-                        <div className="pb-1.5">
-                          {key.values.map((val) => (
-                            <button
-                              key={val.id}
-                              onClick={() => massSetLabel(key.id, val.id)}
-                              className="w-full text-left px-3 py-1.5 text-xs text-text-primary hover:bg-surface-2 hover:text-text-primary transition-colors"
-                            >
-                              {val.name}
-                            </button>
-                          ))}
-                          {key.values.length === 0 && (
-                            <p className="px-3 py-1 text-xs text-text-primary">No values defined</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
                   </div>
                 )}
               </div>
