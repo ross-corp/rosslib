@@ -1,10 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -234,50 +230,6 @@ func ensureTagValue(app core.App, tagKeyID, name string) (*core.Record, error) {
 	return val, nil
 }
 
-// olClient is a simple Open Library API client.
-type olClient struct {
-	httpClient *http.Client
-	baseURL    string
-}
-
-func newOLClient() *olClient {
-	return &olClient{
-		httpClient: &http.Client{Timeout: 10 * time.Second},
-		baseURL:    "https://openlibrary.org",
-	}
-}
-
-func (c *olClient) get(path string) (map[string]any, error) {
-	resp, err := c.httpClient.Get(c.baseURL + path)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("OL API returned %d", resp.StatusCode)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	var result map[string]any
-	if err := json.Unmarshal(body, &result); err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-func (c *olClient) getRaw(path string) ([]byte, error) {
-	resp, err := c.httpClient.Get(c.baseURL + path)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("OL API returned %d", resp.StatusCode)
-	}
-	return io.ReadAll(resp.Body)
-}
 
 // upsertBook finds or creates a book record by open_library_id.
 func upsertBook(app core.App, olID, title, coverURL, isbn13, authors string, pubYear int) (*core.Record, error) {
