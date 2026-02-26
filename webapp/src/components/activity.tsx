@@ -287,13 +287,6 @@ export function ActivityCard({
           <ActivityDescription item={item} />
         </p>
 
-        {/* Rating */}
-        {item.rating && item.type === "rated" && (
-          <div className="mt-1">
-            <Stars rating={item.rating} />
-          </div>
-        )}
-
         {/* Review snippet */}
         {item.review_snippet && (
           <p className="mt-1 text-sm text-text-secondary line-clamp-2">
