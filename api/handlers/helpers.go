@@ -275,6 +275,7 @@ func recordActivity(app core.App, userID, activityType string, opts map[string]a
 		rec := core.NewRecord(coll)
 		rec.Set("user", userID)
 		rec.Set("activity_type", activityType)
+		rec.Set("created", time.Now().UTC().Format("2006-01-02 15:04:05.000Z"))
 		if v, ok := opts["book"]; ok {
 			rec.Set("book", v)
 		}

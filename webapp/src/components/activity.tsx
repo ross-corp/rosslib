@@ -37,7 +37,9 @@ export type FeedResponse = {
 };
 
 export function formatTime(iso: string): string {
+  if (!iso) return "";
   const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
   const now = new Date();
   const diff = now.getTime() - d.getTime();
   const mins = Math.floor(diff / 60000);
@@ -162,6 +164,7 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
           )}
         </>
       );
+    case "follow":
     case "followed_user":
       return (
         <>
