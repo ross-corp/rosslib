@@ -383,6 +383,17 @@ func CommitGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 				ExclusiveShelfSlug string   `json:"exclusive_shelf_slug"`
 				CustomShelves      []string `json:"custom_shelves"`
 			} `json:"rows"`
+			UnmatchedRows []struct {
+				Title              string   `json:"title"`
+				Author             string   `json:"author"`
+				ISBN13             string   `json:"isbn13"`
+				Rating             float64  `json:"rating"`
+				ReviewText         string   `json:"review_text"`
+				DateRead           string   `json:"date_read"`
+				DateAdded          string   `json:"date_added"`
+				ExclusiveShelfSlug string   `json:"exclusive_shelf_slug"`
+				CustomShelves      []string `json:"custom_shelves"`
+			} `json:"unmatched_rows"`
 			ShelfMappings []struct {
 				Shelf      string `json:"shelf"`
 				Action     string `json:"action"` // "tag", "skip", "create_label", "existing_label"
@@ -536,10 +547,46 @@ func CommitGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 			refreshBookStats(app, book.Id)
 		}
 
+		// Persist unmatched rows to pending_imports
+		pendingSaved := 0
+		if len(data.UnmatchedRows) > 0 {
+			piColl, piErr := app.FindCollectionByNameOrId("pending_imports")
+			if piErr == nil {
+				for _, u := range data.UnmatchedRows {
+					if u.Title == "" {
+						continue
+					}
+					pi := core.NewRecord(piColl)
+					pi.Set("user", user.Id)
+					pi.Set("source", "goodreads")
+					pi.Set("title", u.Title)
+					pi.Set("author", u.Author)
+					pi.Set("isbn13", u.ISBN13)
+					pi.Set("exclusive_shelf", u.ExclusiveShelfSlug)
+					if u.CustomShelves != nil {
+						pi.Set("custom_shelves", u.CustomShelves)
+					} else {
+						pi.Set("custom_shelves", []string{})
+					}
+					if u.Rating > 0 {
+						pi.Set("rating", u.Rating)
+					}
+					pi.Set("review_text", u.ReviewText)
+					pi.Set("date_read", u.DateRead)
+					pi.Set("date_added", u.DateAdded)
+					pi.Set("status", "unmatched")
+					if err := app.Save(pi); err == nil {
+						pendingSaved++
+					}
+				}
+			}
+		}
+
 		return e.JSON(http.StatusOK, map[string]any{
-			"imported": imported,
-			"failed":   failed,
-			"errors":   errors,
+			"imported":      imported,
+			"failed":        failed,
+			"errors":        errors,
+			"pending_saved": pendingSaved,
 		})
 	}
 }

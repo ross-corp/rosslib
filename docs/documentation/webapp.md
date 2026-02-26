@@ -112,6 +112,8 @@ webapp/src/app/
     ├── me/books/[olId]/tags/[keyId]/values/[valueId]/route.ts
     ├── me/import/goodreads/preview/route.ts
     ├── me/import/goodreads/commit/route.ts
+    ├── me/imports/pending/route.ts               ← GET list pending imports
+    ├── me/imports/pending/[id]/route.ts           ← PATCH resolve/dismiss, DELETE
     ├── shelves/[shelfId]/books/route.ts
     ├── shelves/[shelfId]/books/[olId]/route.ts    ← GET, PATCH, DELETE
     ├── books/[workId]/links/route.ts              ← GET, POST community links

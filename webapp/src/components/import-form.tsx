@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -55,13 +55,20 @@ type CommitRow = {
   custom_shelves: string[];
 };
 
-type DoneResult = { imported: number; failed: number; errors: string[] };
+type DoneResult = { imported: number; failed: number; errors: string[]; pending_saved?: number };
 
-type SavedUnmatched = {
+type PendingImport = {
+  id: string;
   title: string;
   author: string;
   isbn13: string;
-  exclusive_shelf_slug: string;
+  exclusive_shelf: string;
+  custom_shelves: string[];
+  rating: number | null;
+  review_text: string;
+  date_read: string;
+  date_added: string;
+  created: string;
 };
 
 type ShelfMapping = {
@@ -76,8 +83,6 @@ type TagKey = {
   slug: string;
   mode: string;
 };
-
-const STORAGE_KEY = "rosslib:import:unmatched";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -95,13 +100,7 @@ function shelfLabel(slug: string): string {
 
 function stars(rating: number | null): string {
   if (!rating) return "";
-  return "★".repeat(rating) + "☆".repeat(5 - rating);
-}
-
-function mergeUnmatched(existing: SavedUnmatched[], incoming: SavedUnmatched[]): SavedUnmatched[] {
-  const seen = new Set(existing.map((r) => `${r.title}|||${r.author}`));
-  const added = incoming.filter((r) => !seen.has(`${r.title}|||${r.author}`));
-  return [...existing, ...added];
+  return "\u2605".repeat(rating) + "\u2606".repeat(5 - rating);
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -129,30 +128,52 @@ export default function ImportForm({ username }: { username: string }) {
   // Preview progress
   const [progress, setProgress] = useState<{ current: number; total: number; title: string } | null>(null);
 
-  // Unmatched books persisted from previous imports
-  const [savedUnmatched, setSavedUnmatched] = useState<SavedUnmatched[]>([]);
+  // Pending imports from server
+  const [pendingImports, setPendingImports] = useState<PendingImport[]>([]);
 
-  useEffect(() => {
+  const loadPendingImports = useCallback(async () => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setSavedUnmatched(JSON.parse(raw));
+      const res = await fetch("/api/me/imports/pending");
+      if (res.ok) {
+        const data = await res.json();
+        setPendingImports(Array.isArray(data) ? data : []);
+      }
     } catch {
-      // ignore parse errors
+      // ignore
     }
   }, []);
 
-  function dismissUnmatched(index: number) {
-    const updated = savedUnmatched.filter((_, i) => i !== index);
-    setSavedUnmatched(updated);
+  useEffect(() => {
+    loadPendingImports();
+  }, [loadPendingImports]);
+
+  async function dismissPending(id: string) {
+    setPendingImports((prev) => prev.filter((p) => p.id !== id));
     try {
-      if (updated.length === 0) localStorage.removeItem(STORAGE_KEY);
-      else localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    } catch { /* ignore */ }
+      await fetch(`/api/me/imports/pending/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "dismiss" }),
+      });
+    } catch {
+      // ignore
+    }
   }
 
-  function clearAllUnmatched() {
-    setSavedUnmatched([]);
-    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+  async function clearAllPending() {
+    const ids = pendingImports.map((p) => p.id);
+    setPendingImports([]);
+    for (const id of ids) {
+      try {
+        await fetch(`/api/me/imports/pending/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "dismiss" }),
+        });
+      } catch {
+        // ignore
+      }
+    }
   }
 
   // ── Upload & preview ────────────────────────────────────────────────────────
@@ -281,6 +302,23 @@ export default function ImportForm({ username }: { username: string }) {
     return rows;
   }
 
+  function buildUnmatchedRows() {
+    if (!preview) return [];
+    return preview.rows
+      .filter((r) => r.status === "unmatched")
+      .map((r) => ({
+        title: r.title,
+        author: r.author,
+        isbn13: r.isbn13,
+        rating: r.rating,
+        review_text: r.review_text,
+        date_read: r.date_read,
+        date_added: r.date_added,
+        exclusive_shelf_slug: r.exclusive_shelf_slug,
+        custom_shelves: r.custom_shelves,
+      }));
+  }
+
   async function handleCommit() {
     const rows = buildCommitRows();
     if (rows.length === 0) {
@@ -296,6 +334,7 @@ export default function ImportForm({ username }: { username: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           rows,
+          unmatched_rows: buildUnmatchedRows(),
           shelf_mappings: Array.from(shelfMappings.entries()).map(([shelf, mapping]) => ({
             shelf,
             action: mapping.action,
@@ -310,24 +349,8 @@ export default function ImportForm({ username }: { username: string }) {
         setPhase("review");
         return;
       }
-      // Persist any unmatched rows to localStorage for later manual lookup
-      if (preview) {
-        const unmatched: SavedUnmatched[] = preview.rows
-          .filter((r) => r.status === "unmatched")
-          .map((r) => ({
-            title: r.title,
-            author: r.author,
-            isbn13: r.isbn13,
-            exclusive_shelf_slug: r.exclusive_shelf_slug,
-          }));
-        const merged = mergeUnmatched(savedUnmatched, unmatched);
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-          setSavedUnmatched(merged);
-        } catch {
-          // quota exceeded or SSR — ignore
-        }
-      }
+      // Reload pending imports from server
+      await loadPendingImports();
       setDoneResult(data);
       setPhase("done");
     } catch {
@@ -383,6 +406,11 @@ export default function ImportForm({ username }: { username: string }) {
             {doneResult.failed} book{doneResult.failed !== 1 ? "s" : ""} failed to import.
           </p>
         )}
+        {(doneResult.pending_saved ?? 0) > 0 && (
+          <p className="text-sm text-text-primary">
+            {doneResult.pending_saved} unmatched book{doneResult.pending_saved !== 1 ? "s" : ""} saved for later.
+          </p>
+        )}
         {(doneResult.errors ?? []).length > 0 && (
           <details className="text-xs text-text-primary">
             <summary className="cursor-pointer hover:text-text-primary">Show errors</summary>
@@ -411,9 +439,9 @@ export default function ImportForm({ username }: { username: string }) {
           </svg>
           {phase === "previewing"
             ? progress
-              ? `Matching books (${progress.current}/${progress.total})…`
-              : "Matching books against Open Library…"
-            : "Importing…"}
+              ? `Matching books (${progress.current}/${progress.total})\u2026`
+              : "Matching books against Open Library\u2026"
+            : "Importing\u2026"}
         </div>
         {phase === "previewing" && progress && (
           <p className="text-xs text-text-primary pl-7 truncate">
@@ -486,7 +514,7 @@ export default function ImportForm({ username }: { username: string }) {
                           <option key={c.ol_id} value={c.ol_id}>
                             {c.title}
                             {c.year ? ` (${c.year})` : ""}
-                            {c.authors?.length ? ` — ${c.authors.slice(0, 2).join(", ")}` : ""}
+                            {c.authors?.length ? ` \u2014 ${c.authors.slice(0, 2).join(", ")}` : ""}
                           </option>
                         ))}
                       </select>
@@ -551,7 +579,7 @@ export default function ImportForm({ username }: { username: string }) {
               Not found ({unmatchedRows.length})
             </h2>
             <p className="text-xs text-text-primary mb-3">
-              These books couldn&apos;t be matched to Open Library and will be skipped.
+              These books couldn&apos;t be matched to Open Library and will be saved for later.
             </p>
             <ul className="divide-y divide-border border border-border rounded-lg overflow-hidden">
               {unmatchedRows.map((row) => (
@@ -749,43 +777,43 @@ export default function ImportForm({ username }: { username: string }) {
   // idle
   return (
     <div className="space-y-6">
-      {savedUnmatched.length > 0 && (
+      {pendingImports.length > 0 && (
         <section className="border border-amber-200 rounded-lg p-4 bg-amber-50 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-amber-900">
-              Not found in previous import ({savedUnmatched.length})
+              Failed imports ({pendingImports.length})
             </h2>
             <button
               type="button"
-              onClick={clearAllUnmatched}
+              onClick={clearAllPending}
               className="text-xs text-amber-700 hover:text-amber-900 transition-colors"
             >
-              Clear all
+              Dismiss all
             </button>
           </div>
           <p className="text-xs text-amber-700">
             These books couldn&apos;t be matched automatically. Search for them manually to add them.
           </p>
           <ul className="divide-y divide-amber-200">
-            {savedUnmatched.map((book, i) => (
-              <li key={i} className="flex items-center gap-3 py-2">
+            {pendingImports.map((item) => (
+              <li key={item.id} className="flex items-center gap-3 py-2">
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm text-text-primary truncate block">{book.title}</span>
-                  <span className="text-xs text-text-primary">{book.author}</span>
+                  <span className="text-sm text-text-primary truncate block">{item.title}</span>
+                  <span className="text-xs text-text-primary">{item.author}</span>
                 </div>
                 <a
-                  href={`/search?q=${encodeURIComponent(book.title)}`}
+                  href={`/search?q=${encodeURIComponent(item.title)}`}
                   className="text-xs text-text-primary hover:text-text-primary underline shrink-0 transition-colors"
                 >
                   Search
                 </a>
                 <button
                   type="button"
-                  onClick={() => dismissUnmatched(i)}
+                  onClick={() => dismissPending(item.id)}
                   className="text-xs text-text-primary hover:text-text-primary shrink-0 transition-colors"
                   aria-label="Dismiss"
                 >
-                  ✕
+                  &#10005;
                 </button>
               </li>
             ))}
@@ -796,7 +824,7 @@ export default function ImportForm({ username }: { username: string }) {
       <div className="text-sm text-text-primary space-y-1">
         <p>Export your library from Goodreads:</p>
         <p className="text-text-primary">
-          My Books → Import and Export → Export Library → Download
+          My Books &rarr; Import and Export &rarr; Export Library &rarr; Download
         </p>
       </div>
 

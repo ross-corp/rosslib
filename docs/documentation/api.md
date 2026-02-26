@@ -910,13 +910,71 @@ Response groups rows into `matched`, `ambiguous`, and `unmatched`. See `docs/TOD
 
 ### `POST /me/import/goodreads/commit`  *(auth required)*
 
-Accepts the confirmed preview payload and writes to the database. Returns `{ imported, failed, errors }`.
+Accepts the confirmed preview payload and writes to the database. Returns `{ imported, failed, errors, pending_saved }`.
+
+The request body includes an optional `unmatched_rows` array alongside `rows` and `shelf_mappings`. Unmatched rows are persisted to the `pending_imports` collection for later manual resolution.
 
 **`shelf_mappings` actions:**
 - `"tag"` — creates a standalone tag key per shelf (default)
 - `"create_label"` — groups the shelf as a value under a new label key specified by `label_name`
 - `"existing_label"` — adds the shelf as a value under an existing label key specified by `label_key_id`
 - `"skip"` — ignores the shelf
+
+---
+
+## Pending Imports
+
+### `GET /me/imports/pending`  *(auth required)*
+
+Returns unmatched import rows saved from previous Goodreads imports. Only returns rows with status `unmatched`.
+
+```json
+[
+  {
+    "id": "...",
+    "title": "Destinies, Feb 1980",
+    "author": "James Baen",
+    "isbn13": "",
+    "exclusive_shelf": "read",
+    "custom_shelves": [],
+    "rating": null,
+    "review_text": "",
+    "date_read": "",
+    "date_added": "2024/01/15",
+    "created": "2026-02-26T12:00:00Z"
+  }
+]
+```
+
+### `PATCH /me/imports/pending/:id`  *(auth required)*
+
+Resolve or dismiss a pending import.
+
+**Dismiss** — marks as resolved without importing:
+```json
+{ "action": "dismiss" }
+```
+
+**Resolve** — matches to an Open Library work ID, creates the book and user_book:
+```json
+{ "action": "resolve", "ol_id": "OL82592W" }
+```
+
+```
+200 { "ok": true }
+200 { "ok": true, "book_id": "..." }  (resolve)
+400 { "error": "action must be 'resolve' or 'dismiss'" }
+404 { "error": "Pending import not found" }
+```
+
+### `DELETE /me/imports/pending/:id`  *(auth required)*
+
+Permanently deletes a pending import row.
+
+```
+200 { "ok": true }
+404 { "error": "Pending import not found" }
+```
 
 ---
 

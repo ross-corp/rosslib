@@ -25,6 +25,7 @@ func DeleteAllData(app core.App) func(e *core.RequestEvent) error {
 			"collection_items",
 			"genre_ratings",
 			"user_books",
+			"pending_imports",
 			"notifications",
 			"author_follows",
 			"book_follows",
