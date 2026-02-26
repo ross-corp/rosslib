@@ -496,11 +496,31 @@ Returns all shelves for a user (default + custom + tag collections).
 ]
 ```
 
-`collection_type` is one of `"shelf"` or `"tag"`. See `docs/organization.md` for the distinction.
+`collection_type` is one of `"shelf"`, `"tag"`, or `"computed"`. See `docs/organization.md` for the distinction.
+
+Computed lists include an additional `computed` object with metadata about the set operation:
+
+```json
+{
+  "id": "...",
+  "name": "Books in both lists",
+  "slug": "books-in-both-lists",
+  "exclusive_group": "",
+  "collection_type": "computed",
+  "item_count": 12,
+  "computed": {
+    "operation": "intersection",
+    "is_continuous": true,
+    "last_computed_at": "2026-02-25T14:00:00Z",
+    "source_a_name": "Want to Read",
+    "source_b_name": "Favorites"
+  }
+}
+```
 
 ### `GET /users/:username/shelves/:slug`
 
-Returns a shelf with its full book list.
+Returns a shelf with its full book list. Computed lists also include the `computed` object.
 
 ```json
 {
