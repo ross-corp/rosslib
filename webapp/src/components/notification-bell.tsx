@@ -28,12 +28,14 @@ export default function NotificationBell() {
       href="/notifications"
       className="relative text-sm text-text-secondary hover:text-text-primary px-2 py-1 transition-colors"
       title="Notifications"
+      aria-label={count > 0 ? `Notifications (${count} unread)` : "Notifications"}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 20 20"
         fill="currentColor"
         className="w-4 h-4"
+        aria-hidden="true"
       >
         <path
           fillRule="evenodd"
@@ -42,7 +44,10 @@ export default function NotificationBell() {
         />
       </svg>
       {count > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+        <span
+          className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none"
+          aria-hidden="true"
+        >
           {count > 9 ? "9+" : count}
         </span>
       )}
