@@ -64,6 +64,19 @@ type SavedUnmatched = {
   exclusive_shelf_slug: string;
 };
 
+type ShelfMapping = {
+  action: "tag" | "skip" | "create_label" | "existing_label";
+  label_name?: string;
+  label_key_id?: string;
+};
+
+type TagKey = {
+  id: string;
+  name: string;
+  slug: string;
+  mode: string;
+};
+
 const STORAGE_KEY = "rosslib:import:unmatched";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -109,8 +122,10 @@ export default function ImportForm() {
   const [choices, setChoices] = useState<Map<number, string>>(new Map());
   // matched section expanded
   const [matchedExpanded, setMatchedExpanded] = useState(false);
-  // shelf name → "tag" or "skip"
-  const [shelfMappings, setShelfMappings] = useState<Map<string, "tag" | "skip">>(new Map());
+  // shelf name → mapping config
+  const [shelfMappings, setShelfMappings] = useState<Map<string, ShelfMapping>>(new Map());
+  // User's existing tag keys (for "Add to existing label")
+  const [existingTagKeys, setExistingTagKeys] = useState<TagKey[]>([]);
   // Preview progress
   const [progress, setProgress] = useState<{ current: number; total: number; title: string } | null>(null);
 
@@ -281,9 +296,11 @@ export default function ImportForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           rows,
-          shelf_mappings: Array.from(shelfMappings.entries()).map(([shelf, action]) => ({
+          shelf_mappings: Array.from(shelfMappings.entries()).map(([shelf, mapping]) => ({
             shelf,
-            action,
+            action: mapping.action,
+            label_name: mapping.label_name ?? "",
+            label_key_id: mapping.label_key_id ?? "",
           })),
         }),
       });
@@ -319,7 +336,7 @@ export default function ImportForm() {
     }
   }
 
-  function enterConfigure() {
+  async function enterConfigure() {
     const rows = buildCommitRows();
     // Collect unique custom shelves from selected rows with counts
     const counts = new Map<string, number>();
@@ -329,11 +346,23 @@ export default function ImportForm() {
       }
     }
     // Initialize all custom shelves to "tag" by default
-    const mappings = new Map<string, "tag" | "skip">();
+    const mappings = new Map<string, ShelfMapping>();
     for (const shelf of counts.keys()) {
-      mappings.set(shelf, shelfMappings.get(shelf) ?? "tag");
+      mappings.set(shelf, shelfMappings.get(shelf) ?? { action: "tag" });
     }
     setShelfMappings(mappings);
+    // Fetch existing tag keys for "Add to existing label"
+    try {
+      const res = await fetch("/api/me/tag-keys");
+      if (res.ok) {
+        const data: TagKey[] = await res.json();
+        setExistingTagKeys(
+          (data ?? []).filter((k) => k.slug !== "status"),
+        );
+      }
+    } catch {
+      // ignore — existing labels just won't be available
+    }
     setPhase("configure");
   }
 
@@ -604,33 +633,88 @@ export default function ImportForm() {
               Custom shelves ({sortedShelves.length})
             </h2>
             <p className="text-xs text-text-primary mb-3">
-              Each shelf will be imported as a tag. Set any you don&apos;t want to &quot;Skip&quot;.
+              Choose how to import each Goodreads shelf.
             </p>
             <ul className="divide-y divide-border border border-border rounded-lg overflow-hidden">
-              {sortedShelves.map(([shelf, count]) => (
-                <li key={shelf} className="flex items-center gap-3 px-4 py-2.5">
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm text-text-primary">{shelf}</span>
-                    <span className="text-xs text-text-primary ml-2">
-                      ({count} book{count !== 1 ? "s" : ""})
-                    </span>
-                  </div>
-                  <select
-                    className="text-xs border border-border rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong"
-                    value={shelfMappings.get(shelf) ?? "tag"}
-                    onChange={(e) =>
-                      setShelfMappings((prev) => {
-                        const next = new Map(prev);
-                        next.set(shelf, e.target.value as "tag" | "skip");
-                        return next;
-                      })
-                    }
-                  >
-                    <option value="tag">Tag</option>
-                    <option value="skip">Skip</option>
-                  </select>
-                </li>
-              ))}
+              {sortedShelves.map(([shelf, count]) => {
+                const mapping = shelfMappings.get(shelf) ?? { action: "tag" as const };
+                return (
+                  <li key={shelf} className="px-4 py-2.5 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm text-text-primary">{shelf}</span>
+                        <span className="text-xs text-text-primary ml-2">
+                          ({count} book{count !== 1 ? "s" : ""})
+                        </span>
+                      </div>
+                      <select
+                        className="text-xs border border-border rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong"
+                        value={mapping.action}
+                        onChange={(e) =>
+                          setShelfMappings((prev) => {
+                            const next = new Map(prev);
+                            const action = e.target.value as ShelfMapping["action"];
+                            next.set(shelf, { action });
+                            return next;
+                          })
+                        }
+                      >
+                        <option value="tag">Tag</option>
+                        <option value="create_label">Create label</option>
+                        {existingTagKeys.length > 0 && (
+                          <option value="existing_label">Add to existing label</option>
+                        )}
+                        <option value="skip">Skip</option>
+                      </select>
+                    </div>
+                    {mapping.action === "create_label" && (
+                      <div className="flex items-center gap-2 pl-0">
+                        <label className="text-xs text-text-primary shrink-0">Label name:</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Genre, Source"
+                          className="text-xs border border-border rounded px-2 py-1.5 flex-1 max-w-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong"
+                          value={mapping.label_name ?? ""}
+                          onChange={(e) =>
+                            setShelfMappings((prev) => {
+                              const next = new Map(prev);
+                              next.set(shelf, { ...mapping, label_name: e.target.value });
+                              return next;
+                            })
+                          }
+                        />
+                        <span className="text-xs text-text-primary">
+                          (shelf becomes a value under this label)
+                        </span>
+                      </div>
+                    )}
+                    {mapping.action === "existing_label" && (
+                      <div className="flex items-center gap-2 pl-0">
+                        <label className="text-xs text-text-primary shrink-0">Label:</label>
+                        <select
+                          className="text-xs border border-border rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong"
+                          value={mapping.label_key_id ?? ""}
+                          onChange={(e) =>
+                            setShelfMappings((prev) => {
+                              const next = new Map(prev);
+                              next.set(shelf, { ...mapping, label_key_id: e.target.value });
+                              return next;
+                            })
+                          }
+                        >
+                          <option value="">Select a label...</option>
+                          {existingTagKeys.map((k) => (
+                            <option key={k.id} value={k.id}>{k.name}</option>
+                          ))}
+                        </select>
+                        <span className="text-xs text-text-primary">
+                          (shelf becomes a value under this label)
+                        </span>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         ) : (

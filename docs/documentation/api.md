@@ -810,6 +810,12 @@ Response groups rows into `matched`, `ambiguous`, and `unmatched`. See `docs/TOD
 
 Accepts the confirmed preview payload and writes to the database. Returns `{ imported, failed, errors }`.
 
+**`shelf_mappings` actions:**
+- `"tag"` — creates a standalone tag key per shelf (default)
+- `"create_label"` — groups the shelf as a value under a new label key specified by `label_name`
+- `"existing_label"` — adds the shelf as a value under an existing label key specified by `label_key_id`
+- `"skip"` — ignores the shelf
+
 ---
 
 ## Activity Feed

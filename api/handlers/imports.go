@@ -329,8 +329,10 @@ func CommitGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 				CustomShelves      []string `json:"custom_shelves"`
 			} `json:"rows"`
 			ShelfMappings []struct {
-				Shelf  string `json:"shelf"`
-				Action string `json:"action"`
+				Shelf      string `json:"shelf"`
+				Action     string `json:"action"` // "tag", "skip", "create_label", "existing_label"
+				LabelName  string `json:"label_name"`
+				LabelKeyID string `json:"label_key_id"`
 			} `json:"shelf_mappings"`
 		}{}
 		if err := e.BindBody(&data); err != nil {
@@ -344,14 +346,42 @@ func CommitGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 		}
 		tagMap := map[string]tagMapping{}
 		for _, sm := range data.ShelfMappings {
-			if sm.Action != "tag" {
-				continue
+			switch sm.Action {
+			case "tag":
+				key, val, err := ensureTagKey(app, user.Id, sm.Shelf, "select_multiple")
+				if err != nil {
+					continue
+				}
+				tagMap[sm.Shelf] = tagMapping{KeyID: key.Id, ValueID: val.Id}
+
+			case "create_label":
+				if sm.LabelName == "" {
+					continue
+				}
+				key, _, err := ensureTagKey(app, user.Id, sm.LabelName, "select_multiple")
+				if err != nil {
+					continue
+				}
+				val, err := ensureTagValue(app, key.Id, sm.Shelf)
+				if err != nil {
+					continue
+				}
+				tagMap[sm.Shelf] = tagMapping{KeyID: key.Id, ValueID: val.Id}
+
+			case "existing_label":
+				if sm.LabelKeyID == "" {
+					continue
+				}
+				key, err := app.FindRecordById("tag_keys", sm.LabelKeyID)
+				if err != nil || key.GetString("user") != user.Id {
+					continue
+				}
+				val, err := ensureTagValue(app, key.Id, sm.Shelf)
+				if err != nil {
+					continue
+				}
+				tagMap[sm.Shelf] = tagMapping{KeyID: key.Id, ValueID: val.Id}
 			}
-			key, val, err := ensureTagKey(app, user.Id, sm.Shelf, "select_multiple")
-			if err != nil {
-				continue
-			}
-			tagMap[sm.Shelf] = tagMapping{KeyID: key.Id, ValueID: val.Id}
 		}
 
 		imported := 0

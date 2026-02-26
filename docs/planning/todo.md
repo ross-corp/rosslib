@@ -2,10 +2,6 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination.
 
-## imports
-
-- [ ] Add a "Create label" option to the Goodreads import shelf mapping. Currently the import preview (`import-form.tsx`) only offers "Tag" and "Skip" for each Goodreads shelf. Add a third option: "Create label" — when selected, show an inline form where the user types a label name. Multiple shelves can be assigned to the same label (each shelf becomes a value under that label key). Also add an "Add to existing label" option that shows a dropdown of the user's existing label keys. On import commit, create the label key (via tag_keys) and assign the appropriate tag_values, then tag each imported book with its shelf's label value.
-
 ## edition handling
 
 - [ ] Add a "Change edition" button on the book detail page (visible only when the user has the book in their library). Clicking it opens a modal/panel showing the available editions (reuse the existing `EditionList` data from `GET /books/:workId/editions`). Each edition shows its cover thumbnail, format, publisher, and ISBN. Selecting an edition updates the user's `user_books` record with a new `selected_edition_key` field (Open Library edition key like `/books/OL123M`). The profile and shelf pages should then display the selected edition's cover instead of the default work cover. Requires: adding `selected_edition_key` column to `user_books` (PocketBase migration), a `PATCH /me/books/:olId` field for it, and frontend logic to prefer the edition cover URL when rendering book covers.
@@ -30,3 +26,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 <!-- nephewbot moves tasks here when it opens a PR. Move to docs/planning/completed.md after merging. -->
 - [Add delete-all-data endpoint and settings UI](https://github.com/ross-corp/rosslib/pull/37) — DELETE /me/account/data removes all user data; settings page gets Danger Zone with typed confirmation
+- [Add create/existing label options to import shelf mapping](https://github.com/ross-corp/rosslib/pull/38) — Goodreads import configure step gains "Create label" and "Add to existing label" actions alongside Tag and Skip
