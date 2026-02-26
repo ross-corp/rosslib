@@ -71,6 +71,7 @@ const STORAGE_KEY = "rosslib:import:unmatched";
 function shelfLabel(slug: string): string {
   const labels: Record<string, string> = {
     "read": "Read",
+    "to-read": "Want to Read",
     "currently-reading": "Currently Reading",
     "want-to-read": "Want to Read",
     "owned-to-read": "Owned to Read",
@@ -96,7 +97,7 @@ export default function ImportForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
 
-  type Phase = "idle" | "previewing" | "review" | "importing" | "done";
+  type Phase = "idle" | "previewing" | "review" | "configure" | "importing" | "done";
   const [phase, setPhase] = useState<Phase>("idle");
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +109,10 @@ export default function ImportForm() {
   const [choices, setChoices] = useState<Map<number, string>>(new Map());
   // matched section expanded
   const [matchedExpanded, setMatchedExpanded] = useState(false);
+  // shelf name → "tag" or "skip"
+  const [shelfMappings, setShelfMappings] = useState<Map<string, "tag" | "skip">>(new Map());
+  // Preview progress
+  const [progress, setProgress] = useState<{ current: number; total: number; title: string } | null>(null);
 
   // Unmatched books persisted from previous imports
   const [savedUnmatched, setSavedUnmatched] = useState<SavedUnmatched[]>([]);
@@ -144,6 +149,7 @@ export default function ImportForm() {
       return;
     }
     setError(null);
+    setProgress(null);
     setPhase("previewing");
 
     const form = new FormData();
@@ -154,9 +160,48 @@ export default function ImportForm() {
         method: "POST",
         body: form,
       });
-      const data: PreviewResponse & { error?: string } = await res.json();
+
       if (!res.ok) {
-        setError(data.error ?? "Preview failed.");
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text);
+          setError(data.error ?? "Preview failed.");
+        } catch {
+          setError("Preview failed.");
+        }
+        setPhase("idle");
+        return;
+      }
+
+      // Read NDJSON stream
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let result: (PreviewResponse & { shelves?: { name: string; count: number }[] }) | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop()!;
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const obj = JSON.parse(line);
+            if (obj.type === "progress") {
+              setProgress({ current: obj.current, total: obj.total, title: obj.title });
+            } else if (obj.type === "result") {
+              result = obj;
+            }
+          } catch {
+            // skip malformed lines
+          }
+        }
+      }
+
+      if (!result) {
+        setError("Failed to parse preview response.");
         setPhase("idle");
         return;
       }
@@ -164,7 +209,7 @@ export default function ImportForm() {
       // Pre-populate state: match/ambiguous rows selected, unmatched skipped.
       const sel = new Map<number, boolean>();
       const cho = new Map<number, string>();
-      for (const row of data.rows) {
+      for (const row of result.rows) {
         sel.set(row.row_id, row.status !== "unmatched");
         if (row.status === "ambiguous" && row.candidates?.[0]) {
           cho.set(row.row_id, row.candidates[0].ol_id);
@@ -172,7 +217,7 @@ export default function ImportForm() {
       }
       setSelected(sel);
       setChoices(cho);
-      setPreview(data);
+      setPreview(result);
       setPhase("review");
     } catch {
       setError("Network error. Please try again.");
@@ -234,7 +279,13 @@ export default function ImportForm() {
       const res = await fetch("/api/me/import/goodreads/commit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rows }),
+        body: JSON.stringify({
+          rows,
+          shelf_mappings: Array.from(shelfMappings.entries()).map(([shelf, action]) => ({
+            shelf,
+            action,
+          })),
+        }),
       });
       const data: DoneResult & { error?: string } = await res.json();
       if (!res.ok) {
@@ -266,6 +317,24 @@ export default function ImportForm() {
       setError("Network error. Please try again.");
       setPhase("review");
     }
+  }
+
+  function enterConfigure() {
+    const rows = buildCommitRows();
+    // Collect unique custom shelves from selected rows with counts
+    const counts = new Map<string, number>();
+    for (const row of rows) {
+      for (const shelf of row.custom_shelves) {
+        counts.set(shelf, (counts.get(shelf) ?? 0) + 1);
+      }
+    }
+    // Initialize all custom shelves to "tag" by default
+    const mappings = new Map<string, "tag" | "skip">();
+    for (const shelf of counts.keys()) {
+      mappings.set(shelf, shelfMappings.get(shelf) ?? "tag");
+    }
+    setShelfMappings(mappings);
+    setPhase("configure");
   }
 
   // ── Counts ──────────────────────────────────────────────────────────────────
@@ -305,14 +374,23 @@ export default function ImportForm() {
 
   if (phase === "previewing" || phase === "importing") {
     return (
-      <div className="flex items-center gap-3 text-sm text-text-primary">
-        <svg className="animate-spin h-4 w-4 text-text-primary" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-        {phase === "previewing"
-          ? "Matching books against Open Library — this can take up to 30 seconds…"
-          : "Importing…"}
+      <div className="space-y-2">
+        <div className="flex items-center gap-3 text-sm text-text-primary">
+          <svg className="animate-spin h-4 w-4 text-text-primary shrink-0" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          {phase === "previewing"
+            ? progress
+              ? `Matching books (${progress.current}/${progress.total})…`
+              : "Matching books against Open Library…"
+            : "Importing…"}
+        </div>
+        {phase === "previewing" && progress && (
+          <p className="text-xs text-text-primary pl-7 truncate">
+            Last looked up: {progress.title}
+          </p>
+        )}
       </div>
     );
   }
@@ -459,15 +537,15 @@ export default function ImportForm() {
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        {/* Commit bar */}
+        {/* Action bar */}
         <div className="flex items-center gap-4 pt-2 border-t border-border">
           <button
             type="button"
-            onClick={handleCommit}
+            onClick={enterConfigure}
             disabled={selectedCount === 0}
             className="px-4 py-2 bg-accent text-white text-sm rounded-lg hover:bg-surface-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Import {selectedCount} book{selectedCount !== 1 ? "s" : ""}
+            Next: Configure shelves
           </button>
           <button
             type="button"
@@ -475,6 +553,109 @@ export default function ImportForm() {
             className="text-sm text-text-primary hover:text-text-primary transition-colors"
           >
             Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "configure") {
+    // Compute shelf counts from selected rows
+    const rows = buildCommitRows();
+    const shelfCounts = new Map<string, number>();
+    for (const row of rows) {
+      for (const shelf of row.custom_shelves) {
+        shelfCounts.set(shelf, (shelfCounts.get(shelf) ?? 0) + 1);
+      }
+    }
+    const sortedShelves = Array.from(shelfCounts.entries()).sort((a, b) => b[1] - a[1]);
+    const hasCustomShelves = sortedShelves.length > 0;
+
+    return (
+      <div className="space-y-8">
+        {/* Exclusive shelf mapping (read-only, informational) */}
+        <section>
+          <h2 className="text-sm font-semibold text-text-primary mb-3">
+            Status mapping
+          </h2>
+          <p className="text-xs text-text-primary mb-3">
+            Goodreads reading status will be mapped to your Status label automatically.
+          </p>
+          <ul className="divide-y divide-border border border-border rounded-lg overflow-hidden text-sm">
+            <li className="flex items-center justify-between px-4 py-2.5">
+              <span className="text-text-primary">read</span>
+              <span className="text-text-primary">Status: Finished</span>
+            </li>
+            <li className="flex items-center justify-between px-4 py-2.5">
+              <span className="text-text-primary">currently-reading</span>
+              <span className="text-text-primary">Status: Currently Reading</span>
+            </li>
+            <li className="flex items-center justify-between px-4 py-2.5">
+              <span className="text-text-primary">to-read</span>
+              <span className="text-text-primary">Status: Want to Read</span>
+            </li>
+          </ul>
+        </section>
+
+        {/* Custom shelf mapping */}
+        {hasCustomShelves ? (
+          <section>
+            <h2 className="text-sm font-semibold text-text-primary mb-3">
+              Custom shelves ({sortedShelves.length})
+            </h2>
+            <p className="text-xs text-text-primary mb-3">
+              Each shelf will be imported as a tag. Set any you don&apos;t want to &quot;Skip&quot;.
+            </p>
+            <ul className="divide-y divide-border border border-border rounded-lg overflow-hidden">
+              {sortedShelves.map(([shelf, count]) => (
+                <li key={shelf} className="flex items-center gap-3 px-4 py-2.5">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-text-primary">{shelf}</span>
+                    <span className="text-xs text-text-primary ml-2">
+                      ({count} book{count !== 1 ? "s" : ""})
+                    </span>
+                  </div>
+                  <select
+                    className="text-xs border border-border rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong"
+                    value={shelfMappings.get(shelf) ?? "tag"}
+                    onChange={(e) =>
+                      setShelfMappings((prev) => {
+                        const next = new Map(prev);
+                        next.set(shelf, e.target.value as "tag" | "skip");
+                        return next;
+                      })
+                    }
+                  >
+                    <option value="tag">Tag</option>
+                    <option value="skip">Skip</option>
+                  </select>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : (
+          <p className="text-sm text-text-primary">
+            No custom shelves found — only status mapping will be applied.
+          </p>
+        )}
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        {/* Action bar */}
+        <div className="flex items-center gap-4 pt-2 border-t border-border">
+          <button
+            type="button"
+            onClick={handleCommit}
+            className="px-4 py-2 bg-accent text-white text-sm rounded-lg hover:bg-surface-3 transition-colors"
+          >
+            Import {selectedCount} book{selectedCount !== 1 ? "s" : ""}
+          </button>
+          <button
+            type="button"
+            onClick={() => setPhase("review")}
+            className="text-sm text-text-primary hover:text-text-primary transition-colors"
+          >
+            Back
           </button>
         </div>
       </div>

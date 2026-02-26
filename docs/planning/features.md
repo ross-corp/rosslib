@@ -4,15 +4,6 @@ More major than todo.md. nephewbot does NOT read from this file, so safe to add 
 
 ## MAJOR FEATURES
 
-- a better UI than whatever claude came up with
-
-- bug report form
-
-- feature suggestion form
-
-- more customizable UI
-  - tumble/myspace esque
-
 - better book pages with discussion threads, auto-grouped with embeddings / RAGlike
 
 - better wiki-style links of relevant works, see above
@@ -60,3 +51,7 @@ More major than todo.md. nephewbot does NOT read from this file, so safe to add 
 
 - when the app is larger and we need better planning: 
   - portal on the site to "report bug" -> opens GH issue -> nephewbot pulls issues, submits PRs
+
+- [ ] Bookshelf scan — scan many books at once (10-20 on a shelf); batch mode for book scanner
+- [ ] Improve barcode detection — try multiple barcode formats, rotation/crop preprocessing
+- [ ] Kindle integration (TBD)

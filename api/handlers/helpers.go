@@ -11,6 +11,8 @@ import (
 	"unicode"
 
 	"github.com/pocketbase/pocketbase/core"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -128,6 +130,80 @@ func ensureStatusTagKey(app core.App, userID string) (*core.Record, []*core.Reco
 	}
 
 	return key, values, nil
+}
+
+// titleCase converts a slug-like string to title case ("dark-fantasy" → "Dark Fantasy").
+func titleCase(s string) string {
+	s = strings.ReplaceAll(s, "-", " ")
+	return cases.Title(language.English).String(s)
+}
+
+// ensureTagKey finds or creates a tag key by slug for a user, and ensures it has at least one value.
+// Returns (tagKeyRecord, tagValueRecord, error).
+func ensureTagKey(app core.App, userID, name, mode string) (*core.Record, *core.Record, error) {
+	slug := tagSlugify(name)
+	displayName := titleCase(name)
+
+	// Look for existing tag key
+	existing, err := app.FindRecordsByFilter("tag_keys",
+		"user = {:user} && slug = {:slug}",
+		"", 1, 0,
+		map[string]any{"user": userID, "slug": slug},
+	)
+	if err == nil && len(existing) > 0 {
+		key := existing[0]
+		// Find existing value
+		values, _ := app.FindRecordsByFilter("tag_values",
+			"tag_key = {:key}",
+			"", 1, 0,
+			map[string]any{"key": key.Id},
+		)
+		if len(values) > 0 {
+			return key, values[0], nil
+		}
+		// Create a value
+		valColl, err := app.FindCollectionByNameOrId("tag_values")
+		if err != nil {
+			return nil, nil, err
+		}
+		val := core.NewRecord(valColl)
+		val.Set("tag_key", key.Id)
+		val.Set("name", displayName)
+		val.Set("slug", slug)
+		if err := app.Save(val); err != nil {
+			return nil, nil, err
+		}
+		return key, val, nil
+	}
+
+	// Create new tag key
+	keyColl, err := app.FindCollectionByNameOrId("tag_keys")
+	if err != nil {
+		return nil, nil, err
+	}
+	key := core.NewRecord(keyColl)
+	key.Set("user", userID)
+	key.Set("name", displayName)
+	key.Set("slug", slug)
+	key.Set("mode", mode)
+	if err := app.Save(key); err != nil {
+		return nil, nil, err
+	}
+
+	// Create a value under it
+	valColl, err := app.FindCollectionByNameOrId("tag_values")
+	if err != nil {
+		return nil, nil, err
+	}
+	val := core.NewRecord(valColl)
+	val.Set("tag_key", key.Id)
+	val.Set("name", displayName)
+	val.Set("slug", slug)
+	if err := app.Save(val); err != nil {
+		return nil, nil, err
+	}
+
+	return key, val, nil
 }
 
 // olClient is a simple Open Library API client.

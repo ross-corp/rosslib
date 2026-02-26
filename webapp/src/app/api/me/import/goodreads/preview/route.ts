@@ -8,8 +8,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  // Forward the multipart form data as-is — do NOT set Content-Type manually
-  // so that fetch fills in the correct boundary for multipart/form-data.
   const formData = await req.formData();
   const res = await fetch(
     `${process.env.API_URL}/me/import/goodreads/preview`,
@@ -19,6 +17,12 @@ export async function POST(req: Request) {
       body: formData,
     }
   );
-  const data = await res.json();
-  return NextResponse.json(data, { status: res.status });
+
+  // Stream the NDJSON response through to the client
+  return new Response(res.body, {
+    status: res.status,
+    headers: {
+      "Content-Type": res.headers.get("Content-Type") || "application/json",
+    },
+  });
 }
