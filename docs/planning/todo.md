@@ -1,41 +1,35 @@
 # Features
 
-Backlog of all things we need #todo which are small enough to knock out at random with little additional thinking. note that this doc can get thrashed by AI so watch out
+Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination.
 
+## account tools
 
-## genres
+- [ ] Add a "Delete all my data" button on the settings page. API endpoint `DELETE /me/account/data` should remove all of a user's `user_books`, `collection_items`, `genre_ratings`, `book_tag_values`, `tag_values`, `tag_keys`, `collections`, `threads`, `thread_comments`, `follows`, `book_follows`, `author_follows`, and `notifications`. Does NOT delete the user account itself. Frontend: confirmation dialog ("This will remove all your books, reviews, tags, and follows. This cannot be undone.") on the settings page. Useful for testing.
 
-- [ ] I need a tool to delete all content from my account. just for testing for now
+## imports
 
-- [ ] generate a list of major genres (~20)
-- [ ] connect to local embeddings endpoint
-- [ ] for each book in a user's account, send the book (title, author, summary) to embeddings model and predict the genre
-- [ ] present this prediction to the user somehow
-- [ ] give them sliders on 0-5 of how much a given book fits into a given genre
-
-- [ ] store all this in a DB
-  - [ ] we get a "predicted genres", per-user genre ratings, and global (agerage of all users) genre
+- [ ] Add a "Create label" option to the Goodreads import shelf mapping. Currently the import preview (`import-form.tsx`) only offers "Tag" and "Skip" for each Goodreads shelf. Add a third option: "Create label" — when selected, show an inline form where the user types a label name. Multiple shelves can be assigned to the same label (each shelf becomes a value under that label key). Also add an "Add to existing label" option that shows a dropdown of the user's existing label keys. On import commit, create the label key (via tag_keys) and assign the appropriate tag_values, then tag each imported book with its shelf's label value.
 
 ## edition handling
 
-- [ ] for a book in a user's account, user should be able to "change edition" 
-  - [ ] this shows the other editions available, lets a user pick one
-  - [ ] point of this is mostly to let the users pick what covers appear on their page
+- [ ] Add a "Change edition" button on the book detail page (visible only when the user has the book in their library). Clicking it opens a modal/panel showing the available editions (reuse the existing `EditionList` data from `GET /books/:workId/editions`). Each edition shows its cover thumbnail, format, publisher, and ISBN. Selecting an edition updates the user's `user_books` record with a new `selected_edition_key` field (Open Library edition key like `/books/OL123M`). The profile and shelf pages should then display the selected edition's cover instead of the default work cover. Requires: adding `selected_edition_key` column to `user_books` (PocketBase migration), a `PATCH /me/books/:olId` field for it, and frontend logic to prefer the edition cover URL when rendering book covers.
 
-## misc
+## UI improvements
 
-- [ ] we need a bug report form
-  - [ ] similarly, a feature request form
-- [ ] organize the top bar into dropdown menus
-  - [ ] BROWSE -> search books, search by genre, etc
-  - [ ] PEOPLE -> my account page, my friends, browse users
+- [ ] Reorganize the navbar into dropdown menus. Replace the flat link list with two dropdown menus: **Browse** (Search books, Genres, Scan ISBN) and **Community** (Browse users, My feed). Keep the notification bell and user avatar/settings as standalone items. Use a simple CSS dropdown or headless UI popover — no external library needed. The dropdowns should work on both desktop (hover or click) and mobile (click).
 
-- [ ] improve UI for computed collections, they're currently burried in the user page
+- [ ] Add a "Computed lists" section to the user profile page. Currently computed/continuous lists only appear in the shelves list and are not prominent. Add a dedicated card or section on the profile page (below Favorites, above Tags) that shows the user's computed lists with their operation type badge (union/intersection/difference) and a "Live" indicator for continuous lists. Link each to its shelf detail page.
 
-- [ ] I shouldn't have an option to rate/review books when viewing them on a different user's page
-  - [ ] there should be a button witha "want to read" option, which adds this title to that label in my account
-  - [ ] dropdown on that button which also lets me add to any other tag/label
-  - [ ] also a button in there to review and rate
+- [ ] Fix book interaction buttons when viewing books on another user's page. When browsing another user's shelf or profile page and seeing their books, there's no quick way to add a book to your own library. Add a small "Want to read" button on book cover cards in shelf grids and profile book lists (only shown when viewing another user's page, not your own). Clicking it adds the book to the viewer's "Want to Read" status via `POST /me/books`. Include a small dropdown on the button with options: "Want to read", "Currently reading", "Add to label...", and "Rate & review" (navigates to the book detail page).
 
-- [ ] put a caching layer / proxy in front of openbooks API so we don't hit it when we don't need to
-  - [ ] consider tradeoffs, not certain we want this 
+## bug reports
+
+- [ ] Add bug report and feature request forms. Create a `/feedback` page with two tabs: "Bug Report" and "Feature Request". Bug report fields: title, description (textarea), steps to reproduce (textarea), severity dropdown (low/medium/high). Feature request fields: title, description (textarea). API endpoint `POST /feedback` stores submissions in a new `feedback` PocketBase collection (fields: `user` relation, `type` enum bug/feature, `title`, `description`, `steps_to_reproduce`, `severity`, `status` enum open/closed, `created`). Admin page (`/admin`) gets a new "Feedback" tab showing submissions with status toggle. Add a "Feedback" link in the nav or footer.
+
+## caching
+
+- [ ] Add a server-side response cache for Open Library API calls. Create a simple in-memory TTL cache (sync.Map or similar) keyed by the full OL request URL. Cache successful responses for 24 hours. Apply it to the shared OL HTTP client (the rate-limited client in `api/handlers/helpers.go` or the `olhttp` package). This avoids redundant lookups when multiple users search for or view the same book. Log cache hit/miss rates at startup interval (e.g. every hour). No frontend changes needed.
+
+## Pending PRs
+
+<!-- nephewbot moves tasks here when it opens a PR. Move to docs/planning/completed.md after merging. -->
