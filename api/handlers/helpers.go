@@ -77,18 +77,6 @@ var defaultStatusValues = []struct {
 	{"Owned", "owned"},
 }
 
-// defaultShelves are the shelves created for every new user.
-var defaultShelves = []struct {
-	Name           string
-	Slug           string
-	IsExclusive    bool
-	ExclusiveGroup string
-}{
-	{"Want to Read", "want-to-read", true, "read_status"},
-	{"Currently Reading", "currently-reading", true, "read_status"},
-	{"Read", "read", true, "read_status"},
-}
-
 // ensureStatusTagKey creates the Status tag key and values for a user if they don't exist.
 // Returns the tag key record and all value records.
 func ensureStatusTagKey(app core.App, userID string) (*core.Record, []*core.Record, error) {
@@ -140,28 +128,6 @@ func ensureStatusTagKey(app core.App, userID string) (*core.Record, []*core.Reco
 	}
 
 	return key, values, nil
-}
-
-// createDefaultShelves creates the 3 default shelves for a new user.
-func createDefaultShelves(app core.App, userID string) error {
-	collectionsColl, err := app.FindCollectionByNameOrId("collections")
-	if err != nil {
-		return err
-	}
-	for _, s := range defaultShelves {
-		rec := core.NewRecord(collectionsColl)
-		rec.Set("user", userID)
-		rec.Set("name", s.Name)
-		rec.Set("slug", s.Slug)
-		rec.Set("is_exclusive", s.IsExclusive)
-		rec.Set("exclusive_group", s.ExclusiveGroup)
-		rec.Set("is_public", true)
-		rec.Set("collection_type", "shelf")
-		if err := app.Save(rec); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // olClient is a simple Open Library API client.

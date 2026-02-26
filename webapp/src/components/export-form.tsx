@@ -2,28 +2,13 @@
 
 import { useState } from "react";
 
-type Shelf = {
-  id: string;
-  name: string;
-  slug: string;
-  item_count: number;
-};
-
-export default function ExportForm({ shelves }: { shelves: Shelf[] }) {
-  const [selected, setSelected] = useState("all");
+export default function ExportForm() {
   const [downloading, setDownloading] = useState(false);
-
-  const totalBooks = shelves.reduce((sum, s) => sum + s.item_count, 0);
 
   async function handleExport() {
     setDownloading(true);
     try {
-      const url =
-        selected === "all"
-          ? "/api/me/export/csv"
-          : `/api/me/export/csv?shelf=${encodeURIComponent(selected)}`;
-
-      const res = await fetch(url);
+      const res = await fetch("/api/me/export/csv");
       if (!res.ok) throw new Error("Export failed");
 
       const blob = await res.blob();
@@ -41,28 +26,9 @@ export default function ExportForm({ shelves }: { shelves: Shelf[] }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <label htmlFor="shelf-select" className="block text-sm font-medium text-text-primary mb-2">
-          What to export
-        </label>
-        <select
-          id="shelf-select"
-          value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-          className="w-full max-w-sm rounded-md border border-border bg-surface-0 px-3 py-2 text-sm text-text-primary focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-accent"
-        >
-          <option value="all">All shelves ({totalBooks} books)</option>
-          {shelves.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name} ({s.item_count} books)
-            </option>
-          ))}
-        </select>
-      </div>
-
       <div className="text-sm text-text-primary">
         <p className="font-medium text-text-primary mb-1">Columns included:</p>
-        <p>Title, Author, ISBN13, Collection, Rating, Review, Date Added, Date Read</p>
+        <p>Title, Author, ISBN13, Rating, Review, Date Added, Date Read, Status</p>
       </div>
 
       <button

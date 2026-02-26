@@ -154,10 +154,6 @@ func DeleteShelf(app core.App) func(e *core.RequestEvent) error {
 		if shelf.GetString("user") != user.Id {
 			return e.JSON(http.StatusForbidden, map[string]any{"error": "Not your shelf"})
 		}
-		if shelf.GetString("exclusive_group") == "read_status" {
-			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Cannot delete default read status shelves"})
-		}
-
 		if err := app.Delete(shelf); err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to delete"})
 		}
@@ -522,8 +518,6 @@ func ExportCSV(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
 		}
 
-		shelfFilter := e.Request.URL.Query().Get("shelf")
-
 		query := `
 			SELECT b.open_library_id, b.title, b.authors, b.isbn13,
 				   ub.rating, ub.review_text, ub.date_read, ub.date_added as date_added,
@@ -534,18 +528,9 @@ func ExportCSV(app core.App) func(e *core.RequestEvent) error {
 			LEFT JOIN tag_keys tk ON btv.tag_key = tk.id AND tk.slug = 'status'
 			LEFT JOIN tag_values tv ON btv.tag_value = tv.id AND tk.id IS NOT NULL
 			WHERE ub.user = {:user}
+			ORDER BY ub.date_added DESC
 		`
 		params := map[string]any{"user": user.Id}
-
-		if shelfFilter != "" {
-			query += ` AND EXISTS (
-				SELECT 1 FROM collection_items ci
-				JOIN collections c ON ci.collection = c.id
-				WHERE ci.book = ub.book AND ci.user = ub.user AND c.slug = {:shelf}
-			)`
-			params["shelf"] = shelfFilter
-		}
-		query += " ORDER BY ub.date_added DESC"
 
 		type row struct {
 			OLID       string   `db:"open_library_id"`

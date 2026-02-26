@@ -65,8 +65,7 @@ func SeedGhosts(app core.App) func(e *core.RequestEvent) error {
 				continue
 			}
 
-			// Create default shelves and status tags
-			_ = createDefaultShelves(app, rec.Id)
+			// Create default status tags
 			_, _, _ = ensureStatusTagKey(app, rec.Id)
 
 			createdNames = append(createdNames, persona.Username)

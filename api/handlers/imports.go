@@ -262,36 +262,6 @@ func CommitGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 				setStatusTag(app, user.Id, book.Id, statusSlug)
 			}
 
-			// Add to corresponding shelf
-			shelfSlug := mapGoodreadsToShelfSlug(b.Shelf)
-			if shelfSlug != "" {
-				shelves, _ := app.FindRecordsByFilter("collections",
-					"user = {:user} && slug = {:slug}",
-					"", 1, 0,
-					map[string]any{"user": user.Id, "slug": shelfSlug},
-				)
-				if len(shelves) > 0 {
-					existingItems, _ := app.FindRecordsByFilter("collection_items",
-						"collection = {:coll} && book = {:book}",
-						"", 1, 0,
-						map[string]any{"coll": shelves[0].Id, "book": book.Id},
-					)
-					if len(existingItems) == 0 {
-						ciColl, err := app.FindCollectionByNameOrId("collection_items")
-						if err == nil {
-							ci := core.NewRecord(ciColl)
-							ci.Set("collection", shelves[0].Id)
-							ci.Set("book", book.Id)
-							ci.Set("user", user.Id)
-							if b.Rating > 0 {
-								ci.Set("rating", b.Rating)
-							}
-							_ = app.Save(ci)
-						}
-					}
-				}
-			}
-
 			imported++
 			refreshBookStats(app, book.Id)
 		}
@@ -316,15 +286,3 @@ func mapGoodreadsShelf(shelf string) string {
 	}
 }
 
-func mapGoodreadsToShelfSlug(shelf string) string {
-	switch strings.ToLower(shelf) {
-	case "to-read":
-		return "want-to-read"
-	case "currently-reading":
-		return "currently-reading"
-	case "read":
-		return "read"
-	default:
-		return ""
-	}
-}

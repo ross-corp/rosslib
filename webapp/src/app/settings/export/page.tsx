@@ -1,30 +1,11 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import ExportForm from "@/components/export-form";
-import { getUser, getToken } from "@/lib/auth";
-
-type Shelf = {
-  id: string;
-  name: string;
-  slug: string;
-  item_count: number;
-};
-
-async function fetchShelves(username: string, token: string): Promise<Shelf[]> {
-  const res = await fetch(`${process.env.API_URL}/users/${username}/shelves`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
-  if (!res.ok) return [];
-  return res.json();
-}
+import { getUser } from "@/lib/auth";
 
 export default async function ExportPage() {
   const user = await getUser();
   if (!user) redirect("/login");
-
-  const token = await getToken();
-  const shelves = await fetchShelves(user.username, token || "");
 
   return (
     <div className="min-h-screen">
@@ -43,10 +24,10 @@ export default async function ExportPage() {
 
         <h1 className="text-2xl font-bold text-text-primary mb-2">Export to CSV</h1>
         <p className="text-sm text-text-primary mb-8">
-          Download your library as a CSV file. Export all shelves or pick a specific one.
+          Download your entire library as a CSV file.
         </p>
 
-        <ExportForm shelves={shelves} />
+        <ExportForm />
       </main>
     </div>
   );

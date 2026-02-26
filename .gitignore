@@ -27,3 +27,6 @@ api/tmp/
 
 # playwrite assets
 .playwright-mcp/
+
+# my own import file, as a test
+*.csv

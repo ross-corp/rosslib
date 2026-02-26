@@ -75,12 +75,6 @@ func Register(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": err.Error()})
 		}
 
-		// Create default shelves
-		if err := createDefaultShelves(app, record.Id); err != nil {
-			// Non-fatal: user is created but shelves failed
-			_ = err
-		}
-
 		// Create default Status tag key + values
 		if _, _, err := ensureStatusTagKey(app, record.Id); err != nil {
 			_ = err
@@ -162,11 +156,6 @@ func GoogleAuth(app core.App) func(e *core.RequestEvent) error {
 
 		if err := app.Save(newUser); err != nil {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": err.Error()})
-		}
-
-		// Create default shelves
-		if err := createDefaultShelves(app, newUser.Id); err != nil {
-			_ = err
 		}
 
 		// Create default Status tag key + values
