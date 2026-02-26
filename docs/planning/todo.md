@@ -2,10 +2,6 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination.
 
-## UI improvements
-
-- [ ] Fix book interaction buttons when viewing books on another user's page. When browsing another user's shelf or profile page and seeing their books, there's no quick way to add a book to your own library. Add a small "Want to read" button on book cover cards in shelf grids and profile book lists (only shown when viewing another user's page, not your own). Clicking it adds the book to the viewer's "Want to Read" status via `POST /me/books`. Include a small dropdown on the button with options: "Want to read", "Currently reading", "Add to label...", and "Rate & review" (navigates to the book detail page).
-
 ## bug reports
 
 - [ ] Add bug report and feature request forms. Create a `/feedback` page with two tabs: "Bug Report" and "Feature Request". Bug report fields: title, description (textarea), steps to reproduce (textarea), severity dropdown (low/medium/high). Feature request fields: title, description (textarea). API endpoint `POST /feedback` stores submissions in a new `feedback` PocketBase collection (fields: `user` relation, `type` enum bug/feature, `title`, `description`, `steps_to_reproduce`, `severity`, `status` enum open/closed, `created`). Admin page (`/admin`) gets a new "Feedback" tab showing submissions with status toggle. Add a "Feedback" link in the nav or footer.
@@ -28,3 +24,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add edition picker for book covers](https://github.com/ross-corp/rosslib/pull/42) — Edition selector modal on book detail page; selected edition cover shown on profile/shelf pages
 - [Reorganize navbar into dropdown menus](https://github.com/ross-corp/rosslib/pull/44) — Replace flat nav links with Browse and Community dropdown menus
 - [Add computed lists section to user profile page](https://github.com/ross-corp/rosslib/pull/45) — Computed lists section on profile with operation badges and Live indicator; migration adds computed list fields to collections schema
+- [Add quick-add button for books on other users' pages](https://github.com/ross-corp/rosslib/pull/46) — QuickAddButton overlay on book covers in shelf grids and profile book rows for visitors; one-click "Want to Read" with dropdown for other statuses
