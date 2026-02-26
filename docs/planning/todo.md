@@ -4,7 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UI improvements
 
-- [ ] Reorganize the navbar into dropdown menus. Replace the flat link list with two dropdown menus: **Browse** (Search books, Genres, Scan ISBN) and **Community** (Browse users, My feed). Keep the notification bell and user avatar/settings as standalone items. Use a simple CSS dropdown or headless UI popover — no external library needed. The dropdowns should work on both desktop (hover or click) and mobile (click).
 
 - [ ] Add a "Computed lists" section to the user profile page. Currently computed/continuous lists only appear in the shelves list and are not prominent. Add a dedicated card or section on the profile page (below Favorites, above Tags) that shows the user's computed lists with their operation type badge (union/intersection/difference) and a "Live" indicator for continuous lists. Link each to its shelf detail page.
 
@@ -30,3 +29,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add delete-all-data endpoint and settings UI](https://github.com/ross-corp/rosslib/pull/37) — DELETE /me/account/data removes all user data; settings page gets Danger Zone with typed confirmation
 - [Add create/existing label options to import shelf mapping](https://github.com/ross-corp/rosslib/pull/38) — Goodreads import configure step gains "Create label" and "Add to existing label" actions alongside Tag and Skip
 - [Add edition picker for book covers](https://github.com/ross-corp/rosslib/pull/42) — Edition selector modal on book detail page; selected edition cover shown on profile/shelf pages
+- [Reorganize navbar into dropdown menus](https://github.com/ross-corp/rosslib/pull/44) — Replace flat nav links with Browse and Community dropdown menus
