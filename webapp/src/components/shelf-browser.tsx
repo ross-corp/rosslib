@@ -118,7 +118,7 @@ export default function ShelfBrowser({
             </div>
             {activeStatus.count > books.length && (
               <Link
-                href={`/${username}/shelves/${activeStatus.slug}`}
+                href={`/${username}/library/${activeStatus.slug}`}
                 className="block text-center text-xs text-text-tertiary hover:text-text-secondary transition-colors pt-3"
               >
                 View all {activeStatus.count} books &rarr;

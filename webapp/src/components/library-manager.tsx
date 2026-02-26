@@ -94,25 +94,31 @@ function buildValueTree(values: TagValue[]): ValueTreeNode[] {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+export type StatusInfo = { slug: string; name: string; count: number };
+
 export default function LibraryManager({
   username,
   initialBooks,
   initialShelf,
   allShelves,
   tagKeys,
+  statusCounts = {},
+  statusList = [],
 }: {
   username: string;
   initialBooks: Book[];
   initialShelf: { id: string; name: string; slug: string };
   allShelves: ShelfSummary[];
   tagKeys: TagKey[];
+  statusCounts?: Record<string, number>;
+  statusList?: StatusInfo[];
 }) {
   const [books, setBooks] = useState(initialBooks);
-  const [filter, setFilter] = useState<ActiveFilter>({
-    kind: "status",
-    slug: initialShelf.slug,
-    name: initialShelf.name,
-  });
+  const [filter, setFilter] = useState<ActiveFilter>(
+    initialShelf.slug === "_all"
+      ? { kind: "all" }
+      : { kind: "status", slug: initialShelf.slug, name: initialShelf.name }
+  );
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
@@ -156,14 +162,16 @@ export default function LibraryManager({
     setLoading(true);
     setSelectedIds(new Set());
     closeMenus();
-    const res = await fetch(`/api/users/${username}/books`);
+    const res = await fetch(`/api/users/${username}/books?limit=500`);
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
-      // Flatten all statuses into a single book list
-      const allBooks: Book[] = (data.statuses ?? []).flatMap(
-        (s: { books: Book[] }) => s.books ?? []
-      );
+      const allBooks: Book[] = [
+        ...(data.statuses ?? []).flatMap(
+          (s: { books: Book[] }) => s.books ?? []
+        ),
+        ...(data.unstatused_books ?? []),
+      ];
       setBooks(allBooks);
       setFilter({ kind: "all" });
     }
@@ -363,28 +371,33 @@ export default function LibraryManager({
         <div>
           <SidebarItem
             label="All Books"
-            count={0}
+            count={statusCounts["_all"] ?? 0}
             active={filter.kind === "all"}
             onClick={() => navigateToAllBooks()}
           />
         </div>
 
         {/* Status values */}
-        {statusValues.length > 0 && (
-          <div>
-            <p className="px-4 mb-1 text-[10px] font-semibold text-text-primary uppercase tracking-wider">
-              Status
-            </p>
-            {statusValues.map((v) => (
+        {statusList.length > 0 && (
+          <SidebarSection label="Status" count={statusList.length} defaultOpen>
+            {statusList.map((s) => (
               <SidebarItem
-                key={v.id}
-                label={v.name}
-                count={0}
-                active={filter.kind === "status" && filter.slug === v.slug}
-                onClick={() => navigateToStatus(v.slug, v.name)}
+                key={s.slug}
+                label={s.name}
+                count={s.count}
+                active={filter.kind === "status" && filter.slug === s.slug}
+                onClick={() => navigateToStatus(s.slug, s.name)}
               />
             ))}
-          </div>
+            {(statusCounts["_unstatused"] ?? 0) > 0 && (
+              <SidebarItem
+                label="Unstatused"
+                count={statusCounts["_unstatused"]}
+                active={filter.kind === "status" && filter.slug === "_unstatused"}
+                onClick={() => navigateToStatus("_unstatused", "Unstatused")}
+              />
+            )}
+          </SidebarSection>
         )}
 
         {/* Path-based tag collections */}
@@ -762,12 +775,14 @@ function SidebarSection({
   label,
   count,
   children,
+  defaultOpen = false,
 }: {
   label: string;
   count: number;
   children: ReactNode;
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <div>
       <button

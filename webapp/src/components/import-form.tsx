@@ -106,7 +106,7 @@ function mergeUnmatched(existing: SavedUnmatched[], incoming: SavedUnmatched[]):
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function ImportForm() {
+export default function ImportForm({ username }: { username: string }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
 
@@ -392,10 +392,10 @@ export default function ImportForm() {
           </details>
         )}
         <Link
-          href="/me/shelves"
+          href={`/${username}/library`}
           className="inline-block mt-2 text-sm text-text-primary underline hover:no-underline"
         >
-          Go to your shelves
+          Go to your library
         </Link>
       </div>
     );
@@ -574,7 +574,7 @@ export default function ImportForm() {
             disabled={selectedCount === 0}
             className="px-4 py-2 bg-accent text-white text-sm rounded-lg hover:bg-surface-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Next: Configure shelves
+            Next: Configure labels
           </button>
           <button
             type="button"
@@ -630,10 +630,10 @@ export default function ImportForm() {
         {hasCustomShelves ? (
           <section>
             <h2 className="text-sm font-semibold text-text-primary mb-3">
-              Custom shelves ({sortedShelves.length})
+              Custom labels ({sortedShelves.length})
             </h2>
             <p className="text-xs text-text-primary mb-3">
-              Choose how to import each Goodreads shelf.
+              Choose how to import each custom Goodreads shelf as a label.
             </p>
             <ul className="divide-y divide-border border border-border rounded-lg overflow-hidden">
               {sortedShelves.map(([shelf, count]) => {
@@ -684,7 +684,7 @@ export default function ImportForm() {
                           }
                         />
                         <span className="text-xs text-text-primary">
-                          (shelf becomes a value under this label)
+                          (becomes a value under this label)
                         </span>
                       </div>
                     )}
@@ -708,7 +708,7 @@ export default function ImportForm() {
                           ))}
                         </select>
                         <span className="text-xs text-text-primary">
-                          (shelf becomes a value under this label)
+                          (becomes a value under this label)
                         </span>
                       </div>
                     )}
@@ -719,7 +719,7 @@ export default function ImportForm() {
           </section>
         ) : (
           <p className="text-sm text-text-primary">
-            No custom shelves found — only status mapping will be applied.
+            No custom labels found — only status mapping will be applied.
           </p>
         )}
 

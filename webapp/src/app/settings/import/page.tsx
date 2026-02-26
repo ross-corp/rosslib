@@ -24,10 +24,10 @@ export default async function ImportPage() {
 
         <h1 className="text-2xl font-bold text-text-primary mb-2">Import from Goodreads</h1>
         <p className="text-sm text-text-primary mb-8">
-          Import your books, shelves, ratings, and reviews from a Goodreads CSV export.
+          Import your books, ratings, and reviews from a Goodreads CSV export.
         </p>
 
-        <ImportForm />
+        <ImportForm username={user.username} />
       </main>
     </div>
   );

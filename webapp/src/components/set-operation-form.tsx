@@ -294,7 +294,7 @@ export default function SetOperationForm({
                   <p className="text-sm text-green-700">
                     Saved!{" "}
                     <Link
-                      href={`/${username}/shelves/${savedSlug}`}
+                      href={`/${username}/library/${savedSlug}`}
                       className="underline hover:text-green-900"
                     >
                       View list

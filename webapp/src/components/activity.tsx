@@ -75,7 +75,7 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
               {item.book.title}
             </Link>
           )}{" "}
-          to {item.shelf_name || "a shelf"}
+          to {item.shelf_name || "a status"}
         </>
       );
     case "rated":

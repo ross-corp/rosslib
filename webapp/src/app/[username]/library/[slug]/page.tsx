@@ -84,6 +84,20 @@ async function fetchTagKeys(token: string): Promise<TagKey[]> {
   return res.json();
 }
 
+type UserBooksResponse = {
+  statuses: { slug: string; name: string; count: number }[];
+  unstatused_count: number;
+};
+
+async function fetchUserBooksSummary(username: string): Promise<UserBooksResponse> {
+  const res = await fetch(
+    `${process.env.API_URL}/users/${username}/books?limit=0`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return { statuses: [], unstatused_count: 0 };
+  return res.json();
+}
+
 // Status slugs that should be fetched from the books endpoint instead of shelves
 const STATUS_SLUGS = new Set([
   "want-to-read",
@@ -106,11 +120,12 @@ export default async function ShelfPage({
 
   const isStatusSlug = STATUS_SLUGS.has(slug);
 
-  const [shelf, statusBooks, allShelves, tagKeys] = await Promise.all([
+  const [shelf, statusBooks, allShelves, tagKeys, userBooksSummary] = await Promise.all([
     isStatusSlug ? Promise.resolve(null) : fetchShelf(username, slug),
     isStatusSlug ? fetchStatusBooks(username, slug) : Promise.resolve(null),
     fetchUserShelves(username),
     isOwner && token ? fetchTagKeys(token) : Promise.resolve([] as TagKey[]),
+    isOwner ? fetchUserBooksSummary(username) : Promise.resolve({ statuses: [], unstatused_count: 0 } as UserBooksResponse),
   ]);
 
   // Build books array from either source
@@ -137,6 +152,18 @@ export default async function ShelfPage({
       ? { id: shelf.id, name: shelf.name, slug: shelf.slug }
       : { id: `status-${slug}`, name: displayName, slug };
 
+    const statusCounts: Record<string, number> = {};
+    const statusList = userBooksSummary.statuses.map((s) => {
+      statusCounts[s.slug] = s.count;
+      return { slug: s.slug, name: s.name ?? s.slug, count: s.count };
+    });
+    let total = userBooksSummary.unstatused_count;
+    for (const s of userBooksSummary.statuses) {
+      total += s.count;
+    }
+    statusCounts["_all"] = total;
+    statusCounts["_unstatused"] = userBooksSummary.unstatused_count;
+
     return (
       <div className="h-screen flex flex-col overflow-hidden">
         {shelf?.computed?.is_continuous && (
@@ -155,6 +182,8 @@ export default async function ShelfPage({
           initialShelf={initialShelf}
           allShelves={allShelves}
           tagKeys={tagKeys}
+          statusCounts={statusCounts}
+          statusList={statusList}
         />
       </div>
     );
@@ -195,7 +224,7 @@ export default async function ShelfPage({
               .map((s) => (
                 <Link
                   key={s.id}
-                  href={`/${username}/shelves/${s.slug}`}
+                  href={`/${username}/library/${s.slug}`}
                   className={`text-sm px-3 py-1 rounded border transition-colors ${
                     s.slug === slug
                       ? "border-accent bg-accent text-white"

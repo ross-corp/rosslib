@@ -78,8 +78,8 @@ export default function RecentReviews({
 
   return (
     <div>
-      {reviews.map((r) => (
-        <ReviewCard key={r.book_id} review={r} />
+      {reviews.map((r, i) => (
+        <ReviewCard key={`${r.book_id}-${i}`} review={r} />
       ))}
       <Link
         href={`/${username}/reviews`}

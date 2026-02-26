@@ -6,7 +6,7 @@ const features = [
   {
     title: "Collections",
     description:
-      "Organize your books your way. Flexible lists with set operations — intersect, union, or diff your shelves.",
+      "Organize your books your way. Flexible lists with set operations — intersect, union, or diff your labels.",
   },
   {
     title: "Social",

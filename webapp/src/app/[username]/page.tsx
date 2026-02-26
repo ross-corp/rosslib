@@ -8,7 +8,6 @@ import BookCoverRow from "@/components/book-cover-row";
 import ReadingStats from "@/components/reading-stats";
 import RecentReviews from "@/components/recent-reviews";
 import type { ReviewItem } from "@/components/recent-reviews";
-import ShelfBrowser from "@/components/shelf-browser";
 
 type StatusBook = {
   book_id: string;
@@ -338,6 +337,25 @@ export default async function UserPage({
         <div className="lg:grid lg:grid-cols-3 lg:gap-8">
           {/* Main content — 2/3 */}
           <div className="lg:col-span-2 space-y-10">
+            {/* Library summary link */}
+            {(() => {
+              const totalBooks = userBooks.statuses.reduce((sum, s) => sum + s.count, 0) + userBooks.unstatused_count;
+              const totalTags = tagCollections.length;
+              const totalLabels = labelKeys.reduce((sum, k) => sum + k.values.length, 0);
+              const parts: string[] = [];
+              if (totalBooks > 0) parts.push(`${totalBooks} book${totalBooks !== 1 ? "s" : ""}`);
+              if (totalTags > 0) parts.push(`${totalTags} tag${totalTags !== 1 ? "s" : ""}`);
+              if (totalLabels > 0) parts.push(`${totalLabels} label${totalLabels !== 1 ? "s" : ""}`);
+              return parts.length > 0 ? (
+                <Link
+                  href={`/${username}/library`}
+                  className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  {parts.join(", ")} →
+                </Link>
+              ) : null;
+            })()}
+
             {/* Currently Reading */}
             {currentlyReadingStatus &&
               currentlyReadingStatus.books.length > 0 && (
@@ -352,7 +370,7 @@ export default async function UserPage({
                     seeAllHref={
                       currentlyReadingStatus.count >
                       currentlyReadingStatus.books.length
-                        ? `/${username}/shelves/currently-reading`
+                        ? `/${username}/library/currently-reading`
                         : undefined
                     }
                   />
@@ -399,67 +417,6 @@ export default async function UserPage({
               </section>
             )}
 
-            {/* Status Browser (replaces ShelfBrowser) */}
-            {userBooks.statuses.length > 0 && (
-              <section>
-                <h2 className="section-heading mb-3">
-                  Library
-                </h2>
-                <ShelfBrowser statuses={userBooks.statuses} username={username} />
-              </section>
-            )}
-
-            {/* Tags */}
-            {tagCollections.length > 0 && (
-              <section>
-                <h2 className="section-heading mb-3">
-                  Tags
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {tagCollections.map((tag) => (
-                    <Link
-                      key={tag.id}
-                      href={`/${username}/tags/${tag.slug}`}
-                      className="tag-pill"
-                    >
-                      {tag.name || tag.slug}
-                      <span className="ml-1.5 text-xs text-text-tertiary">
-                        {tag.item_count}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Labels */}
-            {labelKeys.length > 0 && (
-              <section>
-                <h2 className="section-heading mb-3">
-                  Labels
-                </h2>
-                <div className="space-y-4">
-                  {labelKeys.map((key) => (
-                    <div key={key.id}>
-                      <h3 className="text-xs font-medium text-text-tertiary mb-2">
-                        {key.name}
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {key.values.map((val) => (
-                          <Link
-                            key={val.id}
-                            href={`/${username}/labels/${key.slug}/${val.slug}`}
-                            className="tag-pill"
-                          >
-                            {val.name}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
           </div>
 
           {/* Sidebar — 1/3 */}

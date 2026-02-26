@@ -389,20 +389,40 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 				AddedAt  string   `db:"added_at" json:"added_at"`
 			}
 			var books []bookRow
-			err := app.DB().NewQuery(`
-				SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url, b.authors,
-					   ub.rating, ub.date_added as added_at
-				FROM user_books ub
-				JOIN books b ON ub.book = b.id
-				JOIN book_tag_values btv ON btv.user = ub.user AND btv.book = ub.book
-				JOIN tag_keys tk ON btv.tag_key = tk.id
-				JOIN tag_values tv ON btv.tag_value = tv.id
-				WHERE ub.user = {:user} AND tk.slug = 'status' AND tv.slug = {:status}
-				ORDER BY ub.date_added DESC
-				LIMIT {:limit}
-			`).Bind(map[string]any{"user": targetUser.Id, "status": statusFilter, "limit": limit}).All(&books)
-			if err != nil || books == nil {
-				books = []bookRow{}
+			if statusFilter == "_unstatused" {
+				err := app.DB().NewQuery(`
+					SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url, b.authors,
+						   ub.rating, ub.date_added as added_at
+					FROM user_books ub
+					JOIN books b ON ub.book = b.id
+					WHERE ub.user = {:user}
+					AND NOT EXISTS (
+						SELECT 1 FROM book_tag_values btv
+						JOIN tag_keys tk ON btv.tag_key = tk.id
+						WHERE btv.user = ub.user AND btv.book = ub.book AND tk.slug = 'status'
+					)
+					ORDER BY ub.date_added DESC
+					LIMIT {:limit}
+				`).Bind(map[string]any{"user": targetUser.Id, "limit": limit}).All(&books)
+				if err != nil || books == nil {
+					books = []bookRow{}
+				}
+			} else {
+				err := app.DB().NewQuery(`
+					SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url, b.authors,
+						   ub.rating, ub.date_added as added_at
+					FROM user_books ub
+					JOIN books b ON ub.book = b.id
+					JOIN book_tag_values btv ON btv.user = ub.user AND btv.book = ub.book
+					JOIN tag_keys tk ON btv.tag_key = tk.id
+					JOIN tag_values tv ON btv.tag_value = tv.id
+					WHERE ub.user = {:user} AND tk.slug = 'status' AND tv.slug = {:status}
+					ORDER BY ub.date_added DESC
+					LIMIT {:limit}
+				`).Bind(map[string]any{"user": targetUser.Id, "status": statusFilter, "limit": limit}).All(&books)
+				if err != nil || books == nil {
+					books = []bookRow{}
+				}
 			}
 			return e.JSON(http.StatusOK, map[string]any{"books": books})
 		}
@@ -461,11 +481,38 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 			statuses = []map[string]any{}
 		}
 
-		// Count unstatused books
-		type countResult struct {
+		// Fetch unstatused books
+		type unstatusedBookRow struct {
+			BookID   string   `db:"book_id" json:"book_id"`
+			OLID     string   `db:"open_library_id" json:"open_library_id"`
+			Title    string   `db:"title" json:"title"`
+			CoverURL *string  `db:"cover_url" json:"cover_url"`
+			Rating   *float64 `db:"rating" json:"rating"`
+			AddedAt  string   `db:"added_at" json:"added_at"`
+		}
+		var unstatusedBooks []unstatusedBookRow
+		_ = app.DB().NewQuery(`
+			SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url,
+				   ub.rating, ub.date_added as added_at
+			FROM user_books ub
+			JOIN books b ON ub.book = b.id
+			WHERE ub.user = {:user}
+			AND NOT EXISTS (
+				SELECT 1 FROM book_tag_values btv
+				JOIN tag_keys tk ON btv.tag_key = tk.id
+				WHERE btv.user = ub.user AND btv.book = ub.book AND tk.slug = 'status'
+			)
+			ORDER BY ub.date_added DESC
+			LIMIT {:limit}
+		`).Bind(map[string]any{"user": targetUser.Id, "limit": limit}).All(&unstatusedBooks)
+		if unstatusedBooks == nil {
+			unstatusedBooks = []unstatusedBookRow{}
+		}
+
+		type unstatusedCountResult struct {
 			Count int `db:"count"`
 		}
-		var unstatused countResult
+		var unstatusedCnt unstatusedCountResult
 		_ = app.DB().NewQuery(`
 			SELECT COUNT(*) as count FROM user_books ub
 			WHERE ub.user = {:user}
@@ -474,11 +521,12 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 				JOIN tag_keys tk ON btv.tag_key = tk.id
 				WHERE btv.user = ub.user AND btv.book = ub.book AND tk.slug = 'status'
 			)
-		`).Bind(map[string]any{"user": targetUser.Id}).One(&unstatused)
+		`).Bind(map[string]any{"user": targetUser.Id}).One(&unstatusedCnt)
 
 		return e.JSON(http.StatusOK, map[string]any{
 			"statuses":         statuses,
-			"unstatused_count": unstatused.Count,
+			"unstatused_count": unstatusedCnt.Count,
+			"unstatused_books": unstatusedBooks,
 		})
 	}
 }
