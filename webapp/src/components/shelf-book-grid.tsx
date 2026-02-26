@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import BookTagPicker, { TagKey } from "@/components/book-tag-picker";
+import QuickAddButton from "@/components/quick-add-button";
+import type { StatusValue } from "@/components/shelf-picker";
 
 type Book = {
   book_id: string;
@@ -18,11 +20,15 @@ export default function ShelfBookGrid({
   initialBooks,
   isOwner,
   tagKeys = [],
+  statusValues,
+  statusKeyId,
 }: {
   shelfId: string;
   initialBooks: Book[];
   isOwner: boolean;
   tagKeys?: TagKey[];
+  statusValues?: StatusValue[];
+  statusKeyId?: string;
 }) {
   const [books, setBooks] = useState(initialBooks);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -99,6 +105,15 @@ export default function ShelfBookGrid({
             >
               {removing === book.open_library_id ? "..." : "✕"}
             </button>
+          )}
+          {!isOwner && statusValues && statusKeyId && (
+            <QuickAddButton
+              openLibraryId={book.open_library_id}
+              title={book.title}
+              coverUrl={book.cover_url}
+              statusValues={statusValues}
+              statusKeyId={statusKeyId}
+            />
           )}
         </li>
       ))}

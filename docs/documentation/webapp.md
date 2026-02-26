@@ -191,6 +191,10 @@ Simpler read-only-ish grid used on non-owner shelf views and the tag browsing pa
 
 Dropdown for managing label assignments on a single book. Lazily loads current assignments on first open. Supports toggling predefined values and adding free-form values.
 
+### `QuickAddButton` (`components/quick-add-button.tsx`)
+
+Compact overlay button shown on book covers in `ShelfBookGrid` and `BookCoverRow` when a logged-in user is viewing another user's profile or shelf page. Appears on hover in the bottom-right corner of the book cover. The main button triggers "Want to read" (adds via `POST /api/me/books` with the want-to-read status), and a dropdown arrow reveals all status options (Want to Read, Currently Reading, Finished, etc.) plus a "Rate & review" link that navigates to the book detail page. Requires `statusValues` and `statusKeyId` props (fetched from the viewer's `GET /me/tag-keys`).
+
 ### `ShelfPicker` (`components/shelf-picker.tsx`)
 
 Dropdown for adding/moving/removing a single book from shelves. Used on search results and book pages.
