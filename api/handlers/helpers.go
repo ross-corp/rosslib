@@ -206,6 +206,34 @@ func ensureTagKey(app core.App, userID, name, mode string) (*core.Record, *core.
 	return key, val, nil
 }
 
+// ensureTagValue finds or creates a tag_value by slug under a given tag_key.
+func ensureTagValue(app core.App, tagKeyID, name string) (*core.Record, error) {
+	slug := tagSlugify(name)
+	displayName := titleCase(name)
+
+	existing, err := app.FindRecordsByFilter("tag_values",
+		"tag_key = {:key} && slug = {:slug}",
+		"", 1, 0,
+		map[string]any{"key": tagKeyID, "slug": slug},
+	)
+	if err == nil && len(existing) > 0 {
+		return existing[0], nil
+	}
+
+	valColl, err := app.FindCollectionByNameOrId("tag_values")
+	if err != nil {
+		return nil, err
+	}
+	val := core.NewRecord(valColl)
+	val.Set("tag_key", tagKeyID)
+	val.Set("name", displayName)
+	val.Set("slug", slug)
+	if err := app.Save(val); err != nil {
+		return nil, err
+	}
+	return val, nil
+}
+
 // olClient is a simple Open Library API client.
 type olClient struct {
 	httpClient *http.Client
