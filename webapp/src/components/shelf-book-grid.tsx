@@ -9,6 +9,7 @@ type Book = {
   open_library_id: string;
   title: string;
   cover_url: string | null;
+  selected_edition_cover_url?: string | null;
   added_at: string;
   rating: number | null;
 };
@@ -49,9 +50,9 @@ export default function ShelfBookGrid({
       {books.map((book) => (
         <li key={book.book_id} className="group relative flex flex-col gap-2">
           <Link href={`/books/${book.open_library_id}`} className="block">
-            {book.cover_url ? (
+            {(book.selected_edition_cover_url || book.cover_url) ? (
               <img
-                src={book.cover_url}
+                src={book.selected_edition_cover_url || book.cover_url!}
                 alt={book.title}
                 className="w-full aspect-[2/3] object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
               />

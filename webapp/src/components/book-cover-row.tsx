@@ -5,6 +5,7 @@ type Book = {
   open_library_id: string;
   title: string;
   cover_url: string | null;
+  selected_edition_cover_url?: string | null;
   rating?: number | null;
   progress_pages?: number | null;
   progress_percent?: number | null;
@@ -48,15 +49,16 @@ export default function BookCoverRow({
     <div className="flex items-end gap-3 overflow-x-auto pb-2 scrollbar-hide">
       {books.map((book) => {
         const pct = showProgress ? getProgressPercent(book) : null;
+        const displayCover = book.selected_edition_cover_url || book.cover_url;
         return (
           <Link
             key={book.book_id}
             href={`/books/${book.open_library_id}`}
             className="shrink-0 group"
           >
-            {book.cover_url ? (
+            {displayCover ? (
               <img
-                src={book.cover_url}
+                src={displayCover}
                 alt={book.title}
                 className={`${sizeClasses[size]} object-cover rounded shadow-sm group-hover:shadow-md transition-shadow`}
               />

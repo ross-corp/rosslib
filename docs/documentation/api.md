@@ -628,11 +628,13 @@ Update review metadata on a book in a shelf. Only provided fields are updated �
   "rating": 4,
   "review_text": "Great book.",
   "spoiler": false,
-  "date_read": "2024-06-01T00:00:00Z"
+  "date_read": "2024-06-01T00:00:00Z",
+  "selected_edition_key": "/books/OL12345M",
+  "selected_edition_cover_url": "https://covers.openlibrary.org/b/id/12345-L.jpg"
 }
 ```
 
-`rating` is 1–5 or null to clear.
+`rating` is 1–5 or null to clear. `selected_edition_key` and `selected_edition_cover_url` store the user's preferred edition; set both to `""` to reset to the default cover. The selected edition cover is returned in user book list queries and the book status endpoint, and takes priority over the work's default `cover_url` when rendering.
 
 ### `DELETE /shelves/:shelfId/books/:olId`  *(auth required)*
 

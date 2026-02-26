@@ -231,6 +231,14 @@ Client component for genre dimension ratings on book detail pages. Shows aggrega
 
 Client component for the `/scan` page. Three input modes: Camera (uses browser `BarcodeDetector` API for real-time EAN-13 scanning on supported devices), Upload (sends image to `POST /api/books/scan` for server-side barcode detection via gozxing), and Enter ISBN (manual input via `GET /api/books/lookup`). Detected books are displayed with cover, metadata, and a StatusPicker for quick library addition. Supports scanning multiple books in a session with a history list.
 
+### `BookCoverWithEdition` (`components/book-cover-with-edition.tsx`)
+
+Client component wrapping the book cover on the detail page. When the user has the book in their library, shows a "Change edition" link below the cover. Clicking it opens the `EditionPicker` modal. Manages the displayed cover URL client-side so it updates immediately when the user selects a different edition.
+
+### `EditionPicker` (`components/edition-picker.tsx`)
+
+Client modal for selecting a preferred book edition. Loads editions from `GET /api/books/:workId/editions` with pagination. Each edition shows cover thumbnail, title, format badge, publisher, date, page count, language, and ISBN. Selecting an edition calls `PATCH /api/me/books/:olId` with `selected_edition_key` and `selected_edition_cover_url`. A "Use default cover" option resets to the work's original cover. The selected edition is highlighted with a "Selected" badge.
+
 ### `StarRating` (`components/star-rating.tsx`)
 
 Read-only star display used on shelf book cards.

@@ -7,6 +7,7 @@ import ReadingProgress from "@/components/reading-progress";
 import ThreadList from "@/components/thread-list";
 import ReviewText from "@/components/review-text";
 import EditionList from "@/components/edition-list";
+import BookCoverWithEdition from "@/components/book-cover-with-edition";
 import BookLinkList from "@/components/book-link-list";
 import BookFollowButton from "@/components/book-follow-button";
 import GenreRatingEditor from "@/components/genre-rating-editor";
@@ -68,6 +69,8 @@ type MyBookStatus = {
   progress_pages: number | null;
   progress_percent: number | null;
   device_total_pages: number | null;
+  selected_edition_key: string | null;
+  selected_edition_cover_url: string | null;
 };
 
 type BookThread = {
@@ -224,6 +227,21 @@ async function fetchMyGenreRatings(
   return res.json();
 }
 
+async function fetchEditions(
+  workId: string
+): Promise<{ entries: BookEdition[]; size: number }> {
+  const res = await fetch(
+    `${process.env.API_URL}/books/${workId}/editions`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return { entries: [], size: 0 };
+  const data = await res.json();
+  return {
+    entries: data.entries ?? [],
+    size: data.size ?? 0,
+  };
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function renderStars(rating: number): string {
@@ -250,7 +268,7 @@ export default async function BookPage({
   const { workId } = await params;
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings] = await Promise.all([
+  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings, editionsData] = await Promise.all([
     fetchBook(workId),
     fetchBookReviews(workId, token ?? undefined),
     fetchThreads(workId),
@@ -266,6 +284,7 @@ export default async function BookPage({
     currentUser && token
       ? fetchMyGenreRatings(token, workId)
       : Promise.resolve([]),
+    fetchEditions(workId),
   ]);
 
   if (!book) notFound();
@@ -280,16 +299,18 @@ export default async function BookPage({
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
         {/* ── Book header ── */}
         <div className="flex gap-8 items-start mb-10">
-          {/* Cover */}
-          {book.cover_url ? (
-            <img
-              src={book.cover_url}
-              alt={book.title}
-              className="w-32 shrink-0 rounded shadow-sm object-cover"
-            />
-          ) : (
-            <div className="w-32 h-48 shrink-0 bg-surface-2 rounded" />
-          )}
+          {/* Cover + edition picker */}
+          <BookCoverWithEdition
+            defaultCoverUrl={book.cover_url}
+            title={book.title}
+            openLibraryId={workId}
+            workId={workId}
+            editions={editionsData.entries}
+            totalEditions={editionsData.size}
+            selectedEditionKey={myStatus?.selected_edition_key ?? null}
+            selectedEditionCoverUrl={myStatus?.selected_edition_cover_url ?? null}
+            showEditionPicker={!!myStatus}
+          />
 
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-text-primary mb-1">
@@ -508,14 +529,14 @@ export default async function BookPage({
         </section>
 
         {/* ── Editions ── */}
-        {book.editions && book.editions.length > 0 && (
+        {editionsData.entries.length > 0 && (
           <section className="border-t border-border pt-8 mt-10">
             <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-4">
-              Editions{book.edition_count > 0 && ` (${book.edition_count})`}
+              Editions{editionsData.size > 0 && ` (${editionsData.size})`}
             </h2>
             <EditionList
-              editions={book.editions}
-              totalEditions={book.edition_count}
+              editions={editionsData.entries}
+              totalEditions={editionsData.size}
               workId={workId}
             />
           </section>
