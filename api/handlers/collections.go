@@ -390,7 +390,7 @@ func AddBookToShelf(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": err.Error()})
 		}
 
-		recordActivity(app, user.Id, "shelve_book", map[string]any{
+		recordActivity(app, user.Id, "shelved", map[string]any{
 			"book":           book.Id,
 			"collection_ref": shelfID,
 		})
@@ -526,7 +526,7 @@ func ExportCSV(app core.App) func(e *core.RequestEvent) error {
 
 		query := `
 			SELECT b.open_library_id, b.title, b.authors, b.isbn13,
-				   ub.rating, ub.review_text, ub.date_read, ub.created as date_added,
+				   ub.rating, ub.review_text, ub.date_read, ub.date_added as date_added,
 				   COALESCE(tv.slug, '') as status
 			FROM user_books ub
 			JOIN books b ON ub.book = b.id
@@ -545,7 +545,7 @@ func ExportCSV(app core.App) func(e *core.RequestEvent) error {
 			)`
 			params["shelf"] = shelfFilter
 		}
-		query += " ORDER BY ub.created DESC"
+		query += " ORDER BY ub.date_added DESC"
 
 		type row struct {
 			OLID       string   `db:"open_library_id"`

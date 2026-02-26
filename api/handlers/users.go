@@ -192,12 +192,12 @@ func GetUserReviews(app core.App) func(e *core.RequestEvent) error {
 
 		var reviews []reviewRow
 		err = app.DB().NewQuery(`
-			SELECT ub.rating, ub.review_text, ub.spoiler, ub.date_read, ub.created as date_added,
+			SELECT ub.rating, ub.review_text, ub.spoiler, ub.date_read, ub.date_added as date_added,
 				   b.open_library_id, b.title, b.cover_url
 			FROM user_books ub
 			JOIN books b ON ub.book = b.id
 			WHERE ub.user = {:user} AND ub.review_text != '' AND ub.review_text IS NOT NULL
-			ORDER BY ub.created DESC
+			ORDER BY ub.date_added DESC
 			LIMIT {:limit}
 		`).Bind(map[string]any{"user": user.Id, "limit": limit}).All(&reviews)
 		if err != nil {
@@ -333,7 +333,7 @@ func FollowUser(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": err.Error()})
 		}
 
-		recordActivity(app, user.Id, "follow", map[string]any{"target_user": target.Id})
+		recordActivity(app, user.Id, "followed_user", map[string]any{"target_user": target.Id})
 
 		return e.JSON(http.StatusOK, map[string]any{"status": status})
 	}

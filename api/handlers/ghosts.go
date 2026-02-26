@@ -4,10 +4,19 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 )
+
+// ghostSubjects are Open Library subjects used to discover random books for ghosts.
+var ghostSubjects = []string{
+	"fiction", "science_fiction", "mystery", "romance", "fantasy",
+	"history", "biography", "thriller", "young_adult", "horror",
+	"poetry", "philosophy", "adventure", "humor", "classics",
+	"psychology", "science", "travel", "art", "music",
+}
 
 var ghostPersonas = []struct {
 	Username    string
@@ -70,6 +79,96 @@ func SeedGhosts(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// fetchBooksFromOpenLibrary fetches books from Open Library subjects and upserts them locally.
+// Returns a slice of local book records ready for ghost assignment.
+func fetchBooksFromOpenLibrary(app core.App, rng *rand.Rand, count int) ([]*core.Record, []string) {
+	ol := newOLClient()
+	var books []*core.Record
+	var logs []string
+	seen := make(map[string]bool)
+
+	// Shuffle subjects so each run gets variety
+	subjects := make([]string, len(ghostSubjects))
+	copy(subjects, ghostSubjects)
+	rng.Shuffle(len(subjects), func(i, j int) {
+		subjects[i], subjects[j] = subjects[j], subjects[i]
+	})
+
+	for _, subject := range subjects {
+		if len(books) >= count {
+			break
+		}
+
+		// Use a random offset to get different books each run
+		offset := rng.Intn(100)
+		path := fmt.Sprintf("/subjects/%s.json?limit=20&offset=%d", subject, offset)
+		data, err := ol.get(path)
+		if err != nil {
+			logs = append(logs, fmt.Sprintf("Failed to fetch subject %s: %v", subject, err))
+			continue
+		}
+
+		works, ok := data["works"].([]any)
+		if !ok || len(works) == 0 {
+			continue
+		}
+
+		for _, w := range works {
+			if len(books) >= count {
+				break
+			}
+
+			work, ok := w.(map[string]any)
+			if !ok {
+				continue
+			}
+
+			// Extract work key
+			key, _ := work["key"].(string)
+			key = strings.TrimPrefix(key, "/works/")
+			if key == "" || seen[key] {
+				continue
+			}
+			seen[key] = true
+
+			title, _ := work["title"].(string)
+			if title == "" {
+				continue
+			}
+
+			// Extract authors
+			var authorNames []string
+			if authors, ok := work["authors"].([]any); ok {
+				for _, a := range authors {
+					if aMap, ok := a.(map[string]any); ok {
+						if name, ok := aMap["name"].(string); ok {
+							authorNames = append(authorNames, name)
+						}
+					}
+				}
+			}
+
+			// Extract cover
+			var coverURL string
+			if coverID, ok := work["cover_id"].(float64); ok && coverID > 0 {
+				coverURL = fmt.Sprintf("https://covers.openlibrary.org/b/id/%.0f-M.jpg", coverID)
+			}
+
+			// Upsert into local database
+			book, err := upsertBook(app, key, title, coverURL, "", strings.Join(authorNames, ", "), 0)
+			if err != nil {
+				logs = append(logs, fmt.Sprintf("Failed to save \"%s\": %v", title, err))
+				continue
+			}
+
+			books = append(books, book)
+		}
+	}
+
+	logs = append(logs, fmt.Sprintf("Fetched %d books from Open Library", len(books)))
+	return books, logs
+}
+
 // SimulateGhosts handles POST /admin/ghosts/simulate
 func SimulateGhosts(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
@@ -84,16 +183,34 @@ func SimulateGhosts(app core.App) func(e *core.RequestEvent) error {
 			})
 		}
 
-		// Get some books to work with
-		books, _ := app.FindRecordsByFilter("books", "1=1", "-created", 200, 0, nil)
-		if len(books) == 0 {
-			return e.JSON(http.StatusOK, map[string]any{
-				"results": []any{},
-				"error":   "No books in the database. Search for and add some books first.",
-			})
+		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+		// Fetch fresh books from Open Library (enough for all ghosts, ~5 per ghost)
+		needed := len(ghosts) * 5
+		if needed < 50 {
+			needed = 50
+		}
+		fetchedBooks, fetchLogs := fetchBooksFromOpenLibrary(app, rng, needed)
+
+		// Also include any existing local books for variety
+		localBooks, _ := app.FindRecordsByFilter("books", "1=1", "-created", 200, 0, nil)
+		localSet := make(map[string]bool)
+		for _, b := range fetchedBooks {
+			localSet[b.Id] = true
+		}
+		for _, b := range localBooks {
+			if !localSet[b.Id] {
+				fetchedBooks = append(fetchedBooks, b)
+			}
 		}
 
-		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+		if len(fetchedBooks) == 0 {
+			return e.JSON(http.StatusOK, map[string]any{
+				"results":    []any{},
+				"fetch_logs": fetchLogs,
+				"error":      "Could not fetch any books from Open Library. Check network connectivity.",
+			})
+		}
 
 		type ghostResult struct {
 			Ghost   string   `json:"ghost"`
@@ -118,7 +235,7 @@ func SimulateGhosts(app core.App) func(e *core.RequestEvent) error {
 			}
 
 			var available []*core.Record
-			for _, b := range books {
+			for _, b := range fetchedBooks {
 				if !ratedSet[b.Id] {
 					available = append(available, b)
 				}
@@ -157,6 +274,16 @@ func SimulateGhosts(app core.App) func(e *core.RequestEvent) error {
 
 				setStatusTag(app, ghost.Id, book.Id, "finished")
 				refreshBookStats(app, book.Id)
+
+				// Record activities so they appear in feeds
+				recordActivity(app, ghost.Id, "rated", map[string]any{
+					"book":     book.Id,
+					"metadata": fmt.Sprintf(`{"rating":%d}`, rating),
+				})
+				recordActivity(app, ghost.Id, "finished_book", map[string]any{
+					"book": book.Id,
+				})
+
 				gr.Actions = append(gr.Actions, fmt.Sprintf("Rated \"%s\" %d/5", book.GetString("title"), rating))
 			}
 
@@ -164,7 +291,8 @@ func SimulateGhosts(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{
-			"results": results,
+			"results":    results,
+			"fetch_logs": fetchLogs,
 		})
 	}
 }

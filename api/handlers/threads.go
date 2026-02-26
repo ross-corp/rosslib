@@ -130,7 +130,7 @@ func CreateThread(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": err.Error()})
 		}
 
-		recordActivity(app, user.Id, "create_thread", map[string]any{
+		recordActivity(app, user.Id, "created_thread", map[string]any{
 			"book":   books[0].Id,
 			"thread": rec.Id,
 		})

@@ -77,7 +77,7 @@ func AddBook(app core.App) func(e *core.RequestEvent) error {
 			setStatusTag(app, user.Id, book.Id, data.StatusSlug)
 		}
 
-		recordActivity(app, user.Id, "add_book", map[string]any{"book": book.Id})
+		recordActivity(app, user.Id, "shelved", map[string]any{"book": book.Id})
 		refreshBookStats(app, book.Id)
 
 		return e.JSON(http.StatusOK, map[string]any{
@@ -391,14 +391,14 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 			var books []bookRow
 			err := app.DB().NewQuery(`
 				SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url, b.authors,
-					   ub.rating, ub.created as added_at
+					   ub.rating, ub.date_added as added_at
 				FROM user_books ub
 				JOIN books b ON ub.book = b.id
 				JOIN book_tag_values btv ON btv.user = ub.user AND btv.book = ub.book
 				JOIN tag_keys tk ON btv.tag_key = tk.id
 				JOIN tag_values tv ON btv.tag_value = tv.id
 				WHERE ub.user = {:user} AND tk.slug = 'status' AND tv.slug = {:status}
-				ORDER BY ub.created DESC
+				ORDER BY ub.date_added DESC
 				LIMIT {:limit}
 			`).Bind(map[string]any{"user": targetUser.Id, "status": statusFilter, "limit": limit}).All(&books)
 			if err != nil || books == nil {
@@ -427,12 +427,12 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 			var books []bookRow
 			_ = app.DB().NewQuery(`
 				SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url,
-					   ub.rating, ub.created as added_at
+					   ub.rating, ub.date_added as added_at
 				FROM book_tag_values btv
 				JOIN books b ON btv.book = b.id
 				LEFT JOIN user_books ub ON ub.user = btv.user AND ub.book = btv.book
 				WHERE btv.user = {:user} AND btv.tag_value = {:value}
-				ORDER BY btv.created DESC
+				ORDER BY ub.date_added DESC
 				LIMIT {:limit}
 			`).Bind(map[string]any{"user": targetUser.Id, "value": v.Id, "limit": limit}).All(&books)
 

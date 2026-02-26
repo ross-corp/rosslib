@@ -26,7 +26,9 @@ export default function ShelfBrowser({
   statuses: StatusGroup[];
   username: string;
 }) {
-  const [activeSlug, setActiveSlug] = useState(statuses[0]?.slug ?? "");
+  const [activeSlug, setActiveSlug] = useState(
+    () => statuses.find((s) => s.count > 0)?.slug ?? statuses[0]?.slug ?? ""
+  );
   const [bookCache, setBookCache] = useState<Record<string, StatusBook[]>>(() => {
     const initial: Record<string, StatusBook[]> = {};
     for (const s of statuses) {

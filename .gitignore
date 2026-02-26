@@ -24,3 +24,6 @@ infra/charts/**/charts/*.txt
 api/api
 api/server
 api/tmp/
+
+# playwrite assets
+.playwright-mcp/

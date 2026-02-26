@@ -401,11 +401,11 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 		err := app.DB().NewQuery(`
 			SELECT ub.user as user_id, u.username, u.display_name, u.avatar,
 				   ub.rating, ub.review_text, ub.spoiler, ub.date_read,
-				   ub.created as date_added
+				   ub.date_added as date_added
 			FROM user_books ub
 			JOIN users u ON ub.user = u.id
 			WHERE ub.book = {:book} AND ub.review_text != '' AND ub.review_text IS NOT NULL
-			ORDER BY CASE WHEN ub.user = {:viewer} THEN 0 ELSE 1 END, ub.created DESC
+			ORDER BY CASE WHEN ub.user = {:viewer} THEN 0 ELSE 1 END, ub.date_added DESC
 		`).Bind(map[string]any{"book": books[0].Id, "viewer": viewerID}).All(&reviews)
 		if err != nil {
 			return e.JSON(http.StatusOK, []any{})

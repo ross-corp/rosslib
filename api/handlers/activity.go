@@ -1,10 +1,146 @@
 package handlers
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/pocketbase/pocketbase/core"
 )
+
+// enrichActivity takes a raw activity row and enriches it with book, user, and
+// metadata details to match the webapp's ActivityItem type.
+func enrichActivity(app core.App, row activityRow) map[string]any {
+	item := map[string]any{
+		"id":         row.ID,
+		"type":       row.ActivityType,
+		"created_at": row.Created,
+	}
+
+	// Nested user object
+	var avatarURL *string
+	if row.Avatar != nil && *row.Avatar != "" {
+		url := fmt.Sprintf("/api/files/users/%s/%s", row.UserID, *row.Avatar)
+		avatarURL = &url
+	}
+	item["user"] = map[string]any{
+		"user_id":      row.UserID,
+		"username":     row.Username,
+		"display_name": row.DisplayName,
+		"avatar_url":   avatarURL,
+	}
+
+	// Nested book object (if activity has a book reference)
+	if row.BookID != nil && *row.BookID != "" {
+		bookObj := map[string]any{
+			"open_library_id": "",
+			"title":           "",
+			"cover_url":       nil,
+		}
+		if row.BookOLID != nil {
+			bookObj["open_library_id"] = *row.BookOLID
+		}
+		if row.BookTitle != nil {
+			bookObj["title"] = *row.BookTitle
+		}
+		if row.BookCoverURL != nil && *row.BookCoverURL != "" {
+			bookObj["cover_url"] = *row.BookCoverURL
+		}
+		item["book"] = bookObj
+	}
+
+	// Nested target_user object (for follow activities)
+	if row.TargetUserID != nil && *row.TargetUserID != "" {
+		var targetAvatarURL *string
+		if row.TargetAvatar != nil && *row.TargetAvatar != "" {
+			url := fmt.Sprintf("/api/files/users/%s/%s", *row.TargetUserID, *row.TargetAvatar)
+			targetAvatarURL = &url
+		}
+		item["target_user"] = map[string]any{
+			"user_id":      *row.TargetUserID,
+			"username":     row.TargetUsername,
+			"display_name": row.TargetDisplayName,
+			"avatar_url":   targetAvatarURL,
+		}
+	}
+
+	// Shelf name (for shelved activities)
+	if row.ShelfName != nil && *row.ShelfName != "" {
+		item["shelf_name"] = *row.ShelfName
+	}
+
+	// Thread title (for created_thread activities)
+	if row.ThreadTitle != nil && *row.ThreadTitle != "" {
+		item["thread_title"] = *row.ThreadTitle
+	}
+
+	// Parse metadata JSON for rating, review_snippet, etc.
+	if row.Metadata != nil && *row.Metadata != "" {
+		var meta map[string]any
+		if err := json.Unmarshal([]byte(*row.Metadata), &meta); err == nil {
+			if rating, ok := meta["rating"].(float64); ok {
+				item["rating"] = int(rating)
+			}
+			if snippet, ok := meta["review_snippet"].(string); ok {
+				item["review_snippet"] = snippet
+			}
+			if linkType, ok := meta["link_type"].(string); ok {
+				item["link_type"] = linkType
+			}
+			if toBookOL, ok := meta["to_book_ol_id"].(string); ok {
+				item["to_book_ol_id"] = toBookOL
+			}
+			if toBookTitle, ok := meta["to_book_title"].(string); ok {
+				item["to_book_title"] = toBookTitle
+			}
+			if authorKey, ok := meta["author_key"].(string); ok {
+				item["author_key"] = authorKey
+			}
+			if authorName, ok := meta["author_name"].(string); ok {
+				item["author_name"] = authorName
+			}
+		}
+	}
+
+	return item
+}
+
+// activityRow holds the result of the enriched activity query.
+type activityRow struct {
+	ID                string  `db:"id"`
+	UserID            string  `db:"user_id"`
+	ActivityType      string  `db:"activity_type"`
+	Created           string  `db:"created"`
+	Username          string  `db:"username"`
+	DisplayName       *string `db:"display_name"`
+	Avatar            *string `db:"avatar"`
+	BookID            *string `db:"book_id"`
+	BookOLID          *string `db:"book_olid"`
+	BookTitle         *string `db:"book_title"`
+	BookCoverURL      *string `db:"book_cover_url"`
+	TargetUserID      *string `db:"target_user_id"`
+	TargetUsername    *string `db:"target_username"`
+	TargetDisplayName *string `db:"target_display_name"`
+	TargetAvatar      *string `db:"target_avatar"`
+	ShelfName         *string `db:"shelf_name"`
+	ThreadTitle       *string `db:"thread_title"`
+	Metadata          *string `db:"metadata"`
+}
+
+const activitySelectClause = `
+	SELECT a.id, a.user as user_id, a.activity_type, a.created, a.metadata,
+		   u.username, u.display_name, u.avatar,
+		   a.book as book_id, b.open_library_id as book_olid, b.title as book_title, b.cover_url as book_cover_url,
+		   a.target_user as target_user_id, tu.username as target_username, tu.display_name as target_display_name, tu.avatar as target_avatar,
+		   c.name as shelf_name,
+		   t.title as thread_title
+	FROM activities a
+	JOIN users u ON a.user = u.id
+	LEFT JOIN books b ON a.book = b.id
+	LEFT JOIN users tu ON a.target_user = tu.id
+	LEFT JOIN collections c ON a.collection_ref = c.id
+	LEFT JOIN threads t ON a.thread = t.id
+`
 
 // GetFeed handles GET /me/feed
 func GetFeed(app core.App) func(e *core.RequestEvent) error {
@@ -17,41 +153,24 @@ func GetFeed(app core.App) func(e *core.RequestEvent) error {
 		cursor := e.Request.URL.Query().Get("cursor")
 		limit := 30
 
-		// Get IDs of users the current user follows
-		type followRow struct {
-			Followee string `db:"followee"`
+		// Check if user follows anyone
+		type countResult struct {
+			Count int `db:"count"`
 		}
-		var follows []followRow
+		var cnt countResult
 		_ = app.DB().NewQuery(`
-			SELECT followee FROM follows
+			SELECT COUNT(*) as count FROM follows
 			WHERE follower = {:user} AND status = 'active'
-		`).Bind(map[string]any{"user": user.Id}).All(&follows)
+		`).Bind(map[string]any{"user": user.Id}).One(&cnt)
 
-		if len(follows) == 0 {
+		if cnt.Count == 0 {
 			return e.JSON(http.StatusOK, map[string]any{
 				"activities":  []any{},
 				"next_cursor": nil,
 			})
 		}
 
-		// Build IN clause
-		followeeIDs := make([]any, len(follows))
-		placeholders := ""
-		for i, f := range follows {
-			followeeIDs[i] = f.Followee
-			if i > 0 {
-				placeholders += ","
-			}
-			placeholders += "{:f" + string(rune('0'+i)) + "}"
-		}
-
-		// Use simple filter approach instead of raw IN clause
-		query := `
-			SELECT a.id, a.user, a.activity_type, a.book, a.target_user,
-				   a.collection_ref, a.thread, a.metadata, a.created,
-				   u.username, u.display_name, u.avatar
-			FROM activities a
-			JOIN users u ON a.user = u.id
+		query := activitySelectClause + `
 			WHERE a.user IN (SELECT followee FROM follows WHERE follower = {:user} AND status = 'active')
 		`
 		params := map[string]any{"user": user.Id}
@@ -63,23 +182,8 @@ func GetFeed(app core.App) func(e *core.RequestEvent) error {
 		query += " ORDER BY a.created DESC LIMIT {:limit}"
 		params["limit"] = limit
 
-		type actRow struct {
-			ID            string  `db:"id" json:"id"`
-			UserID        string  `db:"user" json:"user_id"`
-			ActivityType  string  `db:"activity_type" json:"activity_type"`
-			Book          *string `db:"book" json:"book"`
-			TargetUser    *string `db:"target_user" json:"target_user"`
-			CollectionRef *string `db:"collection_ref" json:"collection_ref"`
-			Thread        *string `db:"thread" json:"thread"`
-			Metadata      *string `db:"metadata" json:"metadata"`
-			Created       string  `db:"created" json:"created_at"`
-			Username      string  `db:"username" json:"username"`
-			DisplayName   *string `db:"display_name" json:"display_name"`
-			Avatar        *string `db:"avatar" json:"avatar"`
-		}
-
-		var activities []actRow
-		err := app.DB().NewQuery(query).Bind(params).All(&activities)
+		var rows []activityRow
+		err := app.DB().NewQuery(query).Bind(params).All(&rows)
 		if err != nil {
 			return e.JSON(http.StatusOK, map[string]any{
 				"activities":  []any{},
@@ -87,29 +191,14 @@ func GetFeed(app core.App) func(e *core.RequestEvent) error {
 			})
 		}
 
-		var result []map[string]any
-		for _, a := range activities {
-			result = append(result, map[string]any{
-				"id":             a.ID,
-				"user_id":        a.UserID,
-				"username":       a.Username,
-				"display_name":   a.DisplayName,
-				"activity_type":  a.ActivityType,
-				"book":           a.Book,
-				"target_user":    a.TargetUser,
-				"collection_ref": a.CollectionRef,
-				"thread":         a.Thread,
-				"metadata":       a.Metadata,
-				"created_at":     a.Created,
-			})
-		}
-		if result == nil {
-			result = []map[string]any{}
+		result := make([]map[string]any, 0, len(rows))
+		for _, row := range rows {
+			result = append(result, enrichActivity(app, row))
 		}
 
 		var nextCursor any
-		if len(activities) == limit {
-			nextCursor = activities[len(activities)-1].Created
+		if len(rows) == limit {
+			nextCursor = rows[len(rows)-1].Created
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{
@@ -141,28 +230,21 @@ func GetUserActivity(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusForbidden, map[string]any{"error": "Profile is private"})
 		}
 
-		activities, err := app.FindRecordsByFilter("activities",
-			"user = {:user}", "-created", 30, 0,
-			map[string]any{"user": targetUser.Id},
-		)
+		query := activitySelectClause + `
+			WHERE a.user = {:user}
+			ORDER BY a.created DESC
+			LIMIT 30
+		`
+
+		var rows []activityRow
+		err = app.DB().NewQuery(query).Bind(map[string]any{"user": targetUser.Id}).All(&rows)
 		if err != nil {
 			return e.JSON(http.StatusOK, map[string]any{"activities": []any{}})
 		}
 
-		var result []map[string]any
-		for _, a := range activities {
-			result = append(result, map[string]any{
-				"id":             a.Id,
-				"activity_type":  a.GetString("activity_type"),
-				"book":           a.GetString("book"),
-				"target_user":    a.GetString("target_user"),
-				"collection_ref": a.GetString("collection_ref"),
-				"thread":         a.GetString("thread"),
-				"created_at":     a.GetString("created"),
-			})
-		}
-		if result == nil {
-			result = []map[string]any{}
+		result := make([]map[string]any, 0, len(rows))
+		for _, row := range rows {
+			result = append(result, enrichActivity(app, row))
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{"activities": result})
