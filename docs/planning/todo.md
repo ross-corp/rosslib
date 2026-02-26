@@ -2,10 +2,6 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination.
 
-## bug reports
-
-- [ ] Add bug report and feature request forms. Create a `/feedback` page with two tabs: "Bug Report" and "Feature Request". Bug report fields: title, description (textarea), steps to reproduce (textarea), severity dropdown (low/medium/high). Feature request fields: title, description (textarea). API endpoint `POST /feedback` stores submissions in a new `feedback` PocketBase collection (fields: `user` relation, `type` enum bug/feature, `title`, `description`, `steps_to_reproduce`, `severity`, `status` enum open/closed, `created`). Admin page (`/admin`) gets a new "Feedback" tab showing submissions with status toggle. Add a "Feedback" link in the nav or footer.
-
 ## caching
 
 - [ ] Add a server-side response cache for Open Library API calls. Create a simple in-memory TTL cache (sync.Map or similar) keyed by the full OL request URL. Cache successful responses for 24 hours. Apply it to the shared OL HTTP client (the rate-limited client in `api/handlers/helpers.go` or the `olhttp` package). This avoids redundant lookups when multiple users search for or view the same book. Log cache hit/miss rates at startup interval (e.g. every hour). No frontend changes needed.
@@ -25,3 +21,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Reorganize navbar into dropdown menus](https://github.com/ross-corp/rosslib/pull/44) — Replace flat nav links with Browse and Community dropdown menus
 - [Add computed lists section to user profile page](https://github.com/ross-corp/rosslib/pull/45) — Computed lists section on profile with operation badges and Live indicator; migration adds computed list fields to collections schema
 - [Add quick-add button for books on other users' pages](https://github.com/ross-corp/rosslib/pull/46) — QuickAddButton overlay on book covers in shelf grids and profile book rows for visitors; one-click "Want to Read" with dropdown for other statuses
+- [Add bug report and feature request forms](https://github.com/ross-corp/rosslib/pull/47) — /feedback page with tabbed form; feedback PocketBase collection; admin Feedback section with status toggle
