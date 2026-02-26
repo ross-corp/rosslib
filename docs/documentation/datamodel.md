@@ -111,6 +111,7 @@ Per-user book ownership. Replaces `collection_items` for user-book metadata (rat
 | progress_pages | integer | nullable; current page number |
 | progress_percent | smallint | nullable; 0–100 reading percentage |
 | device_total_pages | integer | nullable; user's edition page count (overrides `books.page_count` for % calc) |
+| selected_edition_key | text | nullable; Open Library edition key (e.g. `OL123M`); overrides default work cover on shelves/profile |
 | created_at | timestamptz | |
 
 Unique constraint: `(user_id, book_id)`

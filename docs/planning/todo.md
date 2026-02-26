@@ -2,10 +2,6 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination.
 
-## edition handling
-
-- [ ] Add a "Change edition" button on the book detail page (visible only when the user has the book in their library). Clicking it opens a modal/panel showing the available editions (reuse the existing `EditionList` data from `GET /books/:workId/editions`). Each edition shows its cover thumbnail, format, publisher, and ISBN. Selecting an edition updates the user's `user_books` record with a new `selected_edition_key` field (Open Library edition key like `/books/OL123M`). The profile and shelf pages should then display the selected edition's cover instead of the default work cover. Requires: adding `selected_edition_key` column to `user_books` (PocketBase migration), a `PATCH /me/books/:olId` field for it, and frontend logic to prefer the edition cover URL when rendering book covers.
-
 ## UI improvements
 
 - [ ] Reorganize the navbar into dropdown menus. Replace the flat link list with two dropdown menus: **Browse** (Search books, Genres, Scan ISBN) and **Community** (Browse users, My feed). Keep the notification bell and user avatar/settings as standalone items. Use a simple CSS dropdown or headless UI popover — no external library needed. The dropdowns should work on both desktop (hover or click) and mobile (click).
@@ -33,3 +29,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 <!-- nephewbot moves tasks here when it opens a PR. Move to docs/planning/completed.md after merging. -->
 - [Add delete-all-data endpoint and settings UI](https://github.com/ross-corp/rosslib/pull/37) — DELETE /me/account/data removes all user data; settings page gets Danger Zone with typed confirmation
 - [Add create/existing label options to import shelf mapping](https://github.com/ross-corp/rosslib/pull/38) — Goodreads import configure step gains "Create label" and "Add to existing label" actions alongside Tag and Skip
+- [Add change edition feature to book detail page](https://github.com/ross-corp/rosslib/pull/41) — Users can select a preferred edition cover via modal on book detail page; selected cover shown on shelves/profile

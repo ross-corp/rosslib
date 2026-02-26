@@ -223,6 +223,10 @@ Client component rendered on the settings page below the password form in a "Dan
 
 Client component rendered in the nav bar for authenticated users. Polls `GET /api/me/notifications/unread-count` every 60 seconds and displays a bell icon with a red badge when unread notifications exist. Links to `/notifications`.
 
+### `EditionPicker` (`components/edition-picker.tsx`)
+
+Client component for selecting a preferred edition on the book detail page. Shows a "Change edition" link below the book cover (visible only when the user has the book in their library). Opens a modal listing available editions with cover thumbnails, format badges, publisher, and ISBN. Selecting an edition saves the Open Library edition key to `user_books.selected_edition_key` via `PATCH /api/me/books/:olId` and reloads the page. Includes a "Reset to default cover" option. Supports loading more editions from the API.
+
 ### `GenreRatingEditor` (`components/genre-rating-editor.tsx`)
 
 Client component for genre dimension ratings on book detail pages. Shows aggregate community ratings as horizontal bar charts (genre name, progress bar, average/10, rater count). Logged-in users can expand an editor with 0–10 sliders for each of the 12 predefined genres (Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children). Setting a slider to 0 removes the rating. Saves via `PUT /api/me/books/:olId/genre-ratings` and refreshes aggregate data on save.

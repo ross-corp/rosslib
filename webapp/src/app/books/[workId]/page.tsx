@@ -7,6 +7,7 @@ import ReadingProgress from "@/components/reading-progress";
 import ThreadList from "@/components/thread-list";
 import ReviewText from "@/components/review-text";
 import EditionList from "@/components/edition-list";
+import EditionPicker from "@/components/edition-picker";
 import BookLinkList from "@/components/book-link-list";
 import BookFollowButton from "@/components/book-follow-button";
 import GenreRatingEditor from "@/components/genre-rating-editor";
@@ -68,6 +69,7 @@ type MyBookStatus = {
   progress_pages: number | null;
   progress_percent: number | null;
   device_total_pages: number | null;
+  selected_edition_key: string | null;
 };
 
 type BookThread = {
@@ -127,6 +129,46 @@ async function fetchBook(workId: string): Promise<BookDetail | null> {
   });
   if (!res.ok) return null;
   return res.json();
+}
+
+async function fetchEditions(
+  workId: string
+): Promise<{ entries: BookEdition[]; size: number }> {
+  const res = await fetch(
+    `${process.env.API_URL}/books/${workId}/editions?limit=20`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return { entries: [], size: 0 };
+  const data = await res.json();
+  // OL returns entries under the "entries" key
+  const raw = (data.entries ?? []) as Record<string, unknown>[];
+  const editions: BookEdition[] = raw.map((e) => {
+    const key = ((e.key as string) ?? "").replace("/books/", "");
+    let coverUrl: string | null = null;
+    if (Array.isArray(e.covers) && (e.covers as number[]).length > 0) {
+      coverUrl = `https://covers.openlibrary.org/b/id/${(e.covers as number[])[0]}-M.jpg`;
+    }
+    let isbn: string | null = null;
+    if (Array.isArray(e.isbn_13) && (e.isbn_13 as string[]).length > 0) {
+      isbn = (e.isbn_13 as string[])[0];
+    } else if (Array.isArray(e.isbn_10) && (e.isbn_10 as string[]).length > 0) {
+      isbn = (e.isbn_10 as string[])[0];
+    }
+    const pubs = e.publishers as string[] | undefined;
+    const langs = e.languages as { key: string }[] | undefined;
+    return {
+      key,
+      title: (e.title as string) ?? "",
+      publisher: pubs?.[0] ?? null,
+      publish_date: (e.publish_date as string) ?? "",
+      page_count: (e.number_of_pages as number) ?? null,
+      isbn,
+      cover_url: coverUrl,
+      format: (e.physical_format as string) ?? "",
+      language: langs?.[0]?.key?.replace("/languages/", "") ?? "",
+    };
+  });
+  return { entries: editions, size: data.size ?? editions.length };
 }
 
 async function fetchBookReviews(workId: string, token?: string): Promise<BookReview[]> {
@@ -250,7 +292,7 @@ export default async function BookPage({
   const { workId } = await params;
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings] = await Promise.all([
+  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings, editionsData] = await Promise.all([
     fetchBook(workId),
     fetchBookReviews(workId, token ?? undefined),
     fetchThreads(workId),
@@ -266,6 +308,7 @@ export default async function BookPage({
     currentUser && token
       ? fetchMyGenreRatings(token, workId)
       : Promise.resolve([]),
+    fetchEditions(workId),
   ]);
 
   if (!book) notFound();
@@ -275,21 +318,40 @@ export default async function BookPage({
   const statusValues: StatusValue[] = statusKey?.values ?? [];
   const statusKeyId = statusKey?.id ?? null;
 
+  // Prefer the user's selected edition cover
+  const editionKey = myStatus?.selected_edition_key ?? null;
+  const displayCover = editionKey
+    ? `https://covers.openlibrary.org/b/olid/${editionKey}-L.jpg`
+    : book.cover_url;
+
   return (
     <div className="min-h-screen">
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
         {/* ── Book header ── */}
         <div className="flex gap-8 items-start mb-10">
           {/* Cover */}
-          {book.cover_url ? (
-            <img
-              src={book.cover_url}
-              alt={book.title}
-              className="w-32 shrink-0 rounded shadow-sm object-cover"
-            />
-          ) : (
-            <div className="w-32 h-48 shrink-0 bg-surface-2 rounded" />
-          )}
+          <div className="shrink-0">
+            {displayCover ? (
+              <img
+                src={displayCover}
+                alt={book.title}
+                className="w-32 rounded shadow-sm object-cover"
+              />
+            ) : (
+              <div className="w-32 h-48 bg-surface-2 rounded" />
+            )}
+            {myStatus && editionsData.entries.length > 0 && (
+              <div className="mt-2">
+                <EditionPicker
+                  workId={workId}
+                  openLibraryId={workId}
+                  initialEditions={editionsData.entries}
+                  totalEditions={editionsData.size}
+                  currentEditionKey={editionKey}
+                />
+              </div>
+            )}
+          </div>
 
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-text-primary mb-1">
@@ -508,14 +570,14 @@ export default async function BookPage({
         </section>
 
         {/* ── Editions ── */}
-        {book.editions && book.editions.length > 0 && (
+        {editionsData.entries.length > 0 && (
           <section className="border-t border-border pt-8 mt-10">
             <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-4">
-              Editions{book.edition_count > 0 && ` (${book.edition_count})`}
+              Editions{editionsData.size > 0 && ` (${editionsData.size})`}
             </h2>
             <EditionList
-              editions={book.editions}
-              totalEditions={book.edition_count}
+              editions={editionsData.entries}
+              totalEditions={editionsData.size}
               workId={workId}
             />
           </section>

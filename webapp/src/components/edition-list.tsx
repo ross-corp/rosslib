@@ -81,7 +81,34 @@ export default function EditionList({
       );
       if (res.ok) {
         const data = await res.json();
-        setAllEditions((prev) => [...prev, ...data.editions]);
+        const raw = (data.entries ?? []) as Record<string, unknown>[];
+        const parsed: Edition[] = raw.map((e) => {
+          const key = ((e.key as string) ?? "").replace("/books/", "");
+          let coverUrl: string | null = null;
+          if (Array.isArray(e.covers) && (e.covers as number[]).length > 0) {
+            coverUrl = `https://covers.openlibrary.org/b/id/${(e.covers as number[])[0]}-M.jpg`;
+          }
+          let isbn: string | null = null;
+          if (Array.isArray(e.isbn_13) && (e.isbn_13 as string[]).length > 0) {
+            isbn = (e.isbn_13 as string[])[0];
+          } else if (Array.isArray(e.isbn_10) && (e.isbn_10 as string[]).length > 0) {
+            isbn = (e.isbn_10 as string[])[0];
+          }
+          const pubs = e.publishers as string[] | undefined;
+          const langs = e.languages as { key: string }[] | undefined;
+          return {
+            key,
+            title: (e.title as string) ?? "",
+            publisher: pubs?.[0] ?? null,
+            publish_date: (e.publish_date as string) ?? "",
+            page_count: (e.number_of_pages as number) ?? null,
+            isbn,
+            cover_url: coverUrl,
+            format: (e.physical_format as string) ?? "",
+            language: langs?.[0]?.key?.replace("/languages/", "") ?? "",
+          };
+        });
+        setAllEditions((prev) => [...prev, ...parsed]);
       }
     } finally {
       setLoading(false);
