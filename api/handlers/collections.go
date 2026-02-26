@@ -288,13 +288,15 @@ func GetShelfDetail(app core.App) func(e *core.RequestEvent) error {
 		}
 		var books []bookRow
 		_ = app.DB().NewQuery(`
-			SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url,
+			SELECT b.id as book_id, b.open_library_id, b.title,
+				   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
 				   ci.created as added_at, ci.rating
 			FROM collection_items ci
 			JOIN books b ON ci.book = b.id
+			LEFT JOIN user_books ub ON ub.user = {:user} AND ub.book = b.id
 			WHERE ci.collection = {:coll}
 			ORDER BY ci.created DESC
-		`).Bind(map[string]any{"coll": shelf.Id}).All(&books)
+		`).Bind(map[string]any{"coll": shelf.Id, "user": targetUser.Id}).All(&books)
 		if books == nil {
 			books = []bookRow{}
 		}

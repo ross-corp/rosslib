@@ -227,6 +227,14 @@ Client component rendered in the nav bar for authenticated users. Polls `GET /ap
 
 Client component for genre dimension ratings on book detail pages. Shows aggregate community ratings as horizontal bar charts (genre name, progress bar, average/10, rater count). Logged-in users can expand an editor with 0–10 sliders for each of the 12 predefined genres (Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children). Setting a slider to 0 removes the rating. Saves via `PUT /api/me/books/:olId/genre-ratings` and refreshes aggregate data on save.
 
+### `BookCoverWithEdition` (`components/book-cover-with-edition.tsx`)
+
+Client component for the book detail page cover area. Displays the book cover with edition selection support. When the user has the book in their library and editions are available, shows a "Select edition" / "Change edition" link below the cover that opens the `EditionSelector`. The displayed cover updates immediately when an edition is selected.
+
+### `EditionSelector` (`components/edition-selector.tsx`)
+
+Client component that provides a panel for choosing a specific edition of a book. Shows a scrollable list of editions with cover thumbnails, format badges, publisher, page count, language, and ISBN. Selecting an edition saves `selected_edition_key` and `selected_edition_cover_url` to the user's book record via `PATCH /api/me/books/:olId`. A "Default cover" option resets to the work cover. Supports lazy-loading additional editions.
+
 ### `BookScanner` (`components/book-scanner.tsx`)
 
 Client component for the `/scan` page. Three input modes: Camera (uses browser `BarcodeDetector` API for real-time EAN-13 scanning on supported devices), Upload (sends image to `POST /api/books/scan` for server-side barcode detection via gozxing), and Enter ISBN (manual input via `GET /api/books/lookup`). Detected books are displayed with cover, metadata, and a StatusPicker for quick library addition. Supports scanning multiple books in a session with a history list.
