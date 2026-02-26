@@ -7,6 +7,7 @@ import ReadingProgress from "@/components/reading-progress";
 import ThreadList from "@/components/thread-list";
 import ReviewText from "@/components/review-text";
 import EditionList from "@/components/edition-list";
+import EditionPicker from "@/components/edition-picker";
 import BookLinkList from "@/components/book-link-list";
 import BookFollowButton from "@/components/book-follow-button";
 import GenreRatingEditor from "@/components/genre-rating-editor";
@@ -68,6 +69,8 @@ type MyBookStatus = {
   progress_pages: number | null;
   progress_percent: number | null;
   device_total_pages: number | null;
+  selected_edition_key: string | null;
+  selected_edition_cover_url: string | null;
 };
 
 type BookThread = {
@@ -281,15 +284,28 @@ export default async function BookPage({
         {/* ── Book header ── */}
         <div className="flex gap-8 items-start mb-10">
           {/* Cover */}
-          {book.cover_url ? (
-            <img
-              src={book.cover_url}
-              alt={book.title}
-              className="w-32 shrink-0 rounded shadow-sm object-cover"
-            />
-          ) : (
-            <div className="w-32 h-48 shrink-0 bg-surface-2 rounded" />
-          )}
+          <div className="shrink-0">
+            {(myStatus?.selected_edition_cover_url || book.cover_url) ? (
+              <img
+                src={myStatus?.selected_edition_cover_url ?? book.cover_url!}
+                alt={book.title}
+                className="w-32 rounded shadow-sm object-cover"
+              />
+            ) : (
+              <div className="w-32 h-48 bg-surface-2 rounded" />
+            )}
+            {myStatus && book.editions && book.editions.length > 0 && (
+              <div className="mt-2 text-center">
+                <EditionPicker
+                  openLibraryId={workId}
+                  workId={workId}
+                  editions={book.editions}
+                  totalEditions={book.edition_count}
+                  currentEditionKey={myStatus.selected_edition_key}
+                />
+              </div>
+            )}
+          </div>
 
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-text-primary mb-1">

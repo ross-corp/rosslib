@@ -229,6 +229,88 @@ When a valid token is provided, reviews from users the caller follows are sorted
 
 ---
 
+## User Books
+
+### `POST /me/books`  *(auth required)*
+
+Add a book to the user's library. Upserts the book into the global catalog.
+
+```json
+{
+  "open_library_id": "OL82592W",
+  "title": "The Great Gatsby",
+  "cover_url": "https://...",
+  "isbn13": "9780743273565",
+  "authors": ["F. Scott Fitzgerald"],
+  "publication_year": 1925,
+  "status_slug": "want-to-read"
+}
+```
+
+### `PATCH /me/books/:olId`  *(auth required)*
+
+Update metadata on a book in the user's library. Only provided fields are updated.
+
+```json
+{
+  "rating": 4,
+  "review_text": "Great book.",
+  "spoiler": false,
+  "date_read": "2024-06-01T00:00:00Z",
+  "date_dnf": null,
+  "progress_pages": 150,
+  "progress_percent": 45,
+  "status_slug": "currently-reading",
+  "selected_edition_key": "OL123M",
+  "selected_edition_cover_url": "https://covers.openlibrary.org/b/id/12345-M.jpg"
+}
+```
+
+`selected_edition_key` and `selected_edition_cover_url` allow the user to select a specific edition of a book. When set, the edition's cover is displayed instead of the default work cover on profile pages, shelf views, and the book detail page.
+
+### `DELETE /me/books/:olId`  *(auth required)*
+
+Remove a book from the user's library. Also cleans up tag assignments and collection items.
+
+### `GET /me/books/:olId/status`  *(auth required)*
+
+Returns the user's status, rating, review, progress, and edition selection for a book.
+
+```json
+{
+  "status_value_id": "...",
+  "status_name": "Currently Reading",
+  "status_slug": "currently-reading",
+  "rating": 4,
+  "review_text": "Great so far.",
+  "spoiler": false,
+  "date_read": null,
+  "date_dnf": null,
+  "progress_pages": 150,
+  "progress_percent": 45,
+  "selected_edition_key": "OL123M",
+  "selected_edition_cover_url": "https://covers.openlibrary.org/b/id/12345-M.jpg"
+}
+```
+
+### `PUT /me/books/:olId/status`  *(auth required)*
+
+Set the reading status for a book.
+
+```json
+{ "slug": "currently-reading" }
+```
+
+### `GET /me/books/status-map`  *(auth required)*
+
+Returns a map of all the user's books to their status slugs.
+
+```json
+{ "OL82592W": "read", "OL27448W": "currently-reading" }
+```
+
+---
+
 ## Genres
 
 ### `GET /genres`

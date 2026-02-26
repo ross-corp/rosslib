@@ -193,7 +193,8 @@ func GetUserReviews(app core.App) func(e *core.RequestEvent) error {
 		var reviews []reviewRow
 		err = app.DB().NewQuery(`
 			SELECT ub.rating, ub.review_text, ub.spoiler, ub.date_read, ub.date_added as date_added,
-				   b.open_library_id, b.title, b.cover_url
+				   b.open_library_id, b.title,
+				   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url
 			FROM user_books ub
 			JOIN books b ON ub.book = b.id
 			WHERE ub.user = {:user} AND ub.review_text != '' AND ub.review_text IS NOT NULL

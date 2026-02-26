@@ -117,14 +117,16 @@ func UpdateBook(app core.App) func(e *core.RequestEvent) error {
 		ub := ubs[0]
 
 		data := struct {
-			Rating          *float64 `json:"rating"`
-			ReviewText      *string  `json:"review_text"`
-			Spoiler         *bool    `json:"spoiler"`
-			DateRead        *string  `json:"date_read"`
-			DateDnf         *string  `json:"date_dnf"`
-			ProgressPages   *int     `json:"progress_pages"`
-			ProgressPercent *int     `json:"progress_percent"`
-			StatusSlug      *string  `json:"status_slug"`
+			Rating                  *float64 `json:"rating"`
+			ReviewText              *string  `json:"review_text"`
+			Spoiler                 *bool    `json:"spoiler"`
+			DateRead                *string  `json:"date_read"`
+			DateDnf                 *string  `json:"date_dnf"`
+			ProgressPages           *int     `json:"progress_pages"`
+			ProgressPercent         *int     `json:"progress_percent"`
+			StatusSlug              *string  `json:"status_slug"`
+			SelectedEditionKey      *string  `json:"selected_edition_key"`
+			SelectedEditionCoverURL *string  `json:"selected_edition_cover_url"`
 		}{}
 		if err := e.BindBody(&data); err != nil {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
@@ -150,6 +152,12 @@ func UpdateBook(app core.App) func(e *core.RequestEvent) error {
 		}
 		if data.ProgressPercent != nil {
 			ub.Set("progress_percent", *data.ProgressPercent)
+		}
+		if data.SelectedEditionKey != nil {
+			ub.Set("selected_edition_key", *data.SelectedEditionKey)
+		}
+		if data.SelectedEditionCoverURL != nil {
+			ub.Set("selected_edition_cover_url", *data.SelectedEditionCoverURL)
 		}
 
 		if err := app.Save(ub); err != nil {
@@ -243,6 +251,7 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 				"rating": nil, "review_text": nil, "spoiler": false,
 				"date_read": nil, "date_dnf": nil,
 				"progress_pages": nil, "progress_percent": nil,
+				"selected_edition_key": nil, "selected_edition_cover_url": nil,
 			})
 		}
 		book := books[0]
@@ -255,16 +264,18 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 		)
 
 		result := map[string]any{
-			"status_value_id":  nil,
-			"status_name":      nil,
-			"status_slug":      nil,
-			"rating":           nil,
-			"review_text":      nil,
-			"spoiler":          false,
-			"date_read":        nil,
-			"date_dnf":         nil,
-			"progress_pages":   nil,
-			"progress_percent": nil,
+			"status_value_id":            nil,
+			"status_name":               nil,
+			"status_slug":               nil,
+			"rating":                    nil,
+			"review_text":               nil,
+			"spoiler":                   false,
+			"date_read":                 nil,
+			"date_dnf":                  nil,
+			"progress_pages":            nil,
+			"progress_percent":          nil,
+			"selected_edition_key":      nil,
+			"selected_edition_cover_url": nil,
 		}
 
 		if len(ubs) > 0 {
@@ -287,6 +298,12 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 			}
 			if pct := ub.GetInt("progress_percent"); pct > 0 {
 				result["progress_percent"] = pct
+			}
+			if sek := ub.GetString("selected_edition_key"); sek != "" {
+				result["selected_edition_key"] = sek
+			}
+			if secu := ub.GetString("selected_edition_cover_url"); secu != "" {
+				result["selected_edition_cover_url"] = secu
 			}
 		}
 
@@ -419,8 +436,9 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 			var books []bookRow
 			if statusFilter == "_unstatused" {
 				err := app.DB().NewQuery(`
-					SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url, b.authors,
-						   ub.rating, ub.date_added as added_at
+					SELECT b.id as book_id, b.open_library_id, b.title,
+						   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
+						   b.authors, ub.rating, ub.date_added as added_at
 					FROM user_books ub
 					JOIN books b ON ub.book = b.id
 					WHERE ub.user = {:user}
@@ -437,8 +455,9 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 				}
 			} else {
 				err := app.DB().NewQuery(`
-					SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url, b.authors,
-						   ub.rating, ub.date_added as added_at
+					SELECT b.id as book_id, b.open_library_id, b.title,
+						   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
+						   b.authors, ub.rating, ub.date_added as added_at
 					FROM user_books ub
 					JOIN books b ON ub.book = b.id
 					JOIN book_tag_values btv ON btv.user = ub.user AND btv.book = ub.book
@@ -474,7 +493,8 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 			}
 			var books []bookRow
 			_ = app.DB().NewQuery(`
-				SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url,
+				SELECT b.id as book_id, b.open_library_id, b.title,
+					   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
 					   ub.rating, ub.date_added as added_at
 				FROM book_tag_values btv
 				JOIN books b ON btv.book = b.id
@@ -520,7 +540,8 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 		}
 		var unstatusedBooks []unstatusedBookRow
 		_ = app.DB().NewQuery(`
-			SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url,
+			SELECT b.id as book_id, b.open_library_id, b.title,
+				   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
 				   ub.rating, ub.date_added as added_at
 			FROM user_books ub
 			JOIN books b ON ub.book = b.id
