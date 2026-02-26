@@ -4,9 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UI improvements
 
-
-- [ ] Add a "Computed lists" section to the user profile page. Currently computed/continuous lists only appear in the shelves list and are not prominent. Add a dedicated card or section on the profile page (below Favorites, above Tags) that shows the user's computed lists with their operation type badge (union/intersection/difference) and a "Live" indicator for continuous lists. Link each to its shelf detail page.
-
 - [ ] Fix book interaction buttons when viewing books on another user's page. When browsing another user's shelf or profile page and seeing their books, there's no quick way to add a book to your own library. Add a small "Want to read" button on book cover cards in shelf grids and profile book lists (only shown when viewing another user's page, not your own). Clicking it adds the book to the viewer's "Want to Read" status via `POST /me/books`. Include a small dropdown on the button with options: "Want to read", "Currently reading", "Add to label...", and "Rate & review" (navigates to the book detail page).
 
 ## bug reports
@@ -30,3 +27,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add create/existing label options to import shelf mapping](https://github.com/ross-corp/rosslib/pull/38) — Goodreads import configure step gains "Create label" and "Add to existing label" actions alongside Tag and Skip
 - [Add edition picker for book covers](https://github.com/ross-corp/rosslib/pull/42) — Edition selector modal on book detail page; selected edition cover shown on profile/shelf pages
 - [Reorganize navbar into dropdown menus](https://github.com/ross-corp/rosslib/pull/44) — Replace flat nav links with Browse and Community dropdown menus
+- [Add computed lists section to user profile page](https://github.com/ross-corp/rosslib/pull/45) — Computed lists section on profile with operation badges and Live indicator; migration adds computed list fields to collections schema
