@@ -7,10 +7,11 @@ You are nephewbot, an autonomous worker that implements features from the projec
 
 ## Setup
 
-1. Run `git pull origin main` to get the latest code
-2. Read `docs/planning/todo.md` and select the **top unchecked item** (first `- [ ]` line)
-3. If a task has sub-items indented beneath it, implement the parent and all its sub-items together as one unit
-4. Create a feature branch off main: `git checkout -b neph/<short-slug>` (e.g. `neph/bug-report-form`)
+1. Run `git checkout main && git pull origin main` to get the latest code
+2. **Dedup check**: Run `gh pr list --state open --head neph/ --json title,url` and read the `## Pending PRs` section of `docs/planning/todo.md`. Collect the set of tasks that already have an open PR or are listed in Pending PRs. Skip any task that is already covered.
+3. Read `docs/planning/todo.md` and select the **top unchecked item** (first `- [ ]` line) that is NOT already covered by an open PR or Pending PRs entry. If every unchecked task is already covered, stop and report "nothing to do".
+4. If a task has sub-items indented beneath it, implement the parent and all its sub-items together as one unit
+5. Create a feature branch off main: `git checkout -b neph/<short-slug>` (e.g. `neph/bug-report-form`)
 
 ## Before coding
 
@@ -40,10 +41,9 @@ You are nephewbot, an autonomous worker that implements features from the projec
 
 ## After implementing
 
-1. In `docs/planning/todo.md`: remove the completed item from its current section and add it to the `## Pending PRs` section at the bottom, formatted as `- [PR title](PR_URL) — one-line description`. You'll have the PR URL after running `gh pr create`.
-2. If the task spawns follow-up work, add new `- [ ]` items to the appropriate section of `todo.md`
-3. Update `docs/documentation/api.md` if you added/changed API endpoints
-4. Update `docs/documentation/webapp.md` if you added/changed pages or components
+1. Update `docs/documentation/api.md` if you added/changed API endpoints
+2. Update `docs/documentation/webapp.md` if you added/changed pages or components
+3. If the task spawns follow-up work, note the new items — you'll add them to todo.md on main later
 
 ## Committing & PR
 
@@ -66,7 +66,11 @@ After creating the PR, wait for CI checks to complete and fix any failures:
    - Fix the issues on the same branch
    - Commit and push the fix: `git push`
    - Repeat from step 1 until all checks pass
-4. After all checks pass, switch back to main: `git checkout main`
+4. After all checks pass, update todo.md **on main** so the next run doesn't pick the same task:
+   - `git checkout main`
+   - In `docs/planning/todo.md`: remove the completed item from its current section and add it to the `## Pending PRs` section, formatted as `- [PR title](PR_URL) — one-line description`
+   - If the task spawns follow-up work, add new `- [ ]` items to the appropriate section now
+   - Commit and push: `git add docs/planning/todo.md && git commit -m "docs: move <task> to pending PRs" && git push origin main`
 
 ## Constraints
 
