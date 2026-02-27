@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import AuthorFollowButton from "@/components/author-follow-button";
+import AuthorWorksGrid from "@/components/author-works-grid";
 import { getToken } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -150,36 +150,11 @@ export default async function AuthorPage({
               : "Works"}
           </h2>
 
-          {works.length === 0 ? (
-            <p className="text-text-primary text-sm">No works found.</p>
-          ) : (
-            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-4">
-              {works.map((work) => (
-                <Link
-                  key={work.key}
-                  href={`/books/${work.key}`}
-                  className="group"
-                >
-                  {work.cover_url ? (
-                    <img
-                      src={work.cover_url}
-                      alt={work.title}
-                      className="w-full aspect-[2/3] object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
-                    />
-                  ) : (
-                    <div className="w-full aspect-[2/3] bg-surface-2 rounded flex items-center justify-center p-2">
-                      <span className="text-[10px] text-text-primary text-center leading-tight line-clamp-3">
-                        {work.title}
-                      </span>
-                    </div>
-                  )}
-                  <p className="mt-1.5 text-xs text-text-primary leading-tight line-clamp-2 group-hover:text-text-primary transition-colors">
-                    {work.title}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          )}
+          <AuthorWorksGrid
+            authorKey={authorKey}
+            initialWorks={works}
+            workCount={author.work_count}
+          />
         </section>
       </main>
     </div>

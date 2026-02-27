@@ -232,6 +232,10 @@ Client component for the `/admin` page. Displays proposed community link edits w
 
 Client component for selecting a specific edition of a book. Shown on the book detail page below the cover image when the user has the book in their library. Opens a modal listing all available editions (reusing the editions data from `GET /books/:workId/editions`) with cover thumbnails, format badges, publisher, and ISBN. Selecting an edition saves the edition key and cover URL to the user's `user_books` record via `PATCH /api/me/books/:olId`. The selected edition's cover is then displayed on the book detail page, profile pages, and shelf views instead of the default work cover.
 
+### `AuthorWorksGrid` (`components/author-works-grid.tsx`)
+
+Client component for the author detail page. Displays a paginated grid of the author's works (24 per page) with cover images and titles. A "Show more" button fetches the next page via `GET /api/authors/:authorKey/works?limit=24&offset=N`. Receives initial works and total count from the server component.
+
 ### `EditionList` (`components/edition-list.tsx`)
 
 Read-only list of book editions shown in the "Editions" section of the book detail page. Displays edition cover thumbnails, format, publisher, publish date, page count, language, and ISBN. Supports "Show all" expansion and "Load more" pagination.

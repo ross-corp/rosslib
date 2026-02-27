@@ -474,6 +474,36 @@ Proxies to Open Library's author search API. Returns up to 20 results.
 
 `birth_date`, `death_date`, `top_work`, `top_subjects`, and `photo_url` may be null.
 
+### `GET /authors/:authorKey?limit=24&offset=0`
+
+Fetches author detail from Open Library including a paginated slice of their works.
+
+**Query parameters:**
+- `limit` *(optional, default 24, max 100)* — number of works to return.
+- `offset` *(optional, default 0)* — offset into the works list.
+
+```json
+{
+  "key": "OL26320A",
+  "name": "J.R.R. Tolkien",
+  "bio": "John Ronald Reuel Tolkien was an English writer...",
+  "birth_date": "3 January 1892",
+  "death_date": "2 September 1973",
+  "photo_url": "https://covers.openlibrary.org/a/id/6257741-L.jpg",
+  "links": [{ "title": "Wikipedia", "url": "https://en.wikipedia.org/wiki/J._R._R._Tolkien" }],
+  "work_count": 392,
+  "works": [
+    {
+      "key": "OL27448W",
+      "title": "The Lord of the Rings",
+      "cover_url": "https://covers.openlibrary.org/b/id/8406786-M.jpg"
+    }
+  ]
+}
+```
+
+`bio`, `birth_date`, `death_date`, `photo_url`, `links`, and `cover_url` on works may be null.
+
 ### `POST /authors/:authorKey/follow`  *(auth required)*
 
 Follow an author. Accepts optional `{ "author_name": "..." }` to cache the display name.
