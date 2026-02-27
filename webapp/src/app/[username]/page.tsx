@@ -342,14 +342,20 @@ export default async function UserPage({
               </Link>
             </>
           )}
-          <span className="text-sm text-text-secondary">
+          <Link
+            href={`/${profile.username}/followers`}
+            className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+          >
             <span className="font-semibold text-text-primary">{profile.followers_count}</span>{" "}
             <span className="text-text-tertiary">followers</span>
-          </span>
-          <span className="text-sm text-text-secondary">
+          </Link>
+          <Link
+            href={`/${profile.username}/following`}
+            className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+          >
             <span className="font-semibold text-text-primary">{profile.following_count}</span>{" "}
             <span className="text-text-tertiary">following</span>
-          </span>
+          </Link>
           <span className="text-sm text-text-secondary">
             <span className="font-semibold text-text-primary">{profile.friends_count}</span>{" "}
             <span className="text-text-tertiary">friends</span>
