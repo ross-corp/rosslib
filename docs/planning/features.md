@@ -14,7 +14,7 @@ Full pipeline for predicting and displaying book genres using a local embeddings
 6. Store in DB: `predicted_genres` (model output), per-user genre ratings (user overrides), global genre scores (average across all users)
 7. Use genre data to power recommendations and "similar books" features
 
-Dependencies: local embeddings endpoint (ollama or similar), GPU access on the server. The existing `genre_ratings` table (0–10 manual ratings on 12 genres) could be extended or replaced.
+Dependencies: local embeddings endpoint (ollama or similar), GPU access on the server. The existing `genre_ratings` table (0–10 manual ratings on 12 genres, now implemented — see completed.md) could be extended with model predictions, or the embedding output could be stored separately and compared against user ratings for calibration.
 
 ## Integrations & external connections
 
@@ -77,8 +77,8 @@ Dependencies: local embeddings endpoint (ollama or similar), GPU access on the s
 ## Infrastructure
 
 ### CI/CD
-- GitHub Actions: lint, typecheck, `go test`, and `npm run build` on every PR
-- CD: auto-deploy to production on main merge (docker compose pull + restart on the server)
+- DONE: GitHub Actions for lint, typecheck, `go test`, and `npm run build` on PRs (PRs #28, #34, #35).
+- CD: auto-deploy to production on main merge (docker compose pull + restart on the server) — not yet implemented
 - Switch GHA runners to homelab machines to avoid burning minutes
 
 ### Testing
@@ -91,7 +91,7 @@ Dependencies: local embeddings endpoint (ollama or similar), GPU access on the s
 
 ### Nephewbot improvements
 - nephewbot pulls from GitHub Issues instead of (or in addition to) `todo.md`
-- In-app "Report bug" button creates a GitHub Issue via the API, nephewbot picks it up and submits a PR
+- PARTIAL: In-app bug report and feature request forms now exist (PR #47, `feedback` collection in DB). Not yet connected to GitHub Issues — could bridge feedback submissions to GH Issues via the API so nephewbot picks them up automatically.
 
 ## Business
 
