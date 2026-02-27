@@ -240,6 +240,7 @@ When a valid token is provided, reviews from users the caller follows are sorted
 ```json
 [
   {
+    "user_id": "abc123",
     "username": "alice",
     "display_name": "Alice",
     "avatar_url": "https://...",
@@ -249,10 +250,24 @@ When a valid token is provided, reviews from users the caller follows are sorted
     "date_read": "2025-06-15T00:00:00Z",
     "date_dnf": null,
     "date_added": "2025-06-20T14:32:10Z",
-    "is_followed": true
+    "is_followed": true,
+    "like_count": 3,
+    "liked_by_me": false
   }
 ]
 ```
+
+### `POST /books/:workId/reviews/:userId/like`  *(auth required)*
+
+Toggle like on a review. If not liked, creates a like; if already liked, removes it. Cannot like your own review. Records a `liked_review` activity and sends a `review_liked` notification to the review author.
+
+Returns `{ "liked": true }` or `{ "liked": false }`.
+
+### `GET /books/:workId/reviews/:userId/like`  *(auth required)*
+
+Check if the current user has liked a specific review.
+
+Returns `{ "liked": true }` or `{ "liked": false }`.
 
 ---
 

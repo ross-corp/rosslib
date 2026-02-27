@@ -153,6 +153,10 @@ func main() {
 		authed.GET("/me/books/{olId}/genre-ratings", handlers.GetMyGenreRatings(app))
 		authed.PUT("/me/books/{olId}/genre-ratings", handlers.SetGenreRatings(app))
 
+		// Review likes
+		authed.POST("/books/{workId}/reviews/{userId}/like", handlers.ToggleReviewLike(app))
+		authed.GET("/books/{workId}/reviews/{userId}/like", handlers.GetReviewLikeStatus(app))
+
 		// Book links
 		authed.POST("/books/{workId}/links", handlers.CreateBookLink(app))
 		authed.DELETE("/links/{linkId}", handlers.DeleteBookLink(app))

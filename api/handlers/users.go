@@ -281,13 +281,15 @@ func GetUserReviews(app core.App) func(e *core.RequestEvent) error {
 			BookOLID   string   `db:"open_library_id" json:"open_library_id"`
 			BookTitle  string   `db:"title" json:"title"`
 			CoverURL   *string  `db:"cover_url" json:"cover_url"`
+			LikeCount  int      `db:"like_count" json:"like_count"`
 		}
 
 		var reviews []reviewRow
 		err = app.DB().NewQuery(`
 			SELECT ub.rating, ub.review_text, ub.spoiler, ub.date_read, ub.date_added as date_added,
 				   b.open_library_id, b.title,
-				   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url
+				   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
+				   COALESCE((SELECT COUNT(*) FROM review_likes rl WHERE rl.book = ub.book AND rl.review_user = ub.user), 0) as like_count
 			FROM user_books ub
 			JOIN books b ON ub.book = b.id
 			WHERE ub.user = {:user} AND ub.review_text != '' AND ub.review_text IS NOT NULL
