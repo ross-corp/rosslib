@@ -4,8 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## quick wins
 
-- [ ] Fix the logged-out homepage feature grid responsiveness. In `webapp/src/app/page.tsx` (~line 57), the features grid uses `grid-cols-3` with no responsive variant. Add `grid-cols-1 md:grid-cols-3` (or `sm:grid-cols-2 lg:grid-cols-3`) so the grid stacks properly on mobile.
-
 - [ ] Validate `rating` is in range 1–5 in `AddBook` and `UpdateBook`. In `api/handlers/userbooks.go` (~line 64), the rating is applied with no bounds check. Add validation that rejects ratings outside 1–5 with a 400 error. The `user_books` schema defines rating as 1–5 — without handler validation, out-of-range values fail at the DB layer with an opaque error.
 
 - [ ] Add max-length validation to thread title and body in `CreateThread`. In `api/handlers/threads.go` (~lines 115–117), only non-empty checks exist. Add length limits: title max 500 chars (matching the schema `varchar(500)`), body max 10,000 chars. Return a 400 with a clear message if exceeded, rather than letting it fail at the DB layer.
@@ -88,3 +86,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add notification preferences](https://github.com/ross-corp/rosslib/pull/59) — Per-user notification toggle switches on settings page with GET/PUT API and ShouldNotify helper
 - [Add series metadata](https://github.com/ross-corp/rosslib/pull/60) — Series and book_series collections, API endpoints, book detail series badges, /series/:id page, shelf grid position badges
 - [Add StoryGraph CSV import](https://github.com/ross-corp/rosslib/pull/61) — StoryGraph preview/commit endpoints, status mapping, tag import, tabbed import page
+- [Fix homepage feature grid responsiveness](https://github.com/ross-corp/rosslib/pull/62) — Add responsive breakpoints (1-col mobile, 2-col sm, 3-col lg) to feature grid
