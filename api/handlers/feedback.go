@@ -7,6 +7,84 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
+// GetMyFeedback handles GET /me/feedback
+func GetMyFeedback(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+
+		type feedbackRow struct {
+			ID               string  `db:"id" json:"id"`
+			Type             string  `db:"type" json:"type"`
+			Title            string  `db:"title" json:"title"`
+			Description      string  `db:"description" json:"description"`
+			StepsToReproduce *string `db:"steps_to_reproduce" json:"steps_to_reproduce"`
+			Severity         *string `db:"severity" json:"severity"`
+			Status           string  `db:"status" json:"status"`
+			CreatedAt        string  `db:"created_at" json:"created_at"`
+		}
+
+		query := `
+			SELECT id, type, title, description, steps_to_reproduce,
+				   severity, status, created as created_at
+			FROM feedback
+			WHERE user = {:userId}
+			ORDER BY created DESC
+		`
+
+		var rows []feedbackRow
+		err := app.DB().NewQuery(query).Bind(map[string]any{"userId": user.Id}).All(&rows)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		result := make([]map[string]any, 0, len(rows))
+		for _, r := range rows {
+			result = append(result, map[string]any{
+				"id":                  r.ID,
+				"type":               r.Type,
+				"title":              r.Title,
+				"description":        r.Description,
+				"steps_to_reproduce": r.StepsToReproduce,
+				"severity":           r.Severity,
+				"status":             r.Status,
+				"created_at":         r.CreatedAt,
+			})
+		}
+
+		return e.JSON(http.StatusOK, result)
+	}
+}
+
+// DeleteMyFeedback handles DELETE /me/feedback/{feedbackId}
+func DeleteMyFeedback(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+
+		feedbackID := e.Request.PathValue("feedbackId")
+
+		rec, err := app.FindRecordById("feedback", feedbackID)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Feedback not found"})
+		}
+
+		if rec.GetString("user") != user.Id {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "You can only delete your own feedback"})
+		}
+
+		if err := app.Delete(rec); err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to delete feedback"})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"ok": true})
+	}
+}
+
 // CreateFeedback handles POST /feedback
 func CreateFeedback(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {

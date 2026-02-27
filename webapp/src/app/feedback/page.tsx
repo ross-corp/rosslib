@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import FeedbackForm from "@/components/feedback-form";
+import MyFeedback from "@/components/my-feedback";
 import { getUser } from "@/lib/auth";
 
 export default async function FeedbackPage() {
@@ -14,6 +15,9 @@ export default async function FeedbackPage() {
           Found a bug or have an idea? Let us know.
         </p>
         <FeedbackForm />
+        <div className="mt-10">
+          <MyFeedback />
+        </div>
       </main>
     </div>
   );

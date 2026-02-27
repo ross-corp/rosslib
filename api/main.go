@@ -153,6 +153,8 @@ func main() {
 
 		// Feedback
 		authed.POST("/feedback", handlers.CreateFeedback(app))
+		authed.GET("/me/feedback", handlers.GetMyFeedback(app))
+		authed.DELETE("/me/feedback/{feedbackId}", handlers.DeleteMyFeedback(app))
 
 		// ── Admin routes ─────────────────────────────────────────
 		admin := se.Router.Group("/admin").Bind(apis.RequireAuth()).BindFunc(handlers.RequireModerator(app))
