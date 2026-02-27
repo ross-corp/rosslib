@@ -17,8 +17,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 ## settings & account
 
 
-- [ ] Add a "Followed Books" management page. The API endpoint `GET /me/followed-books` (registered in `api/main.go` line 152) returns the user's followed books, and `DELETE /books/{workId}/follow` unfollows. But there is no webapp page to view or manage these. **Steps**: (1) Create proxy route `webapp/src/app/api/me/followed-books/route.ts` that forwards to `GET /me/followed-books`. (2) Create page at `webapp/src/app/settings/followed-books/page.tsx` — fetch the list, display each book with cover image, title, author, and an "Unfollow" button (calls `DELETE /api/books/{workId}/follow`). (3) Add a "Followed Books" link in the settings navigation (or at minimum link from the main settings page).
-
 - [ ] Add a pending imports review page at `/settings/imports/pending`. The API has three endpoints in `api/handlers/pending_imports.go`: `GetPendingImports` (GET, returns list with title, author, isbn13, status), `ResolvePendingImport` (PATCH, links an unmatched row to a book), and `DeletePendingImport` (DELETE, dismisses a row). Create a new Next.js page at `webapp/src/app/settings/imports/pending/page.tsx`. It should: (1) fetch pending imports via `GET /api/me/imports/pending`, (2) show each row with title, author, ISBN, and status, (3) provide a "Search & Link" button per row that opens a book search modal — when a book is selected, call `PATCH /api/me/imports/pending/:id` with the OL work ID, (4) provide a "Dismiss" button that calls `DELETE /api/me/imports/pending/:id`. Add a link to this page from the import page (`/settings/import`). Add the Next.js proxy routes if they don't exist.
 
 ## UX polish
@@ -66,3 +64,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Link author names to author pages on book detail](https://github.com/ross-corp/rosslib/pull/81) — Author names link to /authors/{key} pages, with plain text fallback for local-only records
 - [Add pagination to author works grid](https://github.com/ross-corp/rosslib/pull/84) — Paginated author works with Show more button (24 per page)
 - [Add shared settings page navigation](https://github.com/ross-corp/rosslib/pull/85) — Pill-style SettingsNav component on all settings pages
+- [Add followed books management page](https://github.com/ross-corp/rosslib/pull/86) — /settings/followed-books page with book list and unfollow buttons
