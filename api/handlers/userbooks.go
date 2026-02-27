@@ -484,18 +484,22 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 		var statuses []map[string]any
 		for _, v := range values {
 			type bookRow struct {
-				BookID   string   `db:"book_id" json:"book_id"`
-				OLID     string   `db:"open_library_id" json:"open_library_id"`
-				Title    string   `db:"title" json:"title"`
-				CoverURL *string  `db:"cover_url" json:"cover_url"`
-				Rating   *float64 `db:"rating" json:"rating"`
-				AddedAt  string   `db:"added_at" json:"added_at"`
+				BookID          string   `db:"book_id" json:"book_id"`
+				OLID            string   `db:"open_library_id" json:"open_library_id"`
+				Title           string   `db:"title" json:"title"`
+				CoverURL        *string  `db:"cover_url" json:"cover_url"`
+				Rating          *float64 `db:"rating" json:"rating"`
+				AddedAt         string   `db:"added_at" json:"added_at"`
+				ProgressPages   *int     `db:"progress_pages" json:"progress_pages"`
+				ProgressPercent *int     `db:"progress_percent" json:"progress_percent"`
+				PageCount       *int     `db:"page_count" json:"page_count"`
 			}
 			var books []bookRow
 			_ = app.DB().NewQuery(`
 				SELECT b.id as book_id, b.open_library_id, b.title,
 					   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
-					   ub.rating, ub.date_added as added_at
+					   ub.rating, ub.date_added as added_at,
+					   ub.progress_pages, ub.progress_percent, b.page_count
 				FROM book_tag_values btv
 				JOIN books b ON btv.book = b.id
 				LEFT JOIN user_books ub ON ub.user = btv.user AND ub.book = btv.book
