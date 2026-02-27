@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import ImportForm from "@/components/import-form";
+import ImportTabs from "@/components/import-tabs";
 import SettingsNav from "@/components/settings-nav";
 import { getUser } from "@/lib/auth";
 
@@ -23,12 +23,12 @@ export default async function ImportPage() {
 
         <SettingsNav />
 
-        <h2 className="text-xl font-semibold text-text-primary mb-2">Import from Goodreads</h2>
+        <h2 className="text-xl font-semibold text-text-primary mb-2">Import Library</h2>
         <p className="text-sm text-text-primary mb-8">
-          Import your books, ratings, and reviews from a Goodreads CSV export.
+          Import your books, ratings, and reviews from a CSV export.
         </p>
 
-        <ImportForm username={user.username} />
+        <ImportTabs username={user.username} />
       </main>
     </div>
   );

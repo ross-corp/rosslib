@@ -1018,13 +1018,23 @@ The request body includes an optional `unmatched_rows` array alongside `rows` an
 - `"existing_label"` — adds the shelf as a value under an existing label key specified by `label_key_id`
 - `"skip"` — ignores the shelf
 
+### `POST /me/import/storygraph/preview`  *(auth required)*
+
+Accepts a multipart form with a `file` field containing a StoryGraph CSV export. Returns a preview without writing to the database.
+
+StoryGraph CSV columns: `Title`, `Authors`, `ISBN/UID`, `Format`, `Read Status`, `Star Rating`, `Review`, `Tags`, `Read Dates`. The lookup chain is the same as Goodreads import. Status mapping: `to-read` → `want-to-read`, `currently-reading` → `currently-reading`, `read` → `finished`, `did-not-finish` → `dnf`. Tags are imported as custom shelves/labels. Read Dates may be a range (`2024/01/15-2024/02/20`); the end date is used as `date_read`.
+
+### `POST /me/import/storygraph/commit`  *(auth required)*
+
+Accepts the confirmed preview payload and writes to the database. Returns `{ imported, failed, errors, pending_saved }`. Same request body format and `shelf_mappings` actions as the Goodreads commit endpoint. Unmatched rows are saved with `source: "storygraph"`.
+
 ---
 
 ## Pending Imports
 
 ### `GET /me/imports/pending`  *(auth required)*
 
-Returns unmatched import rows saved from previous Goodreads imports. Only returns rows with status `unmatched`.
+Returns unmatched import rows saved from previous imports (Goodreads or StoryGraph). Only returns rows with status `unmatched`.
 
 ```json
 [
