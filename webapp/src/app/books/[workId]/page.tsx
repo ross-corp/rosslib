@@ -42,6 +42,7 @@ type BookDetail = {
   first_publish_year: number | null;
   edition_count: number;
   editions: BookEdition[] | null;
+  subjects: string[];
 };
 
 type BookReview = {
@@ -407,6 +408,20 @@ export default async function BookPage({
               <p className="text-text-primary text-sm leading-relaxed">
                 {book.description}
               </p>
+            )}
+
+            {book.subjects && book.subjects.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {book.subjects.map((subject) => (
+                  <Link
+                    key={subject}
+                    href={`/search?q=${encodeURIComponent(subject)}`}
+                    className="inline-block text-xs px-2.5 py-1 rounded-full bg-surface-2 text-text-primary hover:bg-border transition-colors"
+                  >
+                    {subject}
+                  </Link>
+                ))}
+              </div>
             )}
           </div>
         </div>

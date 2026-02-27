@@ -262,6 +262,7 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 		var firstPubYear *float64
 		var pageCount *int
 		var publisher *string
+		var subjects []string
 
 		if olErr == nil {
 			if t, ok := workData["title"].(string); ok {
@@ -300,6 +301,17 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 					}
 				}
 			}
+			// Extract subjects (up to 10)
+			if subjectList, ok := workData["subjects"].([]any); ok {
+				for _, s := range subjectList {
+					if str, ok := s.(string); ok && str != "" {
+						subjects = append(subjects, str)
+						if len(subjects) >= 10 {
+							break
+						}
+					}
+				}
+			}
 		}
 
 		// Fallback to local data
@@ -324,6 +336,20 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 		if edErr == nil {
 			if size, ok := editionsData["size"].(float64); ok {
 				editionCount = int(size)
+			}
+		}
+		// Fallback subjects from local book record
+		if len(subjects) == 0 && len(localBooks) > 0 {
+			if s := localBooks[0].GetString("subjects"); s != "" {
+				for _, part := range strings.Split(s, ",") {
+					part = strings.TrimSpace(part)
+					if part != "" {
+						subjects = append(subjects, part)
+						if len(subjects) >= 10 {
+							break
+						}
+					}
+				}
 			}
 		}
 
@@ -356,6 +382,10 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 			}
 		}
 
+		if subjects == nil {
+			subjects = []string{}
+		}
+
 		return e.JSON(http.StatusOK, map[string]any{
 			"key":                     workID,
 			"title":                   title,
@@ -370,6 +400,7 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 			"page_count":              pageCount,
 			"first_publish_year":      firstPubYear,
 			"edition_count":           editionCount,
+			"subjects":                subjects,
 		})
 	}
 }

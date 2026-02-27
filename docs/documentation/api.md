@@ -163,7 +163,7 @@ Returns `422` if no barcode is detected (with a `hint` field), `404` if the ISBN
 
 Returns book details by its bare OL work ID (e.g. `OL82592W`). Fetches enriched data from Open Library with local fallback. 404 if not found.
 
-The `authors` field returns an array of objects with `name` (string) and `key` (string or null). The `key` is the bare OL author ID (e.g. `OL23919A`) when available from Open Library, or `null` for local-only records.
+The `authors` field returns an array of objects with `name` (string) and `key` (string or null). The `key` is the bare OL author ID (e.g. `OL23919A`) when available from Open Library, or `null` for local-only records. Includes a `subjects` array (up to 10 strings) sourced from the Open Library work's `subjects` field, with a fallback to the local book record's comma-separated `subjects` column.
 
 ```json
 { "authors": [{ "name": "Author Name", "key": "OL23919A" }] }
