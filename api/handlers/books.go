@@ -509,13 +509,17 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 			Spoiler     bool     `db:"spoiler" json:"spoiler"`
 			DateRead    *string  `db:"date_read" json:"date_read"`
 			DateAdded   string   `db:"date_added" json:"date_added"`
+			LikeCount   int      `db:"like_count" json:"like_count"`
+			LikedByMe   int      `db:"liked_by_me" json:"liked_by_me"`
 		}
 
 		var reviews []reviewRow
 		err := app.DB().NewQuery(`
 			SELECT ub.id as user_book_id, ub.user as user_id, u.username, u.display_name, u.avatar,
 				   ub.rating, ub.review_text, ub.spoiler, ub.date_read,
-				   ub.date_added as date_added
+				   ub.date_added as date_added,
+				   COALESCE((SELECT COUNT(*) FROM review_likes rl WHERE rl.book = ub.book AND rl.review_user = ub.user), 0) as like_count,
+				   COALESCE((SELECT COUNT(*) FROM review_likes rl WHERE rl.book = ub.book AND rl.review_user = ub.user AND rl.user = {:viewer}), 0) as liked_by_me
 			FROM user_books ub
 			JOIN users u ON ub.user = u.id
 			WHERE ub.book = {:book} AND ub.review_text != '' AND ub.review_text IS NOT NULL
@@ -548,6 +552,7 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 
 			result = append(result, map[string]any{
 				"user_book_id": r.UserBookID,
+				"user_id":      r.UserID,
 				"username":     r.Username,
 				"display_name": r.DisplayName,
 				"avatar_url":   avatarURL,
@@ -557,6 +562,8 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 				"date_read":    r.DateRead,
 				"date_added":   r.DateAdded,
 				"is_followed":  isFollowed,
+				"like_count":   r.LikeCount,
+				"liked_by_me":  r.LikedByMe > 0,
 			})
 		}
 		if result == nil {

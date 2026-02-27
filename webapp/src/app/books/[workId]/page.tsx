@@ -12,6 +12,7 @@ import BookLinkList from "@/components/book-link-list";
 import BookFollowButton from "@/components/book-follow-button";
 import GenreRatingEditor from "@/components/genre-rating-editor";
 import ReportButton from "@/components/report-button";
+import ReviewLikeButton from "@/components/review-like-button";
 import { getUser, getToken } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -55,6 +56,7 @@ type BookDetail = {
 
 type BookReview = {
   user_book_id: string;
+  user_id: string;
   username: string;
   display_name: string | null;
   avatar_url: string | null;
@@ -65,6 +67,8 @@ type BookReview = {
   date_dnf: string | null;
   date_added: string;
   is_followed: boolean;
+  like_count: number;
+  liked_by_me: boolean;
 };
 
 type MyBookStatus = {
@@ -567,10 +571,27 @@ export default async function BookPage({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-3 mt-2">
                       <p className="text-xs text-text-primary">
                         {formatDate(review.date_added)}
                       </p>
+                      {currentUser && (
+                        <ReviewLikeButton
+                          workId={workId}
+                          reviewUserId={review.user_id}
+                          initialLiked={review.liked_by_me}
+                          initialCount={review.like_count}
+                          disabled={currentUser.user_id === review.user_id}
+                        />
+                      )}
+                      {!currentUser && review.like_count > 0 && (
+                        <span className="inline-flex items-center gap-1 text-xs text-text-tertiary">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                          </svg>
+                          {review.like_count}
+                        </span>
+                      )}
                       {currentUser && review.username !== currentUser.username && (
                         <ReportButton contentType="review" contentId={review.user_book_id} />
                       )}

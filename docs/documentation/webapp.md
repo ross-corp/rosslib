@@ -129,6 +129,7 @@ webapp/src/app/
     ├── shelves/[shelfId]/books/[olId]/route.ts    ← GET, PATCH, DELETE
     ├── books/[workId]/series/route.ts              ← GET, POST series memberships
     ├── series/[seriesId]/route.ts                 ← GET series detail with books
+    ├── books/[workId]/reviews/[userId]/like/route.ts ← POST toggle, GET check review like
     ├── books/[workId]/links/route.ts              ← GET, POST community links
     ├── links/[linkId]/route.ts                    ← DELETE community link
     ├── links/[linkId]/vote/route.ts               ← POST, DELETE vote on link
@@ -300,6 +301,10 @@ Client component rendered in the nav bar for authenticated users. Polls `GET /ap
 ### `NotificationPreferences` (`components/notification-preferences.tsx`)
 
 Client component rendered on the settings page. Displays toggle switches for each notification type (new publications, new threads, new links, new reviews, review likes, mentions, recommendations). Fetches current preferences on mount via `GET /api/me/notification-preferences` and updates individual toggles via `PUT /api/me/notification-preferences` with optimistic UI updates.
+
+### `ReviewLikeButton` (`components/review-like-button.tsx`)
+
+Client component for liking/unliking reviews. Shows a heart icon with like count. Toggling calls `POST /api/books/:workId/reviews/:userId/like`. Disabled for the user's own reviews. Used on the book detail page's community reviews section. Unauthenticated users see a static like count (no button).
 
 ### `GenreRatingEditor` (`components/genre-rating-editor.tsx`)
 

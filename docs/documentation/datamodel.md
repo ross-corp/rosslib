@@ -403,8 +403,24 @@ collections ──< computed_collections  (operation definition for live lists)
 books ──< book_stats               (precomputed aggregate stats)
 users ──< pending_imports          (unmatched import rows)
 users ──< reports                  (content reports, reviewer)
+users ──< review_likes >── books, users  (review likes)
 
 ```
+
+### `review_likes`
+
+Likes on user reviews. Each row represents a user liking another user's review of a book. A user cannot like their own review.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user | uuid FK → users (cascade) | the liker |
+| book | uuid FK → books (cascade) | the book being reviewed |
+| review_user | uuid FK → users (cascade) | the review author |
+| created | timestamptz | PocketBase auto-generated |
+
+Unique constraint: `(user, book, review_user)` — one like per user per review.
+Index: `(book, review_user)` for efficient like count queries.
 
 ### `genre_ratings`
 
