@@ -4,8 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## quick wins
 
-- [ ] Add max-length validation to `display_name` in `UpdateProfile`. In `api/handlers/users.go` (~lines 229–237), display_name is applied with no length check. The schema says `varchar(100)` — validate at the handler level and return a clear 400 error. Also consider a reasonable max length for `bio` (e.g. 2000 chars).
-
 ## stats & data
 
 - [ ] Populate `friends_count` on the profile endpoint. In `GetProfile` (`api/handlers/users.go` line 143), `friends_count` is hardcoded to `0`. Add a query using the same `countResult` struct (line 92): `SELECT COUNT(*) as count FROM follows f1 JOIN follows f2 ON f1.follower = f2.followee AND f1.followee = f2.follower WHERE f1.follower = {:id} AND f1.status = 'active' AND f2.status = 'active'`. This counts mutual follows (friends). Replace the hardcoded `0` with the result. The profile header already renders this count.
@@ -85,3 +83,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Fix homepage feature grid responsiveness](https://github.com/ross-corp/rosslib/pull/62) — Add responsive breakpoints (1-col mobile, 2-col sm, 3-col lg) to feature grid
 - [Add rating validation to AddBook and UpdateBook](https://github.com/ross-corp/rosslib/pull/64) — Validate rating is in range 1-5 with clear 400 error
 - [Add max-length validation to threads and comments](https://github.com/ross-corp/rosslib/pull/65) — Title max 500 chars, body max 10k chars, comment max 5k chars with clear 400 errors
+- [Add max-length validation to profile fields](https://github.com/ross-corp/rosslib/pull/66) — display_name max 100 chars, bio max 2000 chars with clear 400 errors
