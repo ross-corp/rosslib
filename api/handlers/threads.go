@@ -115,6 +115,12 @@ func CreateThread(app core.App) func(e *core.RequestEvent) error {
 		if data.Title == "" || data.Body == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "title and body required"})
 		}
+		if len(data.Title) > 500 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "title must be 500 characters or fewer"})
+		}
+		if len(data.Body) > 10000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "body must be 10,000 characters or fewer"})
+		}
 
 		coll, err := app.FindCollectionByNameOrId("threads")
 		if err != nil {
@@ -275,6 +281,9 @@ func AddComment(app core.App) func(e *core.RequestEvent) error {
 		}{}
 		if err := e.BindBody(&data); err != nil || data.Body == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "body required"})
+		}
+		if len(data.Body) > 5000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "comment must be 5,000 characters or fewer"})
 		}
 
 		// Enforce max 1-level nesting

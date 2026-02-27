@@ -1091,9 +1091,13 @@ Create a new discussion thread on a book. Records a `created_thread` activity an
 { "title": "What did the ending mean?", "body": "I just finished and...", "spoiler": true }
 ```
 
+`title` max 500 characters, `body` max 10,000 characters.
+
 ```
 201 { "id": "...", "created_at": "..." }
 400 { "error": "title and body are required" }
+400 { "error": "title must be 500 characters or fewer" }
+400 { "error": "body must be 10,000 characters or fewer" }
 404 { "error": "book not found" }
 ```
 
@@ -1109,8 +1113,11 @@ Add a comment to a thread. Set `parent_id` to reply to a top-level comment (one 
 { "body": "I think it meant...", "parent_id": null }
 ```
 
+`body` max 5,000 characters.
+
 ```
 201 { "id": "...", "created_at": "..." }
+400 { "error": "comment must be 5,000 characters or fewer" }
 400 { "error": "replies can only be one level deep" }
 ```
 
