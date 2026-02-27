@@ -1,4 +1,6 @@
 import Link from "next/link";
+import QuickAddButton from "@/components/quick-add-button";
+import type { StatusValue } from "@/components/shelf-picker";
 
 type Book = {
   book_id: string;
@@ -34,6 +36,8 @@ export default function BookCoverRow({
   showProgress = false,
   seeAllHref,
   seeAllLabel = "See all",
+  statusValues,
+  statusKeyId,
 }: {
   books: Book[];
   size?: "sm" | "md" | "lg";
@@ -41,6 +45,8 @@ export default function BookCoverRow({
   showProgress?: boolean;
   seeAllHref?: string;
   seeAllLabel?: string;
+  statusValues?: StatusValue[];
+  statusKeyId?: string;
 }) {
   if (books.length === 0) return null;
 
@@ -49,45 +55,54 @@ export default function BookCoverRow({
       {books.map((book) => {
         const pct = showProgress ? getProgressPercent(book) : null;
         return (
-          <Link
-            key={book.book_id}
-            href={`/books/${book.open_library_id}`}
-            className="shrink-0 group"
-          >
-            {book.cover_url ? (
-              <img
-                src={book.cover_url}
-                alt={book.title}
-                className={`${sizeClasses[size]} object-cover rounded shadow-sm group-hover:shadow-md transition-shadow`}
-              />
-            ) : (
-              <div
-                className={`${sizeClasses[size]} rounded bg-surface-2 flex items-center justify-center`}
-              >
-                <span className="text-[10px] text-text-tertiary text-center px-1 line-clamp-3">
-                  {book.title}
-                </span>
-              </div>
-            )}
-            {pct != null && (
-              <div className="mt-1">
-                <div className="w-full h-1 bg-surface-2 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-text-tertiary rounded-full"
-                    style={{ width: `${pct}%` }}
-                  />
+          <div key={book.book_id} className="shrink-0 group relative">
+            <Link
+              href={`/books/${book.open_library_id}`}
+            >
+              {book.cover_url ? (
+                <img
+                  src={book.cover_url}
+                  alt={book.title}
+                  className={`${sizeClasses[size]} object-cover rounded shadow-sm group-hover:shadow-md transition-shadow`}
+                />
+              ) : (
+                <div
+                  className={`${sizeClasses[size]} rounded bg-surface-2 flex items-center justify-center`}
+                >
+                  <span className="text-[10px] text-text-tertiary text-center px-1 line-clamp-3">
+                    {book.title}
+                  </span>
                 </div>
-                <p className="text-[10px] text-text-tertiary mt-0.5 text-center">
-                  {pct}%
+              )}
+              {pct != null && (
+                <div className="mt-1">
+                  <div className="w-full h-1 bg-surface-2 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-text-tertiary rounded-full"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-text-tertiary mt-0.5 text-center">
+                    {pct}%
+                  </p>
+                </div>
+              )}
+              {showTitle && (
+                <p className="mt-1 text-xs text-text-secondary truncate max-w-[80px] group-hover:text-text-primary">
+                  {book.title}
                 </p>
-              </div>
+              )}
+            </Link>
+            {statusValues && statusKeyId && (
+              <QuickAddButton
+                openLibraryId={book.open_library_id}
+                title={book.title}
+                coverUrl={book.cover_url}
+                statusValues={statusValues}
+                statusKeyId={statusKeyId}
+              />
             )}
-            {showTitle && (
-              <p className="mt-1 text-xs text-text-secondary truncate max-w-[80px] group-hover:text-text-primary">
-                {book.title}
-              </p>
-            )}
-          </Link>
+          </div>
         );
       })}
       {seeAllHref && (

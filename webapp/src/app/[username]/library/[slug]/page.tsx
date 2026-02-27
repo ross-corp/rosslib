@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import ShelfBookGrid from "@/components/shelf-book-grid";
 import LibraryManager, { ShelfSummary } from "@/components/library-manager";
-import { getUser } from "@/lib/auth";
+import { getUser, getToken } from "@/lib/auth";
 import { TagKey } from "@/components/book-tag-picker";
+import type { StatusValue } from "@/components/shelf-picker";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -98,6 +99,23 @@ async function fetchUserBooksSummary(username: string): Promise<UserBooksRespons
   return res.json();
 }
 
+type ViewerTagKey = {
+  id: string;
+  name: string;
+  slug: string;
+  mode: string;
+  values: StatusValue[];
+};
+
+async function fetchViewerTagKeys(token: string): Promise<ViewerTagKey[]> {
+  const res = await fetch(`${process.env.API_URL}/me/tag-keys`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 // Status slugs that should be fetched from the books endpoint instead of shelves
 const STATUS_SLUGS = new Set([
   "want-to-read",
@@ -115,18 +133,24 @@ export default async function ShelfPage({
   params: Promise<{ username: string; slug: string }>;
 }) {
   const { username, slug } = await params;
-  const currentUser = await getUser();
+  const [currentUser, token] = await Promise.all([getUser(), getToken()]);
   const isOwner = currentUser?.username === username;
 
   const isStatusSlug = STATUS_SLUGS.has(slug);
 
-  const [shelf, statusBooks, allShelves, tagKeys, userBooksSummary] = await Promise.all([
+  const [shelf, statusBooks, allShelves, tagKeys, userBooksSummary, viewerTagKeys] = await Promise.all([
     isStatusSlug ? Promise.resolve(null) : fetchShelf(username, slug),
     isStatusSlug ? fetchStatusBooks(username, slug) : Promise.resolve(null),
     fetchUserShelves(username),
     isOwner ? fetchTagKeys(username) : Promise.resolve([] as TagKey[]),
     isOwner ? fetchUserBooksSummary(username) : Promise.resolve({ statuses: [], unstatused_count: 0 } as UserBooksResponse),
+    !isOwner && token ? fetchViewerTagKeys(token) : Promise.resolve([] as ViewerTagKey[]),
   ]);
+
+  // Extract status values for QuickAddButton (visitor view)
+  const viewerStatusKey = viewerTagKeys.find((k) => k.slug === "status") ?? null;
+  const statusValues: StatusValue[] = viewerStatusKey?.values ?? [];
+  const statusKeyId = viewerStatusKey?.id ?? null;
 
   // Build books array from either source
   const books = statusBooks?.books?.map((b) => ({
@@ -245,6 +269,8 @@ export default async function ShelfPage({
           initialBooks={books}
           isOwner={false}
           tagKeys={[]}
+          statusValues={statusKeyId ? statusValues : undefined}
+          statusKeyId={statusKeyId ?? undefined}
         />
       </main>
     </div>

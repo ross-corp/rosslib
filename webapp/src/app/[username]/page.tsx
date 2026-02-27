@@ -8,6 +8,7 @@ import BookCoverRow from "@/components/book-cover-row";
 import ReadingStats from "@/components/reading-stats";
 import RecentReviews from "@/components/recent-reviews";
 import type { ReviewItem } from "@/components/recent-reviews";
+import type { StatusValue } from "@/components/shelf-picker";
 
 type StatusBook = {
   book_id: string;
@@ -148,6 +149,23 @@ async function fetchRecentReviews(username: string): Promise<ReviewItem[]> {
   return res.json();
 }
 
+type ViewerTagKey = {
+  id: string;
+  name: string;
+  slug: string;
+  mode: string;
+  values: StatusValue[];
+};
+
+async function fetchViewerTagKeys(token: string): Promise<ViewerTagKey[]> {
+  const res = await fetch(`${process.env.API_URL}/me/tag-keys`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export default async function UserPage({
   params,
 }: {
@@ -162,15 +180,21 @@ export default async function UserPage({
   const isOwnProfile = currentUser?.user_id === profile.user_id;
   const isRestricted = profile.is_restricted && !isOwnProfile;
 
-  const [userBooks, shelves, tagKeys, recentActivity, recentReviews] = isRestricted
-    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, [] as UserShelf[], [] as TagKey[], [] as ActivityItem[], [] as ReviewItem[]]
+  const [userBooks, shelves, tagKeys, recentActivity, recentReviews, viewerTagKeys] = isRestricted
+    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, [] as UserShelf[], [] as TagKey[], [] as ActivityItem[], [] as ReviewItem[], [] as ViewerTagKey[]]
     : await Promise.all([
         fetchUserBooks(username),
         fetchUserShelves(username),
         fetchTagKeys(username),
         fetchRecentActivity(username),
         fetchRecentReviews(username),
+        !isOwnProfile && token ? fetchViewerTagKeys(token) : Promise.resolve([] as ViewerTagKey[]),
       ]);
+
+  // Extract status values for QuickAddButton (viewer adding books to their own library)
+  const viewerStatusKey = viewerTagKeys.find((k) => k.slug === "status") ?? null;
+  const statusValues: StatusValue[] = viewerStatusKey?.values ?? [];
+  const statusKeyId = viewerStatusKey?.id ?? null;
 
   const memberSince = new Date(profile.member_since).toLocaleDateString(
     "en-US",
@@ -385,6 +409,8 @@ export default async function UserPage({
                         ? `/${username}/library/currently-reading`
                         : undefined
                     }
+                    statusValues={!isOwnProfile && statusKeyId ? statusValues : undefined}
+                    statusKeyId={!isOwnProfile && statusKeyId ? statusKeyId : undefined}
                   />
                 </section>
               )}
@@ -399,6 +425,8 @@ export default async function UserPage({
                   books={favorites.books}
                   size="md"
                   seeAllHref={`/${username}/tags/favorites`}
+                  statusValues={!isOwnProfile && statusKeyId ? statusValues : undefined}
+                  statusKeyId={!isOwnProfile && statusKeyId ? statusKeyId : undefined}
                 />
               </section>
             )}
