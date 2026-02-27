@@ -27,9 +27,37 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 		var results []map[string]any
 		seenOLIDs := map[string]bool{}
 
+		// Batch-fetch book_stats for all local books
+		statsMap := map[string]*core.Record{} // bookId -> stats record
+		if len(localBooks) > 0 {
+			var bookIDs []any
+			for _, b := range localBooks {
+				bookIDs = append(bookIDs, b.Id)
+			}
+			allStats, _ := app.FindRecordsByFilter("book_stats",
+				"book IN {:ids}", "", len(localBooks), 0,
+				map[string]any{"ids": bookIDs},
+			)
+			for _, s := range allStats {
+				statsMap[s.GetString("book")] = s
+			}
+		}
+
 		for _, b := range localBooks {
 			olid := b.GetString("open_library_id")
 			seenOLIDs[olid] = true
+
+			var avgRating *float64
+			var ratingCount, alreadyReadCount int
+			if s, ok := statsMap[b.Id]; ok {
+				if rc := s.GetInt("rating_count"); rc > 0 {
+					avg := s.GetFloat("rating_sum") / float64(rc)
+					avgRating = &avg
+				}
+				ratingCount = s.GetInt("rating_count")
+				alreadyReadCount = s.GetInt("reads_count")
+			}
+
 			results = append(results, map[string]any{
 				"key":                olid,
 				"title":              b.GetString("title"),
@@ -37,9 +65,9 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 				"publish_year":       b.GetInt("publication_year"),
 				"cover_url":         b.GetString("cover_url"),
 				"edition_count":     0,
-				"average_rating":    nil,
-				"rating_count":      0,
-				"already_read_count": 0,
+				"average_rating":    avgRating,
+				"rating_count":      ratingCount,
+				"already_read_count": alreadyReadCount,
 			})
 		}
 
