@@ -204,6 +204,9 @@ export default async function UserPage({
   const currentlyReadingStatus = userBooks.statuses.find(
     (s) => s.slug === "currently-reading"
   );
+  const wantToReadStatus = userBooks.statuses.find(
+    (s) => s.slug === "want-to-read"
+  );
   const favorites = shelves.find(
     (s) => s.slug === "favorites" && s.collection_type === "tag"
   );
@@ -407,6 +410,28 @@ export default async function UserPage({
                       currentlyReadingStatus.count >
                       currentlyReadingStatus.books.length
                         ? `/${username}/library/currently-reading`
+                        : undefined
+                    }
+                    statusValues={!isOwnProfile && statusKeyId ? statusValues : undefined}
+                    statusKeyId={!isOwnProfile && statusKeyId ? statusKeyId : undefined}
+                  />
+                </section>
+              )}
+
+            {/* Want to Read */}
+            {wantToReadStatus &&
+              wantToReadStatus.books.length > 0 && (
+                <section>
+                  <h2 className="section-heading mb-3">
+                    Want to Read
+                  </h2>
+                  <BookCoverRow
+                    books={wantToReadStatus.books}
+                    size="md"
+                    seeAllHref={
+                      wantToReadStatus.count >
+                      wantToReadStatus.books.length
+                        ? `/${username}/library/want-to-read`
                         : undefined
                     }
                     statusValues={!isOwnProfile && statusKeyId ? statusValues : undefined}
