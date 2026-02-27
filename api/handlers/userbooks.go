@@ -62,7 +62,7 @@ func AddBook(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		if data.Rating != nil {
-			if *data.Rating < 1 || *data.Rating > 5 {
+			if *data.Rating != 0 && (*data.Rating < 1 || *data.Rating > 5) {
 				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Rating must be between 1 and 5"})
 			}
 			ub.Set("rating", *data.Rating)
@@ -136,7 +136,7 @@ func UpdateBook(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		if data.Rating != nil {
-			if *data.Rating < 1 || *data.Rating > 5 {
+			if *data.Rating != 0 && (*data.Rating < 1 || *data.Rating > 5) {
 				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Rating must be between 1 and 5"})
 			}
 			ub.Set("rating", *data.Rating)
