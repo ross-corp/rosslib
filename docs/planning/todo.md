@@ -14,8 +14,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## book detail & discovery
 
-- [ ] Show book subjects as tags on the book detail page. First, add `subjects` to the `GetBookDetail` response in `api/handlers/books.go`. The OL work response (`workData`) contains a `"subjects"` array of strings — extract up to 10 and include as `"subjects": [...]` in the response JSON (line 302). Also fall back to `localBooks[0].GetString("subjects")` (comma-separated) if OL data is unavailable. In `webapp/src/app/books/[workId]/page.tsx`, add `subjects: string[]` to the `BookDetail` type. Render them as small pill/chip tags (rounded, muted background, small text) below the book description. Each subject can link to `/genres/{slug}` if it matches a known genre, or to `/search?subject={encoded}` otherwise. These are read-only OL-sourced tags, distinct from user-assigned tags.
-
 - [ ] Replace the raw OL work ID input in the "Suggest Link" form with a book search dropdown. In `webapp/src/components/book-link-list.tsx` (~lines 205–213), the related books form asks for a raw Open Library work ID string. Replace this with a search-as-you-type input that queries `/books/search`, shows matching results in a dropdown, and uses the selected book's OL key. This makes the feature actually usable by normal users.
 
 - [ ] Add pagination to the author works grid. In `webapp/src/app/authors/[authorKey]/page.tsx`, all works are rendered at once with no pagination. For prolific authors this can be hundreds of entries. Add a "Show more" button or paginated grid (e.g. show first 24, load more on click).
@@ -39,6 +37,7 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 ## Pending PRs
 
 <!-- nephewbot moves tasks here when it opens a PR. Move to docs/planning/completed.md after merging. -->
+- [Show book subjects as tags on book detail page](https://github.com/ross-corp/rosslib/pull/82) — Extract OL subjects and render as pill tags below description
 - [Add review likes](https://github.com/ross-corp/rosslib/pull/51) — Toggle like on reviews with heart icon, notifications, and activity recording
 - [Add user blocking](https://github.com/ross-corp/rosslib/pull/52) — Block/unblock users with review/search/feed filtering and profile UI
 - [Add reading goals](https://github.com/ross-corp/rosslib/pull/53) — Annual reading goal with progress tracking, profile card, and settings form
