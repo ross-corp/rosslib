@@ -261,6 +261,7 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 		var authors []map[string]any
 		var firstPubYear *float64
 		var pageCount *int
+		var publisher *string
 
 		if olErr == nil {
 			if t, ok := workData["title"].(string); ok {
@@ -326,6 +327,16 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 			}
 		}
 
+		// Populate page_count and publisher from local data (OL work data doesn't include these)
+		if len(localBooks) > 0 {
+			if pc := localBooks[0].GetInt("page_count"); pc > 0 {
+				pageCount = &pc
+			}
+			if pub := localBooks[0].GetString("publisher"); pub != "" {
+				publisher = &pub
+			}
+		}
+
 		// Get local stats
 		var avgRating *float64
 		var ratingCount, readsCount, wtrCount int
@@ -355,7 +366,7 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 			"rating_count":            ratingCount,
 			"local_reads_count":       readsCount,
 			"local_want_to_read_count": wtrCount,
-			"publisher":               nil,
+			"publisher":               publisher,
 			"page_count":              pageCount,
 			"first_publish_year":      firstPubYear,
 			"edition_count":           editionCount,
