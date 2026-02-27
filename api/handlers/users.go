@@ -319,6 +319,13 @@ func UpdateProfile(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
 		}
 
+		if data.DisplayName != nil && len(*data.DisplayName) > 100 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Display name must be 100 characters or fewer"})
+		}
+		if data.Bio != nil && len(*data.Bio) > 2000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Bio must be 2000 characters or fewer"})
+		}
+
 		if data.DisplayName != nil {
 			user.Set("display_name", *data.DisplayName)
 		}

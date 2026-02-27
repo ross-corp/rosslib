@@ -173,6 +173,7 @@ export default function SettingsForm({
             onChange={(e) => setBio(e.target.value)}
             placeholder="A short line about yourself"
             rows={3}
+            maxLength={2000}
             className="w-full px-3 py-2 border border-border rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent text-sm resize-none"
           />
         </div>

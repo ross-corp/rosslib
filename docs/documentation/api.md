@@ -605,7 +605,9 @@ Returns a user profile. With a valid token, also returns `is_following` for the 
 
 ### `PATCH /users/me`  *(auth required)*
 
-Update own display name and byline. Accepts any subset of `{ display_name, bio }`.
+Update own display name and byline. Accepts any subset of `{ display_name, bio, is_private }`.
+
+Validation: `display_name` max 100 characters, `bio` max 2000 characters. Returns 400 if exceeded.
 
 ### `POST /me/avatar`  *(auth required)*
 
