@@ -30,7 +30,7 @@ type BookEdition = {
 type BookDetail = {
   key: string;
   title: string;
-  authors: string[] | null;
+  authors: { name: string; key: string | null }[] | null;
   description: string | null;
   cover_url: string | null;
   average_rating: number | null;
@@ -314,7 +314,21 @@ export default async function BookPage({
 
             {book.authors && book.authors.length > 0 && (
               <p className="text-text-primary text-sm mb-1">
-                {book.authors.join(", ")}
+                {book.authors.map((a, i) => (
+                  <span key={i}>
+                    {i > 0 && ", "}
+                    {a.key ? (
+                      <Link
+                        href={`/authors/${a.key}`}
+                        className="hover:underline"
+                      >
+                        {a.name}
+                      </Link>
+                    ) : (
+                      a.name
+                    )}
+                  </span>
+                ))}
               </p>
             )}
 

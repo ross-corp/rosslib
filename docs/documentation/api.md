@@ -161,7 +161,13 @@ Returns `422` if no barcode is detected (with a `hint` field), `404` if the ISBN
 
 ### `GET /books/:workId`
 
-Returns a book from the local `books` table by its bare OL work ID (e.g. `OL82592W`). 404 if not in the local catalog yet.
+Returns book details by its bare OL work ID (e.g. `OL82592W`). Fetches enriched data from Open Library with local fallback. 404 if not found.
+
+The `authors` field returns an array of objects with `name` (string) and `key` (string or null). The `key` is the bare OL author ID (e.g. `OL23919A`) when available from Open Library, or `null` for local-only records.
+
+```json
+{ "authors": [{ "name": "Author Name", "key": "OL23919A" }] }
+```
 
 ### `GET /books/:workId/editions?limit=50&offset=0`
 
