@@ -23,7 +23,15 @@ export default async function ImportPage() {
 
         <SettingsNav />
 
-        <h2 className="text-xl font-semibold text-text-primary mb-2">Import Library</h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xl font-semibold text-text-primary">Import Library</h2>
+          <Link
+            href="/settings/imports/pending"
+            className="text-sm text-accent hover:underline transition-colors"
+          >
+            Review pending imports
+          </Link>
+        </div>
         <p className="text-sm text-text-primary mb-8">
           Import your books, ratings, and reviews from a CSV export.
         </p>

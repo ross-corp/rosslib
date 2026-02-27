@@ -77,6 +77,7 @@ webapp/src/app/
 ├── settings/
 │   ├── page.tsx                    profile settings
 │   ├── import/page.tsx             CSV import (Goodreads & StoryGraph tabs)
+│   ├── imports/pending/page.tsx   review unmatched imports
 │   ├── export/page.tsx             CSV export
 │   ├── tags/page.tsx               label category management
 │   ├── ghost-activity/page.tsx     ghost user controls
@@ -270,6 +271,10 @@ Client component rendered on the settings page below the profile form. Fetches `
 ### `DeleteDataForm` (`components/delete-data-form.tsx`)
 
 Client component rendered on the settings page below the password form in a "Danger zone" section. Shows a red "Delete all my data" button. Clicking it reveals a confirmation form where the user must type "delete my data" to proceed. Calls `DELETE /api/me/account/data` which removes all user-owned records (books, reviews, tags, shelves, follows, threads, notifications, etc.) but keeps the account. On success, redirects to the home page.
+
+### `PendingImportsManager` (`components/pending-imports-manager.tsx`)
+
+Client component for the `/settings/imports/pending` page. Displays unmatched import rows from previous Goodreads imports with title, author, ISBN, shelf, and rating info. Each row has three actions: "Search & Link" opens a modal with debounced book search — selecting a result calls `PATCH /api/me/imports/pending/:id` with `action: "resolve"` and the OL work ID. "Dismiss" marks the row as resolved without importing (`action: "dismiss"`). "Delete" permanently removes the row via `DELETE /api/me/imports/pending/:id`. Shows an empty state when all items are resolved.
 
 ### `NotificationBell` (`components/notification-bell.tsx`)
 
