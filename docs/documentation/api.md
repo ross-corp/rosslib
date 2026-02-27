@@ -784,6 +784,50 @@ Unfollow a user.
 
 ---
 
+## Reading Goals
+
+### `GET /me/goals`  *(auth required)*
+
+List all reading goals for the current user.
+
+```json
+[
+  { "id": "...", "year": 2026, "target": 25 }
+]
+```
+
+### `PUT /me/goals/:year`  *(auth required)*
+
+Create or update a reading goal for a year. Records a `goal_set` activity.
+
+```json
+{ "target": 25 }
+```
+
+Response:
+
+```json
+{ "id": "...", "year": 2026, "target": 25 }
+```
+
+### `GET /me/goals/:year`  *(auth required)*
+
+Returns the goal and progress (count of finished books with `date_read` in that year) for the current user.
+
+```json
+{ "id": "...", "year": 2026, "target": 25, "progress": 12 }
+```
+
+### `GET /users/:username/goals/:year`  *(optional auth)*
+
+Public endpoint — returns goal + progress for a user. Respects privacy settings.
+
+```json
+{ "id": "...", "year": 2026, "target": 25, "progress": 12 }
+```
+
+---
+
 ## Shelves (collections)
 
 A "shelf" is a `collection` row. Default shelves (`read_status` exclusive group) enforce mutual exclusivity — adding a book to one removes it from the others in the group.

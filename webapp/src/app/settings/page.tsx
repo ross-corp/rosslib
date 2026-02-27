@@ -4,15 +4,22 @@ import DeleteDataForm from "@/components/delete-data-form";
 import EmailVerificationBanner from "@/components/email-verification-banner";
 import NotificationPreferences from "@/components/notification-preferences";
 import PasswordForm from "@/components/password-form";
+import ReadingGoalForm from "@/components/reading-goal-form";
 import SettingsForm from "@/components/settings-form";
 import SettingsNav from "@/components/settings-nav";
-import { getUser } from "@/lib/auth";
+import { getUser, getToken } from "@/lib/auth";
 
 type UserProfile = {
   display_name: string | null;
   bio: string | null;
   avatar_url: string | null;
   is_private: boolean;
+};
+
+type GoalData = {
+  id: string;
+  year: number;
+  target: number;
 };
 
 async function fetchProfile(username: string): Promise<UserProfile | null> {
@@ -23,11 +30,24 @@ async function fetchProfile(username: string): Promise<UserProfile | null> {
   return res.json();
 }
 
-export default async function SettingsPage() {
-  const user = await getUser();
-  if (!user) redirect("/login");
+async function fetchCurrentGoal(token: string): Promise<GoalData | null> {
+  const year = new Date().getFullYear();
+  const res = await fetch(`${process.env.API_URL}/me/goals/${year}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
 
-  const profile = await fetchProfile(user.username);
+export default async function SettingsPage() {
+  const [user, token] = await Promise.all([getUser(), getToken()]);
+  if (!user || !token) redirect("/login");
+
+  const [profile, currentGoal] = await Promise.all([
+    fetchProfile(user.username),
+    fetchCurrentGoal(token),
+  ]);
 
   return (
     <div className="min-h-screen">
@@ -55,6 +75,8 @@ export default async function SettingsPage() {
         />
 
         <NotificationPreferences />
+
+        <ReadingGoalForm initialGoal={currentGoal} />
 
         <PasswordForm />
 

@@ -330,6 +330,14 @@ Client component on `/library/compare` "Compare with a Friend" tab. Select one o
 
 Client component providing tab navigation between "My Lists" and "Compare with a Friend" modes on the compare page.
 
+### `ReadingGoalCard` (`components/reading-goal-card.tsx`)
+
+Client component displaying a reading goal progress bar on user profile pages. Shows "{X} of {Y} books read in {year}" with a visual progress bar.
+
+### `ReadingGoalForm` (`components/reading-goal-form.tsx`)
+
+Client component on the settings page for setting an annual reading goal. Calls `PUT /api/me/goals/:year` to create or update the goal.
+
 ---
 
 ## Adding a new page

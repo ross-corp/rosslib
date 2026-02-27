@@ -6,6 +6,8 @@ import type { ActivityItem } from "@/components/activity";
 import { getUser, getToken } from "@/lib/auth";
 import BookCoverRow from "@/components/book-cover-row";
 import ReadingStats from "@/components/reading-stats";
+import ReadingGoalCard from "@/components/reading-goal-card";
+import type { ReadingGoal } from "@/components/reading-goal-card";
 import RecentReviews from "@/components/recent-reviews";
 import type { ReviewItem } from "@/components/recent-reviews";
 import type { StatusValue } from "@/components/shelf-picker";
@@ -157,6 +159,22 @@ type ViewerTagKey = {
   values: StatusValue[];
 };
 
+async function fetchGoal(
+  username: string,
+  year: number,
+  token?: string
+): Promise<ReadingGoal | null> {
+  const headers: HeadersInit = token
+    ? { Authorization: `Bearer ${token}` }
+    : {};
+  const res = await fetch(
+    `${process.env.API_URL}/users/${username}/goals/${year}`,
+    { cache: "no-store", headers }
+  );
+  if (!res.ok) return null;
+  return res.json();
+}
+
 async function fetchViewerTagKeys(token: string): Promise<ViewerTagKey[]> {
   const res = await fetch(`${process.env.API_URL}/me/tag-keys`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -180,8 +198,10 @@ export default async function UserPage({
   const isOwnProfile = currentUser?.user_id === profile.user_id;
   const isRestricted = profile.is_restricted && !isOwnProfile;
 
-  const [userBooks, shelves, tagKeys, recentActivity, recentReviews, viewerTagKeys] = isRestricted
-    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, [] as UserShelf[], [] as TagKey[], [] as ActivityItem[], [] as ReviewItem[], [] as ViewerTagKey[]]
+  const currentYear = new Date().getFullYear();
+
+  const [userBooks, shelves, tagKeys, recentActivity, recentReviews, viewerTagKeys, readingGoal] = isRestricted
+    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, [] as UserShelf[], [] as TagKey[], [] as ActivityItem[], [] as ReviewItem[], [] as ViewerTagKey[], null as ReadingGoal | null]
     : await Promise.all([
         fetchUserBooks(username),
         fetchUserShelves(username),
@@ -189,6 +209,7 @@ export default async function UserPage({
         fetchRecentActivity(username),
         fetchRecentReviews(username),
         !isOwnProfile && token ? fetchViewerTagKeys(token) : Promise.resolve([] as ViewerTagKey[]),
+        fetchGoal(username, currentYear, token ?? undefined),
       ]);
 
   // Extract status values for QuickAddButton (viewer adding books to their own library)
@@ -507,6 +528,13 @@ export default async function UserPage({
                     </Link>
                   ))}
                 </div>
+              </section>
+            )}
+
+            {/* Reading Goal */}
+            {readingGoal && (
+              <section>
+                <ReadingGoalCard goal={readingGoal} />
               </section>
             )}
 
