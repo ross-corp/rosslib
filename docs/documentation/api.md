@@ -446,6 +446,42 @@ Set or update genre ratings for a book. Accepts an array of `{genre, rating}` ob
 
 **Valid genres:** Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children.
 
+### `POST /books/:workId/follow`  *(auth required)*
+
+Follow a book. You'll be notified when new threads are created on it.
+
+```
+200 { "message": "Following book" }
+200 { "message": "Already following" }
+404 { "error": "Book not found" }
+```
+
+### `DELETE /books/:workId/follow`  *(auth required)*
+
+Unfollow a book.
+
+```
+200 { "message": "Unfollowed book" }
+200 { "message": "Not following" }
+```
+
+### `GET /me/followed-books`  *(auth required)*
+
+List books you follow, newest first.
+
+```json
+[
+  {
+    "open_library_id": "OL82592W",
+    "title": "The Name of the Wind",
+    "authors": ["Patrick Rothfuss"],
+    "cover_url": "https://covers.openlibrary.org/b/id/1234567-M.jpg"
+  }
+]
+```
+
+`authors` and `cover_url` may be null.
+
 ---
 
 ## Authors
