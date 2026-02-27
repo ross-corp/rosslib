@@ -8,8 +8,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## notifications & feed
 
-- [ ] Use distinct icons per notification type on the notifications page. In `webapp/src/app/notifications/page.tsx` (lines 109–117), the `NotificationCard` component renders the same inline SVG sun icon for all notification types. Replace the hardcoded SVG with a function that maps `notif.notif_type` to a distinct inline SVG: a book/pages icon for `new_publication`, a speech-bubble icon for `book_new_thread`, a link icon for `book_new_link`, a star icon for `book_new_review`. The project uses inline SVGs (no icon library) — keep that pattern. Use simple, recognizable 20x20 viewBox SVG paths from heroicons or similar open-source icon sets.
-
 - [ ] Add click-to-mark-read on individual notifications. The API endpoint `POST /me/notifications/{notifId}/read` and its webapp proxy route (`webapp/src/app/api/me/notifications/[notifId]/read/route.ts`) both exist. In `webapp/src/app/notifications/page.tsx`, the `NotificationCard` component (line 101) shows a blue unread dot but has no click handler to mark individual notifications as read. Convert `NotificationCard` to a client component (or wrap in one). Add an onClick handler (or a small "x" dismiss button) that calls `POST /api/me/notifications/${notif.id}/read`, then optimistically removes the unread dot by updating local state. Currently only the "Mark all as read" button works.
 
 ## profile & social
@@ -79,3 +77,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Populate page_count and publisher from local book records](https://github.com/ross-corp/rosslib/pull/69) — Add migration for page_count/publisher columns and populate from local data in GetBookDetail
 - [Return edition_count in GetBookDetail response](https://github.com/ross-corp/rosslib/pull/70) — Fetch edition count from OL editions endpoint and include in book detail JSON
 - [Populate book stats for local search results](https://github.com/ross-corp/rosslib/pull/71) — Batch-fetch book_stats for local results to populate average_rating, rating_count, and already_read_count
+- [Add distinct icons per notification type](https://github.com/ross-corp/rosslib/pull/72) — Type-specific SVG icons for notification types (book, chat, link, star) with bell fallback
