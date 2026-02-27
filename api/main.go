@@ -61,6 +61,7 @@ func main() {
 		se.Router.GET("/users/{username}/following", handlers.GetUserFollowing(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/activity", handlers.GetUserActivity(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/timeline", handlers.GetReadingTimeline(app)).BindFunc(handlers.OptionalAuthFunc(app))
+		se.Router.GET("/users/{username}/goals/{year}", handlers.GetUserGoalYear(app)).BindFunc(handlers.OptionalAuthFunc(app))
 
 		// ── Threads (public GET) ─────────────────────────────────
 		se.Router.GET("/threads/{threadId}", handlers.GetThread(app))
@@ -76,6 +77,11 @@ func main() {
 		// Profile
 		authed.PATCH("/users/me", handlers.UpdateProfile(app))
 		authed.POST("/me/avatar", handlers.UploadAvatar(app))
+
+		// Reading goals
+		authed.GET("/me/goals", handlers.GetMyGoals(app))
+		authed.PUT("/me/goals/{year}", handlers.UpsertGoal(app))
+		authed.GET("/me/goals/{year}", handlers.GetMyGoalYear(app))
 
 		// Feed
 		authed.GET("/me/feed", handlers.GetFeed(app))
