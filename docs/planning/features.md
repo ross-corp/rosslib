@@ -77,7 +77,7 @@ Dependencies: local embeddings endpoint (ollama or similar), GPU access on the s
 ## Infrastructure
 
 ### CI/CD
-- DONE: GitHub Actions for lint, typecheck, `go test`, and `npm run build` on PRs (PRs #28, #34, #35).
+- CI: GitHub Actions for lint, typecheck, `go test`, and `npm run build` on PRs — DONE (PRs #28, #34, #35)
 - CD: auto-deploy to production on main merge (docker compose pull + restart on the server) — not yet implemented
 - Switch GHA runners to homelab machines to avoid burning minutes
 
@@ -91,7 +91,7 @@ Dependencies: local embeddings endpoint (ollama or similar), GPU access on the s
 
 ### Nephewbot improvements
 - nephewbot pulls from GitHub Issues instead of (or in addition to) `todo.md`
-- PARTIAL: In-app bug report and feature request forms now exist (PR #47, `feedback` collection in DB). Not yet connected to GitHub Issues — could bridge feedback submissions to GH Issues via the API so nephewbot picks them up automatically.
+- In-app bug report and feature request forms now exist (PR #47, `feedback` collection in DB). Not yet connected to GitHub Issues — could bridge feedback submissions to GH Issues via the API so nephewbot picks them up automatically. This would need a GitHub token with Issues write scope, plus a small handler or background job that creates a GH issue for each new feedback row.
 
 ## Business
 
