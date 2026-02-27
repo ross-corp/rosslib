@@ -6,8 +6,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## stats & data
 
-- [ ] Populate `average_rating`, `rating_count`, and `already_read_count` for local book results in `SearchBooks`. In `api/handlers/books.go` (lines 30–44), the loop over `localBooks` hardcodes `average_rating: nil`, `rating_count: 0`, and `already_read_count: 0`. For each local book, look up its `book_stats` record by `book = b.Id`. Compute `average_rating` as `rating_sum / rating_count` (when `rating_count > 0`), and use `reads_count` for `already_read_count`. The `book_stats` table already has all these fields precomputed. Either batch-fetch stats for all local book IDs before the loop, or fetch per-book inside the loop (the result set is at most 20 books). The `BookList` component already renders star ratings via `StarRating` and read counts — they're just always empty for cached books.
-
 ## notifications & feed
 
 - [ ] Use distinct icons per notification type on the notifications page. In `webapp/src/app/notifications/page.tsx` (lines 109–117), the `NotificationCard` component renders the same inline SVG sun icon for all notification types. Replace the hardcoded SVG with a function that maps `notif.notif_type` to a distinct inline SVG: a book/pages icon for `new_publication`, a speech-bubble icon for `book_new_thread`, a link icon for `book_new_link`, a star icon for `book_new_review`. The project uses inline SVGs (no icon library) — keep that pattern. Use simple, recognizable 20x20 viewBox SVG paths from heroicons or similar open-source icon sets.
@@ -80,3 +78,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Populate books_this_year on profile endpoint](https://github.com/ross-corp/rosslib/pull/68) — Count finished books with date_read in current calendar year
 - [Populate page_count and publisher from local book records](https://github.com/ross-corp/rosslib/pull/69) — Add migration for page_count/publisher columns and populate from local data in GetBookDetail
 - [Return edition_count in GetBookDetail response](https://github.com/ross-corp/rosslib/pull/70) — Fetch edition count from OL editions endpoint and include in book detail JSON
+- [Populate book stats for local search results](https://github.com/ross-corp/rosslib/pull/71) — Batch-fetch book_stats for local results to populate average_rating, rating_count, and already_read_count
