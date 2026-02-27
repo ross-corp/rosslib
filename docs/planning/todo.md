@@ -8,8 +8,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## data quality
 
-- [ ] Add series metadata. Create a `series` PocketBase collection (fields: `name` text required, `open_library_id` text optional, `description` text optional, `created` auto; index on `name`) and a `book_series` PocketBase collection (fields: `book` relation to books, `series` relation to series, `position` number optional — the book's order in the series; unique constraint on `(book, series)`). API endpoints: `GET /books/:workId/series` (returns series the book belongs to with position), `GET /series/:seriesId` (returns series info + ordered book list with covers), `POST /books/:workId/series` (auth required; body: `{series_name, position?}` — finds or creates series by name, links book). When fetching book detail via `GET /books/:workId`, include a `series` array in the response if the book has series memberships. Frontend: on book detail pages, show series badge(s) below the title — e.g. "Book 3 in The Lord of the Rings" — linking to a `/series/:id` page that shows all books in order with covers and a progress indicator for the viewing user. Also add the series info on book covers in shelf grids as a small "#{position}" badge.
-
 - [ ] Populate series data from Open Library during book lookup. When a book is fetched from Open Library (in `books.go` `GetBookDetail`), check the OL work response for a `subject_places`, `subjects`, or — more usefully — the `/works/{workId}/editions.json` entries for `series` fields, or query `/search.json?q=series:{title}` to find related works. A simpler approach: parse the OL work's `links` and `subject_people` for series indicators. If a series is detected, auto-create the `series` and `book_series` records. This is best-effort — not all OL works have series data. Log when series data is found vs. not for visibility into coverage.
 
 ## import improvements
@@ -30,3 +28,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add reading timeline view](https://github.com/ross-corp/rosslib/pull/57) — GET /users/:username/timeline with year/month grouping and /[username]/timeline page
 - [Add content reporting](https://github.com/ross-corp/rosslib/pull/58) — Reports collection with flag icons on reviews/comments/links, modal submission, and admin review panel
 - [Add notification preferences](https://github.com/ross-corp/rosslib/pull/59) — Per-user notification toggle switches on settings page with GET/PUT API and ShouldNotify helper
+- [Add series metadata](https://github.com/ross-corp/rosslib/pull/60) — Series and book_series collections, API endpoints, book detail series badges, /series/:id page, shelf grid position badges
