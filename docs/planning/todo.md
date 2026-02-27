@@ -12,8 +12,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## search & browse
 
-- [ ] Add sort options to the browse-all-users page. In `webapp/src/app/users/page.tsx`, users are listed in registration order (`-created`). Add a sort dropdown with options: "Newest", "Most books", "Most followers". Pass the sort parameter to the `GET /users/search` endpoint (may need to add sort support to the API handler in `api/handlers/users.go` `SearchUsers`).
-
 ## book detail & discovery
 
 - [ ] Link author names to their author pages on the book detail page. In `api/handlers/books.go` (lines 254–269), the `GetBookDetail` handler fetches each author's data from OL (via `ol.get(key + ".json")`) and collects names into `authorNames []string`. The author key is already available in the loop at line 258 (e.g. `/authors/OL23919A`). Change `authorNames` from `[]string` to `[]map[string]string` and collect both `name` and `key` (strip the `/authors/` prefix). Update the response JSON on line 305: `"authors": authorNames` now returns `[{"name": "Author", "key": "OL23919A"}, ...]`. In the local fallback (line 278), return `[{"name": "Author", "key": null}, ...]` since local records don't store author keys. In `webapp/src/app/books/[workId]/page.tsx`, update the `BookDetail` type's `authors` from `string[]` to `{name: string, key: string | null}[]`. Render each author as `<Link href={"/authors/" + a.key}>` when `key` is non-null, plain text otherwise. The `/authors/[authorKey]` page already exists.
@@ -71,3 +69,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add followers/following list pages](https://github.com/ross-corp/rosslib/pull/77) — Followers/following API endpoints with privacy checks, paginated list pages with user cards and follow buttons
 - [Add user avatars to People search results](https://github.com/ross-corp/rosslib/pull/78) — Render avatar images with letter fallback on People search tab
 - [Add empty/landing state to search page](https://github.com/ross-corp/rosslib/pull/79) — Show prompt message and popular books grid when no query is entered
+- [Add sort options to browse-all-users page](https://github.com/ross-corp/rosslib/pull/80) — Sort dropdown (Newest, Most books, Most followers) on /users page
