@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import GhostControls from "./ghost-controls";
+import SettingsNav from "@/components/settings-nav";
 import { getUser, getToken } from "@/lib/auth";
 
 type GhostStatus = {
@@ -39,14 +40,14 @@ export default async function GhostActivityPage() {
             {user.username}
           </Link>
           <span>/</span>
-          <Link href="/settings" className="hover:text-text-primary transition-colors">
-            Settings
-          </Link>
-          <span>/</span>
-          <span className="text-text-primary">Ghost activity</span>
+          <span className="text-text-primary">Settings</span>
         </div>
 
-        <h1 className="text-2xl font-bold text-text-primary mb-8">Ghost activity</h1>
+        <h1 className="text-2xl font-bold text-text-primary mb-4">Settings</h1>
+
+        <SettingsNav />
+
+        <h2 className="text-xl font-semibold text-text-primary mb-8">Ghost activity</h2>
 
         <GhostControls initialGhosts={ghosts} />
       </main>

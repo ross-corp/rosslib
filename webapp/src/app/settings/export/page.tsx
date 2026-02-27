@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import ExportForm from "@/components/export-form";
+import SettingsNav from "@/components/settings-nav";
 import { getUser } from "@/lib/auth";
 
 export default async function ExportPage() {
@@ -15,14 +16,14 @@ export default async function ExportPage() {
             {user.username}
           </Link>
           <span>/</span>
-          <Link href="/settings" className="hover:text-text-primary transition-colors">
-            Settings
-          </Link>
-          <span>/</span>
-          <span className="text-text-primary">Export</span>
+          <span className="text-text-primary">Settings</span>
         </div>
 
-        <h1 className="text-2xl font-bold text-text-primary mb-2">Export to CSV</h1>
+        <h1 className="text-2xl font-bold text-text-primary mb-4">Settings</h1>
+
+        <SettingsNav />
+
+        <h2 className="text-xl font-semibold text-text-primary mb-2">Export to CSV</h2>
         <p className="text-sm text-text-primary mb-8">
           Download your entire library as a CSV file.
         </p>

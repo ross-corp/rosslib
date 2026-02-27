@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import FollowRequestsList from "./follow-requests-list";
+import SettingsNav from "@/components/settings-nav";
 import { getUser, getToken } from "@/lib/auth";
 
 type FollowRequest = {
@@ -35,14 +36,14 @@ export default async function FollowRequestsPage() {
             {user.username}
           </Link>
           <span>/</span>
-          <Link href="/settings" className="hover:text-text-primary transition-colors">
-            Settings
-          </Link>
-          <span>/</span>
-          <span className="text-text-primary">Follow requests</span>
+          <span className="text-text-primary">Settings</span>
         </div>
 
-        <h1 className="text-2xl font-bold text-text-primary mb-8">Follow requests</h1>
+        <h1 className="text-2xl font-bold text-text-primary mb-4">Settings</h1>
+
+        <SettingsNav />
+
+        <h2 className="text-xl font-semibold text-text-primary mb-8">Follow requests</h2>
 
         <FollowRequestsList initialRequests={requests} />
       </main>
