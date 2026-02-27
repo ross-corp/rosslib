@@ -126,6 +126,10 @@ func main() {
 		authed.POST("/me/notifications/{notifId}/read", handlers.MarkNotificationRead(app))
 		authed.POST("/me/notifications/read-all", handlers.MarkAllRead(app))
 
+		// Notification preferences
+		authed.GET("/me/notification-preferences", handlers.GetNotificationPreferences(app))
+		authed.PUT("/me/notification-preferences", handlers.UpdateNotificationPreferences(app))
+
 		// Imports
 		authed.POST("/me/import/goodreads/preview", handlers.PreviewGoodreadsImport(app))
 		authed.POST("/me/import/goodreads/commit", handlers.CommitGoodreadsImport(app))

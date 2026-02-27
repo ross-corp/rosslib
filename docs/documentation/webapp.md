@@ -142,6 +142,7 @@ webapp/src/app/
     ├── me/notifications/unread-count/route.ts     ← GET unread count
     ├── me/notifications/read-all/route.ts         ← POST mark all read
     ├── me/notifications/[notifId]/read/route.ts   ← POST mark one read
+    ├── me/notification-preferences/route.ts     ← GET, PUT notification prefs
     └── users/[username]/
         ├── tags/[...path]/route.ts
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
@@ -264,6 +265,10 @@ Client component rendered on the settings page below the password form in a "Dan
 ### `NotificationBell` (`components/notification-bell.tsx`)
 
 Client component rendered in the nav bar for authenticated users. Polls `GET /api/me/notifications/unread-count` every 60 seconds and displays a bell icon with a red badge when unread notifications exist. Links to `/notifications`.
+
+### `NotificationPreferences` (`components/notification-preferences.tsx`)
+
+Client component rendered on the settings page. Displays toggle switches for each notification type (new publications, new threads, new links, new reviews, review likes, mentions, recommendations). Fetches current preferences on mount via `GET /api/me/notification-preferences` and updates individual toggles via `PUT /api/me/notification-preferences` with optimistic UI updates.
 
 ### `GenreRatingEditor` (`components/genre-rating-editor.tsx`)
 

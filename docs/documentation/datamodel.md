@@ -357,6 +357,25 @@ Per-user notification rows. Types include `new_publication` (author works poller
 
 Index: `(user_id, read, created_at DESC)` for efficient unread count and listing.
 
+### `notification_preferences`
+
+Per-user notification preferences. Each boolean field controls whether that notification type is sent. If no row exists for a user, all types default to enabled.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user | uuid FK → users (cascade) | unique; one row per user |
+| new_publication | bool | default true; author new work notifications |
+| book_new_thread | bool | default true; new thread on followed book |
+| book_new_link | bool | default true; new link on followed book |
+| book_new_review | bool | default true; new review on followed book |
+| review_liked | bool | default true; someone liked your review |
+| thread_mention | bool | default true; @mentioned in a comment |
+| book_recommendation | bool | default true; someone recommended a book |
+| created | timestamptz | PocketBase auto-generated |
+
+Index: unique on `user`.
+
 ---
 
 ## Relationships
@@ -376,6 +395,7 @@ users ──< book_link_edits >── book_links  (proposed edits)
 users ──< author_follows     (OL author keys)
 users ──< book_follows >── books  (book subscriptions)
 users ──< notifications      (per-user notifications)
+users ──< notification_preferences  (per-user notification settings)
 users ──< password_reset_tokens  (password reset tokens)
 users ──< genre_ratings >── books  (per-user genre dimension scores)
 author_works_snapshot        (OL author key → work count snapshot)
