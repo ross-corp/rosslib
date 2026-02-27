@@ -133,8 +133,11 @@ webapp/src/app/
     ├── links/[linkId]/vote/route.ts               ← POST, DELETE vote on link
     ├── links/[linkId]/edits/route.ts              ← POST propose link edit
     ├── feedback/route.ts                           ← POST submit feedback
+    ├── reports/route.ts                            ← POST submit content report
     ├── admin/feedback/route.ts                    ← GET list feedback (admin)
     ├── admin/feedback/[feedbackId]/route.ts       ← PATCH toggle feedback status (admin)
+    ├── admin/reports/route.ts                     ← GET list reports (admin)
+    ├── admin/reports/[reportId]/route.ts          ← PATCH review/dismiss report (admin)
     ├── admin/users/route.ts                       ← GET admin user list
     ├── admin/users/[userId]/moderator/route.ts    ← PUT grant/revoke moderator
     ├── admin/link-edits/route.ts                  ← GET list link edits
@@ -231,6 +234,18 @@ Client component for the `/admin` page. Provides a searchable, paginated table o
 ### `AdminFeedback` (`components/admin-feedback.tsx`)
 
 Client component for the `/admin` page. Displays user-submitted bug reports and feature requests with status filter tabs (open/closed). Each item shows the type badge (bug/feature), severity badge for bugs, title, description, steps to reproduce (for bugs), and a close/reopen button. Calls `GET /api/admin/feedback` and `PATCH /api/admin/feedback/:id`.
+
+### `AdminReports` (`components/admin-reports.tsx`)
+
+Client component for the `/admin` page. Displays content reports submitted by users with status filter tabs (pending/reviewed/dismissed). Each report shows the content type badge (review/thread/comment/link), reason badge, reporter info, optional details, and a content preview. Pending reports have Review and Dismiss buttons. Calls `GET /api/admin/reports` and `PATCH /api/admin/reports/:id`.
+
+### `ReportButton` (`components/report-button.tsx`)
+
+Client component that renders a small flag icon button. When clicked, opens a `ReportModal`. Takes `contentType` ("review", "thread", "comment", or "link") and `contentId` props. Shown on reviews (book detail page), community links (BookLinkList), and thread comments (ThreadComments) for logged-in users viewing other users' content.
+
+### `ReportModal` (`components/report-modal.tsx`)
+
+Client component that renders a modal overlay for submitting content reports. Shows a reason radio group (spam, harassment, inappropriate, other) and an optional details textarea. Calls `POST /api/reports`. Displays success message and auto-closes on completion.
 
 ### `FeedbackForm` (`components/feedback-form.tsx`)
 

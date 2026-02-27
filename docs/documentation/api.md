@@ -1580,6 +1580,70 @@ Toggle feedback status between open and closed.
 
 ---
 
+## Reports
+
+### `POST /reports`  *(auth required)*
+
+Report a piece of content (review, thread, comment, or link). Prevents duplicate reports from the same user on the same content.
+
+```json
+{
+  "content_type": "review",
+  "content_id": "abc123",
+  "reason": "spam",
+  "details": "This review is advertising a product"
+}
+```
+
+`content_type` is `"review"`, `"thread"`, `"comment"`, or `"link"`. `reason` is `"spam"`, `"harassment"`, `"inappropriate"`, or `"other"`. `details` is optional.
+
+```
+201 { "id": "...", "created_at": "..." }
+400 { "error": "content_type must be review, thread, comment, or link" }
+400 { "error": "reason must be spam, harassment, inappropriate, or other" }
+409 { "error": "You have already reported this content" }
+```
+
+### `GET /admin/reports?status=pending`  *(moderator required)*
+
+List content reports. Filterable by `status` (`pending`, `reviewed`, `dismissed`). Returns reports with reporter info and a content preview, sorted by newest first.
+
+```json
+[
+  {
+    "id": "...",
+    "reporter_id": "...",
+    "reporter_username": "alice",
+    "reporter_display_name": "Alice",
+    "content_type": "review",
+    "content_id": "abc123",
+    "reason": "spam",
+    "details": "This review is advertising a product",
+    "status": "pending",
+    "reviewer_id": null,
+    "reviewer_username": null,
+    "created_at": "2026-02-26T14:00:00Z",
+    "content_preview": "Buy my product at example.com..."
+  }
+]
+```
+
+### `PATCH /admin/reports/:reportId`  *(moderator required)*
+
+Update a report's status to reviewed or dismissed. Sets the reviewer to the current moderator.
+
+```json
+{ "status": "reviewed" }
+```
+
+```
+200 { "ok": true, "status": "reviewed" }
+400 { "error": "status must be reviewed or dismissed" }
+404 { "error": "Report not found" }
+```
+
+---
+
 ## Notifications
 
 ### `GET /me/notifications`  *(auth required)*

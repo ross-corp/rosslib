@@ -11,6 +11,7 @@ import EditionPicker from "@/components/edition-picker";
 import BookLinkList from "@/components/book-link-list";
 import BookFollowButton from "@/components/book-follow-button";
 import GenreRatingEditor from "@/components/genre-rating-editor";
+import ReportButton from "@/components/report-button";
 import { getUser, getToken } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -53,6 +54,7 @@ type BookDetail = {
 };
 
 type BookReview = {
+  user_book_id: string;
   username: string;
   display_name: string | null;
   avatar_url: string | null;
@@ -565,9 +567,14 @@ export default async function BookPage({
                       )}
                     </div>
 
-                    <p className="text-xs text-text-primary mt-2">
-                      {formatDate(review.date_added)}
-                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <p className="text-xs text-text-primary">
+                        {formatDate(review.date_added)}
+                      </p>
+                      {currentUser && review.username !== currentUser.username && (
+                        <ReportButton contentType="review" contentId={review.user_book_id} />
+                      )}
+                    </div>
                   </div>
                 </article>
               ))}
