@@ -10,8 +10,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## profile & social
 
-- [ ] Add empty states for profile sections on own profile. When viewing your own profile: if `recentReviews` is empty, show "You haven't written any reviews yet" with a subtle CTA. If `recentActivity` is empty, show "No activity yet — add a book to get started." If "Currently Reading" is empty, show "Nothing on the nightstand? Search for a book to start reading." These only show on the logged-in user's own profile, not on other users' profiles.
-
 - [ ] Add followers/following list API endpoints and pages. The profile header shows follower and following counts but they're not clickable. **API**: Add two new public endpoints in `api/handlers/users.go` registered in `api/main.go` alongside the other `/users/{username}/*` routes: `GET /users/{username}/followers` (query `follows` where `followee = user.Id AND status = 'active'`, join `users` on `follower` to return `user_id`, `username`, `display_name`, `avatar_url`) and `GET /users/{username}/following` (query `follows` where `follower = user.Id AND status = 'active'`, join `users` on `followee`). Both should respect privacy (return 403 for private profiles the viewer doesn't follow, reusing the existing `isRestricted` pattern from `GetProfile`). Paginate with `?page=&limit=` (default 50). **Webapp**: Add proxy routes `webapp/src/app/api/users/[username]/followers/route.ts` and `.../following/route.ts`. Create pages at `webapp/src/app/[username]/followers/page.tsx` and `.../following/page.tsx` — each shows a list of user cards with avatar, display name, username, and a follow/unfollow button. Link the follower/following counts on the profile header (`webapp/src/app/[username]/page.tsx`) to these pages.
 
 ## search & browse
@@ -75,3 +73,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add click-to-mark-read on individual notifications](https://github.com/ross-corp/rosslib/pull/73) — Click unread dot to mark single notification as read with optimistic UI update
 - [Show reading progress on other users' profiles](https://github.com/ross-corp/rosslib/pull/74) — Include progress_pages, progress_percent, page_count in GetUserBooks grouped status response
 - [Add Want to Read section to profile page](https://github.com/ross-corp/rosslib/pull/75) — Render want-to-read book covers grid on user profiles between Currently Reading and Favorites
+- [Add empty states for profile sections on own profile](https://github.com/ross-corp/rosslib/pull/76) — Show helpful empty state messages for Currently Reading, Recent Reviews, and Recent Activity on own profile
