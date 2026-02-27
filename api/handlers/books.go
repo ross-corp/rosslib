@@ -230,7 +230,7 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 		title := ""
 		var description *string
 		var coverURL *string
-		var authorNames []string
+		var authors []map[string]any
 		var firstPubYear *float64
 		var pageCount *int
 
@@ -259,7 +259,11 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 								aData, err := ol.get(key + ".json")
 								if err == nil {
 									if name, ok := aData["name"].(string); ok {
-										authorNames = append(authorNames, name)
+										authorKey := strings.TrimPrefix(key, "/authors/")
+										authors = append(authors, map[string]any{
+											"name": name,
+											"key":  authorKey,
+										})
 									}
 								}
 							}
@@ -276,7 +280,12 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 				coverURL = &cv
 			}
 			if a := localBooks[0].GetString("authors"); a != "" {
-				authorNames = splitAuthors(a)
+				for _, name := range splitAuthors(a) {
+					authors = append(authors, map[string]any{
+						"name": name,
+						"key":  nil,
+					})
+				}
 			}
 		}
 
@@ -302,7 +311,7 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 		return e.JSON(http.StatusOK, map[string]any{
 			"key":                     workID,
 			"title":                   title,
-			"authors":                 authorNames,
+			"authors":                 authors,
 			"description":             description,
 			"cover_url":               coverURL,
 			"average_rating":          avgRating,
