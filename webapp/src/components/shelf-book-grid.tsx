@@ -13,6 +13,7 @@ type Book = {
   cover_url: string | null;
   added_at: string;
   rating: number | null;
+  series_position?: number | null;
 };
 
 export default function ShelfBookGrid({
@@ -54,7 +55,7 @@ export default function ShelfBookGrid({
     <ul className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-5">
       {books.map((book) => (
         <li key={book.book_id} className="group relative flex flex-col gap-2">
-          <Link href={`/books/${book.open_library_id}`} className="block">
+          <Link href={`/books/${book.open_library_id}`} className="block relative">
             {book.cover_url ? (
               <img
                 src={book.cover_url}
@@ -67,6 +68,11 @@ export default function ShelfBookGrid({
                   {book.title}
                 </span>
               </div>
+            )}
+            {book.series_position != null && (
+              <span className="absolute top-1 left-1 bg-surface-0/80 backdrop-blur-sm text-[10px] font-mono font-medium text-text-secondary border border-border rounded px-1 py-0.5 leading-none">
+                #{book.series_position}
+              </span>
             )}
           </Link>
           <div className="min-w-0">

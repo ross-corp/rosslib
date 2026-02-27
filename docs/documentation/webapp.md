@@ -72,7 +72,8 @@ webapp/src/app/
 ├── reset-password/page.tsx           set new password (from email link)
 ├── search/page.tsx                 book + user + author search (shows popular books when no query)
 ├── users/page.tsx                  browse all users (sort by newest/books/followers)
-├── books/[workId]/page.tsx         single book page
+├── books/[workId]/page.tsx         single book page (shows series badges below title)
+├── series/[seriesId]/page.tsx     series detail — ordered book list with covers & reading progress
 ├── settings/
 │   ├── page.tsx                    profile settings
 │   ├── import/page.tsx             CSV import (Goodreads & StoryGraph tabs)
@@ -124,6 +125,8 @@ webapp/src/app/
     ├── me/imports/pending/[id]/route.ts           ← PATCH resolve/dismiss, DELETE
     ├── shelves/[shelfId]/books/route.ts
     ├── shelves/[shelfId]/books/[olId]/route.ts    ← GET, PATCH, DELETE
+    ├── books/[workId]/series/route.ts              ← GET, POST series memberships
+    ├── series/[seriesId]/route.ts                 ← GET series detail with books
     ├── books/[workId]/links/route.ts              ← GET, POST community links
     ├── links/[linkId]/route.ts                    ← DELETE community link
     ├── links/[linkId]/vote/route.ts               ← POST, DELETE vote on link

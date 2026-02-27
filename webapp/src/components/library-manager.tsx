@@ -13,6 +13,7 @@ type Book = {
   cover_url: string | null;
   added_at: string;
   rating: number | null;
+  series_position?: number | null;
 };
 
 export type ShelfSummary = {
@@ -672,7 +673,7 @@ export default function LibraryManager({
                       href={`/books/${book.open_library_id}`}
                       tabIndex={-1}
                       onClick={(e) => { if (anySelected) { e.preventDefault(); toggleSelect(book.book_id); } }}
-                      className={`block transition-all ${selected ? "ring-2 ring-accent ring-offset-1 rounded" : ""}`}
+                      className={`block relative transition-all ${selected ? "ring-2 ring-accent ring-offset-1 rounded" : ""}`}
                     >
                       {book.cover_url ? (
                         <img
@@ -695,6 +696,11 @@ export default function LibraryManager({
                             {book.title}
                           </span>
                         </div>
+                      )}
+                      {book.series_position != null && (
+                        <span className="absolute top-1 right-1 bg-surface-0/80 backdrop-blur-sm text-[10px] font-mono font-medium text-text-secondary border border-border rounded px-1 py-0.5 leading-none">
+                          #{book.series_position}
+                        </span>
                       )}
                     </Link>
 
