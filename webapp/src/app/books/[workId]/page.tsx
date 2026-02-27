@@ -13,6 +13,7 @@ import BookFollowButton from "@/components/book-follow-button";
 import GenreRatingEditor from "@/components/genre-rating-editor";
 import ReportButton from "@/components/report-button";
 import ReviewLikeButton from "@/components/review-like-button";
+import RecommendButton from "@/components/recommend-button";
 import { getUser, getToken } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -416,6 +417,10 @@ export default async function BookPage({
                 <BookFollowButton
                   workId={workId}
                   initialFollowing={isFollowingBook}
+                />
+                <RecommendButton
+                  bookOlId={workId}
+                  bookTitle={book.title}
                 />
               </div>
             )}

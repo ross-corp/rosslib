@@ -86,6 +86,7 @@ webapp/src/app/
 ├── scan/page.tsx                   ISBN barcode scanner
 ├── library/compare/page.tsx        compare lists (set operations)
 ├── notifications/page.tsx          notification center
+├── recommendations/page.tsx       received book recommendations
 ├── feedback/page.tsx              bug report & feature request form
 ├── admin/page.tsx                 admin panel (moderator only)
 ├── [username]/
@@ -156,6 +157,9 @@ webapp/src/app/
     ├── me/notifications/read-all/route.ts         ← POST mark all read
     ├── me/notifications/[notifId]/read/route.ts   ← POST mark one read
     ├── me/notification-preferences/route.ts     ← GET, PUT notification prefs
+    ├── me/recommendations/route.ts               ← GET, POST recommendations
+    ├── me/recommendations/[recId]/route.ts       ← PATCH update recommendation status
+    ├── users/route.ts                             ← GET search users
     └── users/[username]/
         ├── followers/route.ts                     ← GET followers list
         ├── following/route.ts                     ← GET following list
@@ -293,6 +297,10 @@ Client component rendered on the settings page below the password form in a "Dan
 ### `PendingImportsManager` (`components/pending-imports-manager.tsx`)
 
 Client component for the `/settings/imports/pending` page. Displays unmatched import rows from previous Goodreads imports with title, author, ISBN, shelf, and rating info. Each row has three actions: "Search & Link" opens a modal with debounced book search — selecting a result calls `PATCH /api/me/imports/pending/:id` with `action: "resolve"` and the OL work ID. "Dismiss" marks the row as resolved without importing (`action: "dismiss"`). "Delete" permanently removes the row via `DELETE /api/me/imports/pending/:id`. Shows an empty state when all items are resolved.
+
+### `RecommendButton` (`components/recommend-button.tsx`)
+
+Client component rendered on book detail pages for logged-in users. Shows a "Recommend" button that opens a modal. The modal has two steps: (1) search for a user by username or display name (debounced, uses `GET /api/users?q=`), and (2) add an optional note before sending. Calls `POST /api/me/recommendations` with the selected username, book OL ID, and optional note. Shows a success confirmation after sending.
 
 ### `NotificationBell` (`components/notification-bell.tsx`)
 

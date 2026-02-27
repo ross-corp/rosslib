@@ -50,7 +50,15 @@ export default async function NotificationsPage({
     <div className="min-h-screen">
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-text-primary">Notifications</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold text-text-primary">Notifications</h1>
+            <Link
+              href="/recommendations"
+              className="text-xs text-text-secondary hover:text-text-primary border border-border rounded px-2.5 py-1.5 transition-colors"
+            >
+              Recommendations
+            </Link>
+          </div>
           {data.notifications.length > 0 && (
             <NotificationList
               notifications={data.notifications}

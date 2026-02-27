@@ -172,6 +172,11 @@ func main() {
 		authed.DELETE("/books/{workId}/follow", handlers.UnfollowBook(app))
 		authed.GET("/me/followed-books", handlers.GetFollowedBooks(app))
 
+		// Recommendations
+		authed.POST("/me/recommendations", handlers.SendRecommendation(app))
+		authed.GET("/me/recommendations", handlers.GetRecommendations(app))
+		authed.PATCH("/me/recommendations/{recId}", handlers.UpdateRecommendation(app))
+
 		// Feedback
 		authed.POST("/feedback", handlers.CreateFeedback(app))
 		authed.GET("/me/feedback", handlers.GetMyFeedback(app))
