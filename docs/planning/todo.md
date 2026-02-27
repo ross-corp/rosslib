@@ -12,8 +12,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## search & browse
 
-- [ ] Add user avatars to the People search results tab. In `webapp/src/app/search/page.tsx` (~lines 471–491), user search results show as plain text links. The `SearchUsers` handler returns `avatar_url`. Render a small avatar (or letter fallback) next to each user result, matching the style used on user cards elsewhere in the app.
-
 - [ ] Add an empty/landing state to the search page when no query is entered. When navigating to `/search` with no query param, the page is blank. Show a "Start typing to search for books, authors, or people" message, and optionally show trending/popular books from `book_stats` as a discovery surface.
 
 - [ ] Add sort options to the browse-all-users page. In `webapp/src/app/users/page.tsx`, users are listed in registration order (`-created`). Add a sort dropdown with options: "Newest", "Most books", "Most followers". Pass the sort parameter to the `GET /users/search` endpoint (may need to add sort support to the API handler in `api/handlers/users.go` `SearchUsers`).
@@ -73,3 +71,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add Want to Read section to profile page](https://github.com/ross-corp/rosslib/pull/75) — Render want-to-read book covers grid on user profiles between Currently Reading and Favorites
 - [Add empty states for profile sections on own profile](https://github.com/ross-corp/rosslib/pull/76) — Show helpful empty state messages for Currently Reading, Recent Reviews, and Recent Activity on own profile
 - [Add followers/following list pages](https://github.com/ross-corp/rosslib/pull/77) — Followers/following API endpoints with privacy checks, paginated list pages with user cards and follow buttons
+- [Add user avatars to People search results](https://github.com/ross-corp/rosslib/pull/78) — Render avatar images with letter fallback on People search tab
