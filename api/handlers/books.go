@@ -514,7 +514,7 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		var reviews []reviewRow
-		err := app.DB().NewQuery(`
+		query := `
 			SELECT ub.id as user_book_id, ub.user as user_id, u.username, u.display_name, u.avatar,
 				   ub.rating, ub.review_text, ub.spoiler, ub.date_read,
 				   ub.date_added as date_added,
@@ -522,9 +522,18 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 				   COALESCE((SELECT COUNT(*) FROM review_likes rl WHERE rl.book = ub.book AND rl.review_user = ub.user AND rl.user = {:viewer}), 0) as liked_by_me
 			FROM user_books ub
 			JOIN users u ON ub.user = u.id
-			WHERE ub.book = {:book} AND ub.review_text != '' AND ub.review_text IS NOT NULL
-			ORDER BY CASE WHEN ub.user = {:viewer} THEN 0 ELSE 1 END, ub.date_added DESC
-		`).Bind(map[string]any{"book": books[0].Id, "viewer": viewerID}).All(&reviews)
+			WHERE ub.book = {:book} AND ub.review_text != '' AND ub.review_text IS NOT NULL`
+		params := map[string]any{"book": books[0].Id, "viewer": viewerID}
+
+		if viewerID != "" {
+			query += `
+			AND ub.user NOT IN (SELECT blocked FROM blocks WHERE blocker = {:viewer})
+			AND ub.user NOT IN (SELECT blocker FROM blocks WHERE blocked = {:viewer})`
+		}
+		query += `
+			ORDER BY CASE WHEN ub.user = {:viewer} THEN 0 ELSE 1 END, ub.date_added DESC`
+
+		err := app.DB().NewQuery(query).Bind(params).All(&reviews)
 		if err != nil {
 			return e.JSON(http.StatusOK, []any{})
 		}

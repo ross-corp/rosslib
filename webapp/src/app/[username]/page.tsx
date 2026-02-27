@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import FollowButton from "@/components/follow-button";
+import BlockButton from "@/components/block-button";
 import { ActivityCard } from "@/components/activity";
 import type { ActivityItem } from "@/components/activity";
 import { getUser, getToken } from "@/lib/auth";
@@ -54,6 +55,7 @@ type UserProfile = {
   books_this_year: number;
   average_rating: number | null;
   is_restricted: boolean;
+  is_blocked: boolean;
   author_key: string | null;
 };
 
@@ -332,10 +334,18 @@ export default async function UserPage({
               </Link>
             </div>
           ) : currentUser ? (
-            <FollowButton
-              username={profile.username}
-              initialFollowStatus={profile.follow_status || "none"}
-            />
+            <div className="flex flex-col items-end gap-2">
+              {!profile.is_blocked && (
+                <FollowButton
+                  username={profile.username}
+                  initialFollowStatus={profile.follow_status || "none"}
+                />
+              )}
+              <BlockButton
+                username={profile.username}
+                initialBlocked={profile.is_blocked || false}
+              />
+            </div>
           ) : null}
         </div>
 
@@ -390,12 +400,20 @@ export default async function UserPage({
 
       {isRestricted && (
         <div className="text-center py-8 border border-border rounded">
-          <p className="text-text-tertiary text-sm">
-            This account is private
-          </p>
-          <p className="text-text-tertiary text-xs mt-1">
-            Follow this user to see their books and activity
-          </p>
+          {profile.is_blocked ? (
+            <p className="text-text-tertiary text-sm">
+              You have blocked this user
+            </p>
+          ) : (
+            <>
+              <p className="text-text-tertiary text-sm">
+                This account is private
+              </p>
+              <p className="text-text-tertiary text-xs mt-1">
+                Follow this user to see their books and activity
+              </p>
+            </>
+          )}
         </div>
       )}
 

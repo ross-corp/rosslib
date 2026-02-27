@@ -782,6 +782,25 @@ Follow a user. Status is `active` immediately (private account approval not yet 
 
 Unfollow a user.
 
+### `POST /users/:username/block`  *(auth required)*
+
+Block a user. Also removes any existing follow relationship in both directions. Returns `{ "blocked": true }`.
+
+Blocking effects:
+- Blocked user's reviews are hidden from book pages for the blocker
+- Blocked user is hidden from search results
+- Blocked user's activity is excluded from the feed
+- Neither user can follow the other
+- Visiting the blocked user's profile shows restricted view
+
+### `DELETE /users/:username/block`  *(auth required)*
+
+Unblock a user. Returns `{ "blocked": false }`.
+
+### `GET /users/:username/block`  *(auth required)*
+
+Check if you have blocked a user. Returns `{ "blocked": true/false }`.
+
 ---
 
 ## Reading Goals
