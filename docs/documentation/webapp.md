@@ -71,7 +71,7 @@ webapp/src/app/
 ├── forgot-password/page.tsx          forgot password (request reset link)
 ├── reset-password/page.tsx           set new password (from email link)
 ├── search/page.tsx                 book + user search
-├── users/page.tsx                  browse all users
+├── users/page.tsx                  browse all users (sort by newest/books/followers)
 ├── books/[workId]/page.tsx         single book page
 ├── settings/
 │   ├── page.tsx                    profile settings

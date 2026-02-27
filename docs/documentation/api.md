@@ -485,9 +485,14 @@ List authors you follow.
 
 ## Users
 
-### `GET /users?q=<query>&page=<n>`
+### `GET /users?q=<query>&page=<n>&sort=<newest|books|followers>`
 
-Search/browse users by username or display name. Alphabetical, 20 per page.
+Search/browse users by username or display name. 20 per page.
+
+**Query parameters:**
+- `q` *(optional)* — search by username or display name
+- `page` *(optional, default 1)* — pagination
+- `sort` *(optional, default `newest`)* — sort order: `newest` (registration date), `books` (most books in library), `followers` (most followers)
 
 ### `GET /users/:username`  *(optional auth)*
 
