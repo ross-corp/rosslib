@@ -1765,6 +1765,39 @@ Returns the full updated preferences object (same shape as GET).
 
 ---
 
+## Recommendations
+
+### `POST /me/recommendations`  *(auth required)*
+
+Send a book recommendation to another user.
+
+```json
+{ "username": "bob", "book_ol_id": "OL82592W", "note": "You'll love this!" }
+```
+
+Creates a recommendation record and sends a `book_recommendation` notification to the recipient. Also records a `sent_recommendation` activity. Returns `201` with the recommendation ID. Returns `409` if the same sender/recipient/book triple already exists.
+
+### `GET /me/recommendations`  *(auth required)*
+
+List received recommendations for the current user.
+
+**Query parameters:**
+- `status` *(optional, default: `pending`)* — filter by `pending`, `seen`, `dismissed`, or `all`.
+
+Returns an array of recommendation objects, each including sender info (username, display_name, avatar_url) and book info (open_library_id, title, cover_url, authors).
+
+### `PATCH /me/recommendations/:recId`  *(auth required)*
+
+Update a recommendation's status. Only the recipient can update.
+
+```json
+{ "status": "seen" }
+```
+
+Valid statuses: `seen`, `dismissed`.
+
+---
+
 ## Background: Author Publication Poller
 
 A background goroutine (`notifications.StartPoller`) runs every 6 hours. It:
