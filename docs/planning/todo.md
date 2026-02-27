@@ -10,8 +10,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## profile & social
 
-- [ ] Add followers/following list API endpoints and pages. The profile header shows follower and following counts but they're not clickable. **API**: Add two new public endpoints in `api/handlers/users.go` registered in `api/main.go` alongside the other `/users/{username}/*` routes: `GET /users/{username}/followers` (query `follows` where `followee = user.Id AND status = 'active'`, join `users` on `follower` to return `user_id`, `username`, `display_name`, `avatar_url`) and `GET /users/{username}/following` (query `follows` where `follower = user.Id AND status = 'active'`, join `users` on `followee`). Both should respect privacy (return 403 for private profiles the viewer doesn't follow, reusing the existing `isRestricted` pattern from `GetProfile`). Paginate with `?page=&limit=` (default 50). **Webapp**: Add proxy routes `webapp/src/app/api/users/[username]/followers/route.ts` and `.../following/route.ts`. Create pages at `webapp/src/app/[username]/followers/page.tsx` and `.../following/page.tsx` — each shows a list of user cards with avatar, display name, username, and a follow/unfollow button. Link the follower/following counts on the profile header (`webapp/src/app/[username]/page.tsx`) to these pages.
-
 ## search & browse
 
 - [ ] Add user avatars to the People search results tab. In `webapp/src/app/search/page.tsx` (~lines 471–491), user search results show as plain text links. The `SearchUsers` handler returns `avatar_url`. Render a small avatar (or letter fallback) next to each user result, matching the style used on user cards elsewhere in the app.
@@ -74,3 +72,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Show reading progress on other users' profiles](https://github.com/ross-corp/rosslib/pull/74) — Include progress_pages, progress_percent, page_count in GetUserBooks grouped status response
 - [Add Want to Read section to profile page](https://github.com/ross-corp/rosslib/pull/75) — Render want-to-read book covers grid on user profiles between Currently Reading and Favorites
 - [Add empty states for profile sections on own profile](https://github.com/ross-corp/rosslib/pull/76) — Show helpful empty state messages for Currently Reading, Recent Reviews, and Recent Activity on own profile
+- [Add followers/following list pages](https://github.com/ross-corp/rosslib/pull/77) — Followers/following API endpoints with privacy checks, paginated list pages with user cards and follow buttons
