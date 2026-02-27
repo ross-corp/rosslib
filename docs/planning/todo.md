@@ -14,8 +14,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## book detail & discovery
 
-- [ ] Replace the raw OL work ID input in the "Suggest Link" form with a book search dropdown. In `webapp/src/components/book-link-list.tsx` (~lines 205–213), the related books form asks for a raw Open Library work ID string. Replace this with a search-as-you-type input that queries `/books/search`, shows matching results in a dropdown, and uses the selected book's OL key. This makes the feature actually usable by normal users.
-
 - [ ] Add pagination to the author works grid. In `webapp/src/app/authors/[authorKey]/page.tsx`, all works are rendered at once with no pagination. For prolific authors this can be hundreds of entries. Add a "Show more" button or paginated grid (e.g. show first 24, load more on click).
 
 ## settings & account
@@ -37,6 +35,7 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 ## Pending PRs
 
 <!-- nephewbot moves tasks here when it opens a PR. Move to docs/planning/completed.md after merging. -->
+- [Replace raw OL ID input with book search dropdown](https://github.com/ross-corp/rosslib/pull/83) — Search-as-you-type dropdown in Suggest Link form using /api/books/search
 - [Show book subjects as tags on book detail page](https://github.com/ross-corp/rosslib/pull/82) — Extract OL subjects and render as pill tags below description
 - [Add review likes](https://github.com/ross-corp/rosslib/pull/51) — Toggle like on reviews with heart icon, notifications, and activity recording
 - [Add user blocking](https://github.com/ross-corp/rosslib/pull/52) — Block/unblock users with review/search/feed filtering and profile UI
