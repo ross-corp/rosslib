@@ -906,7 +906,7 @@ Exports the authenticated user's library as a CSV download. Returns `Content-Typ
 
 Accepts a multipart form with a `file` field containing a Goodreads CSV export. Returns a preview without writing to the database.
 
-Response groups rows into `matched`, `ambiguous`, and `unmatched`. See `docs/TODO.md` for full details on the import pipeline.
+Response groups rows into `matched`, `ambiguous`, and `unmatched`. The lookup chain tries: local DB by ISBN, OL direct ISBN endpoint, OL search by ISBN, OL search by cleaned title+author, OL search by title only, OL comma-subtitle retry, and finally Google Books as a fallback. The Google Books fallback searches by ISBN then by title+author, and maps results back to Open Library by re-searching OL with the title/author from Google. Set the optional `GOOGLE_BOOKS_API_KEY` env var for higher rate limits (free tier: 1,000 req/day); the fallback works without a key.
 
 ### `POST /me/import/goodreads/commit`  *(auth required)*
 

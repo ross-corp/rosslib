@@ -1,6 +1,12 @@
 package handlers
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -230,6 +236,157 @@ func ensureTagValue(app core.App, tagKeyID, name string) (*core.Record, error) {
 	return val, nil
 }
 
+
+// gbClient is a Google Books API client used as a fallback catalog lookup.
+type gbClient struct {
+	httpClient *http.Client
+	apiKey     string
+}
+
+func newGBClient() *gbClient {
+	return &gbClient{
+		httpClient: &http.Client{Timeout: 10 * time.Second},
+		apiKey:     os.Getenv("GOOGLE_BOOKS_API_KEY"),
+	}
+}
+
+// gbResult holds the fields we extract from a Google Books volume.
+type gbResult struct {
+	Title   string
+	Authors []string
+	ISBN13  string
+}
+
+// searchByISBN queries Google Books for a volume matching the given ISBN.
+func (c *gbClient) searchByISBN(isbn string) (*gbResult, error) {
+	return c.search("isbn:" + isbn)
+}
+
+// searchByTitleAuthor queries Google Books by title and optional author.
+func (c *gbClient) searchByTitleAuthor(title, author string) (*gbResult, error) {
+	q := "intitle:" + title
+	if author != "" {
+		q += "+inauthor:" + author
+	}
+	return c.search(q)
+}
+
+func (c *gbClient) search(query string) (*gbResult, error) {
+	u := "https://www.googleapis.com/books/v1/volumes?q=" + url.QueryEscape(query) + "&maxResults=1"
+	if c.apiKey != "" {
+		u += "&key=" + url.QueryEscape(c.apiKey)
+	}
+	resp, err := c.httpClient.Get(u)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Google Books API returned %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	var data map[string]any
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, err
+	}
+	items, ok := data["items"].([]any)
+	if !ok || len(items) == 0 {
+		return nil, fmt.Errorf("no results")
+	}
+	item, ok := items[0].(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("invalid item")
+	}
+	vol, ok := item["volumeInfo"].(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("no volumeInfo")
+	}
+	result := &gbResult{}
+	if t, ok := vol["title"].(string); ok {
+		result.Title = t
+	}
+	if authors, ok := vol["authors"].([]any); ok {
+		for _, a := range authors {
+			if s, ok := a.(string); ok {
+				result.Authors = append(result.Authors, s)
+			}
+		}
+	}
+	// Extract ISBN-13 from industry identifiers
+	if ids, ok := vol["industryIdentifiers"].([]any); ok {
+		for _, id := range ids {
+			if idMap, ok := id.(map[string]any); ok {
+				if idMap["type"] == "ISBN_13" {
+					if v, ok := idMap["identifier"].(string); ok {
+						result.ISBN13 = v
+					}
+				}
+			}
+		}
+	}
+	return result, nil
+}
+
+// googleBooksLookup tries Google Books as a fallback, then maps the result
+// back to Open Library by searching OL with the Google Books title/author.
+// Returns the same tuple as extractOLSearchResult.
+func googleBooksLookup(gb *gbClient, ol *cachedOLClient, isbn, title, author string) (olID, matchTitle, coverURL string, authors []string, found bool) {
+	var gbr *gbResult
+	var err error
+
+	// Try ISBN first
+	if isbn != "" {
+		gbr, err = gb.searchByISBN(isbn)
+	}
+	// Fall back to title+author
+	if err != nil || gbr == nil {
+		if title == "" {
+			return
+		}
+		gbr, err = gb.searchByTitleAuthor(title, author)
+	}
+	if err != nil || gbr == nil || gbr.Title == "" {
+		return
+	}
+
+	// Now try to map the Google Books result back to Open Library
+	// Use the (potentially better) title/authors from Google Books
+	gbTitle := gbr.Title
+	gbAuthor := ""
+	if len(gbr.Authors) > 0 {
+		gbAuthor = gbr.Authors[0]
+	}
+
+	// Try OL search with Google's ISBN first (if Google found one we didn't have)
+	if gbr.ISBN13 != "" && gbr.ISBN13 != isbn {
+		data, searchErr := ol.get(fmt.Sprintf("/search.json?isbn=%s&fields=key,title,author_name,first_publish_year,cover_i&limit=1", url.QueryEscape(gbr.ISBN13)))
+		if searchErr == nil {
+			olID, matchTitle, coverURL, authors, found = extractOLSearchResult(data)
+			if found {
+				return
+			}
+		}
+	}
+
+	// Try OL search with Google's title+author
+	q := "title=" + url.QueryEscape(gbTitle)
+	if gbAuthor != "" {
+		q += "&author=" + url.QueryEscape(gbAuthor)
+	}
+	data, searchErr := ol.get(fmt.Sprintf("/search.json?%s&fields=key,title,author_name,first_publish_year,cover_i&limit=1", q))
+	if searchErr == nil {
+		id, mt, cu, au, ok := extractOLSearchResult(data)
+		if ok && titleMatchesResult(gbTitle, mt) {
+			olID, matchTitle, coverURL, authors, found = id, mt, cu, au, ok
+			return
+		}
+	}
+
+	return
+}
 
 // upsertBook finds or creates a book record by open_library_id.
 func upsertBook(app core.App, olID, title, coverURL, isbn13, authors string, pubYear int) (*core.Record, error) {
