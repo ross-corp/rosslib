@@ -54,6 +54,14 @@ type UserProfile = {
   author_key: string | null;
 };
 
+type ComputedInfo = {
+  operation: string;
+  is_continuous: boolean;
+  last_computed_at?: string;
+  source_a_name?: string;
+  source_b_name?: string;
+};
+
 type UserShelf = {
   id: string;
   name: string;
@@ -62,6 +70,7 @@ type UserShelf = {
   collection_type: string;
   item_count: number;
   books?: StatusBook[];
+  computed?: ComputedInfo;
 };
 
 type TagValue = {
@@ -179,6 +188,9 @@ export default async function UserPage({
   const tagCollections = shelves.filter(
     (s) => s.collection_type === "tag" && s.slug !== "favorites"
   );
+
+  // Computed/continuous lists
+  const computedLists = shelves.filter((s) => s.computed);
 
   // Label keys with values (status key is excluded by the API)
   const labelKeys = tagKeys.filter((k) => k.values.length > 0);
@@ -388,6 +400,41 @@ export default async function UserPage({
                   size="md"
                   seeAllHref={`/${username}/tags/favorites`}
                 />
+              </section>
+            )}
+
+            {/* Computed Lists */}
+            {computedLists.length > 0 && (
+              <section>
+                <h2 className="section-heading mb-3">
+                  Computed Lists
+                </h2>
+                <div className="space-y-2">
+                  {computedLists.map((list) => (
+                    <Link
+                      key={list.id}
+                      href={`/${username}/library/${list.slug}`}
+                      className="flex items-center justify-between p-3 rounded border border-border hover:border-accent/40 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors truncate">
+                          {list.name}
+                        </span>
+                        <span className="shrink-0 text-xs px-1.5 py-0.5 rounded bg-surface-2 text-text-tertiary border border-border">
+                          {list.computed!.operation}
+                        </span>
+                        {list.computed!.is_continuous && (
+                          <span className="shrink-0 text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">
+                            Live
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-text-tertiary ml-2 shrink-0">
+                        {list.item_count} {list.item_count === 1 ? "book" : "books"}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
               </section>
             )}
 

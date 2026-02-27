@@ -82,7 +82,7 @@ webapp/src/app/
 ├── notifications/page.tsx          notification center
 ├── admin/page.tsx                 admin panel (moderator only)
 ├── [username]/
-│   ├── page.tsx                    public profile
+│   ├── page.tsx                    public profile (incl. computed lists section)
 │   ├── shelves/[slug]/page.tsx     shelf page (owner gets library manager)
 │   ├── tags/[...path]/page.tsx     tag browsing page
 │   └── labels/[keySlug]/[...valuePath]/page.tsx   label browsing page (nested)

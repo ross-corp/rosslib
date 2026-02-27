@@ -34,7 +34,7 @@ func GetMyShelves(app core.App) func(e *core.RequestEvent) error {
 			_ = app.DB().NewQuery("SELECT COUNT(*) as count FROM collection_items WHERE collection = {:id}").
 				Bind(map[string]any{"id": s.Id}).One(&cnt)
 
-			result = append(result, map[string]any{
+			entry := map[string]any{
 				"id":              s.Id,
 				"name":            s.GetString("name"),
 				"slug":            s.GetString("slug"),
@@ -43,7 +43,31 @@ func GetMyShelves(app core.App) func(e *core.RequestEvent) error {
 				"is_public":       s.GetBool("is_public"),
 				"collection_type": s.GetString("collection_type"),
 				"item_count":      cnt.Count,
-			})
+			}
+
+			// Include computed list metadata if present
+			if opType := s.GetString("operation_type"); opType != "" {
+				computed := map[string]any{
+					"operation":     opType,
+					"is_continuous": s.GetBool("is_continuous"),
+				}
+				if lca := s.GetString("last_computed_at"); lca != "" {
+					computed["last_computed_at"] = lca
+				}
+				if srcA := s.GetString("source_collection_a"); srcA != "" {
+					if rec, err := app.FindRecordById("collections", srcA); err == nil {
+						computed["source_a_name"] = rec.GetString("name")
+					}
+				}
+				if srcB := s.GetString("source_collection_b"); srcB != "" {
+					if rec, err := app.FindRecordById("collections", srcB); err == nil {
+						computed["source_b_name"] = rec.GetString("name")
+					}
+				}
+				entry["computed"] = computed
+			}
+
+			result = append(result, entry)
 		}
 		if result == nil {
 			result = []map[string]any{}
@@ -211,6 +235,29 @@ func GetUserShelves(app core.App) func(e *core.RequestEvent) error {
 				"item_count":      cnt.Count,
 			}
 
+			// Include computed list metadata if present
+			if opType := s.GetString("operation_type"); opType != "" {
+				computed := map[string]any{
+					"operation":    opType,
+					"is_continuous": s.GetBool("is_continuous"),
+				}
+				if lca := s.GetString("last_computed_at"); lca != "" {
+					computed["last_computed_at"] = lca
+				}
+				// Resolve source collection names
+				if srcA := s.GetString("source_collection_a"); srcA != "" {
+					if rec, err := app.FindRecordById("collections", srcA); err == nil {
+						computed["source_a_name"] = rec.GetString("name")
+					}
+				}
+				if srcB := s.GetString("source_collection_b"); srcB != "" {
+					if rec, err := app.FindRecordById("collections", srcB); err == nil {
+						computed["source_b_name"] = rec.GetString("name")
+					}
+				}
+				entry["computed"] = computed
+			}
+
 			if includeBooks > 0 {
 				type bookRow struct {
 					BookID   string   `db:"book_id" json:"book_id"`
@@ -299,13 +346,37 @@ func GetShelfDetail(app core.App) func(e *core.RequestEvent) error {
 			books = []bookRow{}
 		}
 
-		return e.JSON(http.StatusOK, map[string]any{
+		detail := map[string]any{
 			"id":              shelf.Id,
 			"name":            shelf.GetString("name"),
 			"slug":            shelf.GetString("slug"),
 			"exclusive_group": shelf.GetString("exclusive_group"),
 			"books":           books,
-		})
+		}
+
+		// Include computed list metadata if present
+		if opType := shelf.GetString("operation_type"); opType != "" {
+			computed := map[string]any{
+				"operation":     opType,
+				"is_continuous": shelf.GetBool("is_continuous"),
+			}
+			if lca := shelf.GetString("last_computed_at"); lca != "" {
+				computed["last_computed_at"] = lca
+			}
+			if srcA := shelf.GetString("source_collection_a"); srcA != "" {
+				if rec, err := app.FindRecordById("collections", srcA); err == nil {
+					computed["source_a_name"] = rec.GetString("name")
+				}
+			}
+			if srcB := shelf.GetString("source_collection_b"); srcB != "" {
+				if rec, err := app.FindRecordById("collections", srcB); err == nil {
+					computed["source_b_name"] = rec.GetString("name")
+				}
+			}
+			detail["computed"] = computed
+		}
+
+		return e.JSON(http.StatusOK, detail)
 	}
 }
 
