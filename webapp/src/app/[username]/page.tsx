@@ -397,7 +397,7 @@ export default async function UserPage({
 
             {/* Currently Reading */}
             {currentlyReadingStatus &&
-              currentlyReadingStatus.books.length > 0 && (
+              currentlyReadingStatus.books.length > 0 ? (
                 <section>
                   <h2 className="section-heading mb-3">
                     Currently Reading
@@ -416,7 +416,20 @@ export default async function UserPage({
                     statusKeyId={!isOwnProfile && statusKeyId ? statusKeyId : undefined}
                   />
                 </section>
-              )}
+              ) : isOwnProfile ? (
+                <section>
+                  <h2 className="section-heading mb-3">
+                    Currently Reading
+                  </h2>
+                  <p className="text-sm text-text-tertiary py-4">
+                    Nothing on the nightstand?{" "}
+                    <Link href="/search" className="text-accent hover:underline">
+                      Search for a book
+                    </Link>{" "}
+                    to start reading.
+                  </p>
+                </section>
+              ) : null}
 
             {/* Want to Read */}
             {wantToReadStatus &&
@@ -505,7 +518,7 @@ export default async function UserPage({
             </section>
 
             {/* Recent Reviews */}
-            {recentReviews.length > 0 && (
+            {recentReviews.length > 0 ? (
               <section>
                 <h2 className="section-heading mb-3">
                   Recent Reviews
@@ -515,14 +528,23 @@ export default async function UserPage({
                   username={username}
                 />
               </section>
-            )}
+            ) : isOwnProfile ? (
+              <section>
+                <h2 className="section-heading mb-3">
+                  Recent Reviews
+                </h2>
+                <p className="text-sm text-text-tertiary py-4">
+                  You haven&apos;t written any reviews yet.
+                </p>
+              </section>
+            ) : null}
 
           </div>
 
           {/* Sidebar — 1/3 */}
           <div className="mt-10 lg:mt-0">
             <div className="lg:sticky lg:top-20">
-              {recentActivity.length > 0 && (
+              {recentActivity.length > 0 ? (
                 <div>
                   <h2 className="section-heading mb-2">
                     Recent Activity
@@ -537,7 +559,16 @@ export default async function UserPage({
                     ))}
                   </div>
                 </div>
-              )}
+              ) : isOwnProfile ? (
+                <div>
+                  <h2 className="section-heading mb-2">
+                    Recent Activity
+                  </h2>
+                  <p className="text-sm text-text-tertiary py-4">
+                    No activity yet — add a book to get started.
+                  </p>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
