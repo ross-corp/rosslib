@@ -1,9 +1,21 @@
 import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import NotificationBell from "@/components/notification-bell";
+import NavDropdown from "@/components/nav-dropdown";
 
 export default async function Nav() {
   const user = await getUser();
+
+  const browseItems = [
+    { href: "/search", label: "Search books" },
+    { href: "/genres", label: "Genres" },
+    ...(user ? [{ href: "/scan", label: "Scan ISBN" }] : []),
+  ];
+
+  const communityItems = [
+    { href: "/users", label: "Browse users" },
+    ...(user ? [{ href: "/feed", label: "My feed" }] : []),
+  ];
 
   return (
     <header className="bg-surface-1 border-b-2 border-border-strong">
@@ -23,21 +35,10 @@ export default async function Nav() {
           />
         </form>
         <nav className="flex items-center gap-1 ml-auto shrink-0">
-          <Link href="/genres" className="nav-link">
-            genres
-          </Link>
-          <Link href="/users" className="nav-link">
-            people
-          </Link>
-          <span className="text-text-tertiary select-none">|</span>
+          <NavDropdown label="browse" items={browseItems} />
+          <NavDropdown label="community" items={communityItems} />
           {user ? (
             <>
-              <Link href="/feed" className="nav-link">
-                feed
-              </Link>
-              <Link href="/scan" className="nav-link">
-                scan
-              </Link>
               <NotificationBell />
               {user.is_moderator && (
                 <Link href="/admin" className="nav-link">

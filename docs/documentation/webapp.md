@@ -144,7 +144,11 @@ webapp/src/app/
 
 ### `Nav` (`components/nav.tsx`)
 
-Top navigation bar. Statically imported by each page — not in the root layout.
+Top navigation bar. Server component that fetches the current user. Links are organized into two dropdown menus: **Browse** (Search books, Genres, Scan ISBN) and **Community** (Browse users, My feed). Notification bell, admin link, user avatar, and sign out remain as standalone items.
+
+### `NavDropdown` (`components/nav-dropdown.tsx`)
+
+Client component used by `Nav` for dropdown menus. Opens on hover (desktop) or click (mobile). Closes when clicking outside. Takes a `label` string and an array of `{ href, label }` items.
 
 ### `LibraryManager` (`components/library-manager.tsx`)
 
