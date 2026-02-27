@@ -94,7 +94,8 @@ webapp/src/app/
 │   ├── followers/page.tsx          followers list
 │   ├── following/page.tsx          following list
 │   ├── tags/[...path]/page.tsx     tag browsing page
-│   └── labels/[keySlug]/[...valuePath]/page.tsx   label browsing page (nested)
+│   ├── labels/[keySlug]/[...valuePath]/page.tsx   label browsing page (nested)
+│   └── timeline/page.tsx          reading timeline (books by month/year)
 └── api/                            Next.js proxy route handlers
     ├── auth/login/route.ts
     ├── auth/register/route.ts
@@ -156,7 +157,8 @@ webapp/src/app/
         ├── following/route.ts                     ← GET following list
         ├── tags/[...path]/route.ts
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
-        └── shelves/[slug]/route.ts                ← GET (for client-side shelf switching)
+        ├── shelves/[slug]/route.ts                ← GET (for client-side shelf switching)
+        └── timeline/route.ts                      ← GET reading timeline
 ```
 
 ---

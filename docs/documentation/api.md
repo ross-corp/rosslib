@@ -732,6 +732,33 @@ Returns all reviews (collection items with non-empty `review_text`) for a user, 
 
 `authors`, `cover_url`, `rating`, `date_read`, and `date_dnf` may be null.
 
+### `GET /users/:username/timeline?year=<YYYY>`  *(optional auth)*
+
+Returns finished books for a user grouped by month for a given year. Defaults to the current year. Respects profile privacy settings.
+
+```json
+{
+  "year": 2026,
+  "months": [
+    {
+      "month": 1,
+      "books": [
+        {
+          "book_id": "...",
+          "open_library_id": "OL82592W",
+          "title": "The Great Gatsby",
+          "cover_url": "https://...",
+          "rating": 4,
+          "date_read": "2026-01-15T00:00:00Z"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Empty months are omitted. Books within each month are sorted by `date_read` ascending.
+
 ### `POST /users/:username/follow`  *(auth required)*
 
 Follow a user. Status is `active` immediately (private account approval not yet enforced).
