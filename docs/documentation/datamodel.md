@@ -111,12 +111,14 @@ Per-user book ownership. Replaces `collection_items` for user-book metadata (rat
 | progress_pages | integer | nullable; current page number |
 | progress_percent | smallint | nullable; 0–100 reading percentage |
 | device_total_pages | integer | nullable; user's edition page count (overrides `books.page_count` for % calc) |
+| selected_edition_key | text | nullable; Open Library edition key (e.g. `OL123M`); when set, the frontend displays this edition's cover |
+| selected_edition_cover_url | text | nullable; cached cover URL for the selected edition; avoids extra API calls |
 | created_at | timestamptz | |
 
 Unique constraint: `(user_id, book_id)`
 Index: `(user_id, date_added DESC)`
 
-Rating and review are updated via `PATCH /me/books/:olId`. Absent fields in the PATCH body are ignored — only explicitly provided fields are updated.
+Rating and review are updated via `PATCH /me/books/:olId`. Absent fields in the PATCH body are ignored — only explicitly provided fields are updated. Edition selection is also updated via PATCH with `selected_edition_key` and `selected_edition_cover_url` — when set, SQL queries use `COALESCE(ub.selected_edition_cover_url, b.cover_url)` so the edition cover takes precedence.
 
 ### `collection_items` (legacy)
 

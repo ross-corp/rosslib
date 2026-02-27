@@ -207,6 +207,14 @@ Client component for the `/admin` page. Provides a searchable, paginated table o
 
 Client component for the `/admin` page. Displays proposed community link edits with status filter tabs (pending/approved/rejected). Each edit shows the proposer, book pair, current vs. proposed values (type and note) side by side, and approve/reject buttons for pending edits. Reviewed edits show the reviewer name, date, and optional comment.
 
+### `EditionPicker` (`components/edition-picker.tsx`)
+
+Client component for selecting a specific edition of a book. Shown on the book detail page below the cover image when the user has the book in their library. Opens a modal listing all available editions (reusing the editions data from `GET /books/:workId/editions`) with cover thumbnails, format badges, publisher, and ISBN. Selecting an edition saves the edition key and cover URL to the user's `user_books` record via `PATCH /api/me/books/:olId`. The selected edition's cover is then displayed on the book detail page, profile pages, and shelf views instead of the default work cover.
+
+### `EditionList` (`components/edition-list.tsx`)
+
+Read-only list of book editions shown in the "Editions" section of the book detail page. Displays edition cover thumbnails, format, publisher, publish date, page count, language, and ISBN. Supports "Show all" expansion and "Load more" pagination.
+
 ### `ReviewText` (`components/review-text.tsx`)
 
 Renders review text with wikilink and markdown link support. Parses two inline link syntaxes:

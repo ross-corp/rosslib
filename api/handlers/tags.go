@@ -515,7 +515,9 @@ func GetUserTagBooks(app core.App) func(e *core.RequestEvent) error {
 		}
 		var books []bookRow
 		err = app.DB().NewQuery(`
-			SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url, ub.rating
+			SELECT b.id as book_id, b.open_library_id, b.title,
+				   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
+				   ub.rating
 			FROM book_tag_values btv
 			JOIN books b ON btv.book = b.id
 			LEFT JOIN user_books ub ON ub.user = btv.user AND ub.book = btv.book
@@ -584,7 +586,9 @@ func GetUserLabelBooks(app core.App) func(e *core.RequestEvent) error {
 		}
 		var books []bookRow
 		err = app.DB().NewQuery(`
-			SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url, ub.rating
+			SELECT b.id as book_id, b.open_library_id, b.title,
+				   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
+				   ub.rating
 			FROM book_tag_values btv
 			JOIN books b ON btv.book = b.id
 			LEFT JOIN user_books ub ON ub.user = btv.user AND ub.book = btv.book
