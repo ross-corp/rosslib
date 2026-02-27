@@ -36,11 +36,15 @@ async function fetchProfile(
 
 async function fetchFollowers(
   username: string,
-  page: number
+  page: number,
+  token?: string
 ): Promise<FollowUser[]> {
+  const headers: HeadersInit = token
+    ? { Authorization: `Bearer ${token}` }
+    : {};
   const res = await fetch(
     `${process.env.API_URL}/users/${username}/followers?page=${page}&limit=${PER_PAGE}`,
-    { cache: "no-store" }
+    { cache: "no-store", headers }
   );
   if (!res.ok) return [];
   const data = await res.json();
@@ -71,7 +75,7 @@ export default async function FollowersPage({
     );
   }
 
-  const followers = await fetchFollowers(username, page);
+  const followers = await fetchFollowers(username, page, token ?? undefined);
   const hasNext = followers.length >= PER_PAGE;
 
   return (
