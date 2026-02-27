@@ -16,7 +16,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## settings & account
 
-- [ ] Improve settings page navigation. In `webapp/src/app/settings/page.tsx` (lines 43–56), links to Export and Ghost Activity are tucked into the header as small text. There's no link to Import at all. Add a horizontal nav bar below the "Settings" heading with links to: Profile (current page), Import (`/settings/import`), Export (`/settings/export`), and Ghost Activity (`/settings/ghost-activity`). Use a simple pill/tab style with the current section highlighted. This makes all settings sections discoverable from any settings page. Apply the same nav bar to each settings sub-page by extracting it into a shared `SettingsNav` component in `webapp/src/components/settings-nav.tsx`.
 
 - [ ] Add a "Followed Books" management page. The API endpoint `GET /me/followed-books` (registered in `api/main.go` line 152) returns the user's followed books, and `DELETE /books/{workId}/follow` unfollows. But there is no webapp page to view or manage these. **Steps**: (1) Create proxy route `webapp/src/app/api/me/followed-books/route.ts` that forwards to `GET /me/followed-books`. (2) Create page at `webapp/src/app/settings/followed-books/page.tsx` — fetch the list, display each book with cover image, title, author, and an "Unfollow" button (calls `DELETE /api/books/{workId}/follow`). (3) Add a "Followed Books" link in the settings navigation (or at minimum link from the main settings page).
 
@@ -66,3 +65,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add sort options to browse-all-users page](https://github.com/ross-corp/rosslib/pull/80) — Sort dropdown (Newest, Most books, Most followers) on /users page
 - [Link author names to author pages on book detail](https://github.com/ross-corp/rosslib/pull/81) — Author names link to /authors/{key} pages, with plain text fallback for local-only records
 - [Add pagination to author works grid](https://github.com/ross-corp/rosslib/pull/84) — Paginated author works with Show more button (24 per page)
+- [Add shared settings page navigation](https://github.com/ross-corp/rosslib/pull/85) — Pill-style SettingsNav component on all settings pages
