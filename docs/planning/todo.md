@@ -4,8 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## stats & data
 
-- [ ] Add a reading log / timeline view. Create `GET /users/:username/timeline?year=2026` (public, respects privacy) that returns books read in a given year grouped by month. Query: join `user_books` with `books` where the user has a "finished" tag value AND `date_read` falls in the requested year. Return `{year, months: [{month: 1, books: [{book_id, open_library_id, title, cover_url, rating, date_read}]}]}`. Sort books within each month by `date_read`. Frontend: `/[username]/timeline` page with a year selector dropdown and month-by-month sections, each showing a horizontal row of book covers (reuse `BookCoverRow`). Default to the current year. Empty months are omitted.
-
 ## moderation & safety
 
 - [ ] Add content reporting. Create a `reports` PocketBase collection (fields: `reporter` relation to users, `content_type` select `review`/`thread`/`comment`/`link`, `content_id` text required, `reason` select `spam`/`harassment`/`inappropriate`/`other`, `details` text optional, `status` select `pending`/`reviewed`/`dismissed`, `reviewer` relation to users optional, `created` auto). API endpoints: `POST /reports` (auth required; body: `{content_type, content_id, reason, details?}`; prevents duplicate reports from same user on same content), `GET /admin/reports?status=pending` (moderator only; returns reports with reporter username and content preview), `PATCH /admin/reports/:id` (moderator only; update status to `reviewed` or `dismissed`, sets `reviewer`). Frontend: small flag icon on reviews, thread comments, and community links. Clicking opens a modal with reason dropdown and optional details textarea. Admin page gets a new "Reports" section (similar to Feedback section) showing pending reports with content preview, reporter info, and review/dismiss buttons.
@@ -33,3 +31,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add @mention notifications in thread comments](https://github.com/ross-corp/rosslib/pull/54) — @username in comments creates thread_mention notifications and renders as profile links
 - [Add recommend-to-friend feature](https://github.com/ross-corp/rosslib/pull/55) — Recommend books to users with modal, notifications, and /recommendations page
 - [Add detailed reading statistics](https://github.com/ross-corp/rosslib/pull/56) — GET /users/:username/stats with books by year/month, rating distribution, and /[username]/stats page
+- [Add reading timeline view](https://github.com/ross-corp/rosslib/pull/57) — GET /users/:username/timeline with year/month grouping and /[username]/timeline page
