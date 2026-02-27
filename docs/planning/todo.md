@@ -8,8 +8,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## notifications & feed
 
-- [ ] Add click-to-mark-read on individual notifications. The API endpoint `POST /me/notifications/{notifId}/read` and its webapp proxy route (`webapp/src/app/api/me/notifications/[notifId]/read/route.ts`) both exist. In `webapp/src/app/notifications/page.tsx`, the `NotificationCard` component (line 101) shows a blue unread dot but has no click handler to mark individual notifications as read. Convert `NotificationCard` to a client component (or wrap in one). Add an onClick handler (or a small "x" dismiss button) that calls `POST /api/me/notifications/${notif.id}/read`, then optimistically removes the unread dot by updating local state. Currently only the "Mark all as read" button works.
-
 ## profile & social
 
 - [ ] Show reading progress on other users' "Currently Reading" profile section. Currently, visiting another user's profile shows their currently-reading books as covers only. The `progress_percent` data is available in the API response — render a small progress bar or percentage beneath each book cover, matching how it looks on your own profile.
@@ -78,3 +76,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Return edition_count in GetBookDetail response](https://github.com/ross-corp/rosslib/pull/70) — Fetch edition count from OL editions endpoint and include in book detail JSON
 - [Populate book stats for local search results](https://github.com/ross-corp/rosslib/pull/71) — Batch-fetch book_stats for local results to populate average_rating, rating_count, and already_read_count
 - [Add distinct icons per notification type](https://github.com/ross-corp/rosslib/pull/72) — Type-specific SVG icons for notification types (book, chat, link, star) with bell fallback
+- [Add click-to-mark-read on individual notifications](https://github.com/ross-corp/rosslib/pull/73) — Click unread dot to mark single notification as read with optimistic UI update
