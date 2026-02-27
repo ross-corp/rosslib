@@ -12,8 +12,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## import improvements
 
-- [ ] Add StoryGraph CSV import. StoryGraph exports use a different CSV format than Goodreads. Add `POST /me/import/storygraph/preview` and `POST /me/import/storygraph/commit` endpoints. StoryGraph CSV columns include: `Title`, `Authors`, `ISBN/UID`, `Format`, `Read Status` (to-read/currently-reading/read/did-not-finish), `Star Rating`, `Review`, `Tags`, `Read Dates` (may be a range like "2024/01/15-2024/02/20"). Reuse the same OL lookup chain as Goodreads import. Map StoryGraph statuses to the existing status tag system (to-read → want-to-read, currently-reading → currently-reading, read → finished, did-not-finish → dnf). StoryGraph tags should be imported as label tag keys. Frontend: add a "StoryGraph" tab on the import settings page alongside the existing Goodreads tab, reusing the same preview/configure/commit flow and `ImportForm` component structure.
-
 ## Pending PRs
 
 <!-- nephewbot moves tasks here when it opens a PR. Move to docs/planning/completed.md after merging. -->
@@ -29,3 +27,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add content reporting](https://github.com/ross-corp/rosslib/pull/58) — Reports collection with flag icons on reviews/comments/links, modal submission, and admin review panel
 - [Add notification preferences](https://github.com/ross-corp/rosslib/pull/59) — Per-user notification toggle switches on settings page with GET/PUT API and ShouldNotify helper
 - [Add series metadata](https://github.com/ross-corp/rosslib/pull/60) — Series and book_series collections, API endpoints, book detail series badges, /series/:id page, shelf grid position badges
+- [Add StoryGraph CSV import](https://github.com/ross-corp/rosslib/pull/61) — StoryGraph preview/commit endpoints, status mapping, tag import, tabbed import page
