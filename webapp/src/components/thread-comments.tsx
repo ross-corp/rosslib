@@ -30,6 +30,31 @@ function formatDate(iso: string): string {
   });
 }
 
+function CommentBody({ text }: { text: string }) {
+  if (!text) return null;
+  // Split on @username tokens, keeping the delimiters in the array
+  const parts = text.split(/(@[a-zA-Z0-9_]+)/g);
+  return (
+    <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap mt-1">
+      {parts.map((part, i) => {
+        if (part.startsWith("@") && /^@[a-zA-Z0-9_]+$/.test(part)) {
+          const username = part.slice(1);
+          return (
+            <Link
+              key={i}
+              href={`/${username}`}
+              className="text-blue-600 hover:underline"
+            >
+              {part}
+            </Link>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </p>
+  );
+}
+
 function CommentItem({
   comment,
   replies,
@@ -88,9 +113,7 @@ function CommentItem({
               {formatDate(comment.created_at)}
             </span>
           </div>
-          <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap mt-1">
-            {comment.body}
-          </p>
+          <CommentBody text={comment.body} />
           <div className="flex items-center gap-3 mt-1.5">
             {isLoggedIn && !comment.parent_id && (
               <button
@@ -176,9 +199,7 @@ function CommentItem({
                     {formatDate(reply.created_at)}
                   </span>
                 </div>
-                <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap mt-1">
-                  {reply.body}
-                </p>
+                <CommentBody text={reply.body} />
                 {currentUserId === reply.user_id && (
                   <button
                     type="button"

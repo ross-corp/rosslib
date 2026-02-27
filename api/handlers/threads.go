@@ -3,10 +3,14 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 )
+
+var mentionRegex = regexp.MustCompile(`@([a-zA-Z0-9_]+)`)
 
 // GetBookThreads handles GET /books/{workId}/threads
 func GetBookThreads(app core.App) func(e *core.RequestEvent) error {
@@ -312,6 +316,9 @@ func AddComment(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": err.Error()})
 		}
 
+		// Fan out @mention notifications
+		go fanOutMentionNotifications(app, user, thread, rec.Id, data.Body)
+
 		return e.JSON(http.StatusOK, map[string]any{
 			"id":   rec.Id,
 			"body": data.Body,
@@ -344,5 +351,73 @@ func DeleteComment(app core.App) func(e *core.RequestEvent) error {
 
 		e.Response.WriteHeader(http.StatusNoContent)
 		return nil
+	}
+}
+
+// fanOutMentionNotifications scans a comment body for @username mentions and
+// creates a thread_mention notification for each valid, distinct, non-self user.
+func fanOutMentionNotifications(app core.App, commenter *core.Record, thread *core.Record, commentID, body string) {
+	matches := mentionRegex.FindAllStringSubmatch(body, -1)
+	if len(matches) == 0 {
+		return
+	}
+
+	// Resolve the book's open_library_id for notification metadata.
+	bookOLID := ""
+	book, err := app.FindRecordById("books", thread.GetString("book"))
+	if err == nil {
+		bookOLID = book.GetString("open_library_id")
+	}
+
+	commenterName := commenter.GetString("display_name")
+	if commenterName == "" {
+		commenterName = commenter.GetString("username")
+	}
+
+	// Truncate body for notification preview.
+	preview := body
+	if len(preview) > 120 {
+		preview = preview[:120] + "..."
+	}
+
+	seen := map[string]bool{}
+	for _, m := range matches {
+		username := strings.ToLower(m[1])
+		if seen[username] {
+			continue
+		}
+		seen[username] = true
+
+		// Skip self-mentions.
+		if strings.EqualFold(username, commenter.GetString("username")) {
+			continue
+		}
+
+		// Look up the mentioned user (case-insensitive).
+		users, err := app.FindRecordsByFilter("users",
+			"LOWER(username) = {:username}", "", 1, 0,
+			map[string]any{"username": username},
+		)
+		if err != nil || len(users) == 0 {
+			continue
+		}
+		mentioned := users[0]
+
+		notifColl, err := app.FindCollectionByNameOrId("notifications")
+		if err != nil {
+			continue
+		}
+		rec := core.NewRecord(notifColl)
+		rec.Set("user", mentioned.Id)
+		rec.Set("notif_type", "thread_mention")
+		rec.Set("title", fmt.Sprintf("%s mentioned you in a thread", commenterName))
+		rec.Set("body", preview)
+		rec.Set("metadata", map[string]any{
+			"thread_id":  thread.Id,
+			"comment_id": commentID,
+			"book_ol_id": bookOLID,
+		})
+		rec.Set("read", false)
+		_ = app.Save(rec)
 	}
 }
