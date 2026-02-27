@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -119,6 +121,18 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			WHERE user = {:id} AND review_text != '' AND review_text IS NOT NULL
 		`).Bind(map[string]any{"id": user.Id}).One(&reviewsCount)
 
+		// Count books finished this year
+		var booksThisYear countResult
+		startOfYear := fmt.Sprintf("%d-01-01 00:00:00", time.Now().Year())
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(DISTINCT btv.book) as count
+			FROM book_tag_values btv
+			JOIN tag_values tv ON btv.tag_value = tv.id
+			JOIN user_books ub ON ub.user = btv.user AND ub.book = btv.book
+			WHERE btv.user = {:id} AND tv.slug = 'finished'
+			AND ub.date_read >= {:startOfYear}
+		`).Bind(map[string]any{"id": user.Id, "startOfYear": startOfYear}).One(&booksThisYear)
+
 		// Average rating
 		type avgResult struct {
 			Avg *float64 `db:"avg"`
@@ -151,7 +165,7 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			"friends_count":   friendsCount.Count,
 			"books_read":      booksRead.Count,
 			"reviews_count":   reviewsCount.Count,
-			"books_this_year": 0,
+			"books_this_year": booksThisYear.Count,
 			"average_rating":  avgRating.Avg,
 			"is_restricted":   isRestricted,
 		}
