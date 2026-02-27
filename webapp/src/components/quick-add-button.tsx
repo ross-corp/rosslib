@@ -73,7 +73,7 @@ export default function QuickAddButton({
   return (
     <div
       ref={containerRef}
-      className="absolute bottom-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+      className="absolute bottom-1 right-1 z-10 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto focus-within:pointer-events-auto"
     >
       <div className="flex items-center">
         <button
@@ -93,6 +93,9 @@ export default function QuickAddButton({
             e.stopPropagation();
             setOpen(!open);
           }}
+          aria-label="More options"
+          aria-haspopup="true"
+          aria-expanded={open}
           className="text-[10px] px-1 py-0.5 rounded-r bg-surface-0 border border-l-0 border-border text-text-primary hover:bg-surface-2 transition-colors"
         >
           ▾
