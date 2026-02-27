@@ -245,6 +245,141 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// GetUserStats handles GET /users/{username}/stats
+func GetUserStats(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		username := e.Request.PathValue("username")
+
+		users, err := app.FindRecordsByFilter("users",
+			"username = {:username}", "", 1, 0,
+			map[string]any{"username": username},
+		)
+		if err != nil || len(users) == 0 {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "User not found"})
+		}
+		user := users[0]
+
+		viewerID := ""
+		if e.Auth != nil {
+			viewerID = e.Auth.Id
+		}
+		if !canViewProfile(app, viewerID, user) {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Profile is private"})
+		}
+
+		uid := user.Id
+		currentYear := time.Now().Year()
+
+		// Books by year (from date_read on user_books for finished books)
+		type yearCount struct {
+			Year  int `db:"year" json:"year"`
+			Count int `db:"count" json:"count"`
+		}
+		var booksByYear []yearCount
+		_ = app.DB().NewQuery(`
+			SELECT CAST(strftime('%Y', ub.date_read) AS INTEGER) as year,
+			       COUNT(*) as count
+			FROM user_books ub
+			JOIN book_tag_values btv ON btv.user = ub.user AND btv.book = ub.book
+			JOIN tag_values tv ON btv.tag_value = tv.id
+			WHERE ub.user = {:uid}
+			  AND tv.slug = 'finished'
+			  AND ub.date_read IS NOT NULL AND ub.date_read != ''
+			GROUP BY year
+			ORDER BY year DESC
+		`).Bind(map[string]any{"uid": uid}).All(&booksByYear)
+		if booksByYear == nil {
+			booksByYear = []yearCount{}
+		}
+
+		// Books by month (current year)
+		type monthCount struct {
+			Year  int `db:"year" json:"year"`
+			Month int `db:"month" json:"month"`
+			Count int `db:"count" json:"count"`
+		}
+		var booksByMonth []monthCount
+		_ = app.DB().NewQuery(`
+			SELECT CAST(strftime('%Y', ub.date_read) AS INTEGER) as year,
+			       CAST(strftime('%m', ub.date_read) AS INTEGER) as month,
+			       COUNT(*) as count
+			FROM user_books ub
+			JOIN book_tag_values btv ON btv.user = ub.user AND btv.book = ub.book
+			JOIN tag_values tv ON btv.tag_value = tv.id
+			WHERE ub.user = {:uid}
+			  AND tv.slug = 'finished'
+			  AND ub.date_read IS NOT NULL AND ub.date_read != ''
+			  AND strftime('%Y', ub.date_read) = {:year}
+			GROUP BY month
+			ORDER BY month
+		`).Bind(map[string]any{"uid": uid, "year": strconv.Itoa(currentYear)}).All(&booksByMonth)
+		if booksByMonth == nil {
+			booksByMonth = []monthCount{}
+		}
+
+		// Average rating
+		type avgResult struct {
+			Avg *float64 `db:"avg"`
+		}
+		var avgRating avgResult
+		_ = app.DB().NewQuery(`
+			SELECT AVG(rating) as avg FROM user_books
+			WHERE user = {:uid} AND rating > 0
+		`).Bind(map[string]any{"uid": uid}).One(&avgRating)
+
+		// Rating distribution (1-5)
+		type ratingBucket struct {
+			Rating int `db:"rating" json:"rating"`
+			Count  int `db:"count" json:"count"`
+		}
+		var ratingDist []ratingBucket
+		_ = app.DB().NewQuery(`
+			SELECT CAST(rating AS INTEGER) as rating, COUNT(*) as count
+			FROM user_books
+			WHERE user = {:uid} AND rating > 0
+			GROUP BY CAST(rating AS INTEGER)
+			ORDER BY rating
+		`).Bind(map[string]any{"uid": uid}).All(&ratingDist)
+
+		// Build full distribution map (1-5)
+		distMap := map[int]int{1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+		for _, b := range ratingDist {
+			if b.Rating >= 1 && b.Rating <= 5 {
+				distMap[b.Rating] = b.Count
+			}
+		}
+		ratingDistribution := make([]map[string]int, 5)
+		for i := 1; i <= 5; i++ {
+			ratingDistribution[i-1] = map[string]int{"rating": i, "count": distMap[i]}
+		}
+
+		// Total books
+		type countResult struct {
+			Count int `db:"count"`
+		}
+		var totalBooks countResult
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) as count FROM user_books WHERE user = {:uid}
+		`).Bind(map[string]any{"uid": uid}).One(&totalBooks)
+
+		// Total reviews
+		var totalReviews countResult
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) as count FROM user_books
+			WHERE user = {:uid} AND review_text IS NOT NULL AND review_text != ''
+		`).Bind(map[string]any{"uid": uid}).One(&totalReviews)
+
+		return e.JSON(http.StatusOK, map[string]any{
+			"books_by_year":       booksByYear,
+			"books_by_month":      booksByMonth,
+			"average_rating":      avgRating.Avg,
+			"rating_distribution": ratingDistribution,
+			"total_books":         totalBooks.Count,
+			"total_reviews":       totalReviews.Count,
+		})
+	}
+}
+
 // GetUserReviews handles GET /users/{username}/reviews
 func GetUserReviews(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {

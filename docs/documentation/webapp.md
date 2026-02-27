@@ -91,6 +91,7 @@ webapp/src/app/
 ├── admin/page.tsx                 admin panel (moderator only)
 ├── [username]/
 │   ├── page.tsx                    public profile (incl. computed lists section)
+│   ├── stats/page.tsx              detailed reading statistics
 │   ├── shelves/[slug]/page.tsx     shelf page (owner gets library manager)
 │   ├── followers/page.tsx          followers list
 │   ├── following/page.tsx          following list
@@ -163,6 +164,7 @@ webapp/src/app/
     └── users/[username]/
         ├── followers/route.ts                     ← GET followers list
         ├── following/route.ts                     ← GET following list
+        ├── stats/route.ts                         ← GET reading statistics
         ├── tags/[...path]/route.ts
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
         ├── shelves/[slug]/route.ts                ← GET (for client-side shelf switching)

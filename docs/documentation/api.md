@@ -1301,6 +1301,37 @@ Returns a chronological feed of activities from users the authenticated user fol
 
 Fields are conditional on type — `book` is null for `followed_user`, `target_user` is null for book-related activities, etc. `created_link` includes `link_type`, `to_book_ol_id`, and `to_book_title` for the target book. `followed_author` includes `author_key` and `author_name` in the response.
 
+### `GET /users/:username/stats`  *(optional auth)*
+
+Returns detailed reading statistics for a user. Respects privacy settings — returns 403 for private profiles if the viewer is not an approved follower.
+
+```json
+{
+  "books_by_year": [
+    { "year": 2026, "count": 12 },
+    { "year": 2025, "count": 34 }
+  ],
+  "books_by_month": [
+    { "year": 2026, "month": 1, "count": 5 },
+    { "year": 2026, "month": 2, "count": 7 }
+  ],
+  "average_rating": 3.8,
+  "rating_distribution": [
+    { "rating": 1, "count": 2 },
+    { "rating": 2, "count": 5 },
+    { "rating": 3, "count": 12 },
+    { "rating": 4, "count": 20 },
+    { "rating": 5, "count": 8 }
+  ],
+  "total_books": 47,
+  "total_reviews": 15
+}
+```
+
+- `books_by_year` — finished books grouped by year (from `date_read`), descending
+- `books_by_month` — finished books in the current year grouped by month
+- `rating_distribution` — count of books per star rating (1-5)
+
 ### `GET /users/:username/activity`
 
 Returns recent activity for a specific user. Same response format as `/me/feed`. Cursor-based pagination.
