@@ -541,6 +541,56 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// GetPopularBooks handles GET /books/popular
+func GetPopularBooks(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		type row struct {
+			OLID      string  `db:"open_library_id" json:"key"`
+			Title     string  `db:"title" json:"title"`
+			Authors   string  `db:"authors" json:"authors_raw"`
+			CoverURL  *string `db:"cover_url" json:"cover_url"`
+			PubYear   *int    `db:"publication_year" json:"publish_year"`
+			AvgRating *float64 `db:"avg_rating" json:"average_rating"`
+			RatCount  int     `db:"rating_count" json:"rating_count"`
+			Reads     int     `db:"reads_count" json:"already_read_count"`
+		}
+		var rows []row
+		err := app.DB().NewQuery(`
+			SELECT b.open_library_id, b.title, b.authors, b.cover_url, b.publication_year,
+				CASE WHEN bs.rating_count > 0
+					THEN ROUND(bs.rating_sum * 1.0 / bs.rating_count, 2)
+					ELSE NULL END AS avg_rating,
+				bs.rating_count, bs.reads_count
+			FROM book_stats bs
+			JOIN books b ON bs.book = b.id
+			WHERE bs.reads_count > 0 OR bs.rating_count > 0
+			ORDER BY bs.reads_count DESC, bs.rating_count DESC
+			LIMIT 12
+		`).All(&rows)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		var results []map[string]any
+		for _, r := range rows {
+			results = append(results, map[string]any{
+				"key":                r.OLID,
+				"title":              r.Title,
+				"authors":            splitAuthors(r.Authors),
+				"cover_url":          r.CoverURL,
+				"publish_year":       r.PubYear,
+				"average_rating":     r.AvgRating,
+				"rating_count":       r.RatCount,
+				"already_read_count": r.Reads,
+			})
+		}
+		if results == nil {
+			results = []map[string]any{}
+		}
+		return e.JSON(http.StatusOK, results)
+	}
+}
+
 // SearchAuthors handles GET /authors/search?q=...
 func SearchAuthors(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {

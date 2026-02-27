@@ -155,6 +155,14 @@ async function fetchStatusMap(token: string): Promise<Record<string, string>> {
   return res.json();
 }
 
+async function fetchPopularBooks(): Promise<BookResult[]> {
+  const res = await fetch(`${process.env.API_URL}/books/popular`, {
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function buildSearchParams(base: {
@@ -207,12 +215,15 @@ export default async function SearchPage({
 
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [bookData, users, authorData, tagKeys, statusMap] = await Promise.all([
-    activeTab === "books" ? searchBooks(q, sort, year_min, year_max, subject, language) : Promise.resolve({ total: 0, results: [] }),
-    activeTab === "people" ? searchUsers(q) : Promise.resolve([]),
-    activeTab === "authors" ? searchAuthors(q) : Promise.resolve({ total: 0, results: [] }),
+  const hasQuery = q.trim().length > 0;
+
+  const [bookData, users, authorData, tagKeys, statusMap, popularBooks] = await Promise.all([
+    hasQuery && activeTab === "books" ? searchBooks(q, sort, year_min, year_max, subject, language) : Promise.resolve({ total: 0, results: [] }),
+    hasQuery && activeTab === "people" ? searchUsers(q) : Promise.resolve([]),
+    hasQuery && activeTab === "authors" ? searchAuthors(q) : Promise.resolve({ total: 0, results: [] }),
     currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
     currentUser && token ? fetchStatusMap(token) : Promise.resolve(null),
+    !hasQuery ? fetchPopularBooks() : Promise.resolve([]),
   ]);
 
   const statusKey = tagKeys?.find((k) => k.slug === "status") ?? null;
@@ -274,6 +285,59 @@ export default async function SearchPage({
             People
           </Link>
         </div>
+
+        {/* Empty state when no query */}
+        {!hasQuery && (
+          <div>
+            <p className="text-sm text-text-secondary mb-8">
+              Start typing to search for books, authors, or people.
+            </p>
+
+            {popularBooks.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-text-primary mb-4">
+                  Popular on Rosslib
+                </h2>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                  {popularBooks.map((book) => {
+                    const workId = book.key.replace("/works/", "");
+                    return (
+                      <Link
+                        key={book.key}
+                        href={`/books/${workId}`}
+                        className="group flex flex-col items-center text-center"
+                      >
+                        {book.cover_url ? (
+                          <img
+                            src={book.cover_url}
+                            alt={book.title}
+                            width={96}
+                            height={144}
+                            className="w-24 h-36 object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
+                          />
+                        ) : (
+                          <div className="w-24 h-36 bg-surface-2 rounded shadow-sm flex items-center justify-center">
+                            <span className="text-xs text-text-tertiary px-2 text-center leading-tight">
+                              {book.title}
+                            </span>
+                          </div>
+                        )}
+                        <span className="text-xs font-medium text-text-primary mt-2 line-clamp-2 max-w-[6rem]">
+                          {book.title}
+                        </span>
+                        {book.authors && book.authors.length > 0 && (
+                          <span className="text-xs text-text-secondary truncate max-w-[6rem]">
+                            {book.authors[0]}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Sort controls (books only) */}
         {activeTab === "books" && q && (
@@ -418,7 +482,7 @@ export default async function SearchPage({
         )}
 
         {/* Book results */}
-        {activeTab === "books" && (
+        {activeTab === "books" && hasQuery && (
           <BookList
             books={bookData.results}
             statusValues={statusValues}

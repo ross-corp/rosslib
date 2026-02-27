@@ -27,6 +27,7 @@ func main() {
 
 		// ── Books (public) ───────────────────────────────────────
 		se.Router.GET("/books/search", handlers.SearchBooks(app))
+		se.Router.GET("/books/popular", handlers.GetPopularBooks(app))
 		se.Router.GET("/books/lookup", handlers.LookupBook(app))
 		se.Router.GET("/books/{workId}", handlers.GetBookDetail(app))
 		se.Router.GET("/books/{workId}/editions", handlers.GetBookEditions(app))
