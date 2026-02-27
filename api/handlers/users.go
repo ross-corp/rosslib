@@ -98,6 +98,14 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 		_ = app.DB().NewQuery("SELECT COUNT(*) as count FROM follows WHERE follower = {:id} AND status = 'active'").
 			Bind(map[string]any{"id": user.Id}).One(&followingCount)
 
+		var friendsCount countResult
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) as count
+			FROM follows f1
+			JOIN follows f2 ON f1.follower = f2.followee AND f1.followee = f2.follower
+			WHERE f1.follower = {:id} AND f1.status = 'active' AND f2.status = 'active'
+		`).Bind(map[string]any{"id": user.Id}).One(&friendsCount)
+
 		// Count books read & reviews
 		var booksRead, reviewsCount countResult
 		_ = app.DB().NewQuery(`
@@ -140,7 +148,7 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			"follow_status":   followStatus,
 			"followers_count": followersCount.Count,
 			"following_count": followingCount.Count,
-			"friends_count":   0,
+			"friends_count":   friendsCount.Count,
 			"books_read":      booksRead.Count,
 			"reviews_count":   reviewsCount.Count,
 			"books_this_year": 0,
