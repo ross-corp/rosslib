@@ -4,6 +4,7 @@ import DeleteDataForm from "@/components/delete-data-form";
 import EmailVerificationBanner from "@/components/email-verification-banner";
 import PasswordForm from "@/components/password-form";
 import SettingsForm from "@/components/settings-form";
+import SettingsNav from "@/components/settings-nav";
 import { getUser } from "@/lib/auth";
 
 type UserProfile = {
@@ -38,23 +39,9 @@ export default async function SettingsPage() {
           <span className="text-text-primary">Settings</span>
         </div>
 
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-text-primary">Profile</h1>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/settings/export"
-              className="text-sm text-text-primary hover:text-text-primary transition-colors"
-            >
-              Export to CSV
-            </Link>
-            <Link
-              href="/settings/ghost-activity"
-              className="text-sm text-text-primary hover:text-text-primary transition-colors"
-            >
-              Ghost activity
-            </Link>
-          </div>
-        </div>
+        <h1 className="text-2xl font-bold text-text-primary mb-4">Settings</h1>
+
+        <SettingsNav />
 
         <EmailVerificationBanner />
 

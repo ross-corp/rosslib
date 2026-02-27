@@ -76,7 +76,10 @@ webapp/src/app/
 ├── settings/
 │   ├── page.tsx                    profile settings
 │   ├── import/page.tsx             Goodreads CSV import
-│   └── tags/page.tsx               label category management
+│   ├── export/page.tsx             CSV export
+│   ├── tags/page.tsx               label category management
+│   ├── ghost-activity/page.tsx     ghost user controls
+│   └── follow-requests/page.tsx    pending follow requests
 ├── scan/page.tsx                   ISBN barcode scanner
 ├── library/compare/page.tsx        compare lists (set operations)
 ├── notifications/page.tsx          notification center
@@ -240,6 +243,10 @@ Renders review text with wikilink and markdown link support. Parses two inline l
 - `[Book Title](/books/OL123W)` — rendered as a direct link to the book page
 
 Used on book detail pages (community reviews), user reviews pages, recent reviews on profiles, and the collapsed review view in the book review editor. The companion `BookReviewEditor` component provides `[[` autocomplete that searches books and inserts markdown links.
+
+### `SettingsNav` (`components/settings-nav.tsx`)
+
+Client component providing pill-style navigation across settings sub-pages. Uses `usePathname()` to highlight the active section. Rendered on all settings pages (Profile, Labels, Import, Export, Ghost Activity). The active pill uses `bg-accent text-white`; inactive pills use `bg-surface-2`.
 
 ### `PasswordForm` (`components/password-form.tsx`)
 
