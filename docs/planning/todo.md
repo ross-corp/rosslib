@@ -19,8 +19,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX polish
 
-- [ ] Add color-coded genre cards on the genres page. In `webapp/src/app/genres/page.tsx`, all 12 genre cards are visually identical — just a name and count in a plain border box. Assign each genre a distinct background color (muted pastels or gradients) to make the page visually scannable and more engaging as a discovery surface.
-
 ## blocked
 
 - [ ] Populate series data from Open Library during book lookup. **BLOCKED: depends on PR #60 (series metadata) being merged first.** Once the `series` and `book_series` collections exist, update `GetBookDetail` in `api/handlers/books.go` to auto-detect series data. The OL editions response (`/works/{workId}/editions.json`) includes a `series` array on some editions. For each edition entry, check for a `series` field. If found, find-or-create a `series` record by name and create a `book_series` link with the position number (if available). Also try the OL work's `subjects` array for series-like patterns (e.g. "Harry Potter" appearing as a subject). This is best-effort — not all OL works have series data. Log when series data is found vs. not for visibility into coverage.
@@ -64,3 +62,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add shared settings page navigation](https://github.com/ross-corp/rosslib/pull/85) — Pill-style SettingsNav component on all settings pages
 - [Add followed books management page](https://github.com/ross-corp/rosslib/pull/86) — /settings/followed-books page with book list and unfollow buttons
 - [Add pending imports review page](https://github.com/ross-corp/rosslib/pull/87) — /settings/imports/pending page with search & link modal, dismiss, and delete actions
+- [Add color-coded genre cards on genres page](https://github.com/ross-corp/rosslib/pull/88) — Distinct muted background colors per genre for visual scannability
