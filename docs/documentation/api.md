@@ -1544,6 +1544,36 @@ Mark all unread notifications as read. Returns `{ "ok": true }`.
 
 ---
 
+## Notification Preferences
+
+### `GET /me/notification-preferences`  *(auth required)*
+
+Returns the current user's notification preferences. If no preferences row exists, all types default to `true` (enabled).
+
+```json
+{
+  "new_publication": true,
+  "book_new_thread": true,
+  "book_new_link": true,
+  "book_new_review": true,
+  "review_liked": true,
+  "thread_mention": true,
+  "book_recommendation": true
+}
+```
+
+### `PUT /me/notification-preferences`  *(auth required)*
+
+Upsert notification preferences. Only the fields provided in the body are updated; omitted fields keep their current value (or default to `true` if this is the first save).
+
+```json
+{ "review_liked": false, "thread_mention": false }
+```
+
+Returns the full updated preferences object (same shape as GET).
+
+---
+
 ## Background: Author Publication Poller
 
 A background goroutine (`notifications.StartPoller`) runs every 6 hours. It:

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import DeleteDataForm from "@/components/delete-data-form";
 import EmailVerificationBanner from "@/components/email-verification-banner";
+import NotificationPreferences from "@/components/notification-preferences";
 import PasswordForm from "@/components/password-form";
 import SettingsForm from "@/components/settings-form";
 import SettingsNav from "@/components/settings-nav";
@@ -52,6 +53,8 @@ export default async function SettingsPage() {
           initialAvatarUrl={profile?.avatar_url ?? null}
           initialIsPrivate={profile?.is_private ?? false}
         />
+
+        <NotificationPreferences />
 
         <PasswordForm />
 
