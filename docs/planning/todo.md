@@ -4,8 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## stats & data
 
-- [ ] Add detailed reading statistics endpoint. Create `GET /users/:username/stats` (public, respects privacy) that returns comprehensive reading analytics computed from `user_books` and `book_tag_values`. Response should include: `books_by_year` (array of `{year, count}` from `date_read` grouped by year), `books_by_month` (array of `{year, month, count}` for the current year), `average_rating` (across all rated books), `rating_distribution` (count per star 1-5), `total_books` (count of all user_books), `total_reviews` (count with non-empty review_text), `pages_read_this_year` (sum of `books.page_count` for books finished this year — JOIN through `user_books` → `books`), `longest_book` (title + page_count of highest page_count finished book), `shortest_book` (same for lowest). All queries should use the existing `user_books` table with JOINs to `books`, `book_tag_values`, and `tag_values` (for "finished" status detection). Frontend: dedicated `/[username]/stats` page showing the data as simple text/number cards (no charts library needed — use CSS bar charts like the genre ratings component does). Link from profile page's "Reading Stats" section header.
-
 - [ ] Add a reading log / timeline view. Create `GET /users/:username/timeline?year=2026` (public, respects privacy) that returns books read in a given year grouped by month. Query: join `user_books` with `books` where the user has a "finished" tag value AND `date_read` falls in the requested year. Return `{year, months: [{month: 1, books: [{book_id, open_library_id, title, cover_url, rating, date_read}]}]}`. Sort books within each month by `date_read`. Frontend: `/[username]/timeline` page with a year selector dropdown and month-by-month sections, each showing a horizontal row of book covers (reuse `BookCoverRow`). Default to the current year. Empty months are omitted.
 
 ## moderation & safety
@@ -34,3 +32,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add reading goals](https://github.com/ross-corp/rosslib/pull/53) — Annual reading goal with progress tracking, profile card, and settings form
 - [Add @mention notifications in thread comments](https://github.com/ross-corp/rosslib/pull/54) — @username in comments creates thread_mention notifications and renders as profile links
 - [Add recommend-to-friend feature](https://github.com/ross-corp/rosslib/pull/55) — Recommend books to users with modal, notifications, and /recommendations page
+- [Add detailed reading statistics](https://github.com/ross-corp/rosslib/pull/56) — GET /users/:username/stats with books by year/month, rating distribution, and /[username]/stats page
