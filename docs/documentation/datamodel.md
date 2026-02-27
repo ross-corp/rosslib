@@ -381,6 +381,7 @@ users ──< genre_ratings >── books  (per-user genre dimension scores)
 author_works_snapshot        (OL author key → work count snapshot)
 collections ──< computed_collections  (operation definition for live lists)
 books ──< book_stats               (precomputed aggregate stats)
+users ──< pending_imports          (unmatched import rows)
 ```
 
 ### `genre_ratings`
@@ -473,6 +474,29 @@ User-submitted bug reports and feature requests. Moderators can toggle status vi
 | created | timestamptz | PocketBase auto-generated |
 
 Indexes: `user`, `status`.
+
+### `pending_imports`
+
+Unmatched rows from Goodreads CSV imports. Saved so users can retry or manually resolve them later.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user | uuid FK → users (cascade) | |
+| source | text | `'goodreads'` |
+| title | text | required |
+| author | text | nullable |
+| isbn13 | text | nullable |
+| exclusive_shelf | text | nullable; Goodreads shelf name |
+| custom_shelves | json | array of shelf names |
+| rating | number | nullable; 1–5 |
+| review_text | text | nullable |
+| date_read | text | nullable |
+| date_added | text | nullable |
+| status | select | `'unmatched'` or `'resolved'` |
+| created | timestamptz | auto |
+
+Index: `(user, status)` for efficient listing of unresolved imports.
 
 ---
 

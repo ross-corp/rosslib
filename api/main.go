@@ -128,6 +128,9 @@ func main() {
 		// Imports
 		authed.POST("/me/import/goodreads/preview", handlers.PreviewGoodreadsImport(app))
 		authed.POST("/me/import/goodreads/commit", handlers.CommitGoodreadsImport(app))
+		authed.GET("/me/imports/pending", handlers.GetPendingImports(app))
+		authed.PATCH("/me/imports/pending/{id}", handlers.ResolvePendingImport(app))
+		authed.DELETE("/me/imports/pending/{id}", handlers.DeletePendingImport(app))
 
 		// Genre ratings
 		authed.GET("/me/books/{olId}/genre-ratings", handlers.GetMyGenreRatings(app))
