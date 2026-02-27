@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -655,16 +656,130 @@ func SearchAuthors(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
-// GetAuthorDetail handles GET /authors/{authorKey}
+// GetAuthorDetail handles GET /authors/{authorKey}?limit=24&offset=0
+// Fetches author info and a paginated slice of their works from Open Library.
 func GetAuthorDetail(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		authorKey := e.Request.PathValue("authorKey")
 		ol := newOLClient()
-		data, err := ol.get(fmt.Sprintf("/authors/%s.json", authorKey))
+
+		// Parse pagination params (defaults: limit=24, offset=0).
+		limit := 24
+		offset := 0
+		if v := e.Request.URL.Query().Get("limit"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 100 {
+				limit = n
+			}
+		}
+		if v := e.Request.URL.Query().Get("offset"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+				offset = n
+			}
+		}
+
+		// Fetch author metadata.
+		authorData, err := ol.get(fmt.Sprintf("/authors/%s.json", authorKey))
 		if err != nil {
 			return e.JSON(http.StatusNotFound, map[string]any{"error": "Author not found"})
 		}
-		return e.JSON(http.StatusOK, data)
+
+		// Extract author fields.
+		name, _ := authorData["name"].(string)
+
+		var bio *string
+		switch b := authorData["bio"].(type) {
+		case string:
+			bio = &b
+		case map[string]any:
+			if v, ok := b["value"].(string); ok {
+				bio = &v
+			}
+		}
+
+		var birthDate, deathDate *string
+		if v, ok := authorData["birth_date"].(string); ok {
+			birthDate = &v
+		}
+		if v, ok := authorData["death_date"].(string); ok {
+			deathDate = &v
+		}
+
+		var photoURL *string
+		if photos, ok := authorData["photos"].([]any); ok && len(photos) > 0 {
+			if id, ok := photos[0].(float64); ok && int(id) > 0 {
+				u := fmt.Sprintf("https://covers.openlibrary.org/a/id/%d-L.jpg", int(id))
+				photoURL = &u
+			}
+		}
+
+		var links []map[string]any
+		if rawLinks, ok := authorData["links"].([]any); ok {
+			for _, rl := range rawLinks {
+				if lm, ok := rl.(map[string]any); ok {
+					title, _ := lm["title"].(string)
+					url, _ := lm["url"].(string)
+					if title != "" && url != "" {
+						links = append(links, map[string]any{"title": title, "url": url})
+					}
+				}
+			}
+		}
+
+		// Fetch works with pagination.
+		worksData, _ := ol.get(fmt.Sprintf("/authors/%s/works.json?limit=%d&offset=%d", authorKey, limit, offset))
+
+		workCount := 0
+		var works []map[string]any
+		if worksData != nil {
+			if sz, ok := worksData["size"].(float64); ok {
+				workCount = int(sz)
+			}
+			if entries, ok := worksData["entries"].([]any); ok {
+				for _, entry := range entries {
+					e, ok := entry.(map[string]any)
+					if !ok {
+						continue
+					}
+					key, _ := e["key"].(string)
+					title, _ := e["title"].(string)
+
+					// OL work keys are like "/works/OL12345W"
+					key = strings.TrimPrefix(key, "/works/")
+
+					var coverURL *string
+					if covers, ok := e["covers"].([]any); ok {
+						for _, c := range covers {
+							if id, ok := c.(float64); ok && int(id) > 0 {
+								u := fmt.Sprintf("https://covers.openlibrary.org/b/id/%d-M.jpg", int(id))
+								coverURL = &u
+								break
+							}
+						}
+					}
+
+					works = append(works, map[string]any{
+						"key":       key,
+						"title":     title,
+						"cover_url": coverURL,
+					})
+				}
+			}
+		}
+		if works == nil {
+			works = []map[string]any{}
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{
+			"key":        authorKey,
+			"name":       name,
+			"bio":        bio,
+			"birth_date": birthDate,
+			"death_date": deathDate,
+			"photo_url":  photoURL,
+			"links":      links,
+			"work_count": workCount,
+			"works":      works,
+		})
 	}
 }
 
