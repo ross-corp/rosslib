@@ -60,6 +60,7 @@ func main() {
 		se.Router.GET("/users/{username}/followers", handlers.GetUserFollowers(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/following", handlers.GetUserFollowing(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/activity", handlers.GetUserActivity(app)).BindFunc(handlers.OptionalAuthFunc(app))
+		se.Router.GET("/users/{username}/timeline", handlers.GetReadingTimeline(app)).BindFunc(handlers.OptionalAuthFunc(app))
 
 		// ── Threads (public GET) ─────────────────────────────────
 		se.Router.GET("/threads/{threadId}", handlers.GetThread(app))
