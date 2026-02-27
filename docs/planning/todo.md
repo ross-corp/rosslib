@@ -14,8 +14,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## book detail & discovery
 
-- [ ] Add pagination to the author works grid. In `webapp/src/app/authors/[authorKey]/page.tsx`, all works are rendered at once with no pagination. For prolific authors this can be hundreds of entries. Add a "Show more" button or paginated grid (e.g. show first 24, load more on click).
-
 ## settings & account
 
 - [ ] Improve settings page navigation. In `webapp/src/app/settings/page.tsx` (lines 43–56), links to Export and Ghost Activity are tucked into the header as small text. There's no link to Import at all. Add a horizontal nav bar below the "Settings" heading with links to: Profile (current page), Import (`/settings/import`), Export (`/settings/export`), and Ghost Activity (`/settings/ghost-activity`). Use a simple pill/tab style with the current section highlighted. This makes all settings sections discoverable from any settings page. Apply the same nav bar to each settings sub-page by extracting it into a shared `SettingsNav` component in `webapp/src/components/settings-nav.tsx`.
@@ -67,3 +65,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add empty/landing state to search page](https://github.com/ross-corp/rosslib/pull/79) — Show prompt message and popular books grid when no query is entered
 - [Add sort options to browse-all-users page](https://github.com/ross-corp/rosslib/pull/80) — Sort dropdown (Newest, Most books, Most followers) on /users page
 - [Link author names to author pages on book detail](https://github.com/ross-corp/rosslib/pull/81) — Author names link to /authors/{key} pages, with plain text fallback for local-only records
+- [Add pagination to author works grid](https://github.com/ross-corp/rosslib/pull/84) — Paginated author works with Show more button (24 per page)
