@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 type BookLink = {
@@ -36,6 +36,14 @@ const LINK_TYPES = [
   { value: "adaptation", label: "Adaptation" },
 ];
 
+type SearchResult = {
+  open_library_id: string;
+  title: string;
+  authors: string | null;
+  cover_url: string | null;
+  publication_year: number | null;
+};
+
 function linkTypeLabel(type: string): string {
   return LINK_TYPES.find((t) => t.value === type)?.label ?? type;
 }
@@ -56,6 +64,66 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<SearchResult | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+
+    if (searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    searchDebounce.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/books/search?q=${encodeURIComponent(searchQuery.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data.results ?? []);
+        }
+      } catch {
+        // ignore network errors for suggestions
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 400);
+
+    return () => {
+      if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    };
+  }, [searchQuery]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  function selectBook(result: SearchResult) {
+    setSelectedBook(result);
+    setToWorkId(result.open_library_id);
+    setSearchQuery("");
+    setSearchResults([]);
+    setShowDropdown(false);
+  }
+
+  function clearSelectedBook() {
+    setSelectedBook(null);
+    setToWorkId("");
+    setSearchQuery("");
+  }
 
   async function refetchLinks() {
     const res = await fetch(`/api/books/${workId}/links`);
@@ -91,6 +159,9 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
     setToWorkId("");
     setNote("");
     setLinkType("similar");
+    setSelectedBook(null);
+    setSearchQuery("");
+    setSearchResults([]);
     setShowForm(false);
   }
 
@@ -198,18 +269,79 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
       {/* Add link form */}
       {showForm && (
         <form onSubmit={handleSubmit} className="mb-8 space-y-3">
-          <div>
+          <div ref={dropdownRef} className="relative">
             <label className="block text-xs text-text-primary mb-1">
-              Target book ID (Open Library work ID, e.g. OL82592W)
+              Target book
             </label>
-            <input
-              type="text"
-              value={toWorkId}
-              onChange={(e) => setToWorkId(e.target.value)}
-              placeholder="OL82592W"
-              disabled={submitting}
-              className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
-            />
+            {selectedBook ? (
+              <div className="flex items-center gap-2 border border-border rounded px-3 py-2">
+                {selectedBook.cover_url ? (
+                  <img src={selectedBook.cover_url} alt="" className="w-6 h-8 rounded object-cover shrink-0" />
+                ) : (
+                  <div className="w-6 h-8 rounded bg-surface-2 shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-text-primary line-clamp-1">{selectedBook.title}</p>
+                  {selectedBook.authors && (
+                    <p className="text-xs text-text-primary line-clamp-1">{selectedBook.authors}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={clearSelectedBook}
+                  disabled={submitting}
+                  className="text-xs text-text-primary hover:text-red-500 transition-colors disabled:opacity-50"
+                >
+                  <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                    <path d="M3 3l6 6M9 3l-6 6" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowDropdown(true);
+                }}
+                onFocus={() => { if (searchResults.length > 0) setShowDropdown(true); }}
+                placeholder="Search for a book..."
+                disabled={submitting}
+                className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
+              />
+            )}
+            {showDropdown && !selectedBook && searchQuery.trim().length >= 2 && (
+              <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-surface-0 border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {searchLoading && searchResults.length === 0 && (
+                  <p className="px-3 py-2 text-xs text-text-primary">Searching...</p>
+                )}
+                {!searchLoading && searchResults.length === 0 && (
+                  <p className="px-3 py-2 text-xs text-text-primary">No results found</p>
+                )}
+                {searchResults.map((result) => (
+                  <button
+                    key={result.open_library_id}
+                    type="button"
+                    onClick={() => selectBook(result)}
+                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-surface-2 transition-colors text-left"
+                  >
+                    {result.cover_url ? (
+                      <img src={result.cover_url} alt="" className="w-6 h-8 rounded object-cover shrink-0" />
+                    ) : (
+                      <div className="w-6 h-8 rounded bg-surface-2 shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-text-primary line-clamp-1">{result.title}</p>
+                      <p className="text-xs text-text-primary line-clamp-1">
+                        {result.authors ?? "Unknown author"}
+                        {result.publication_year ? ` (${result.publication_year})` : ""}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-xs text-text-primary mb-1">
@@ -257,6 +389,9 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                 setNote("");
                 setLinkType("similar");
                 setError(null);
+                setSelectedBook(null);
+                setSearchQuery("");
+                setSearchResults([]);
               }}
               disabled={submitting}
               className="text-xs text-text-primary hover:text-text-primary transition-colors"

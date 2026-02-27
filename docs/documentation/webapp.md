@@ -210,7 +210,7 @@ Dropdown for adding/moving/removing a single book from shelves. Used on search r
 
 ### `BookLinkList` (`components/book-link-list.tsx`)
 
-Client component for community links (related books) on book detail pages. Shows links grouped by relationship type (sequel, prequel, companion, similar, etc.), sorted by upvote count. Logged-in users can upvote/unvote links, suggest new ones via an inline form, and propose edits to existing links (edit pencil icon). Proposed edits are submitted for moderator review. Target book is specified by Open Library work ID.
+Client component for community links (related books) on book detail pages. Shows links grouped by relationship type (sequel, prequel, companion, similar, etc.), sorted by upvote count. Logged-in users can upvote/unvote links, suggest new ones via an inline form, and propose edits to existing links (edit pencil icon). Proposed edits are submitted for moderator review. Target book is selected via a search-as-you-type dropdown that queries `/api/books/search` with 400ms debounce.
 
 ### `AdminUserList` (`components/admin-user-list.tsx`)
 
