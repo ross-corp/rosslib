@@ -158,6 +158,7 @@ func main() {
 		admin := se.Router.Group("/admin").Bind(apis.RequireAuth()).BindFunc(handlers.RequireModerator(app))
 		admin.GET("/feedback", handlers.GetFeedback(app))
 		admin.PATCH("/feedback/{feedbackId}", handlers.UpdateFeedbackStatus(app))
+		admin.DELETE("/feedback/{feedbackId}", handlers.DeleteFeedback(app))
 		admin.POST("/ghosts/seed", handlers.SeedGhosts(app))
 		admin.POST("/ghosts/simulate", handlers.SimulateGhosts(app))
 		admin.GET("/ghosts/status", handlers.GetGhostStatus(app))

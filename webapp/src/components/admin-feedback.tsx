@@ -37,6 +37,7 @@ export default function AdminFeedback() {
   const [items, setItems] = useState<FeedbackItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchFeedback = useCallback(async (status: string) => {
     setLoading(true);
@@ -63,6 +64,18 @@ export default function AdminFeedback() {
       setItems((prev) => prev.filter((item) => item.id !== id));
     }
     setTogglingId(null);
+  }
+
+  async function deleteFeedback(id: string) {
+    if (!confirm("Delete this feedback? This cannot be undone.")) return;
+    setDeletingId(id);
+    const res = await fetch(`/api/admin/feedback/${id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    }
+    setDeletingId(null);
   }
 
   return (
@@ -131,17 +144,22 @@ export default function AdminFeedback() {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => toggleStatus(item.id, item.status)}
-                  disabled={togglingId === item.id}
-                  className={`shrink-0 px-3 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 ${
-                    item.status === "open"
-                      ? "bg-surface-2 text-text-primary hover:bg-surface-3"
-                      : "bg-surface-2 text-text-primary hover:bg-surface-3"
-                  }`}
-                >
-                  {item.status === "open" ? "Close" : "Reopen"}
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => toggleStatus(item.id, item.status)}
+                    disabled={togglingId === item.id}
+                    className="px-3 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 bg-surface-2 text-text-primary hover:bg-surface-3"
+                  >
+                    {item.status === "open" ? "Close" : "Reopen"}
+                  </button>
+                  <button
+                    onClick={() => deleteFeedback(item.id)}
+                    disabled={deletingId === item.id}
+                    className="px-3 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 bg-red-900/30 text-red-300 hover:bg-red-900/50"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
 
               <p className="text-sm text-text-secondary mt-3 whitespace-pre-wrap">

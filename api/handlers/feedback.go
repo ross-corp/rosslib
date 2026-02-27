@@ -122,6 +122,24 @@ func GetFeedback(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// DeleteFeedback handles DELETE /admin/feedback/{feedbackId}
+func DeleteFeedback(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		feedbackID := e.Request.PathValue("feedbackId")
+
+		rec, err := app.FindRecordById("feedback", feedbackID)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Feedback not found"})
+		}
+
+		if err := app.Delete(rec); err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to delete feedback"})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"ok": true})
+	}
+}
+
 // UpdateFeedbackStatus handles PATCH /admin/feedback/{feedbackId}
 func UpdateFeedbackStatus(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
