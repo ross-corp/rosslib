@@ -105,7 +105,7 @@ function stars(rating: number | null): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function ImportForm({ username }: { username: string }) {
+export default function ImportForm({ username, source = "goodreads" }: { username: string; source?: "goodreads" | "storygraph" }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
 
@@ -192,7 +192,7 @@ export default function ImportForm({ username }: { username: string }) {
     form.append("file", file);
 
     try {
-      const res = await fetch("/api/me/import/goodreads/preview", {
+      const res = await fetch(`/api/me/import/${source}/preview`, {
         method: "POST",
         body: form,
       });
@@ -329,7 +329,7 @@ export default function ImportForm({ username }: { username: string }) {
     setPhase("importing");
 
     try {
-      const res = await fetch("/api/me/import/goodreads/commit", {
+      const res = await fetch(`/api/me/import/${source}/commit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -636,7 +636,7 @@ export default function ImportForm({ username }: { username: string }) {
             Status mapping
           </h2>
           <p className="text-xs text-text-primary mb-3">
-            Goodreads reading status will be mapped to your Status label automatically.
+            Reading status will be mapped to your Status label automatically.
           </p>
           <ul className="divide-y divide-border border border-border rounded-lg overflow-hidden text-sm">
             <li className="flex items-center justify-between px-4 py-2.5">
@@ -651,6 +651,12 @@ export default function ImportForm({ username }: { username: string }) {
               <span className="text-text-primary">to-read</span>
               <span className="text-text-primary">Status: Want to Read</span>
             </li>
+            {source === "storygraph" && (
+              <li className="flex items-center justify-between px-4 py-2.5">
+                <span className="text-text-primary">did-not-finish</span>
+                <span className="text-text-primary">Status: DNF</span>
+              </li>
+            )}
           </ul>
         </section>
 
@@ -661,7 +667,7 @@ export default function ImportForm({ username }: { username: string }) {
               Custom labels ({sortedShelves.length})
             </h2>
             <p className="text-xs text-text-primary mb-3">
-              Choose how to import each custom Goodreads shelf as a label.
+              Choose how to import each {source === "storygraph" ? "StoryGraph tag" : "custom Goodreads shelf"} as a label.
             </p>
             <ul className="divide-y divide-border border border-border rounded-lg overflow-hidden">
               {sortedShelves.map(([shelf, count]) => {
@@ -822,10 +828,21 @@ export default function ImportForm({ username }: { username: string }) {
       )}
 
       <div className="text-sm text-text-primary space-y-1">
-        <p>Export your library from Goodreads:</p>
-        <p className="text-text-primary">
-          My Books &rarr; Import and Export &rarr; Export Library &rarr; Download
-        </p>
+        {source === "storygraph" ? (
+          <>
+            <p>Export your library from StoryGraph:</p>
+            <p className="text-text-primary">
+              Settings &rarr; Manage Account &rarr; Export StoryGraph Library
+            </p>
+          </>
+        ) : (
+          <>
+            <p>Export your library from Goodreads:</p>
+            <p className="text-text-primary">
+              My Books &rarr; Import and Export &rarr; Export Library &rarr; Download
+            </p>
+          </>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
