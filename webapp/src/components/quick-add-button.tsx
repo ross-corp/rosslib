@@ -46,7 +46,7 @@ export default function QuickAddButton({
         open_library_id: openLibraryId,
         title,
         cover_url: coverUrl,
-        status_value_id: value.id,
+        status_slug: value.slug,
       }),
     });
     setLoading(false);
