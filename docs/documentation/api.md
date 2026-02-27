@@ -135,6 +135,27 @@ Optional `year_min` and `year_max` filter results by publication year. Meilisear
 
 `authors`, `isbn`, and `cover_url` may be null.
 
+### `GET /books/popular`
+
+Returns up to 12 popular books from the local catalog, ordered by reads count. Draws from the `book_stats` table. Used as the landing state on the search page when no query is entered.
+
+```json
+[
+  {
+    "key": "OL82592W",
+    "title": "The Great Gatsby",
+    "authors": ["F. Scott Fitzgerald"],
+    "cover_url": "https://covers.openlibrary.org/b/id/8410459-M.jpg",
+    "publish_year": 1925,
+    "average_rating": 4.2,
+    "rating_count": 15,
+    "already_read_count": 42
+  }
+]
+```
+
+Returns an empty array if no books have stats yet.
+
 ### `GET /books/lookup?isbn=<isbn>`
 
 Looks up a single book by ISBN via Open Library. Upserts the result into the local `books` table and returns it. Returns 404 if not found.
