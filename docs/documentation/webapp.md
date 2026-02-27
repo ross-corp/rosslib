@@ -348,6 +348,10 @@ Client component displaying a reading goal progress bar on user profile pages. S
 
 Client component on the settings page for setting an annual reading goal. Calls `PUT /api/me/goals/:year` to create or update the goal.
 
+### `BlockButton` (`components/block-button.tsx`)
+
+Client component on user profile pages. Shows "Block" button that opens an inline confirmation prompt. After blocking, the page reloads to show the restricted view. When already blocked, shows "Unblock" button instead. Calls `POST /api/users/:username/block` and `DELETE /api/users/:username/block`.
+
 ---
 
 ## Adding a new page

@@ -37,6 +37,19 @@ Asymmetric social graph.
 
 PK: `(follower_id, followee_id)`
 
+### `blocks`
+
+User blocking. Blocking hides the blocked user's reviews, removes them from search results and feed, and prevents following in either direction.
+
+| Column | Type | Notes |
+|---|---|---|
+| blocker | uuid FK → users (cascade) | the user who initiated the block |
+| blocked | uuid FK → users (cascade) | the user being blocked |
+| created | timestamptz | auto |
+
+Unique: `(blocker, blocked)`
+Index: `blocked`
+
 ### `books`
 
 Global catalog. Not per-user. Records are upserted by `open_library_id` when a user first adds a book to any shelf.
@@ -242,6 +255,7 @@ Indexes: `(user_id, created_at DESC)`, `(created_at DESC)`.
 
 ```
 users ──< follows >── users
+users ──< blocks >── users
 users ──< user_books >── books
 users ──< collections ──< collection_items >── books  (tag collections)
 users ──< tag_keys ──< tag_values

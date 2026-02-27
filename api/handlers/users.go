@@ -39,8 +39,17 @@ func SearchUsers(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusOK, []any{})
 		}
 
+		// Filter out blocked users if viewer is authenticated
+		viewerID := ""
+		if e.Auth != nil {
+			viewerID = e.Auth.Id
+		}
+
 		var results []map[string]any
 		for _, r := range records {
+			if viewerID != "" && r.Id != viewerID && isBlockedEitherDirection(app, viewerID, r.Id) {
+				continue
+			}
 			var avatarURL *string
 			if av := r.GetString("avatar"); av != "" {
 				url := "/api/files/" + r.Collection().Id + "/" + r.Id + "/" + av
@@ -144,12 +153,21 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			viewerID = e.Auth.Id
 		}
 
-		isRestricted := user.GetBool("is_private") && !canViewProfile(app, viewerID, user)
+		// Check if blocked in either direction
+		blockedByViewer := false
+		blockedByTarget := false
+		if viewerID != "" && viewerID != user.Id {
+			blockedByViewer = isBlocked(app, viewerID, user.Id)
+			blockedByTarget = isBlocked(app, user.Id, viewerID)
+		}
+		isBlockedEither := blockedByViewer || blockedByTarget
+
+		isRestricted := isBlockedEither || (user.GetBool("is_private") && !canViewProfile(app, viewerID, user))
 
 		// Compute stats
 		followStatus := "none"
 		isFollowing := false
-		if viewerID != "" && viewerID != user.Id {
+		if viewerID != "" && viewerID != user.Id && !isBlockedEither {
 			follows, err := app.FindRecordsByFilter("follows",
 				"follower = {:viewer} && followee = {:target}",
 				"", 1, 0,
@@ -239,6 +257,7 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			"books_this_year": booksThisYear.Count,
 			"average_rating":  avgRating.Avg,
 			"is_restricted":   isRestricted,
+			"is_blocked":      blockedByViewer,
 		}
 
 		return e.JSON(http.StatusOK, result)
@@ -684,6 +703,11 @@ func FollowUser(app core.App) func(e *core.RequestEvent) error {
 
 		if target.Id == user.Id {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Cannot follow yourself"})
+		}
+
+		// Check if blocked in either direction
+		if isBlockedEitherDirection(app, user.Id, target.Id) {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Cannot follow this user"})
 		}
 
 		// Check if already following

@@ -48,7 +48,7 @@ func main() {
 		se.Router.GET("/authors/{authorKey}", handlers.GetAuthorDetail(app))
 
 		// ── Users (public / optional auth) ───────────────────────
-		se.Router.GET("/users", handlers.SearchUsers(app))
+		se.Router.GET("/users", handlers.SearchUsers(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}", handlers.GetProfile(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/reviews", handlers.GetUserReviews(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/books", handlers.GetUserBooks(app)).BindFunc(handlers.OptionalAuthFunc(app))
@@ -121,6 +121,11 @@ func main() {
 		// Follow
 		authed.POST("/users/{username}/follow", handlers.FollowUser(app))
 		authed.DELETE("/users/{username}/follow", handlers.UnfollowUser(app))
+
+		// Block
+		authed.POST("/users/{username}/block", handlers.BlockUser(app))
+		authed.DELETE("/users/{username}/block", handlers.UnblockUser(app))
+		authed.GET("/users/{username}/block", handlers.CheckBlock(app))
 		authed.GET("/me/follow-requests", handlers.GetFollowRequests(app))
 		authed.POST("/me/follow-requests/{userId}/accept", handlers.AcceptFollowRequest(app))
 		authed.DELETE("/me/follow-requests/{userId}/reject", handlers.RejectFollowRequest(app))

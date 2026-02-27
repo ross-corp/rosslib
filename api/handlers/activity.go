@@ -172,6 +172,8 @@ func GetFeed(app core.App) func(e *core.RequestEvent) error {
 
 		query := activitySelectClause + `
 			WHERE a.user IN (SELECT followee FROM follows WHERE follower = {:user} AND status = 'active')
+			AND a.user NOT IN (SELECT blocked FROM blocks WHERE blocker = {:user})
+			AND a.user NOT IN (SELECT blocker FROM blocks WHERE blocked = {:user})
 		`
 		params := map[string]any{"user": user.Id}
 

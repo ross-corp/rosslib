@@ -51,6 +51,12 @@ func tagSlugify(s string) string {
 
 // canViewProfile checks whether viewer can see target user's profile.
 func canViewProfile(app core.App, viewerID string, targetUser *core.Record) bool {
+	if viewerID != "" && viewerID != targetUser.Id {
+		// Blocked in either direction — deny access
+		if isBlockedEitherDirection(app, viewerID, targetUser.Id) {
+			return false
+		}
+	}
 	if !targetUser.GetBool("is_private") {
 		return true
 	}
