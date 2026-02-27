@@ -326,17 +326,19 @@ func GetShelfDetail(app core.App) func(e *core.RequestEvent) error {
 		shelf := shelves[0]
 
 		type bookRow struct {
-			BookID   string   `db:"book_id" json:"book_id"`
-			OLID     string   `db:"open_library_id" json:"open_library_id"`
-			Title    string   `db:"title" json:"title"`
-			CoverURL *string  `db:"cover_url" json:"cover_url"`
-			AddedAt  string   `db:"added_at" json:"added_at"`
-			Rating   *float64 `db:"rating" json:"rating"`
+			BookID         string   `db:"book_id" json:"book_id"`
+			OLID           string   `db:"open_library_id" json:"open_library_id"`
+			Title          string   `db:"title" json:"title"`
+			CoverURL       *string  `db:"cover_url" json:"cover_url"`
+			AddedAt        string   `db:"added_at" json:"added_at"`
+			Rating         *float64 `db:"rating" json:"rating"`
+			SeriesPosition *int     `db:"series_position" json:"series_position"`
 		}
 		var books []bookRow
 		_ = app.DB().NewQuery(`
 			SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url,
-				   ci.created as added_at, ci.rating
+				   ci.created as added_at, ci.rating,
+				   (SELECT bs.position FROM book_series bs WHERE bs.book = b.id LIMIT 1) as series_position
 			FROM collection_items ci
 			JOIN books b ON ci.book = b.id
 			WHERE ci.collection = {:coll}

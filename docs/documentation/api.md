@@ -184,7 +184,7 @@ Returns `422` if no barcode is detected (with a `hint` field), `404` if the ISBN
 
 Returns book details by its bare OL work ID (e.g. `OL82592W`). Fetches enriched data from Open Library with local fallback. 404 if not found.
 
-The `authors` field returns an array of objects with `name` (string) and `key` (string or null). The `key` is the bare OL author ID (e.g. `OL23919A`) when available from Open Library, or `null` for local-only records. Includes a `subjects` array (up to 10 strings) sourced from the Open Library work's `subjects` field, with a fallback to the local book record's comma-separated `subjects` column.
+The `authors` field returns an array of objects with `name` (string) and `key` (string or null). The `key` is the bare OL author ID (e.g. `OL23919A`) when available from Open Library, or `null` for local-only records. Includes a `subjects` array (up to 10 strings) sourced from the Open Library work's `subjects` field, with a fallback to the local book record's comma-separated `subjects` column. Response also includes a `series` array (or null) with the book's series memberships, each containing `series_id`, `name`, and `position`.
 
 ```json
 { "authors": [{ "name": "Author Name", "key": "OL23919A" }] }
@@ -481,6 +481,53 @@ List books you follow, newest first.
 ```
 
 `authors` and `cover_url` may be null.
+
+---
+
+## Series
+
+### `GET /books/:workId/series`
+
+Returns series memberships for a book.
+
+```json
+[
+  { "series_id": "abc123", "name": "The Lord of the Rings", "description": null, "position": 3 }
+]
+```
+
+### `GET /series/:seriesId`  *(optional auth)*
+
+Returns series details with an ordered list of books. If authenticated, each book includes `viewer_status` (the logged-in user's reading status slug, e.g. `"finished"`).
+
+```json
+{
+  "id": "abc123",
+  "name": "The Lord of the Rings",
+  "description": "...",
+  "books": [
+    {
+      "book_id": "...",
+      "open_library_id": "OL27448W",
+      "title": "The Fellowship of the Ring",
+      "cover_url": "...",
+      "authors": "J.R.R. Tolkien",
+      "position": 1,
+      "viewer_status": "finished"
+    }
+  ]
+}
+```
+
+### `POST /books/:workId/series`  *(auth required)*
+
+Add a book to a series. Finds or creates the series by name.
+
+```json
+{ "series_name": "The Lord of the Rings", "position": 3 }
+```
+
+Returns `201` on new link, `200` if the link already exists (position is updated if provided).
 
 ---
 

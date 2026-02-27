@@ -387,6 +387,28 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 			subjects = []string{}
 		}
 
+		// Get series memberships
+		type seriesMembership struct {
+			SeriesID string `db:"series_id" json:"series_id"`
+			Name     string `db:"name" json:"name"`
+			Position *int   `db:"position" json:"position"`
+		}
+		var seriesList []seriesMembership
+		if len(localBooks) > 0 {
+			_ = app.DB().NewQuery(`
+				SELECT s.id as series_id, s.name, bs.position
+				FROM book_series bs
+				JOIN series s ON bs.series = s.id
+				WHERE bs.book = {:book}
+				ORDER BY s.name
+			`).Bind(map[string]any{"book": localBooks[0].Id}).All(&seriesList)
+		}
+
+		var seriesOut any
+		if len(seriesList) > 0 {
+			seriesOut = seriesList
+		}
+
 		return e.JSON(http.StatusOK, map[string]any{
 			"key":                     workID,
 			"title":                   title,
@@ -402,6 +424,7 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 			"first_publish_year":      firstPubYear,
 			"edition_count":           editionCount,
 			"subjects":                subjects,
+			"series":                  seriesOut,
 		})
 	}
 }

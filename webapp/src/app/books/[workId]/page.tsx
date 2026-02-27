@@ -27,6 +27,12 @@ type BookEdition = {
   language: string;
 };
 
+type BookSeriesMembership = {
+  series_id: string;
+  name: string;
+  position: number | null;
+};
+
 type BookDetail = {
   key: string;
   title: string;
@@ -43,6 +49,7 @@ type BookDetail = {
   edition_count: number;
   editions: BookEdition[] | null;
   subjects: string[];
+  series: BookSeriesMembership[] | null;
 };
 
 type BookReview = {
@@ -312,6 +319,22 @@ export default async function BookPage({
             <h1 className="text-2xl font-bold text-text-primary mb-1">
               {book.title}
             </h1>
+
+            {book.series && book.series.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-1">
+                {book.series.map((s) => (
+                  <Link
+                    key={s.series_id}
+                    href={`/series/${s.series_id}`}
+                    className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
+                  >
+                    {s.position != null
+                      ? `Book ${s.position} in ${s.name}`
+                      : s.name}
+                  </Link>
+                ))}
+              </div>
+            )}
 
             {book.authors && book.authors.length > 0 && (
               <p className="text-text-primary text-sm mb-1">

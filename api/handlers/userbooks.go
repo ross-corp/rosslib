@@ -431,20 +431,22 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 		// If status filter provided, return flat list
 		if statusFilter != "" {
 			type bookRow struct {
-				BookID   string   `db:"book_id" json:"book_id"`
-				OLID     string   `db:"open_library_id" json:"open_library_id"`
-				Title    string   `db:"title" json:"title"`
-				CoverURL *string  `db:"cover_url" json:"cover_url"`
-				Authors  *string  `db:"authors" json:"authors"`
-				Rating   *float64 `db:"rating" json:"rating"`
-				AddedAt  string   `db:"added_at" json:"added_at"`
+				BookID         string   `db:"book_id" json:"book_id"`
+				OLID           string   `db:"open_library_id" json:"open_library_id"`
+				Title          string   `db:"title" json:"title"`
+				CoverURL       *string  `db:"cover_url" json:"cover_url"`
+				Authors        *string  `db:"authors" json:"authors"`
+				Rating         *float64 `db:"rating" json:"rating"`
+				AddedAt        string   `db:"added_at" json:"added_at"`
+				SeriesPosition *int     `db:"series_position" json:"series_position"`
 			}
 			var books []bookRow
 			if statusFilter == "_unstatused" {
 				err := app.DB().NewQuery(`
 					SELECT b.id as book_id, b.open_library_id, b.title,
 						   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
-						   b.authors, ub.rating, ub.date_added as added_at
+						   b.authors, ub.rating, ub.date_added as added_at,
+						   (SELECT bs.position FROM book_series bs WHERE bs.book = b.id LIMIT 1) as series_position
 					FROM user_books ub
 					JOIN books b ON ub.book = b.id
 					WHERE ub.user = {:user}
@@ -463,7 +465,8 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 				err := app.DB().NewQuery(`
 					SELECT b.id as book_id, b.open_library_id, b.title,
 						   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
-						   b.authors, ub.rating, ub.date_added as added_at
+						   b.authors, ub.rating, ub.date_added as added_at,
+						   (SELECT bs.position FROM book_series bs WHERE bs.book = b.id LIMIT 1) as series_position
 					FROM user_books ub
 					JOIN books b ON ub.book = b.id
 					JOIN book_tag_values btv ON btv.user = ub.user AND btv.book = ub.book
@@ -499,13 +502,15 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 				ProgressPages   *int     `db:"progress_pages" json:"progress_pages"`
 				ProgressPercent *int     `db:"progress_percent" json:"progress_percent"`
 				PageCount       *int     `db:"page_count" json:"page_count"`
+				SeriesPosition  *int     `db:"series_position" json:"series_position"`
 			}
 			var books []bookRow
 			_ = app.DB().NewQuery(`
 				SELECT b.id as book_id, b.open_library_id, b.title,
 					   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
 					   ub.rating, ub.date_added as added_at,
-					   ub.progress_pages, ub.progress_percent, b.page_count
+					   ub.progress_pages, ub.progress_percent, b.page_count,
+					   (SELECT bs.position FROM book_series bs WHERE bs.book = b.id LIMIT 1) as series_position
 				FROM book_tag_values btv
 				JOIN books b ON btv.book = b.id
 				LEFT JOIN user_books ub ON ub.user = btv.user AND ub.book = btv.book
@@ -541,18 +546,20 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 
 		// Fetch unstatused books
 		type unstatusedBookRow struct {
-			BookID   string   `db:"book_id" json:"book_id"`
-			OLID     string   `db:"open_library_id" json:"open_library_id"`
-			Title    string   `db:"title" json:"title"`
-			CoverURL *string  `db:"cover_url" json:"cover_url"`
-			Rating   *float64 `db:"rating" json:"rating"`
-			AddedAt  string   `db:"added_at" json:"added_at"`
+			BookID         string   `db:"book_id" json:"book_id"`
+			OLID           string   `db:"open_library_id" json:"open_library_id"`
+			Title          string   `db:"title" json:"title"`
+			CoverURL       *string  `db:"cover_url" json:"cover_url"`
+			Rating         *float64 `db:"rating" json:"rating"`
+			AddedAt        string   `db:"added_at" json:"added_at"`
+			SeriesPosition *int     `db:"series_position" json:"series_position"`
 		}
 		var unstatusedBooks []unstatusedBookRow
 		_ = app.DB().NewQuery(`
 			SELECT b.id as book_id, b.open_library_id, b.title,
 				   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
-				   ub.rating, ub.date_added as added_at
+				   ub.rating, ub.date_added as added_at,
+				   (SELECT bs.position FROM book_series bs WHERE bs.book = b.id LIMIT 1) as series_position
 			FROM user_books ub
 			JOIN books b ON ub.book = b.id
 			WHERE ub.user = {:user}
