@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import Link from "next/link";
 import Nav from "@/components/nav";
 import "./globals.css";
 
@@ -34,7 +35,10 @@ export default function RootLayout({
         <footer className="border-t border-border">
           <div className="max-w-shell mx-auto px-6 py-4 flex items-center justify-between font-mono text-xs text-text-tertiary">
             <span>rosslib</span>
-            <span>better than goodreads</span>
+            <div className="flex items-center gap-4">
+              <Link href="/feedback" className="hover:text-text-secondary transition-colors">feedback</Link>
+              <span>better than goodreads</span>
+            </div>
           </div>
         </footer>
       </body>

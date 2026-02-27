@@ -456,6 +456,24 @@ Average rating is computed as `rating_sum / rating_count` at query time.
 
 API: `GET /books/:workId/stats` returns all cached stats. `GET /books/:workId` reads `reads_count` and `want_to_read_count` from this table instead of running the expensive aggregate query.
 
+### `feedback`
+
+User-submitted bug reports and feature requests. Moderators can toggle status via the admin panel.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user | uuid FK → users (cascade) | submitter |
+| type | select | `bug` or `feature` |
+| title | text | required |
+| description | text | required |
+| steps_to_reproduce | text | nullable; bug reports only |
+| severity | select | nullable; `low`, `medium`, or `high`; bug reports only |
+| status | select | `open` or `closed`; default `open` |
+| created | timestamptz | PocketBase auto-generated |
+
+Indexes: `user`, `status`.
+
 ---
 
 ## Planned tables (not yet in schema.go)

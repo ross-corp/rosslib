@@ -148,8 +148,13 @@ func main() {
 		authed.DELETE("/books/{workId}/follow", handlers.UnfollowBook(app))
 		authed.GET("/me/followed-books", handlers.GetFollowedBooks(app))
 
+		// Feedback
+		authed.POST("/feedback", handlers.CreateFeedback(app))
+
 		// ── Admin routes ─────────────────────────────────────────
 		admin := se.Router.Group("/admin").Bind(apis.RequireAuth()).BindFunc(handlers.RequireModerator(app))
+		admin.GET("/feedback", handlers.GetFeedback(app))
+		admin.PATCH("/feedback/{feedbackId}", handlers.UpdateFeedbackStatus(app))
 		admin.POST("/ghosts/seed", handlers.SeedGhosts(app))
 		admin.POST("/ghosts/simulate", handlers.SimulateGhosts(app))
 		admin.GET("/ghosts/status", handlers.GetGhostStatus(app))

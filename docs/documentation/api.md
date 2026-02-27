@@ -1258,6 +1258,68 @@ Approve or reject a pending community link edit. Approved edits are applied to t
 
 ---
 
+## Feedback
+
+### `POST /feedback`  *(auth required)*
+
+Submit a bug report or feature request.
+
+```json
+{
+  "type": "bug",
+  "title": "Search results don't load",
+  "description": "When I search for a book, the page stays blank.",
+  "steps_to_reproduce": "1. Go to search\n2. Type a query\n3. See blank page",
+  "severity": "high"
+}
+```
+
+`type` is `"bug"` or `"feature"`. For bug reports, `steps_to_reproduce` (optional) and `severity` (`"low"`, `"medium"`, `"high"`, optional) are accepted. Feature requests only need `title` and `description`.
+
+```
+201 { "id": "...", "created_at": "..." }
+400 { "error": "title and description are required" }
+400 { "error": "type must be bug or feature" }
+```
+
+### `GET /admin/feedback?status=open`  *(moderator required)*
+
+List feedback submissions. Filterable by `status` (`open`, `closed`). Returns all submissions sorted by newest first.
+
+```json
+[
+  {
+    "id": "...",
+    "user_id": "...",
+    "username": "alice",
+    "display_name": "Alice",
+    "type": "bug",
+    "title": "Search results don't load",
+    "description": "When I search...",
+    "steps_to_reproduce": "1. Go to search...",
+    "severity": "high",
+    "status": "open",
+    "created_at": "2026-02-25T14:00:00Z"
+  }
+]
+```
+
+### `PATCH /admin/feedback/:feedbackId`  *(moderator required)*
+
+Toggle feedback status between open and closed.
+
+```json
+{ "status": "closed" }
+```
+
+```
+200 { "ok": true, "status": "closed" }
+400 { "error": "status must be open or closed" }
+404 { "error": "Feedback not found" }
+```
+
+---
+
 ## Notifications
 
 ### `GET /me/notifications`  *(auth required)*

@@ -80,6 +80,7 @@ webapp/src/app/
 ├── scan/page.tsx                   ISBN barcode scanner
 ├── library/compare/page.tsx        compare lists (set operations)
 ├── notifications/page.tsx          notification center
+├── feedback/page.tsx              bug report & feature request form
 ├── admin/page.tsx                 admin panel (moderator only)
 ├── [username]/
 │   ├── page.tsx                    public profile (incl. computed lists section)
@@ -117,6 +118,9 @@ webapp/src/app/
     ├── links/[linkId]/route.ts                    ← DELETE community link
     ├── links/[linkId]/vote/route.ts               ← POST, DELETE vote on link
     ├── links/[linkId]/edits/route.ts              ← POST propose link edit
+    ├── feedback/route.ts                           ← POST submit feedback
+    ├── admin/feedback/route.ts                    ← GET list feedback (admin)
+    ├── admin/feedback/[feedbackId]/route.ts       ← PATCH toggle feedback status (admin)
     ├── admin/users/route.ts                       ← GET admin user list
     ├── admin/users/[userId]/moderator/route.ts    ← PUT grant/revoke moderator
     ├── admin/link-edits/route.ts                  ← GET list link edits
@@ -206,6 +210,14 @@ Client component for community links (related books) on book detail pages. Shows
 ### `AdminUserList` (`components/admin-user-list.tsx`)
 
 Client component for the `/admin` page. Provides a searchable, paginated table of all users with inline moderator toggle buttons. Moderators see a filled "Moderator" button; non-moderators see a "Grant" button. Search is debounced (300ms) and queries by username, display name, or email.
+
+### `AdminFeedback` (`components/admin-feedback.tsx`)
+
+Client component for the `/admin` page. Displays user-submitted bug reports and feature requests with status filter tabs (open/closed). Each item shows the type badge (bug/feature), severity badge for bugs, title, description, steps to reproduce (for bugs), and a close/reopen button. Calls `GET /api/admin/feedback` and `PATCH /api/admin/feedback/:id`.
+
+### `FeedbackForm` (`components/feedback-form.tsx`)
+
+Client component for the `/feedback` page. Two-tab form for submitting bug reports or feature requests. Bug report tab includes title, description, steps to reproduce, and severity dropdown. Feature request tab includes title and description. Calls `POST /api/feedback`.
 
 ### `AdminLinkEdits` (`components/admin-link-edits.tsx`)
 
