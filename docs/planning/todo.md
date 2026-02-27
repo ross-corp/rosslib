@@ -4,8 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## quick wins
 
-- [ ] Validate `rating` is in range 1–5 in `AddBook` and `UpdateBook`. In `api/handlers/userbooks.go` (~line 64), the rating is applied with no bounds check. Add validation that rejects ratings outside 1–5 with a 400 error. The `user_books` schema defines rating as 1–5 — without handler validation, out-of-range values fail at the DB layer with an opaque error.
-
 - [ ] Add max-length validation to thread title and body in `CreateThread`. In `api/handlers/threads.go` (~lines 115–117), only non-empty checks exist. Add length limits: title max 500 chars (matching the schema `varchar(500)`), body max 10,000 chars. Return a 400 with a clear message if exceeded, rather than letting it fail at the DB layer.
 
 - [ ] Add max-length validation to `display_name` in `UpdateProfile`. In `api/handlers/users.go` (~lines 229–237), display_name is applied with no length check. The schema says `varchar(100)` — validate at the handler level and return a clear 400 error. Also consider a reasonable max length for `bio` (e.g. 2000 chars).
@@ -87,3 +85,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add series metadata](https://github.com/ross-corp/rosslib/pull/60) — Series and book_series collections, API endpoints, book detail series badges, /series/:id page, shelf grid position badges
 - [Add StoryGraph CSV import](https://github.com/ross-corp/rosslib/pull/61) — StoryGraph preview/commit endpoints, status mapping, tag import, tabbed import page
 - [Fix homepage feature grid responsiveness](https://github.com/ross-corp/rosslib/pull/62) — Add responsive breakpoints (1-col mobile, 2-col sm, 3-col lg) to feature grid
+- [Add rating validation to AddBook and UpdateBook](https://github.com/ross-corp/rosslib/pull/64) — Validate rating is in range 1-5 with clear 400 error
