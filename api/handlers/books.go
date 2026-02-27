@@ -280,6 +280,15 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 			}
 		}
 
+		// Fetch edition count from OL
+		var editionCount int
+		editionsData, edErr := ol.get(fmt.Sprintf("/works/%s/editions.json?limit=0", workID))
+		if edErr == nil {
+			if size, ok := editionsData["size"].(float64); ok {
+				editionCount = int(size)
+			}
+		}
+
 		// Get local stats
 		var avgRating *float64
 		var ratingCount, readsCount, wtrCount int
@@ -312,6 +321,7 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 			"publisher":               nil,
 			"page_count":              pageCount,
 			"first_publish_year":      firstPubYear,
+			"edition_count":           editionCount,
 		})
 	}
 }
