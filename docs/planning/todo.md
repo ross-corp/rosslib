@@ -12,8 +12,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## search & browse
 
-- [ ] Add an empty/landing state to the search page when no query is entered. When navigating to `/search` with no query param, the page is blank. Show a "Start typing to search for books, authors, or people" message, and optionally show trending/popular books from `book_stats` as a discovery surface.
-
 - [ ] Add sort options to the browse-all-users page. In `webapp/src/app/users/page.tsx`, users are listed in registration order (`-created`). Add a sort dropdown with options: "Newest", "Most books", "Most followers". Pass the sort parameter to the `GET /users/search` endpoint (may need to add sort support to the API handler in `api/handlers/users.go` `SearchUsers`).
 
 ## book detail & discovery
@@ -72,3 +70,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add empty states for profile sections on own profile](https://github.com/ross-corp/rosslib/pull/76) — Show helpful empty state messages for Currently Reading, Recent Reviews, and Recent Activity on own profile
 - [Add followers/following list pages](https://github.com/ross-corp/rosslib/pull/77) — Followers/following API endpoints with privacy checks, paginated list pages with user cards and follow buttons
 - [Add user avatars to People search results](https://github.com/ross-corp/rosslib/pull/78) — Render avatar images with letter fallback on People search tab
+- [Add empty/landing state to search page](https://github.com/ross-corp/rosslib/pull/79) — Show prompt message and popular books grid when no query is entered
