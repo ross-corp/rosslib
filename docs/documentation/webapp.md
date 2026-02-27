@@ -79,7 +79,8 @@ webapp/src/app/
 │   ├── export/page.tsx             CSV export
 │   ├── tags/page.tsx               label category management
 │   ├── ghost-activity/page.tsx     ghost user controls
-│   └── follow-requests/page.tsx    pending follow requests
+│   ├── follow-requests/page.tsx    pending follow requests
+│   └── followed-books/page.tsx     manage followed books
 ├── scan/page.tsx                   ISBN barcode scanner
 ├── library/compare/page.tsx        compare lists (set operations)
 ├── notifications/page.tsx          notification center

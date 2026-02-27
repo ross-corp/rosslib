@@ -952,11 +952,12 @@ func GetFollowedBooks(app core.App) func(e *core.RequestEvent) error {
 		type bookRow struct {
 			OLID     string  `db:"open_library_id" json:"open_library_id"`
 			Title    string  `db:"title" json:"title"`
+			Authors  string  `db:"authors" json:"-"`
 			CoverURL *string `db:"cover_url" json:"cover_url"`
 		}
 		var books []bookRow
 		err := app.DB().NewQuery(`
-			SELECT b.open_library_id, b.title, b.cover_url
+			SELECT b.open_library_id, b.title, b.authors, b.cover_url
 			FROM book_follows bf
 			JOIN books b ON bf.book = b.id
 			WHERE bf.user = {:user}
@@ -965,6 +966,15 @@ func GetFollowedBooks(app core.App) func(e *core.RequestEvent) error {
 		if err != nil {
 			return e.JSON(http.StatusOK, []any{})
 		}
-		return e.JSON(http.StatusOK, books)
+		result := make([]map[string]any, len(books))
+		for i, b := range books {
+			result[i] = map[string]any{
+				"open_library_id": b.OLID,
+				"title":           b.Title,
+				"authors":         splitAuthors(b.Authors),
+				"cover_url":       b.CoverURL,
+			}
+		}
+		return e.JSON(http.StatusOK, result)
 	}
 }
