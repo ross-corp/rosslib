@@ -6,9 +6,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## stats & data
 
-
-- [ ] Return `edition_count` in the `GetBookDetail` response. In `api/handlers/books.go`, the `GetBookDetail` response (line 302) does not include `edition_count`. The OL works API response (`/works/{id}.json`) does not include edition count directly, but the search API does (see `SearchBooks` line 91 which reads `doc["edition_count"]`). To get the count in the detail handler, either: (a) call `/works/{workId}/editions.json?limit=0` and read the `size` field from the response, or (b) call `/search.json?q=key:/works/{workId}&fields=edition_count` to get it from the search index. Option (a) is simpler. Add the result to the response JSON as `"edition_count"`. The frontend type `BookDetail` in `webapp/src/app/books/[workId]/page.tsx` already declares `edition_count: number` and conditionally renders "Editions (N)".
-
 - [ ] Populate `average_rating`, `rating_count`, and `already_read_count` for local book results in `SearchBooks`. In `api/handlers/books.go` (lines 30–44), the loop over `localBooks` hardcodes `average_rating: nil`, `rating_count: 0`, and `already_read_count: 0`. For each local book, look up its `book_stats` record by `book = b.Id`. Compute `average_rating` as `rating_sum / rating_count` (when `rating_count > 0`), and use `reads_count` for `already_read_count`. The `book_stats` table already has all these fields precomputed. Either batch-fetch stats for all local book IDs before the loop, or fetch per-book inside the loop (the result set is at most 20 books). The `BookList` component already renders star ratings via `StarRating` and read counts — they're just always empty for cached books.
 
 ## notifications & feed
@@ -82,3 +79,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Populate friends_count on profile endpoint](https://github.com/ross-corp/rosslib/pull/67) — Count mutual follows (friends) instead of hardcoded 0
 - [Populate books_this_year on profile endpoint](https://github.com/ross-corp/rosslib/pull/68) — Count finished books with date_read in current calendar year
 - [Populate page_count and publisher from local book records](https://github.com/ross-corp/rosslib/pull/69) — Add migration for page_count/publisher columns and populate from local data in GetBookDetail
+- [Return edition_count in GetBookDetail response](https://github.com/ross-corp/rosslib/pull/70) — Fetch edition count from OL editions endpoint and include in book detail JSON
