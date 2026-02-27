@@ -302,6 +302,150 @@ func GetUserReviews(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// GetUserFollowers handles GET /users/{username}/followers
+func GetUserFollowers(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		username := e.Request.PathValue("username")
+
+		users, err := app.FindRecordsByFilter("users",
+			"username = {:username}", "", 1, 0,
+			map[string]any{"username": username},
+		)
+		if err != nil || len(users) == 0 {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "User not found"})
+		}
+		user := users[0]
+		collID := user.Collection().Id
+
+		viewerID := ""
+		if e.Auth != nil {
+			viewerID = e.Auth.Id
+		}
+		if user.GetBool("is_private") && !canViewProfile(app, viewerID, user) {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Profile is private"})
+		}
+
+		page, _ := strconv.Atoi(e.Request.URL.Query().Get("page"))
+		if page < 1 {
+			page = 1
+		}
+		limit, _ := strconv.Atoi(e.Request.URL.Query().Get("limit"))
+		if limit <= 0 || limit > 50 {
+			limit = 50
+		}
+		offset := (page - 1) * limit
+
+		type followerRow struct {
+			UserID      string  `db:"user_id"`
+			Username    string  `db:"username"`
+			DisplayName *string `db:"display_name"`
+			Avatar      string  `db:"avatar"`
+		}
+
+		var rows []followerRow
+		err = app.DB().NewQuery(`
+			SELECT u.id as user_id, u.username, u.display_name, u.avatar
+			FROM follows f
+			JOIN users u ON f.follower = u.id
+			WHERE f.followee = {:user} AND f.status = 'active'
+			ORDER BY f.created DESC
+			LIMIT {:limit} OFFSET {:offset}
+		`).Bind(map[string]any{"user": user.Id, "limit": limit, "offset": offset}).All(&rows)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		results := make([]map[string]any, 0, len(rows))
+		for _, r := range rows {
+			var avatarURL *string
+			if r.Avatar != "" {
+				u := "/api/files/" + collID + "/" + r.UserID + "/" + r.Avatar
+				avatarURL = &u
+			}
+			results = append(results, map[string]any{
+				"user_id":      r.UserID,
+				"username":     r.Username,
+				"display_name": r.DisplayName,
+				"avatar_url":   avatarURL,
+			})
+		}
+
+		return e.JSON(http.StatusOK, results)
+	}
+}
+
+// GetUserFollowing handles GET /users/{username}/following
+func GetUserFollowing(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		username := e.Request.PathValue("username")
+
+		users, err := app.FindRecordsByFilter("users",
+			"username = {:username}", "", 1, 0,
+			map[string]any{"username": username},
+		)
+		if err != nil || len(users) == 0 {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "User not found"})
+		}
+		user := users[0]
+		collID := user.Collection().Id
+
+		viewerID := ""
+		if e.Auth != nil {
+			viewerID = e.Auth.Id
+		}
+		if user.GetBool("is_private") && !canViewProfile(app, viewerID, user) {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Profile is private"})
+		}
+
+		page, _ := strconv.Atoi(e.Request.URL.Query().Get("page"))
+		if page < 1 {
+			page = 1
+		}
+		limit, _ := strconv.Atoi(e.Request.URL.Query().Get("limit"))
+		if limit <= 0 || limit > 50 {
+			limit = 50
+		}
+		offset := (page - 1) * limit
+
+		type followingRow struct {
+			UserID      string  `db:"user_id"`
+			Username    string  `db:"username"`
+			DisplayName *string `db:"display_name"`
+			Avatar      string  `db:"avatar"`
+		}
+
+		var rows []followingRow
+		err = app.DB().NewQuery(`
+			SELECT u.id as user_id, u.username, u.display_name, u.avatar
+			FROM follows f
+			JOIN users u ON f.followee = u.id
+			WHERE f.follower = {:user} AND f.status = 'active'
+			ORDER BY f.created DESC
+			LIMIT {:limit} OFFSET {:offset}
+		`).Bind(map[string]any{"user": user.Id, "limit": limit, "offset": offset}).All(&rows)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		results := make([]map[string]any, 0, len(rows))
+		for _, r := range rows {
+			var avatarURL *string
+			if r.Avatar != "" {
+				u := "/api/files/" + collID + "/" + r.UserID + "/" + r.Avatar
+				avatarURL = &u
+			}
+			results = append(results, map[string]any{
+				"user_id":      r.UserID,
+				"username":     r.Username,
+				"display_name": r.DisplayName,
+				"avatar_url":   avatarURL,
+			})
+		}
+
+		return e.JSON(http.StatusOK, results)
+	}
+}
+
 // UpdateProfile handles PATCH /users/me
 func UpdateProfile(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {

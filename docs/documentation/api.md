@@ -623,6 +623,44 @@ Content-type is detected from the file's magic bytes — the `Content-Type` head
 
 The returned URL is stored in `users.avatar_url` and returned on subsequent `GET /users/:username` calls. In production, point `MINIO_PUBLIC_URL` to the S3 bucket or CDN origin — the URL format is `{MINIO_PUBLIC_URL}/{MINIO_BUCKET}/avatars/{userId}.{ext}`.
 
+### `GET /users/:username/followers`  *(optional auth)*
+
+Returns a paginated list of users who follow this user. Respects privacy — returns 403 for private profiles the viewer doesn't follow.
+
+**Query parameters:**
+- `page` *(optional, default 1)* — page number
+- `limit` *(optional, default 50, max 50)* — results per page
+
+```json
+[
+  {
+    "user_id": "...",
+    "username": "bob",
+    "display_name": "Bob",
+    "avatar_url": "/api/files/..."
+  }
+]
+```
+
+### `GET /users/:username/following`  *(optional auth)*
+
+Returns a paginated list of users this user follows. Respects privacy — returns 403 for private profiles the viewer doesn't follow.
+
+**Query parameters:**
+- `page` *(optional, default 1)* — page number
+- `limit` *(optional, default 50, max 50)* — results per page
+
+```json
+[
+  {
+    "user_id": "...",
+    "username": "alice",
+    "display_name": "Alice",
+    "avatar_url": "/api/files/..."
+  }
+]
+```
+
 ### `GET /users/:username/reviews`
 
 Returns all reviews (collection items with non-empty `review_text`) for a user, ordered by date added descending.

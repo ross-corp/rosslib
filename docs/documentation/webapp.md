@@ -89,6 +89,8 @@ webapp/src/app/
 ├── [username]/
 │   ├── page.tsx                    public profile (incl. computed lists section)
 │   ├── shelves/[slug]/page.tsx     shelf page (owner gets library manager)
+│   ├── followers/page.tsx          followers list
+│   ├── following/page.tsx          following list
 │   ├── tags/[...path]/page.tsx     tag browsing page
 │   └── labels/[keySlug]/[...valuePath]/page.tsx   label browsing page (nested)
 └── api/                            Next.js proxy route handlers
@@ -146,6 +148,8 @@ webapp/src/app/
     ├── me/notifications/[notifId]/read/route.ts   ← POST mark one read
     ├── me/notification-preferences/route.ts     ← GET, PUT notification prefs
     └── users/[username]/
+        ├── followers/route.ts                     ← GET followers list
+        ├── following/route.ts                     ← GET following list
         ├── tags/[...path]/route.ts
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
         └── shelves/[slug]/route.ts                ← GET (for client-side shelf switching)
