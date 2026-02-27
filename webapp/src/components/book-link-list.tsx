@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import ReportButton from "@/components/report-button";
 
 type BookLink = {
   id: string;
@@ -504,6 +505,9 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                               <path d="M8.5 1.5l2 2L4 10H2v-2L8.5 1.5Z" />
                             </svg>
                           </button>
+                        )}
+                        {isLoggedIn && currentUsername !== link.username && (
+                          <ReportButton contentType="link" contentId={link.id} />
                         )}
                         {isLoggedIn && (currentUsername === link.username || isModerator) && (
                           <button

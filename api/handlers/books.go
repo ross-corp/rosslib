@@ -499,6 +499,7 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		type reviewRow struct {
+			UserBookID  string   `db:"user_book_id" json:"user_book_id"`
 			UserID      string   `db:"user_id" json:"user_id"`
 			Username    string   `db:"username" json:"username"`
 			DisplayName *string  `db:"display_name" json:"display_name"`
@@ -512,7 +513,7 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 
 		var reviews []reviewRow
 		err := app.DB().NewQuery(`
-			SELECT ub.user as user_id, u.username, u.display_name, u.avatar,
+			SELECT ub.id as user_book_id, ub.user as user_id, u.username, u.display_name, u.avatar,
 				   ub.rating, ub.review_text, ub.spoiler, ub.date_read,
 				   ub.date_added as date_added
 			FROM user_books ub
@@ -546,6 +547,7 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 			}
 
 			result = append(result, map[string]any{
+				"user_book_id": r.UserBookID,
 				"username":     r.Username,
 				"display_name": r.DisplayName,
 				"avatar_url":   avatarURL,

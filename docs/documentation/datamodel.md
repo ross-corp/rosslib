@@ -402,6 +402,8 @@ author_works_snapshot        (OL author key → work count snapshot)
 collections ──< computed_collections  (operation definition for live lists)
 books ──< book_stats               (precomputed aggregate stats)
 users ──< pending_imports          (unmatched import rows)
+users ──< reports                  (content reports, reviewer)
+
 ```
 
 ### `genre_ratings`
@@ -494,6 +496,24 @@ User-submitted bug reports and feature requests. Moderators can toggle status vi
 | created | timestamptz | PocketBase auto-generated |
 
 Indexes: `user`, `status`.
+
+### `reports`
+
+User-submitted content reports. Moderators can review or dismiss reports via the admin panel. A unique constraint on `(reporter, content_type, content_id)` prevents duplicate reports from the same user on the same content.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| reporter | uuid FK → users (cascade) | who submitted the report |
+| content_type | select | `review`, `thread`, `comment`, or `link` |
+| content_id | text | required; ID of the reported content (e.g. user_books ID, thread ID, etc.) |
+| reason | select | `spam`, `harassment`, `inappropriate`, or `other` |
+| details | text | nullable; additional context from the reporter |
+| status | select | `pending`, `reviewed`, or `dismissed`; default `pending` |
+| reviewer | uuid FK → users | nullable; moderator who reviewed |
+| created | timestamptz | PocketBase auto-generated |
+
+Indexes: `status`, unique on `(reporter, content_type, content_id)`.
 
 ### `pending_imports`
 

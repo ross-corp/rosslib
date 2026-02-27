@@ -172,9 +172,14 @@ func main() {
 		authed.GET("/me/feedback", handlers.GetMyFeedback(app))
 		authed.DELETE("/me/feedback/{feedbackId}", handlers.DeleteMyFeedback(app))
 
+		// Reports
+		authed.POST("/reports", handlers.CreateReport(app))
+
 		// ── Admin routes ─────────────────────────────────────────
 		admin := se.Router.Group("/admin").Bind(apis.RequireAuth()).BindFunc(handlers.RequireModerator(app))
 		admin.GET("/feedback", handlers.GetFeedback(app))
+		admin.GET("/reports", handlers.GetReports(app))
+		admin.PATCH("/reports/{reportId}", handlers.UpdateReportStatus(app))
 		admin.PATCH("/feedback/{feedbackId}", handlers.UpdateFeedbackStatus(app))
 		admin.DELETE("/feedback/{feedbackId}", handlers.DeleteFeedback(app))
 		admin.POST("/ghosts/seed", handlers.SeedGhosts(app))

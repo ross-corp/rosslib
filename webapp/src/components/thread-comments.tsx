@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import ReportButton from "@/components/report-button";
 
 type Comment = {
   id: string;
@@ -133,6 +134,9 @@ function CommentItem({
                 Delete
               </button>
             )}
+            {isLoggedIn && !isOwner && (
+              <ReportButton contentType="comment" contentId={comment.id} />
+            )}
           </div>
 
           {/* Reply form */}
@@ -200,15 +204,20 @@ function CommentItem({
                   </span>
                 </div>
                 <CommentBody text={reply.body} />
-                {currentUserId === reply.user_id && (
-                  <button
-                    type="button"
-                    onClick={() => onDelete(reply.id)}
-                    className="text-xs text-red-400 hover:text-red-600 transition-colors mt-1"
-                  >
-                    Delete
-                  </button>
-                )}
+                <div className="flex items-center gap-3 mt-1">
+                  {currentUserId === reply.user_id && (
+                    <button
+                      type="button"
+                      onClick={() => onDelete(reply.id)}
+                      className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  )}
+                  {isLoggedIn && currentUserId !== reply.user_id && (
+                    <ReportButton contentType="comment" contentId={reply.id} />
+                  )}
+                </div>
               </div>
             </div>
           ))}
