@@ -9,9 +9,17 @@ type UserRow = {
 
 const PER_PAGE = 20;
 
-async function fetchUsers(page: number): Promise<UserRow[]> {
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest" },
+  { value: "books", label: "Most books" },
+  { value: "followers", label: "Most followers" },
+] as const;
+
+type SortValue = (typeof SORT_OPTIONS)[number]["value"];
+
+async function fetchUsers(page: number, sort: SortValue): Promise<UserRow[]> {
   const res = await fetch(
-    `${process.env.API_URL}/users?page=${page}`,
+    `${process.env.API_URL}/users?page=${page}&sort=${sort}`,
     { cache: "no-store" }
   );
   if (!res.ok) return [];
@@ -22,12 +30,26 @@ async function fetchUsers(page: number): Promise<UserRow[]> {
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; sort?: string }>;
 }) {
-  const { page: pageParam = "1" } = await searchParams;
+  const { page: pageParam = "1", sort: sortParam = "newest" } =
+    await searchParams;
   const page = Math.max(1, parseInt(pageParam, 10) || 1);
-  const users = await fetchUsers(page);
+  const sort = SORT_OPTIONS.some((o) => o.value === sortParam)
+    ? (sortParam as SortValue)
+    : "newest";
+  const users = await fetchUsers(page, sort);
   const has_next = users.length >= PER_PAGE;
+
+  function buildHref(params: { page?: number; sort?: string }) {
+    const p = params.page ?? page;
+    const s = params.sort ?? sort;
+    const qs = new URLSearchParams();
+    if (p > 1) qs.set("page", String(p));
+    if (s !== "newest") qs.set("sort", s);
+    const str = qs.toString();
+    return `/users${str ? `?${str}` : ""}`;
+  }
 
   return (
     <div className="min-h-screen">
@@ -40,6 +62,25 @@ export default async function UsersPage({
           >
             Search users
           </Link>
+        </div>
+
+        <div className="flex items-center gap-2 mb-6">
+          <span className="text-sm text-text-secondary">Sort by:</span>
+          <div className="flex gap-1">
+            {SORT_OPTIONS.map((option) => (
+              <Link
+                key={option.value}
+                href={buildHref({ sort: option.value, page: 1 })}
+                className={`text-sm px-3 py-1 rounded-md transition-colors ${
+                  sort === option.value
+                    ? "bg-surface-2 text-text-primary font-medium"
+                    : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+                }`}
+              >
+                {option.label}
+              </Link>
+            ))}
+          </div>
         </div>
 
         {users.length === 0 ? (
@@ -85,7 +126,7 @@ export default async function UsersPage({
           <div className="flex items-center gap-4 mt-8">
             {page > 1 ? (
               <Link
-                href={`/users?page=${page - 1}`}
+                href={buildHref({ page: page - 1 })}
                 className="text-sm text-text-primary hover:text-text-primary transition-colors"
               >
                 &larr; Previous
@@ -95,7 +136,7 @@ export default async function UsersPage({
             )}
             {has_next && (
               <Link
-                href={`/users?page=${page + 1}`}
+                href={buildHref({ page: page + 1 })}
                 className="text-sm text-text-primary hover:text-text-primary transition-colors ml-auto"
               >
                 Next &rarr;

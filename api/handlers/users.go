@@ -7,16 +7,23 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// SearchUsers handles GET /users?q=...
+// SearchUsers handles GET /users?q=...&sort=newest|books|followers
 func SearchUsers(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		q := e.Request.URL.Query().Get("q")
+		sort := e.Request.URL.Query().Get("sort")
 		page, _ := strconv.Atoi(e.Request.URL.Query().Get("page"))
 		if page < 1 {
 			page = 1
 		}
 		perPage := 20
 		offset := (page - 1) * perPage
+
+		// For "books" and "followers" sorts we need subquery ordering,
+		// so use raw SQL. For "newest" (default), use FindRecordsByFilter.
+		if sort == "books" || sort == "followers" {
+			return searchUsersSorted(app, e, q, sort, perPage, offset)
+		}
 
 		filter := "1=1"
 		params := map[string]any{}
@@ -50,6 +57,70 @@ func SearchUsers(app core.App) func(e *core.RequestEvent) error {
 
 		return e.JSON(http.StatusOK, results)
 	}
+}
+
+func searchUsersSorted(app core.App, e *core.RequestEvent, q, sort string, perPage, offset int) error {
+	usersColl, err := app.FindCollectionByNameOrId("users")
+	if err != nil {
+		return e.JSON(http.StatusOK, []any{})
+	}
+	collID := usersColl.Id
+
+	var orderBy string
+	var joinClause string
+	switch sort {
+	case "books":
+		joinClause = "LEFT JOIN user_books ub ON ub.\"user\" = u.id"
+		orderBy = "COUNT(ub.id) DESC, u.created DESC"
+	case "followers":
+		joinClause = "LEFT JOIN follows f ON f.followee = u.id AND f.status = 'active'"
+		orderBy = "COUNT(f.id) DESC, u.created DESC"
+	}
+
+	whereClause := "1=1"
+	params := map[string]any{"limit": perPage, "offset": offset}
+	if q != "" {
+		whereClause = "(u.username LIKE {:q} OR u.display_name LIKE {:q})"
+		params["q"] = "%" + q + "%"
+	}
+
+	type userRow struct {
+		ID          string  `db:"id"`
+		Username    string  `db:"username"`
+		DisplayName *string `db:"display_name"`
+		Avatar      *string `db:"avatar"`
+	}
+
+	var rows []userRow
+	err = app.DB().NewQuery(`
+		SELECT u.id, u.username, u.display_name, u.avatar
+		FROM users u
+		` + joinClause + `
+		WHERE ` + whereClause + `
+		GROUP BY u.id
+		ORDER BY ` + orderBy + `
+		LIMIT {:limit} OFFSET {:offset}
+	`).Bind(params).All(&rows)
+	if err != nil {
+		return e.JSON(http.StatusOK, []any{})
+	}
+
+	results := make([]map[string]any, 0, len(rows))
+	for _, r := range rows {
+		var avatarURL *string
+		if r.Avatar != nil && *r.Avatar != "" {
+			url := "/api/files/" + collID + "/" + r.ID + "/" + *r.Avatar
+			avatarURL = &url
+		}
+		results = append(results, map[string]any{
+			"user_id":      r.ID,
+			"username":     r.Username,
+			"display_name": r.DisplayName,
+			"avatar_url":   avatarURL,
+		})
+	}
+
+	return e.JSON(http.StatusOK, results)
 }
 
 // GetProfile handles GET /users/{username}
