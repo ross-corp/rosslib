@@ -10,8 +10,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## profile & social
 
-- [ ] Show reading progress on other users' "Currently Reading" profile section. Currently, visiting another user's profile shows their currently-reading books as covers only. The `progress_percent` data is available in the API response — render a small progress bar or percentage beneath each book cover, matching how it looks on your own profile.
-
 - [ ] Add a "Want to Read" section to the profile page. In `webapp/src/app/[username]/page.tsx`, the profile only renders `currently-reading` and `favorites`. Add a "Want to Read" section showing a grid of book covers from the user's want-to-read collection, similar to the "Currently Reading" section. The data is already fetched via the profile's status groups — it just needs to be rendered.
 
 - [ ] Add empty states for profile sections on own profile. When viewing your own profile: if `recentReviews` is empty, show "You haven't written any reviews yet" with a subtle CTA. If `recentActivity` is empty, show "No activity yet — add a book to get started." If "Currently Reading" is empty, show "Nothing on the nightstand? Search for a book to start reading." These only show on the logged-in user's own profile, not on other users' profiles.
@@ -77,3 +75,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Populate book stats for local search results](https://github.com/ross-corp/rosslib/pull/71) — Batch-fetch book_stats for local results to populate average_rating, rating_count, and already_read_count
 - [Add distinct icons per notification type](https://github.com/ross-corp/rosslib/pull/72) — Type-specific SVG icons for notification types (book, chat, link, star) with bell fallback
 - [Add click-to-mark-read on individual notifications](https://github.com/ross-corp/rosslib/pull/73) — Click unread dot to mark single notification as read with optimistic UI update
+- [Show reading progress on other users' profiles](https://github.com/ross-corp/rosslib/pull/74) — Include progress_pages, progress_percent, page_count in GetUserBooks grouped status response
