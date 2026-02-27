@@ -6,7 +6,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## stats & data
 
-- [ ] Return `page_count` and `publisher` from local book records in `GetBookDetail`. In `api/handlers/books.go`, `pageCount` (line 235) and `publisher` (line 312, hardcoded `nil`) are never populated from local data. The local `books` table has both columns. In the existing local fallback block (line 272, `if title == "" && len(localBooks) > 0`), add: `if pc := localBooks[0].GetInt("page_count"); pc > 0 { pageCount = &pc }` and read `publisher` similarly. Also populate them unconditionally when `localBooks` exist (not just on OL failure) since OL work data doesn't include these fields — they come from editions data which is already stored locally. The book detail page header already renders `page_count` when present.
 
 - [ ] Return `edition_count` in the `GetBookDetail` response. In `api/handlers/books.go`, the `GetBookDetail` response (line 302) does not include `edition_count`. The OL works API response (`/works/{id}.json`) does not include edition count directly, but the search API does (see `SearchBooks` line 91 which reads `doc["edition_count"]`). To get the count in the detail handler, either: (a) call `/works/{workId}/editions.json?limit=0` and read the `size` field from the response, or (b) call `/search.json?q=key:/works/{workId}&fields=edition_count` to get it from the search index. Option (a) is simpler. Add the result to the response JSON as `"edition_count"`. The frontend type `BookDetail` in `webapp/src/app/books/[workId]/page.tsx` already declares `edition_count: number` and conditionally renders "Editions (N)".
 
@@ -82,3 +81,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add max-length validation to profile fields](https://github.com/ross-corp/rosslib/pull/66) — display_name max 100 chars, bio max 2000 chars with clear 400 errors
 - [Populate friends_count on profile endpoint](https://github.com/ross-corp/rosslib/pull/67) — Count mutual follows (friends) instead of hardcoded 0
 - [Populate books_this_year on profile endpoint](https://github.com/ross-corp/rosslib/pull/68) — Count finished books with date_read in current calendar year
+- [Populate page_count and publisher from local book records](https://github.com/ross-corp/rosslib/pull/69) — Add migration for page_count/publisher columns and populate from local data in GetBookDetail
