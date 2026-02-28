@@ -13,8 +13,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 ## book detail & discovery
 
 
-- [ ] Add review comments / discussion under reviews. Create a `review_comments` table via migration: `id` (uuid PK), `user_id` (FK → users, cascade), `book_id` (FK → books, cascade), `review_user_id` (FK → users, cascade — the review author), `body` (text, max 2000 chars), `created_at`, `deleted_at` (timestamptz, nullable — soft delete). API endpoints in `api/handlers/reviewcomments.go`: `GET /books/:workId/reviews/:userId/comments` (list comments on a review, paginated), `POST /books/:workId/reviews/:userId/comments` (add comment), `DELETE /review-comments/:commentId` (author or moderator). Generate a `review_comment` notification for the review author. On the book detail page, show a comment count per review and a toggle to expand/collapse the comment thread under each review. Webapp proxy routes for all endpoints.
-
 ## settings & account
 
 - [ ] Add label descriptions. Add a `description` column (text, nullable, max 1000 chars) to `collections` via migration. Update `POST /me/shelves` and `PATCH /me/shelves/:id` in `api/handlers/collections.go` to accept and persist `description`. Return it in `GET /users/:username/shelves` and label detail responses. On the label detail page, render the description below the label name. On the create/edit label form, add a textarea for description. Don't add descriptions to the three default status labels (Want to Read, Currently Reading, Read).
@@ -74,3 +72,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add 'more by this author' section on book detail page](https://github.com/ross-corp/rosslib/pull/107) — "More by {Author}" section with up to 6 book covers, reuses existing author works endpoint
 - [Add book quotes/highlights](https://github.com/ross-corp/rosslib/pull/108) — book_quotes collection, CRUD API endpoints, BookQuoteList component on book detail page with public/private toggle
 - [Add thread locking for moderators](https://github.com/ross-corp/rosslib/pull/109) — locked_at column on threads, lock/unlock endpoints, locked banner and mod toggle on frontend
+- [Add review comments / discussion under reviews](https://github.com/ross-corp/rosslib/pull/110) — review_comments collection, GET/POST/DELETE endpoints, ReviewComments component on book detail page with notifications
