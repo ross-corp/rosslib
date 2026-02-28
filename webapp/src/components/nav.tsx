@@ -26,13 +26,17 @@ export default async function Nav() {
         >
           rosslib
         </Link>
-        <form action="/search" method="get" className="flex-1 max-w-xs">
+        <form action="/search" method="get" className="flex-1 max-w-xs relative">
           <input
+            id="nav-search"
             name="q"
             type="search"
             placeholder="Search books..."
-            className="w-full px-3 py-1 text-sm bg-surface-2 border border-border rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent focus:border-transparent"
+            className="w-full px-3 py-1 pr-12 text-sm bg-surface-2 border border-border rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent focus:border-transparent"
           />
+          <kbd className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[10px] font-mono text-text-tertiary bg-surface-1 border border-border rounded px-1 py-0.5 leading-none">
+            ⌘K
+          </kbd>
         </form>
         <nav className="flex items-center gap-1 ml-auto shrink-0">
           <NavDropdown label="browse" items={browseItems} />
