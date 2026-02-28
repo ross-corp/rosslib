@@ -71,8 +71,10 @@ webapp/src/app/
 ├── forgot-password/page.tsx          forgot password (request reset link)
 ├── reset-password/page.tsx           set new password (from email link)
 ├── search/page.tsx                 book + user + author search (shows popular books when no query)
+├── search/loading.tsx              search loading skeleton
 ├── users/page.tsx                  browse all users (sort by newest/books/followers)
 ├── books/[workId]/page.tsx         single book page (shows series badges below title)
+├── books/[workId]/loading.tsx     book detail loading skeleton
 ├── series/[seriesId]/page.tsx     series detail — ordered book list with covers & reading progress
 ├── settings/
 │   ├── page.tsx                    profile settings
@@ -89,8 +91,10 @@ webapp/src/app/
 ├── recommendations/page.tsx       received book recommendations
 ├── feedback/page.tsx              bug report & feature request form
 ├── admin/page.tsx                 admin panel (moderator only)
+├── feed/loading.tsx                feed loading skeleton
 ├── [username]/
 │   ├── page.tsx                    public profile (incl. computed lists section)
+│   ├── loading.tsx                 profile loading skeleton
 │   ├── stats/page.tsx              detailed reading statistics
 │   ├── shelves/[slug]/page.tsx     label page (owner gets library manager)
 │   ├── followers/page.tsx          followers list
@@ -323,6 +327,18 @@ Client component for genre dimension ratings on book detail pages. Shows aggrega
 ### `BookScanner` (`components/book-scanner.tsx`)
 
 Client component for the `/scan` page. Three input modes: Camera (uses browser `BarcodeDetector` API for real-time EAN-13 scanning on supported devices), Upload (sends image to `POST /api/books/scan` for server-side barcode detection via gozxing), and Enter ISBN (manual input via `GET /api/books/lookup`). Detected books are displayed with cover, metadata, and a StatusPicker for quick library addition. Supports scanning multiple books in a session with a history list.
+
+### `Skeleton` (`components/skeleton.tsx`)
+
+Pulsing placeholder component for loading states. Accepts `width`, `height`, and `variant` ("text", "circular", "rectangular") props. Uses a custom `animate-skeleton-pulse` animation defined in `tailwind.config.ts`. Also exports composed skeletons:
+- `BookGridSkeleton` — grid of cover-sized rectangles matching the `ShelfBookGrid` layout
+- `ProfileSkeleton` — avatar circle, heading lines, stats, and sidebar placeholders matching the profile page
+- `ReviewSkeleton` — avatar + text lines matching the reviews section
+- `BookDetailSkeleton` — full book detail page placeholder (cover, metadata, reviews)
+- `FeedSkeleton` — activity feed placeholder (heading + activity rows)
+- `SearchSkeleton` — search page placeholder (input, tabs, result rows)
+
+Used via Next.js `loading.tsx` files in `app/feed/`, `app/[username]/`, `app/books/[workId]/`, and `app/search/` to show loading states while server components fetch data.
 
 ### `StarRating` (`components/star-rating.tsx`)
 
