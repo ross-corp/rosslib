@@ -125,6 +125,7 @@ func UpdateBook(app core.App) func(e *core.RequestEvent) error {
 			Spoiler                 *bool    `json:"spoiler"`
 			DateRead                *string  `json:"date_read"`
 			DateDnf                 *string  `json:"date_dnf"`
+			DateStarted             *string  `json:"date_started"`
 			ProgressPages           *int     `json:"progress_pages"`
 			ProgressPercent         *int     `json:"progress_percent"`
 			StatusSlug              *string  `json:"status_slug"`
@@ -152,6 +153,9 @@ func UpdateBook(app core.App) func(e *core.RequestEvent) error {
 		}
 		if data.DateDnf != nil {
 			ub.Set("date_dnf", *data.DateDnf)
+		}
+		if data.DateStarted != nil {
+			ub.Set("date_started", *data.DateStarted)
 		}
 		if data.ProgressPages != nil {
 			ub.Set("progress_pages", *data.ProgressPages)
@@ -255,7 +259,7 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusOK, map[string]any{
 				"status_value_id": nil, "status_name": nil, "status_slug": nil,
 				"rating": nil, "review_text": nil, "spoiler": false,
-				"date_read": nil, "date_dnf": nil,
+				"date_read": nil, "date_dnf": nil, "date_started": nil,
 				"progress_pages": nil, "progress_percent": nil,
 				"selected_edition_key": nil, "selected_edition_cover_url": nil,
 			})
@@ -278,6 +282,7 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 			"spoiler":                   false,
 			"date_read":                 nil,
 			"date_dnf":                  nil,
+			"date_started":              nil,
 			"progress_pages":            nil,
 			"progress_percent":          nil,
 			"selected_edition_key":      nil,
@@ -298,6 +303,9 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 			}
 			if dd := ub.GetString("date_dnf"); dd != "" {
 				result["date_dnf"] = dd
+			}
+			if ds := ub.GetString("date_started"); ds != "" {
+				result["date_started"] = ds
 			}
 			if pp := ub.GetInt("progress_pages"); pp > 0 {
 				result["progress_pages"] = pp
@@ -654,4 +662,17 @@ func setStatusTag(app core.App, userID, bookID, statusSlug string) {
 	rec.Set("tag_key", key.Id)
 	rec.Set("tag_value", targetValue.Id)
 	_ = app.Save(rec)
+
+	// Auto-set date_started when status changes to "currently-reading"
+	if statusSlug == "currently-reading" {
+		ubs, _ := app.FindRecordsByFilter("user_books",
+			"user = {:user} && book = {:book}",
+			"", 1, 0,
+			map[string]any{"user": userID, "book": bookID},
+		)
+		if len(ubs) > 0 && ubs[0].GetString("date_started") == "" {
+			ubs[0].Set("date_started", time.Now().UTC().Format(time.RFC3339))
+			_ = app.Save(ubs[0])
+		}
+	}
 }

@@ -607,7 +607,8 @@ func ExportCSV(app core.App) func(e *core.RequestEvent) error {
 
 		query := `
 			SELECT b.open_library_id, b.title, b.authors, b.isbn13,
-				   ub.rating, ub.review_text, ub.date_read, ub.date_added as date_added,
+				   ub.rating, ub.review_text, ub.date_started, ub.date_read,
+				   ub.date_added as date_added,
 				   COALESCE(tv.slug, '') as status
 			FROM user_books ub
 			JOIN books b ON ub.book = b.id
@@ -620,15 +621,16 @@ func ExportCSV(app core.App) func(e *core.RequestEvent) error {
 		params := map[string]any{"user": user.Id}
 
 		type row struct {
-			OLID       string   `db:"open_library_id"`
-			Title      string   `db:"title"`
-			Authors    *string  `db:"authors"`
-			ISBN13     *string  `db:"isbn13"`
-			Rating     *float64 `db:"rating"`
-			ReviewText *string  `db:"review_text"`
-			DateRead   *string  `db:"date_read"`
-			DateAdded  string   `db:"date_added"`
-			Status     string   `db:"status"`
+			OLID        string   `db:"open_library_id"`
+			Title       string   `db:"title"`
+			Authors     *string  `db:"authors"`
+			ISBN13      *string  `db:"isbn13"`
+			Rating      *float64 `db:"rating"`
+			ReviewText  *string  `db:"review_text"`
+			DateStarted *string  `db:"date_started"`
+			DateRead    *string  `db:"date_read"`
+			DateAdded   string   `db:"date_added"`
+			Status      string   `db:"status"`
 		}
 		var rows []row
 		err := app.DB().NewQuery(query).Bind(params).All(&rows)
@@ -638,15 +640,16 @@ func ExportCSV(app core.App) func(e *core.RequestEvent) error {
 
 		// Build CSV
 		var sb strings.Builder
-		sb.WriteString("Open Library ID,Title,Authors,ISBN13,Rating,Review,Date Read,Date Added,Status\n")
+		sb.WriteString("Open Library ID,Title,Authors,ISBN13,Rating,Review,Date Started,Date Read,Date Added,Status\n")
 		for _, r := range rows {
-			sb.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+			sb.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
 				csvEscape(r.OLID),
 				csvEscape(r.Title),
 				csvEscape(ptrStr(r.Authors)),
 				csvEscape(ptrStr(r.ISBN13)),
 				csvFloat(r.Rating),
 				csvEscape(ptrStr(r.ReviewText)),
+				csvEscape(ptrStr(r.DateStarted)),
 				csvEscape(ptrStr(r.DateRead)),
 				csvEscape(r.DateAdded),
 				csvEscape(r.Status),

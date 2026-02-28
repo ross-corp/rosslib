@@ -81,6 +81,7 @@ type MyBookStatus = {
   spoiler: boolean;
   date_read: string | null;
   date_dnf: string | null;
+  date_started: string | null;
   progress_pages: number | null;
   progress_percent: number | null;
   device_total_pages: number | null;
@@ -473,6 +474,7 @@ export default async function BookPage({
               initialSpoiler={myStatus.spoiler}
               initialDateRead={myStatus.date_read}
               initialDateDnf={myStatus.date_dnf}
+              initialDateStarted={myStatus.date_started}
               statusSlug={myStatus.status_slug}
             />
           </section>

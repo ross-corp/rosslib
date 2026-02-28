@@ -20,6 +20,7 @@ type Props = {
   initialSpoiler: boolean;
   initialDateRead: string | null;
   initialDateDnf: string | null;
+  initialDateStarted: string | null;
   statusSlug: string | null;
 };
 
@@ -30,6 +31,7 @@ export default function BookReviewEditor({
   initialSpoiler,
   initialDateRead,
   initialDateDnf,
+  initialDateStarted,
   statusSlug,
 }: Props) {
   const [rating, setRating] = useState<number | null>(initialRating);
@@ -40,6 +42,9 @@ export default function BookReviewEditor({
   );
   const [dateDnf, setDateDnf] = useState(
     initialDateDnf ? initialDateDnf.slice(0, 10) : ""
+  );
+  const [dateStarted, setDateStarted] = useState(
+    initialDateStarted ? initialDateStarted.slice(0, 10) : ""
   );
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -58,7 +63,8 @@ export default function BookReviewEditor({
     reviewText !== (initialReviewText ?? "") ||
     spoiler !== initialSpoiler ||
     dateRead !== (initialDateRead ? initialDateRead.slice(0, 10) : "") ||
-    dateDnf !== (initialDateDnf ? initialDateDnf.slice(0, 10) : "");
+    dateDnf !== (initialDateDnf ? initialDateDnf.slice(0, 10) : "") ||
+    dateStarted !== (initialDateStarted ? initialDateStarted.slice(0, 10) : "");
 
   // savedRating tracks what's persisted so we know if a star click is a change
   const [savedRating, setSavedRating] = useState<number | null>(initialRating);
@@ -185,6 +191,9 @@ export default function BookReviewEditor({
     if (dateDnf !== (initialDateDnf ? initialDateDnf.slice(0, 10) : "")) {
       body.date_dnf = dateDnf || null;
     }
+    if (dateStarted !== (initialDateStarted ? initialDateStarted.slice(0, 10) : "")) {
+      body.date_started = dateStarted || null;
+    }
 
     const ok = await patchFields(body);
     if (ok) {
@@ -214,6 +223,7 @@ export default function BookReviewEditor({
           spoiler: false,
           date_read: null,
           date_dnf: null,
+          date_started: null,
         }),
       }
     );
@@ -225,6 +235,7 @@ export default function BookReviewEditor({
       setSpoiler(false);
       setDateRead("");
       setDateDnf("");
+      setDateStarted("");
       setExpanded(false);
       setMessage("Review cleared");
       setTimeout(() => setMessage(null), 2000);
@@ -233,6 +244,7 @@ export default function BookReviewEditor({
     }
   }
 
+  const showDateStarted = statusSlug === "currently-reading" || statusSlug === "finished";
   const showDateRead = statusSlug === "finished";
   const showDateDnf = statusSlug === "dnf";
 
@@ -266,6 +278,15 @@ export default function BookReviewEditor({
                   ) : null}
                   <ReviewText text={initialReviewText} />
                 </div>
+              )}
+              {initialDateStarted && (
+                <p className="text-xs text-text-primary mt-1">
+                  Started {new Date(initialDateStarted).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </p>
               )}
               {initialDateRead && (
                 <p className="text-xs text-text-primary mt-1">
@@ -344,6 +365,19 @@ export default function BookReviewEditor({
                   Contains spoilers
                 </label>
 
+                {showDateStarted && (
+                  <label className="flex items-center gap-1.5 text-text-primary">
+                    Date started
+                    <input
+                      type="date"
+                      value={dateStarted}
+                      onChange={(e) => setDateStarted(e.target.value)}
+                      disabled={saving}
+                      className="border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
+                    />
+                  </label>
+                )}
+
                 {showDateRead && (
                   <label className="flex items-center gap-1.5 text-text-primary">
                     Date read
@@ -388,6 +422,7 @@ export default function BookReviewEditor({
                     setSpoiler(initialSpoiler);
                     setDateRead(initialDateRead ? initialDateRead.slice(0, 10) : "");
                     setDateDnf(initialDateDnf ? initialDateDnf.slice(0, 10) : "");
+                    setDateStarted(initialDateStarted ? initialDateStarted.slice(0, 10) : "");
                     setExpanded(false);
                   }}
                   disabled={saving}
