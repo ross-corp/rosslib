@@ -4,8 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## quick wins
 
-- [ ] Add confirmation dialog when removing a book from library. In `webapp/src/components/shelf-picker.tsx` (or wherever the "Remove from library" action lives), wrap the `DELETE /api/me/books/:olId` call with a confirmation modal: "Remove *{title}* from your library? Your rating, review, and reading progress will be deleted." Use a simple dialog component — no external dependency needed. The confirm button should be red/destructive styled. Cancel closes the dialog with no action.
-
 - [ ] Add toast notifications for user actions. Create a minimal toast system in `webapp/src/components/toast.tsx` — a React context provider with `useToast()` hook exposing `toast.success(message)` and `toast.error(message)`. Render toasts as fixed-position banners in the bottom-right, auto-dismiss after 4 seconds. Wire it into existing actions: book added to library, status changed, review saved, follow/unfollow, import complete. No external dependency — just a context + CSS transitions.
 
 - [ ] Add book cover fallback placeholder. When a book has no `cover_url`, the UI currently shows a broken image or blank space. Create a `BookCoverPlaceholder` component in `webapp/src/components/book-cover-placeholder.tsx` that renders a styled div with the book title text and author in a muted color on a neutral background. Use it as the fallback everywhere book covers are rendered: search results, label grids, profile sections, book detail page. Check all places that render `<img>` with a book cover URL and add an `onError` fallback or conditional render.
@@ -96,3 +94,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 ## Pending PRs
 
 - [Add sort options to owner library view and tag/label endpoints](https://github.com/ross-corp/rosslib/pull/90) — sort dropdown in LibraryManager + sort param on tags/labels API endpoints
+- [Add confirmation dialog when removing books from library](https://github.com/ross-corp/rosslib/pull/91) — reusable ConfirmDialog component, applied to shelf grid, library manager bulk remove, and shelf picker
