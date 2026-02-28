@@ -324,6 +324,14 @@ Client component for genre dimension ratings on book detail pages. Shows aggrega
 
 Client component for the `/scan` page. Three input modes: Camera (uses browser `BarcodeDetector` API for real-time EAN-13 scanning on supported devices), Upload (sends image to `POST /api/books/scan` for server-side barcode detection via gozxing), and Enter ISBN (manual input via `GET /api/books/lookup`). Detected books are displayed with cover, metadata, and a StatusPicker for quick library addition. Supports scanning multiple books in a session with a history list.
 
+### `KeyboardShortcuts` (`components/keyboard-shortcuts.tsx`)
+
+Client component rendered in the root layout. Registers global keyboard shortcuts via the `useKeyboardShortcuts` hook: `/` focuses the search input, `Escape` closes any open modal or blurs the focused element, and `?` toggles a shortcuts help overlay. All shortcuts except `Escape` are suppressed when an input or textarea is focused. Shows a "Press ? for shortcuts" hint in the bottom-right corner for logged-in users.
+
+### `KeyboardShortcutsOverlay` (`components/keyboard-shortcuts-overlay.tsx`)
+
+Client component rendered by `KeyboardShortcuts` when the help overlay is open. Lists all available keyboard shortcuts in a modal with `kbd` badges. Closes on backdrop click or `Escape`.
+
 ### `StarRating` (`components/star-rating.tsx`)
 
 Read-only star display used on label book cards.
