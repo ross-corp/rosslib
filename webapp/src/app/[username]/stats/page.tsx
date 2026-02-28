@@ -79,6 +79,12 @@ export default async function StatsPage({
           <h1 className="text-2xl font-bold text-text-primary mt-2">
             Reading Stats
           </h1>
+          <Link
+            href={`/${username}/year-in-review`}
+            className="text-sm text-accent hover:underline mt-1 inline-block"
+          >
+            Year in Review &rarr;
+          </Link>
         </div>
 
         {/* Summary cards */}

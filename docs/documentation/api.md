@@ -1351,6 +1351,62 @@ Returns detailed reading statistics for a user. Respects privacy settings — re
 - `books_by_month` — finished books in the current year grouped by month
 - `rating_distribution` — count of books per star rating (1-5)
 
+### `GET /users/:username/year-in-review?year=<YYYY>`  *(optional auth)*
+
+Returns a year-in-review summary for a user. Defaults to the current year. Respects profile privacy settings.
+
+```json
+{
+  "year": 2025,
+  "total_books": 42,
+  "total_pages": 12500,
+  "average_rating": 3.8,
+  "highest_rated": {
+    "open_library_id": "OL82592W",
+    "title": "The Great Gatsby",
+    "cover_url": "https://...",
+    "rating": 5
+  },
+  "longest_book": {
+    "open_library_id": "OL27448W",
+    "title": "The Lord of the Rings",
+    "cover_url": "https://...",
+    "page_count": 1200
+  },
+  "shortest_book": {
+    "open_library_id": "OL12345W",
+    "title": "Animal Farm",
+    "cover_url": "https://...",
+    "page_count": 112
+  },
+  "top_genres": [
+    { "name": "Fiction", "count": 20 },
+    { "name": "Fantasy", "count": 8 }
+  ],
+  "books_by_month": [
+    {
+      "month": 1,
+      "count": 5,
+      "books": [
+        {
+          "open_library_id": "OL82592W",
+          "title": "The Great Gatsby",
+          "cover_url": "https://...",
+          "rating": 4
+        }
+      ]
+    }
+  ],
+  "available_years": [2025, 2024, 2023]
+}
+```
+
+- `highest_rated`, `longest_book`, `shortest_book` are null when no qualifying books exist
+- `average_rating` is null when no books are rated
+- `top_genres` derived from books' `subjects` field; top 5 by count
+- `books_by_month` only includes months with books; each month includes book covers
+- `available_years` lists all years the user has finished books (for year selector)
+
 ### `GET /users/:username/activity`
 
 Returns recent activity for a specific user. Same response format as `/me/feed`. Cursor-based pagination.
