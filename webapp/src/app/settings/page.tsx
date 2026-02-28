@@ -13,6 +13,7 @@ type UserProfile = {
   display_name: string | null;
   bio: string | null;
   avatar_url: string | null;
+  banner_url: string | null;
   is_private: boolean;
 };
 
@@ -71,6 +72,7 @@ export default async function SettingsPage() {
           initialDisplayName={profile?.display_name ?? ""}
           initialBio={profile?.bio ?? ""}
           initialAvatarUrl={profile?.avatar_url ?? null}
+          initialBannerUrl={profile?.banner_url ?? null}
           initialIsPrivate={profile?.is_private ?? false}
         />
 

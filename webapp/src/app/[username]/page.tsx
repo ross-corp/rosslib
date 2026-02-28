@@ -43,6 +43,7 @@ type UserProfile = {
   display_name: string | null;
   bio: string | null;
   avatar_url: string | null;
+  banner_url: string | null;
   is_private: boolean;
   member_since: string;
   is_following: boolean;
@@ -249,6 +250,15 @@ export default async function UserPage({
     <>
       {/* Header */}
       <div className="mb-10 relative">
+        {profile.banner_url && (
+          <div className="mb-4 -mx-4 sm:-mx-6">
+            <img
+              src={profile.banner_url}
+              alt=""
+              className="w-full h-40 sm:h-48 object-cover rounded-lg bg-surface-2"
+            />
+          </div>
+        )}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
             {profile.avatar_url ? (

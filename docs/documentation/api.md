@@ -654,6 +654,7 @@ Returns a user profile. With a valid token, also returns `is_following` for the 
   "display_name": "Alice",
   "bio": "...",
   "avatar_url": null,
+  "banner_url": null,
   "is_private": false,
   "member_since": "2024-01-01T00:00:00Z",
   "is_following": false,
@@ -684,6 +685,18 @@ Content-type is detected from the file's magic bytes — the `Content-Type` head
 ```
 
 The returned URL is stored in `users.avatar_url` and returned on subsequent `GET /users/:username` calls. In production, point `MINIO_PUBLIC_URL` to the S3 bucket or CDN origin — the URL format is `{MINIO_PUBLIC_URL}/{MINIO_BUCKET}/avatars/{userId}.{ext}`.
+
+### `POST /me/banner`  *(auth required)*
+
+Upload or replace the authenticated user's profile banner image. Accepts a `multipart/form-data` body with a `banner` field containing the image file (JPEG, PNG, GIF, or WebP; max 10 MB). Recommended dimensions: 1200x300.
+
+```
+200 { "banner_url": "/api/files/<collectionId>/<userId>/<filename>" }
+400 { "error": "No banner file provided" }
+400 { "error": "Failed to process uploaded file" }
+```
+
+The returned URL is included in subsequent `GET /users/:username` responses as `banner_url`.
 
 ### `GET /users/:username/followers`  *(optional auth)*
 
