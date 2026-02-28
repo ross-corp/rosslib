@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import StarRatingInput from "@/components/star-rating-input";
 import ReviewText from "@/components/review-text";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import { useToast } from "@/components/toast";
 
 type BookSuggestion = {
@@ -339,7 +340,7 @@ export default function BookReviewEditor({
                        {book.cover_url ? (
                          <img src={book.cover_url} alt="" className="w-8 h-12 object-cover rounded bg-surface-2" />
                        ) : (
-                         <div className="w-8 h-12 bg-surface-2 rounded flex-shrink-0" />
+                         <BookCoverPlaceholder title={book.title} className="w-8 h-12 flex-shrink-0" />
                        )}
                        <div>
                          <div className="text-sm font-medium text-text-primary line-clamp-1">{book.title}</div>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import ReportButton from "@/components/report-button";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 type BookLink = {
   id: string;
@@ -279,7 +280,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                 {selectedBook.cover_url ? (
                   <img src={selectedBook.cover_url} alt="" className="w-6 h-8 rounded object-cover shrink-0" />
                 ) : (
-                  <div className="w-6 h-8 rounded bg-surface-2 shrink-0" />
+                  <BookCoverPlaceholder title={selectedBook.title} className="w-6 h-8 shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-text-primary line-clamp-1">{selectedBook.title}</p>
@@ -330,7 +331,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                     {result.cover_url ? (
                       <img src={result.cover_url} alt="" className="w-6 h-8 rounded object-cover shrink-0" />
                     ) : (
-                      <div className="w-6 h-8 rounded bg-surface-2 shrink-0" />
+                      <BookCoverPlaceholder title={result.title} className="w-6 h-8 shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-text-primary line-clamp-1">{result.title}</p>
@@ -432,7 +433,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                             className="w-10 h-14 rounded object-cover"
                           />
                         ) : (
-                          <div className="w-10 h-14 rounded bg-surface-2" />
+                          <BookCoverPlaceholder title={link.to_book_title} author={link.to_book_authors} className="w-10 h-14" />
                         )}
                       </Link>
 

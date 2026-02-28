@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 type FollowedBook = {
   open_library_id: string;
@@ -53,9 +54,7 @@ export default function FollowedBooksList({
                   className="w-10 h-14 object-cover rounded shadow-sm bg-surface-2"
                 />
               ) : (
-                <div className="w-10 h-14 rounded bg-surface-2 flex items-center justify-center">
-                  <span className="text-text-primary text-xs select-none">No cover</span>
-                </div>
+                <BookCoverPlaceholder title={book.title} author={book.authors?.join(", ")} className="w-10 h-14" />
               )}
             </Link>
             <div className="min-w-0">

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import StatusPicker, { type StatusValue } from "@/components/shelf-picker";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 type BookResult = {
   key: string;
@@ -362,9 +363,7 @@ export default function BookScanner({
                 className="w-16 h-24 object-cover rounded shadow-sm flex-shrink-0"
               />
             ) : (
-              <div className="w-16 h-24 bg-surface-2 rounded flex-shrink-0 flex items-center justify-center text-text-primary text-xs">
-                No cover
-              </div>
+              <BookCoverPlaceholder title={result.book.title} author={result.book.authors?.join(", ")} className="w-16 h-24 flex-shrink-0" />
             )}
             <div className="flex-1 min-w-0">
               <Link
@@ -425,7 +424,7 @@ export default function BookScanner({
                       className="w-10 h-14 object-cover rounded shadow-sm flex-shrink-0"
                     />
                   ) : (
-                    <div className="w-10 h-14 bg-surface-2 rounded flex-shrink-0" />
+                    <BookCoverPlaceholder title={scan.book.title} className="w-10 h-14 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
                     <Link
