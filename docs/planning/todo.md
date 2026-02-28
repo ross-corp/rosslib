@@ -23,8 +23,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## BUGS
 
-- [ ] http://huey.taila415c.ts.net:3000/search?type=authors on the "popular on rosslib", this always shows books, but when I've selected authors I should see authors, and so for people
-
 ## import improvements
 
 - [ ] Auto-predict label names from Goodreads shelf naming patterns. If a user has Goodreads shelves with a common prefix (e.g. `genre-scifi`, `genre-romance`, `genre-fantasy`), detect the prefix and suggest it as the label name (e.g. "genre") with the suffix as the value. Same logic for year-based Goodreads shelves (e.g. `read-2023`, `read-2024`) — detect the year pattern and suggest "read" as the label with the year as the value.
@@ -34,6 +32,7 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## Pending PRs
 
+- [Fix search page popular section to match active tab](https://github.com/ross-corp/rosslib/pull/120) — show popular authors/people instead of always showing books when on Authors/People tabs
 - [Fix: flatten simultaneous finish + rate into one feed event](https://github.com/ross-corp/rosslib/pull/119) — merge near-simultaneous finished_book + rated activities into a single "finished and rated" feed event
 - [Fix library sidebar counts not updating on re-label](https://github.com/ross-corp/rosslib/pull/118) — optimistic count updates in sidebar when moving books between statuses or removing them
 - [Add sort options to owner library view and tag/label endpoints](https://github.com/ross-corp/rosslib/pull/90) — sort dropdown in LibraryManager + sort param on tags/labels API endpoints
