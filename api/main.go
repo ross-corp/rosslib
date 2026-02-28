@@ -8,6 +8,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 
+	"github.com/tristansaldanha/rosslib/api/bookstats"
 	"github.com/tristansaldanha/rosslib/api/handlers"
 	_ "github.com/tristansaldanha/rosslib/api/migrations"
 )
@@ -209,6 +210,9 @@ func main() {
 		admin.GET("/ghosts/status", handlers.GetGhostStatus(app))
 		admin.GET("/link-edits", handlers.GetPendingLinkEdits(app))
 		admin.PUT("/link-edits/{editId}", handlers.ReviewLinkEdit(app))
+
+		// Start background pollers
+		bookstats.StartPoller(app)
 
 		return se.Next()
 	})
