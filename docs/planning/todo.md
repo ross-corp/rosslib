@@ -4,8 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## quick wins
 
-- [ ] Add toast notifications for user actions. Create a minimal toast system in `webapp/src/components/toast.tsx` — a React context provider with `useToast()` hook exposing `toast.success(message)` and `toast.error(message)`. Render toasts as fixed-position banners in the bottom-right, auto-dismiss after 4 seconds. Wire it into existing actions: book added to library, status changed, review saved, follow/unfollow, import complete. No external dependency — just a context + CSS transitions.
-
 - [ ] Add book cover fallback placeholder. When a book has no `cover_url`, the UI currently shows a broken image or blank space. Create a `BookCoverPlaceholder` component in `webapp/src/components/book-cover-placeholder.tsx` that renders a styled div with the book title text and author in a muted color on a neutral background. Use it as the fallback everywhere book covers are rendered: search results, label grids, profile sections, book detail page. Check all places that render `<img>` with a book cover URL and add an `onError` fallback or conditional render.
 
 - [ ] Add "date started" tracking for books. Add a `date_started` column (timestamptz, nullable) to `user_books` via a new migration in `api/migrations/`. Update `PATCH /me/books/:olId` in `api/handlers/userbooks.go` to accept `date_started` in the request body and persist it. When a book's status is changed to "Currently Reading" via `setStatusLabel` and `date_started` is null, auto-set it to `now()`. Return `date_started` in the book detail and user book responses. On the book detail page (`webapp/src/app/books/[workId]/page.tsx`), show "Started: {date}" when set. Include in CSV export.
@@ -95,3 +93,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 - [Add sort options to owner library view and tag/label endpoints](https://github.com/ross-corp/rosslib/pull/90) — sort dropdown in LibraryManager + sort param on tags/labels API endpoints
 - [Add confirmation dialog when removing books from library](https://github.com/ross-corp/rosslib/pull/91) — reusable ConfirmDialog component, applied to shelf grid, library manager bulk remove, and shelf picker
+- [Wire toast notifications into all user actions](https://github.com/ross-corp/rosslib/pull/92) — extend existing toast system to cover import, quick-add, bulk library ops, settings, export, block, and reading progress
