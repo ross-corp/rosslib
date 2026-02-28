@@ -134,6 +134,59 @@ func searchUsersSorted(app core.App, e *core.RequestEvent, q, sort string, perPa
 	return e.JSON(http.StatusOK, results)
 }
 
+// GetPopularUsers handles GET /users/popular
+// Returns users ordered by number of books in their library.
+func GetPopularUsers(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		usersColl, err := app.FindCollectionByNameOrId("users")
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+		collID := usersColl.Id
+
+		type userRow struct {
+			ID          string  `db:"id"`
+			Username    string  `db:"username"`
+			DisplayName *string `db:"display_name"`
+			Avatar      *string `db:"avatar"`
+			BookCount   int     `db:"book_count"`
+		}
+
+		var rows []userRow
+		err = app.DB().NewQuery(`
+			SELECT u.id, u.username, u.display_name, u.avatar,
+				COUNT(ub.id) AS book_count
+			FROM users u
+			LEFT JOIN user_books ub ON ub."user" = u.id
+			GROUP BY u.id
+			HAVING book_count > 0
+			ORDER BY book_count DESC
+			LIMIT 12
+		`).All(&rows)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		results := make([]map[string]any, 0, len(rows))
+		for _, r := range rows {
+			var avatarURL *string
+			if r.Avatar != nil && *r.Avatar != "" {
+				url := "/api/files/" + collID + "/" + r.ID + "/" + *r.Avatar
+				avatarURL = &url
+			}
+			results = append(results, map[string]any{
+				"user_id":      r.ID,
+				"username":     r.Username,
+				"display_name": r.DisplayName,
+				"avatar_url":   avatarURL,
+				"book_count":   r.BookCount,
+			})
+		}
+
+		return e.JSON(http.StatusOK, results)
+	}
+}
+
 // GetProfile handles GET /users/{username}
 func GetProfile(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {

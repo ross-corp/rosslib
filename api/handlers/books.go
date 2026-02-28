@@ -634,6 +634,55 @@ func GetPopularBooks(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// GetPopularAuthors handles GET /authors/popular
+// Returns the most-read authors on Rosslib, aggregated from book_stats + books.
+func GetPopularAuthors(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		// books.authors is stored as a JSON array string, e.g. ["Author One","Author Two"].
+		// We extract the first author from each book for aggregation.
+		type row struct {
+			Author string `db:"author"`
+			Reads  int    `db:"total_reads"`
+			Books  int    `db:"book_count"`
+		}
+
+		var rows []row
+		err := app.DB().NewQuery(`
+			SELECT
+				TRIM(REPLACE(REPLACE(
+					CASE
+						WHEN INSTR(b.authors, ',') > 0
+						THEN SUBSTR(b.authors, 2, INSTR(b.authors, ',') - 3)
+						ELSE SUBSTR(b.authors, 2, LENGTH(b.authors) - 2)
+					END,
+				'"', ''), '[', ''), ']', '') AS author,
+				SUM(bs.reads_count) AS total_reads,
+				COUNT(DISTINCT b.id) AS book_count
+			FROM book_stats bs
+			JOIN books b ON bs.book = b.id
+			WHERE bs.reads_count > 0 AND b.authors IS NOT NULL AND b.authors != '[]'
+			GROUP BY author
+			HAVING author != ''
+			ORDER BY total_reads DESC
+			LIMIT 12
+		`).All(&rows)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		results := make([]map[string]any, 0, len(rows))
+		for _, r := range rows {
+			results = append(results, map[string]any{
+				"name":        r.Author,
+				"total_reads": r.Reads,
+				"book_count":  r.Books,
+			})
+		}
+
+		return e.JSON(http.StatusOK, results)
+	}
+}
+
 // SearchAuthors handles GET /authors/search?q=...
 func SearchAuthors(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
