@@ -138,6 +138,12 @@ type MyGenreRating = {
   rating: number;
 };
 
+type AuthorWork = {
+  key: string;
+  title: string;
+  cover_url: string | null;
+};
+
 // ── Data fetchers ───────────────────────────────────────────────────────────────
 
 async function fetchBook(workId: string): Promise<BookDetail | null> {
@@ -243,6 +249,20 @@ async function fetchMyGenreRatings(
   return res.json();
 }
 
+async function fetchAuthorWorks(
+  authorKey: string,
+  excludeWorkId: string
+): Promise<AuthorWork[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/authors/${authorKey}?limit=7&offset=0`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  const data = await res.json();
+  const works: AuthorWork[] = data.works ?? [];
+  return works.filter((w) => w.key !== excludeWorkId).slice(0, 6);
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function renderStars(rating: number): string {
@@ -288,6 +308,12 @@ export default async function BookPage({
   ]);
 
   if (!book) notFound();
+
+  // Fetch "more by this author" works
+  const firstAuthor = book.authors?.find((a) => a.key) ?? null;
+  const authorWorks = firstAuthor?.key
+    ? await fetchAuthorWorks(firstAuthor.key, workId)
+    : [];
 
   // Extract the Status key and its values for the StatusPicker
   const statusKey = tagKeys?.find((k) => k.slug === "status") ?? null;
@@ -621,6 +647,47 @@ export default async function BookPage({
               totalEditions={book.edition_count}
               workId={workId}
             />
+          </section>
+        )}
+
+        {/* ── More by this author ── */}
+        {firstAuthor && authorWorks.length > 0 && (
+          <section className="border-t border-border pt-8 mt-10">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider">
+                More by {firstAuthor.name}
+              </h2>
+              {firstAuthor.key && (
+                <Link
+                  href={`/authors/${firstAuthor.key}`}
+                  className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
+                >
+                  See all
+                </Link>
+              )}
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
+              {authorWorks.map((work) => (
+                <Link key={work.key} href={`/books/${work.key}`} className="group">
+                  {work.cover_url ? (
+                    <img
+                      src={work.cover_url}
+                      alt={work.title}
+                      className="w-full aspect-[2/3] object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
+                    />
+                  ) : (
+                    <div className="w-full aspect-[2/3] bg-surface-2 rounded flex items-center justify-center p-2">
+                      <span className="text-[10px] text-text-primary text-center leading-tight line-clamp-3">
+                        {work.title}
+                      </span>
+                    </div>
+                  )}
+                  <p className="mt-1.5 text-xs text-text-primary leading-tight line-clamp-2 group-hover:text-text-primary transition-colors">
+                    {work.title}
+                  </p>
+                </Link>
+              ))}
+            </div>
           </section>
         )}
 
