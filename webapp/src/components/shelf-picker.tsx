@@ -26,6 +26,7 @@ export default function StatusPicker({
   const [activeValueId, setActiveValueId] = useState(currentStatusValueId);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,6 +34,7 @@ export default function StatusPicker({
     function handleClick(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
+        setConfirmRemove(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -75,6 +77,7 @@ export default function StatusPicker({
   async function removeFromLibrary() {
     if (!activeValueId) return;
     setOpen(false);
+    setConfirmRemove(false);
     setLoading(true);
 
     const res = await fetch(`/api/me/books/${openLibraryId}`, {
@@ -115,16 +118,37 @@ export default function StatusPicker({
               {value.name}
             </button>
           ))}
-          {activeValueId && (
+          {activeValueId && !confirmRemove && (
             <>
               <div className="border-t border-border mx-2" />
               <button
-                onClick={removeFromLibrary}
+                onClick={() => setConfirmRemove(true)}
                 className="w-full text-left px-3 py-2 text-xs text-text-primary hover:text-text-primary hover:bg-surface-2 transition-colors"
               >
                 Remove
               </button>
             </>
+          )}
+          {confirmRemove && (
+            <div className="border-t border-border mx-2 mt-0">
+              <p className="px-3 pt-2 pb-1 text-xs text-text-secondary">
+                Remove this book? Rating, review, and progress will be deleted.
+              </p>
+              <div className="flex gap-1 px-3 pb-2">
+                <button
+                  onClick={removeFromLibrary}
+                  className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors"
+                >
+                  Remove
+                </button>
+                <button
+                  onClick={() => setConfirmRemove(false)}
+                  className="text-xs px-2 py-1 rounded border border-border text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           )}
         </div>
       )}
