@@ -1316,9 +1316,9 @@ Returns a chronological feed of activities from users the authenticated user fol
 }
 ```
 
-**Activity types:** `shelved`, `started_book`, `finished_book`, `rated`, `reviewed`, `created_thread`, `followed_user`, `followed_author`, `created_link`.
+**Activity types:** `shelved`, `started_book`, `finished_book`, `rated`, `reviewed`, `finished_and_rated`, `created_thread`, `followed_user`, `followed_author`, `created_link`.
 
-Fields are conditional on type — `book` is null for `followed_user`, `target_user` is null for book-related activities, etc. `created_link` includes `link_type`, `to_book_ol_id`, and `to_book_title` for the target book. `followed_author` includes `author_key` and `author_name` in the response.
+Fields are conditional on type — `book` is null for `followed_user`, `target_user` is null for book-related activities, etc. `created_link` includes `link_type`, `to_book_ol_id`, and `to_book_title` for the target book. `followed_author` includes `author_key` and `author_name` in the response. `finished_and_rated` is a synthetic type created by merging a `finished_book` and `rated` event that occur within 60 seconds for the same user and book; it includes the `rating` field.
 
 ### `GET /users/:username/stats`  *(optional auth)*
 
