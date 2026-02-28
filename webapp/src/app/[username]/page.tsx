@@ -558,12 +558,20 @@ export default async function UserPage({
 
             {/* Reading Stats */}
             <section>
-              <Link
-                href={`/${username}/stats`}
-                className="section-heading mb-3 block hover:text-accent transition-colors"
-              >
-                Reading Stats →
-              </Link>
+              <div className="flex items-center gap-4 mb-3">
+                <Link
+                  href={`/${username}/stats`}
+                  className="section-heading block hover:text-accent transition-colors"
+                >
+                  Reading Stats →
+                </Link>
+                <Link
+                  href={`/${username}/year-in-review`}
+                  className="text-xs text-text-tertiary hover:text-accent transition-colors"
+                >
+                  Year in Review →
+                </Link>
+              </div>
               <ReadingStats
                 booksRead={profile.books_read}
                 reviewsCount={profile.reviews_count}
