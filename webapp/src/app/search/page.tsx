@@ -163,6 +163,37 @@ async function fetchPopularBooks(): Promise<BookResult[]> {
   return res.json();
 }
 
+type PopularAuthor = {
+  name: string;
+  total_reads: number;
+  book_count: number;
+};
+
+async function fetchPopularAuthors(): Promise<PopularAuthor[]> {
+  const res = await fetch(`${process.env.API_URL}/authors/popular`, {
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+type PopularUser = {
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  book_count: number;
+};
+
+async function fetchPopularUsers(): Promise<PopularUser[]> {
+  const res = await fetch(`${process.env.API_URL}/users/popular`, {
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function buildSearchParams(base: {
@@ -217,13 +248,15 @@ export default async function SearchPage({
 
   const hasQuery = q.trim().length > 0;
 
-  const [bookData, users, authorData, tagKeys, statusMap, popularBooks] = await Promise.all([
+  const [bookData, users, authorData, tagKeys, statusMap, popularBooks, popularAuthors, popularUsers] = await Promise.all([
     hasQuery && activeTab === "books" ? searchBooks(q, sort, year_min, year_max, subject, language) : Promise.resolve({ total: 0, results: [] }),
     hasQuery && activeTab === "people" ? searchUsers(q) : Promise.resolve([]),
     hasQuery && activeTab === "authors" ? searchAuthors(q) : Promise.resolve({ total: 0, results: [] }),
     currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
     currentUser && token ? fetchStatusMap(token) : Promise.resolve(null),
-    !hasQuery ? fetchPopularBooks() : Promise.resolve([]),
+    !hasQuery && activeTab === "books" ? fetchPopularBooks() : Promise.resolve([]),
+    !hasQuery && activeTab === "authors" ? fetchPopularAuthors() : Promise.resolve([]),
+    !hasQuery && activeTab === "people" ? fetchPopularUsers() : Promise.resolve([]),
   ]);
 
   const statusKey = tagKeys?.find((k) => k.slug === "status") ?? null;
@@ -290,10 +323,11 @@ export default async function SearchPage({
         {!hasQuery && (
           <div>
             <p className="text-sm text-text-secondary mb-8">
-              Start typing to search for books, authors, or people.
+              Start typing to search for {activeTab === "books" ? "books" : activeTab === "authors" ? "authors" : "people"}.
             </p>
 
-            {popularBooks.length > 0 && (
+            {/* Popular books */}
+            {activeTab === "books" && popularBooks.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-text-primary mb-4">
                   Popular on Rosslib
@@ -334,6 +368,78 @@ export default async function SearchPage({
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {/* Popular authors */}
+            {activeTab === "authors" && popularAuthors.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-text-primary mb-4">
+                  Popular authors on Rosslib
+                </h2>
+                <ul className="divide-y divide-border max-w-2xl">
+                  {popularAuthors.map((author) => (
+                    <li key={author.name} className="flex items-center gap-3 py-3">
+                      <div className="w-10 h-10 rounded-full bg-surface-2 flex-shrink-0 flex items-center justify-center text-sm font-medium text-text-primary">
+                        {author.name.charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium text-text-primary">
+                          {author.name}
+                        </span>
+                        <p className="text-xs text-text-secondary mt-0.5">
+                          {author.total_reads} read{author.total_reads === 1 ? "" : "s"} &middot; {author.book_count} book{author.book_count === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Popular people */}
+            {activeTab === "people" && popularUsers.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-text-primary mb-4">
+                  Active readers on Rosslib
+                </h2>
+                <ul className="divide-y divide-border max-w-md">
+                  {popularUsers.map((user) => (
+                    <li key={user.user_id}>
+                      <Link
+                        href={`/${user.username}`}
+                        className="flex items-center gap-3 py-3 hover:bg-surface-2 -mx-3 px-3 rounded transition-colors"
+                      >
+                        {user.avatar_url ? (
+                          <img
+                            src={user.avatar_url}
+                            alt=""
+                            className="w-9 h-9 rounded-full object-cover bg-surface-2 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center shrink-0">
+                            <span className="text-text-tertiary text-sm font-medium select-none">
+                              {(user.display_name || user.username)[0].toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-text-primary">
+                            {user.display_name || user.username}
+                          </span>
+                          {user.display_name && (
+                            <span className="text-xs text-text-secondary mt-0.5">
+                              @{user.username}
+                            </span>
+                          )}
+                          <span className="text-xs text-text-secondary">
+                            {user.book_count} book{user.book_count === 1 ? "" : "s"}
+                          </span>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>

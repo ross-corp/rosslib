@@ -572,6 +572,20 @@ Proxies to Open Library's author search API. Returns up to 20 results.
 
 `birth_date`, `death_date`, `top_work`, `top_subjects`, and `photo_url` may be null.
 
+### `GET /authors/popular`
+
+Returns the most-read authors on Rosslib, aggregated from `book_stats` and `books`. Up to 12 results ordered by total reads. Used on the search page when the Authors tab is active and no query is entered.
+
+```json
+[
+  {
+    "name": "Brandon Sanderson",
+    "total_reads": 42,
+    "book_count": 8
+  }
+]
+```
+
 ### `GET /authors/:authorKey?limit=24&offset=0`
 
 Fetches author detail from Open Library including a paginated slice of their works.
@@ -633,6 +647,22 @@ List authors you follow.
 ---
 
 ## Users
+
+### `GET /users/popular`
+
+Returns up to 12 users with the most books in their library. Used on the search page when the People tab is active and no query is entered.
+
+```json
+[
+  {
+    "user_id": "abc123",
+    "username": "alice",
+    "display_name": "Alice",
+    "avatar_url": "/api/files/.../avatar.jpg",
+    "book_count": 156
+  }
+]
+```
 
 ### `GET /users?q=<query>&page=<n>&sort=<newest|books|followers>`
 
