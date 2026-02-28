@@ -164,6 +164,26 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
           )}
         </>
       );
+    case "finished_and_rated":
+      return (
+        <>
+          finished{" "}
+          {item.book && (
+            <Link
+              href={`/books/${item.book.open_library_id}`}
+              className="font-medium text-text-primary hover:underline"
+            >
+              {item.book.title}
+            </Link>
+          )}
+          {item.rating && (
+            <>
+              {" "}
+              and rated it <Stars rating={item.rating} />
+            </>
+          )}
+        </>
+      );
     case "follow":
     case "followed_user":
       return (
