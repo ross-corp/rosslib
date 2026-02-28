@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/toast";
 
 export default function BlockButton({
   username,
@@ -12,6 +13,7 @@ export default function BlockButton({
   const [blocked, setBlocked] = useState(initialBlocked);
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const toast = useToast();
 
   async function handleBlock() {
     setLoading(true);
@@ -22,6 +24,7 @@ export default function BlockButton({
     setShowConfirm(false);
     if (res.ok) {
       setBlocked(true);
+      toast.success(`Blocked ${username}`);
       window.location.reload();
     }
   }
@@ -34,6 +37,7 @@ export default function BlockButton({
     setLoading(false);
     if (res.ok) {
       setBlocked(false);
+      toast.success(`Unblocked ${username}`);
       window.location.reload();
     }
   }
