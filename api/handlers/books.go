@@ -634,6 +634,63 @@ func GetPopularBooks(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// GetTrendingBooks handles GET /books/trending?period=week&limit=10
+func GetTrendingBooks(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		period := e.Request.URL.Query().Get("period")
+		days := 7
+		if period == "month" {
+			days = 30
+		}
+
+		limit := 10
+		if v := e.Request.URL.Query().Get("limit"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 50 {
+				limit = n
+			}
+		}
+
+		type row struct {
+			OLID     string  `db:"open_library_id" json:"key"`
+			Title    string  `db:"title" json:"title"`
+			Authors  string  `db:"authors" json:"-"`
+			CoverURL *string `db:"cover_url" json:"cover_url"`
+			PubYear  *int    `db:"publication_year" json:"publish_year"`
+			Count    int     `db:"activity_count" json:"activity_count"`
+		}
+		var rows []row
+		err := app.DB().NewQuery(fmt.Sprintf(`
+			SELECT b.open_library_id, b.title, b.authors, b.cover_url, b.publication_year,
+				COUNT(ub.id) AS activity_count
+			FROM user_books ub
+			JOIN books b ON ub.book = b.id
+			WHERE ub.created >= datetime('now', '-%d days')
+			GROUP BY ub.book
+			ORDER BY activity_count DESC
+			LIMIT {:limit}
+		`, days)).Bind(map[string]any{"limit": limit}).All(&rows)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		var results []map[string]any
+		for _, r := range rows {
+			results = append(results, map[string]any{
+				"key":            r.OLID,
+				"title":          r.Title,
+				"authors":        splitAuthors(r.Authors),
+				"cover_url":      r.CoverURL,
+				"publish_year":   r.PubYear,
+				"activity_count": r.Count,
+			})
+		}
+		if results == nil {
+			results = []map[string]any{}
+		}
+		return e.JSON(http.StatusOK, results)
+	}
+}
+
 // SearchAuthors handles GET /authors/search?q=...
 func SearchAuthors(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
