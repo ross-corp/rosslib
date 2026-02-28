@@ -987,6 +987,82 @@ func UnfollowBook(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// GetBookReaders handles GET /books/{workId}/readers
+// Returns up to 5 users the viewer follows who have this book in their library.
+func GetBookReaders(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		workID := e.Request.PathValue("workId")
+		viewerID := ""
+		if e.Auth != nil {
+			viewerID = e.Auth.Id
+		}
+		if viewerID == "" {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		// Find the local book
+		books, _ := app.FindRecordsByFilter("books",
+			"open_library_id = {:id}", "", 1, 0,
+			map[string]any{"id": workID},
+		)
+		if len(books) == 0 {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		type readerRow struct {
+			UserID      string  `db:"user_id" json:"user_id"`
+			Username    string  `db:"username" json:"username"`
+			DisplayName *string `db:"display_name" json:"display_name"`
+			Avatar      *string `db:"avatar" json:"avatar"`
+			StatusName  *string `db:"status_name" json:"status_name"`
+		}
+
+		var readers []readerRow
+		err := app.DB().NewQuery(`
+			SELECT u.id as user_id, u.username, u.display_name, u.avatar,
+				(SELECT tv.name FROM book_tag_values btv
+					JOIN tag_values tv ON btv.tag_value = tv.id
+					JOIN tag_keys tk ON tv.tag_key = tk.id
+					WHERE btv.user = u.id AND btv.book = {:book}
+					AND tk.slug = 'status'
+					LIMIT 1) as status_name
+			FROM user_books ub
+			JOIN users u ON ub.user = u.id
+			JOIN follows f ON f.followee = u.id AND f.follower = {:viewer} AND f.status = 'active'
+			WHERE ub.book = {:book}
+				AND u.is_private = false
+			ORDER BY ub.created DESC
+			LIMIT 5
+		`).Bind(map[string]any{
+			"book":   books[0].Id,
+			"viewer": viewerID,
+		}).All(&readers)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		var result []map[string]any
+		for _, r := range readers {
+			var avatarURL *string
+			if r.Avatar != nil && *r.Avatar != "" {
+				url := fmt.Sprintf("/api/files/users/%s/%s", r.UserID, *r.Avatar)
+				avatarURL = &url
+			}
+			result = append(result, map[string]any{
+				"user_id":      r.UserID,
+				"username":     r.Username,
+				"display_name": r.DisplayName,
+				"avatar_url":   avatarURL,
+				"status_name":  r.StatusName,
+			})
+		}
+		if result == nil {
+			result = []map[string]any{}
+		}
+		return e.JSON(http.StatusOK, result)
+	}
+}
+
 // GetFollowedBooks handles GET /me/followed-books
 func GetFollowedBooks(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {

@@ -138,6 +138,14 @@ type MyGenreRating = {
   rating: number;
 };
 
+type FriendReader = {
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  status_name: string | null;
+};
+
 // ── Data fetchers ───────────────────────────────────────────────────────────────
 
 async function fetchBook(workId: string): Promise<BookDetail | null> {
@@ -217,6 +225,22 @@ async function fetchBookFollowStatus(
   return data.following === true;
 }
 
+async function fetchFriendReaders(
+  workId: string,
+  token?: string
+): Promise<FriendReader[]> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const res = await fetch(`${process.env.API_URL}/books/${workId}/readers`, {
+    headers,
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 async function fetchAggregateGenreRatings(
   workId: string
 ): Promise<AggregateGenreRating[]> {
@@ -269,7 +293,7 @@ export default async function BookPage({
   const { workId } = await params;
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings] = await Promise.all([
+  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings, friendReaders] = await Promise.all([
     fetchBook(workId),
     fetchBookReviews(workId, token ?? undefined),
     fetchThreads(workId),
@@ -284,6 +308,9 @@ export default async function BookPage({
     fetchAggregateGenreRatings(workId),
     currentUser && token
       ? fetchMyGenreRatings(token, workId)
+      : Promise.resolve([]),
+    currentUser && token
+      ? fetchFriendReaders(workId, token)
       : Promise.resolve([]),
   ]);
 
@@ -399,6 +426,35 @@ export default async function BookPage({
                     want to read
                   </span>
                 )}
+              </div>
+            )}
+
+            {/* Friends reading this */}
+            {friendReaders.length > 0 && (
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs text-text-tertiary mr-1">Friends:</span>
+                <div className="flex -space-x-1.5">
+                  {friendReaders.map((reader) => (
+                    <Link
+                      key={reader.user_id}
+                      href={`/${reader.username}`}
+                      title={`${reader.display_name ?? reader.username}${reader.status_name ? ` · ${reader.status_name}` : ""}`}
+                      className="relative"
+                    >
+                      {reader.avatar_url ? (
+                        <img
+                          src={reader.avatar_url}
+                          alt={reader.display_name ?? reader.username}
+                          className="w-7 h-7 rounded-full object-cover border-2 border-surface-1 hover:ring-2 hover:ring-accent transition-shadow"
+                        />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-surface-2 border-2 border-surface-1 flex items-center justify-center text-[10px] font-medium text-text-tertiary hover:ring-2 hover:ring-accent transition-shadow">
+                          {(reader.display_name ?? reader.username).charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </Link>
+                  ))}
+                </div>
               </div>
             )}
 

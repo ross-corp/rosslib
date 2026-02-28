@@ -231,6 +231,24 @@ Returns precomputed aggregate stats for a book from the `book_stats` cache table
 
 `average_rating` is null when no users have rated the book. Returns 404 if the book is not in the local catalog.
 
+### `GET /books/:workId/readers`  *(optional auth)*
+
+Returns up to 5 users the viewer follows who have this book in their library. Returns an empty array for unauthenticated users or if no followed users have the book.
+
+```json
+[
+  {
+    "user_id": "abc123",
+    "username": "alice",
+    "display_name": "Alice",
+    "avatar_url": "/api/files/users/abc123/avatar.jpg",
+    "status_name": "Currently Reading"
+  }
+]
+```
+
+`display_name`, `avatar_url`, and `status_name` may be null.
+
 ### `GET /books/:workId/reviews`  *(optional auth)*
 
 Returns all community reviews for a book. Each user appears at most once (most recent review).

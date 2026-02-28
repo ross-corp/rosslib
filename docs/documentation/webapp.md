@@ -131,6 +131,7 @@ webapp/src/app/
     ├── shelves/[shelfId]/books/[olId]/route.ts    ← GET, PATCH, DELETE
     ├── books/[workId]/series/route.ts              ← GET, POST series memberships
     ├── series/[seriesId]/route.ts                 ← GET series detail with books
+    ├── books/[workId]/readers/route.ts                ← GET friends reading this book
     ├── books/[workId]/reviews/[userId]/like/route.ts ← POST toggle, GET check review like
     ├── books/[workId]/links/route.ts              ← GET, POST community links
     ├── links/[linkId]/route.ts                    ← DELETE community link

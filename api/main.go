@@ -39,6 +39,7 @@ func main() {
 		se.Router.GET("/series/{seriesId}", handlers.GetSeriesDetail(app)).BindFunc(handlers.OptionalAuthFunc(app))
 
 		// ── Books (optional auth) ────────────────────────────────
+		se.Router.GET("/books/{workId}/readers", handlers.GetBookReaders(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/books/{workId}/reviews", handlers.GetBookReviews(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/books/{workId}/links", handlers.GetBookLinks(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/books/{workId}/threads", handlers.GetBookThreads(app))
