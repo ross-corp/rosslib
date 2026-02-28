@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import BookTagPicker, { TagKey } from "@/components/book-tag-picker";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import QuickAddButton from "@/components/quick-add-button";
 import type { StatusValue } from "@/components/shelf-picker";
 
@@ -63,11 +64,10 @@ export default function ShelfBookGrid({
                 className="w-full aspect-[2/3] object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
               />
             ) : (
-              <div className="w-full aspect-[2/3] bg-surface-2 rounded shadow-sm flex items-end p-2 group-hover:shadow-md transition-shadow">
-                <span className="text-xs text-text-primary leading-tight line-clamp-3">
-                  {book.title}
-                </span>
-              </div>
+              <BookCoverPlaceholder
+                title={book.title}
+                className="w-full aspect-[2/3] group-hover:shadow-md transition-shadow"
+              />
             )}
             {book.series_position != null && (
               <span className="absolute top-1 left-1 bg-surface-0/80 backdrop-blur-sm text-[10px] font-mono font-medium text-text-secondary border border-border rounded px-1 py-0.5 leading-none">

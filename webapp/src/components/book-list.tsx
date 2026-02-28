@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import StarRating from "@/components/star-rating";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import StatusPicker, { type StatusValue } from "@/components/shelf-picker";
 
 type BookResult = {
@@ -47,7 +48,11 @@ export default function BookList({
                   className="w-12 h-16 object-cover rounded shrink-0 bg-surface-2"
                 />
               ) : (
-                <div className="w-12 h-16 bg-surface-2 rounded shrink-0" />
+                <BookCoverPlaceholder
+                  title={book.title}
+                  author={book.authors?.slice(0, 1).join(", ")}
+                  className="w-12 h-16 shrink-0"
+                />
               )}
               <div className="flex flex-col justify-center gap-0.5 min-w-0">
                 <span className="text-sm font-medium text-text-primary truncate">

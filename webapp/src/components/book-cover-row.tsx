@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import QuickAddButton from "@/components/quick-add-button";
 import type { StatusValue } from "@/components/shelf-picker";
 
@@ -66,13 +67,10 @@ export default function BookCoverRow({
                   className={`${sizeClasses[size]} object-cover rounded shadow-sm group-hover:shadow-md transition-shadow`}
                 />
               ) : (
-                <div
-                  className={`${sizeClasses[size]} rounded bg-surface-2 flex items-center justify-center`}
-                >
-                  <span className="text-[10px] text-text-tertiary text-center px-1 line-clamp-3">
-                    {book.title}
-                  </span>
-                </div>
+                <BookCoverPlaceholder
+                  title={book.title}
+                  className={sizeClasses[size]}
+                />
               )}
               {pct != null && (
                 <div className="mt-1">
