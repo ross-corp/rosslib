@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ActivityCard } from "@/components/activity";
 import type { FeedResponse } from "@/components/activity";
+import { FollowSuggestions } from "@/components/follow-suggestions";
 import { getUser, getToken } from "@/lib/auth";
 
 async function fetchFeed(
@@ -37,16 +38,19 @@ export default async function FeedPage({
         <h1 className="text-2xl font-bold text-text-primary mb-8">Feed</h1>
 
         {feed.activities.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-text-primary text-sm">
-              No activity yet. Follow some people to see their updates here.
-            </p>
-            <Link
-              href="/users"
-              className="inline-block mt-4 text-sm text-text-primary hover:text-text-primary border border-border px-4 py-2 rounded transition-colors"
-            >
-              Browse people
-            </Link>
+          <div className="space-y-8">
+            <div className="text-center py-16">
+              <p className="text-text-primary text-sm">
+                No activity yet. Follow some people to see their updates here.
+              </p>
+              <Link
+                href="/users"
+                className="inline-block mt-4 text-sm text-text-primary hover:text-text-primary border border-border px-4 py-2 rounded transition-colors"
+              >
+                Browse people
+              </Link>
+            </div>
+            <FollowSuggestions />
           </div>
         ) : (
           <>
@@ -66,6 +70,10 @@ export default async function FeedPage({
                 </Link>
               </div>
             )}
+
+            <div className="mt-10">
+              <FollowSuggestions />
+            </div>
           </>
         )}
       </main>

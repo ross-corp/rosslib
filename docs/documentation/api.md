@@ -643,6 +643,27 @@ Search/browse users by username or display name. 20 per page.
 - `page` *(optional, default 1)* — pagination
 - `sort` *(optional, default `newest`)* — sort order: `newest` (registration date), `books` (most books in library), `followers` (most followers)
 
+### `GET /me/suggested-follows?limit=5`  *(auth required)*
+
+Returns users with the most books in common with the current user, excluding already-followed and blocked users. Useful for follow suggestions on the feed page.
+
+**Query parameters:**
+- `limit` *(optional, default 5, max 20)* — number of suggestions to return
+
+```json
+[
+  {
+    "user_id": "...",
+    "username": "bob",
+    "display_name": "Bob",
+    "avatar_url": "/api/files/...",
+    "books_in_common": 12
+  }
+]
+```
+
+Returns an empty array if no suggestions are available.
+
 ### `GET /users/:username`  *(optional auth)*
 
 Returns a user profile. With a valid token, also returns `is_following` for the requesting user.

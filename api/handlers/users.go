@@ -780,6 +780,78 @@ func UnfollowUser(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// GetSuggestedFollows handles GET /me/suggested-follows?limit=5
+func GetSuggestedFollows(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+
+		limit, _ := strconv.Atoi(e.Request.URL.Query().Get("limit"))
+		if limit <= 0 || limit > 20 {
+			limit = 5
+		}
+
+		usersColl, err := app.FindCollectionByNameOrId("users")
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+		collID := usersColl.Id
+
+		type suggestionRow struct {
+			ID             string  `db:"id"`
+			Username       string  `db:"username"`
+			DisplayName    *string `db:"display_name"`
+			Avatar         *string `db:"avatar"`
+			BooksInCommon  int     `db:"books_in_common"`
+		}
+
+		var rows []suggestionRow
+		err = app.DB().NewQuery(`
+			SELECT u.id, u.username, u.display_name, u.avatar,
+			       COUNT(DISTINCT their_ub.book) as books_in_common
+			FROM user_books their_ub
+			JOIN user_books my_ub ON my_ub.book = their_ub.book AND my_ub.user = {:me}
+			JOIN users u ON u.id = their_ub.user
+			WHERE their_ub.user != {:me}
+			  AND their_ub.user NOT IN (
+			    SELECT followee FROM follows WHERE follower = {:me} AND status IN ('active', 'pending')
+			  )
+			  AND their_ub.user NOT IN (
+			    SELECT blocked FROM blocks WHERE blocker = {:me}
+			  )
+			  AND their_ub.user NOT IN (
+			    SELECT blocker FROM blocks WHERE blocked = {:me}
+			  )
+			GROUP BY u.id
+			ORDER BY books_in_common DESC
+			LIMIT {:limit}
+		`).Bind(map[string]any{"me": user.Id, "limit": limit}).All(&rows)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		results := make([]map[string]any, 0, len(rows))
+		for _, r := range rows {
+			var avatarURL *string
+			if r.Avatar != nil && *r.Avatar != "" {
+				url := "/api/files/" + collID + "/" + r.ID + "/" + *r.Avatar
+				avatarURL = &url
+			}
+			results = append(results, map[string]any{
+				"user_id":         r.ID,
+				"username":        r.Username,
+				"display_name":    r.DisplayName,
+				"avatar_url":      avatarURL,
+				"books_in_common": r.BooksInCommon,
+			})
+		}
+
+		return e.JSON(http.StatusOK, results)
+	}
+}
+
 // GetFollowRequests handles GET /me/follow-requests
 func GetFollowRequests(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
