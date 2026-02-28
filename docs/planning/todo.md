@@ -23,8 +23,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## BUGS
 
-- [ ] numbers on left sidebar of library do not update if I re-label books. for ex, marking something from in progress to read should subtract 1 and add 1 to the other
-
 - [ ] in the feed, when a user finishes and rates something at the same time, those should be flattened into one event. "user finished X and rated it Y stars"
 
 - [ ] http://huey.taila415c.ts.net:3000/search?type=authors on the "popular on rosslib", this always shows books, but when I've selected authors I should see authors, and so for people
@@ -38,6 +36,7 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## Pending PRs
 
+- [Fix library sidebar counts not updating on re-label](https://github.com/ross-corp/rosslib/pull/118) — optimistic count updates in sidebar when moving books between statuses or removing them
 - [Add sort options to owner library view and tag/label endpoints](https://github.com/ross-corp/rosslib/pull/90) — sort dropdown in LibraryManager + sort param on tags/labels API endpoints
 - [Add confirmation dialog when removing books from library](https://github.com/ross-corp/rosslib/pull/91) — reusable ConfirmDialog component, applied to shelf grid, library manager bulk remove, and shelf picker
 - [Wire toast notifications into all user actions](https://github.com/ross-corp/rosslib/pull/92) — extend existing toast system to cover import, quick-add, bulk library ops, settings, export, block, and reading progress
