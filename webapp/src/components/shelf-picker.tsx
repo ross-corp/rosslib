@@ -143,7 +143,7 @@ export default function StatusPicker({
           {confirmRemove && (
             <div className="border-t border-border mx-2 mt-0">
               <p className="px-3 pt-2 pb-1 text-xs text-text-secondary">
-                Remove this book? Rating, review, and progress will be deleted.
+                Remove <em>{title}</em> from your library? Your rating, review, and reading progress will be deleted.
               </p>
               <div className="flex gap-1 px-3 pb-2">
                 <button
