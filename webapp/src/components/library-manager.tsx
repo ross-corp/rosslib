@@ -128,6 +128,28 @@ export default function LibraryManager({
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const [showTagsMenu, setShowTagsMenu] = useState(false);
   const [localShelves, setLocalShelves] = useState(allShelves);
+  const [localStatusCounts, setLocalStatusCounts] = useState(statusCounts);
+  const [localStatusList, setLocalStatusList] = useState(statusList);
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  async function refreshStatusCounts() {
+    const res = await fetch(`/api/users/${username}/books?limit=0`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const statuses: { slug: string; name: string; count: number }[] = data.statuses ?? [];
+    const unstatusedCount: number = data.unstatused_count ?? 0;
+    let total = unstatusedCount;
+    const counts: Record<string, number> = {};
+    for (const s of statuses) {
+      counts[s.slug] = s.count;
+      total += s.count;
+    }
+    counts["_all"] = total;
+    counts["_unstatused"] = unstatusedCount;
+    setLocalStatusCounts(counts);
+    setLocalStatusList(statuses.map((s) => ({ slug: s.slug, name: s.name, count: s.count })));
+  }
 
   // ── Navigation ───────────────────────────────────────────────────────────────
 
@@ -225,7 +247,23 @@ export default function LibraryManager({
         })
       )
     );
+    const removedCount = targets.length;
     setBooks((prev) => prev.filter((b) => !selectedIds.has(b.book_id)));
+    // Update sidebar counts after removal
+    if (filter.kind === "status") {
+      setLocalStatusList((prev) =>
+        prev.map((s) =>
+          s.slug === filter.slug ? { ...s, count: Math.max(0, s.count - removedCount) } : s
+        )
+      );
+      setLocalStatusCounts((prev) => ({
+        ...prev,
+        [filter.slug]: Math.max(0, (prev[filter.slug] ?? 0) - removedCount),
+        _all: Math.max(0, (prev["_all"] ?? 0) - removedCount),
+      }));
+    } else {
+      await refreshStatusCounts();
+    }
     setSelectedIds(new Set());
     setBulkWorking(false);
   }
@@ -244,9 +282,25 @@ export default function LibraryManager({
         })
       )
     );
-    // If viewing a specific status, remove moved books from view
+    const movedCount = targets.length;
+    // Update sidebar counts: subtract from current filter, add to target
     if (filter.kind === "status" && filter.slug !== slug) {
       setBooks((prev) => prev.filter((b) => !selectedIds.has(b.book_id)));
+      setLocalStatusList((prev) =>
+        prev.map((s) => {
+          if (s.slug === filter.slug) return { ...s, count: Math.max(0, s.count - movedCount) };
+          if (s.slug === slug) return { ...s, count: s.count + movedCount };
+          return s;
+        })
+      );
+      setLocalStatusCounts((prev) => ({
+        ...prev,
+        [filter.slug]: Math.max(0, (prev[filter.slug] ?? 0) - movedCount),
+        [slug]: (prev[slug] ?? 0) + movedCount,
+      }));
+    } else {
+      // From "All Books" or other views we can't determine source status, so re-fetch counts
+      await refreshStatusCounts();
     }
     setSelectedIds(new Set());
     setBulkWorking(false);
@@ -363,16 +417,16 @@ export default function LibraryManager({
         <div>
           <SidebarItem
             label="All Books"
-            count={statusCounts["_all"] ?? 0}
+            count={localStatusCounts["_all"] ?? 0}
             active={filter.kind === "all"}
             onClick={() => navigateToAllBooks()}
           />
         </div>
 
         {/* Status values */}
-        {statusList.length > 0 && (
-          <SidebarSection label="Status" count={statusList.length} defaultOpen>
-            {statusList.map((s) => (
+        {localStatusList.length > 0 && (
+          <SidebarSection label="Status" count={localStatusList.length} defaultOpen>
+            {localStatusList.map((s) => (
               <SidebarItem
                 key={s.slug}
                 label={s.name}
@@ -381,10 +435,10 @@ export default function LibraryManager({
                 onClick={() => navigateToStatus(s.slug, s.name)}
               />
             ))}
-            {(statusCounts["_unstatused"] ?? 0) > 0 && (
+            {(localStatusCounts["_unstatused"] ?? 0) > 0 && (
               <SidebarItem
                 label="Unstatused"
-                count={statusCounts["_unstatused"]}
+                count={localStatusCounts["_unstatused"]}
                 active={filter.kind === "status" && filter.slug === "_unstatused"}
                 onClick={() => navigateToStatus("_unstatused", "Unstatused")}
               />
@@ -461,7 +515,7 @@ export default function LibraryManager({
             </div>
 
             {/* Unified Labels dropdown (Status + tag keys) */}
-            {(statusList.length > 0 || nonStatusTagKeys.length > 0) && (
+            {(localStatusList.length > 0 || nonStatusTagKeys.length > 0) && (
               <div className="relative">
                 <button
                   onClick={() => {
@@ -478,7 +532,7 @@ export default function LibraryManager({
                 {showLabelsMenu && (
                   <div className="absolute top-full left-0 mt-1 z-20 bg-surface-0 border border-border rounded shadow-md min-w-[160px]">
                     {/* Status key */}
-                    {statusList.length > 0 && (
+                    {localStatusList.length > 0 && (
                       <div
                         className="relative border-b border-border last:border-0"
                         onMouseEnter={() => setHoveredKey("_status")}
@@ -489,7 +543,7 @@ export default function LibraryManager({
                         </div>
                         {hoveredKey === "_status" && (
                           <div className="absolute left-full top-0 ml-0 z-30 bg-surface-0 border border-border rounded shadow-md min-w-[140px]">
-                            {statusList.map((s) => (
+                            {localStatusList.map((s) => (
                               <button
                                 key={s.slug}
                                 onClick={() => massChangeStatus(s.slug)}
