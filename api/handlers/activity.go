@@ -4,9 +4,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 )
+
+// validActivityTypes is the set of allowed activity_type values for filtering.
+var validActivityTypes = map[string]bool{
+	"shelved":         true,
+	"started_book":    true,
+	"finished_book":   true,
+	"rated":           true,
+	"reviewed":        true,
+	"created_thread":  true,
+	"followed_user":   true,
+	"followed_author": true,
+	"created_link":    true,
+}
 
 // enrichActivity takes a raw activity row and enriches it with book, user, and
 // metadata details to match the webapp's ActivityItem type.
@@ -151,6 +165,7 @@ func GetFeed(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		cursor := e.Request.URL.Query().Get("cursor")
+		typeFilter := e.Request.URL.Query().Get("type")
 		limit := 30
 
 		// Check if user follows anyone
@@ -176,6 +191,26 @@ func GetFeed(app core.App) func(e *core.RequestEvent) error {
 			AND a.user NOT IN (SELECT blocker FROM blocks WHERE blocked = {:user})
 		`
 		params := map[string]any{"user": user.Id}
+
+		if typeFilter != "" {
+			types := strings.Split(typeFilter, ",")
+			var filtered []string
+			for _, t := range types {
+				t = strings.TrimSpace(t)
+				if validActivityTypes[t] {
+					filtered = append(filtered, t)
+				}
+			}
+			if len(filtered) > 0 {
+				placeholders := make([]string, len(filtered))
+				for i, t := range filtered {
+					key := fmt.Sprintf("type%d", i)
+					placeholders[i] = "{:" + key + "}"
+					params[key] = t
+				}
+				query += " AND a.activity_type IN (" + strings.Join(placeholders, ", ") + ")"
+			}
+		}
 
 		if cursor != "" {
 			query += " AND a.created < {:cursor}"
