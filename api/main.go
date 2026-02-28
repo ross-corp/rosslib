@@ -38,6 +38,9 @@ func main() {
 		se.Router.GET("/books/{workId}/series", handlers.GetBookSeries(app))
 		se.Router.GET("/series/{seriesId}", handlers.GetSeriesDetail(app)).BindFunc(handlers.OptionalAuthFunc(app))
 
+		// ── Book quotes (public) ─────────────────────────────────
+		se.Router.GET("/books/{workId}/quotes", handlers.GetBookQuotes(app))
+
 		// ── Books (optional auth) ────────────────────────────────
 		se.Router.GET("/books/{workId}/reviews", handlers.GetBookReviews(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/books/{workId}/links", handlers.GetBookLinks(app)).BindFunc(handlers.OptionalAuthFunc(app))
@@ -160,6 +163,11 @@ func main() {
 		authed.GET("/me/imports/pending", handlers.GetPendingImports(app))
 		authed.PATCH("/me/imports/pending/{id}", handlers.ResolvePendingImport(app))
 		authed.DELETE("/me/imports/pending/{id}", handlers.DeletePendingImport(app))
+
+		// Quotes
+		authed.GET("/me/books/{olId}/quotes", handlers.GetMyBookQuotes(app))
+		authed.POST("/me/books/{olId}/quotes", handlers.CreateBookQuote(app))
+		authed.DELETE("/me/quotes/{quoteId}", handlers.DeleteBookQuote(app))
 
 		// Genre ratings
 		authed.GET("/me/books/{olId}/genre-ratings", handlers.GetMyGenreRatings(app))
