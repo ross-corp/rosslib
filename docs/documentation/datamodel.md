@@ -411,6 +411,7 @@ users ──< book_follows >── books  (book subscriptions)
 users ──< notifications      (per-user notifications)
 users ──< notification_preferences  (per-user notification settings)
 users ──< password_reset_tokens  (password reset tokens)
+users ──< api_tokens             (personal access tokens)
 users ──< genre_ratings >── books  (per-user genre dimension scores)
 author_works_snapshot        (OL author key → work count snapshot)
 collections ──< computed_collections  (operation definition for live lists)
@@ -490,6 +491,21 @@ Tokens for the forgot-password flow. Tokens are stored as SHA-256 hashes (not ra
 | created_at | timestamptz | |
 
 Index: `user_id`
+
+### `api_tokens`
+
+Personal access tokens for external API integrations (CLI tools, Calibre, etc.). Tokens are stored as SHA-256 hashes. Max 5 per user.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | auto-generated |
+| user | relation → users | cascade delete |
+| name | text | user-chosen label (e.g. "CLI", "Calibre"), max 100 chars |
+| token_hash | text | SHA-256 hash of the raw token (unique index) |
+| last_used_at | date | nullable, updated on each use |
+| created | timestamptz | auto-generated |
+
+Indexes: `user`, `token_hash` (unique)
 
 ### `book_stats`
 

@@ -80,6 +80,7 @@ webapp/src/app/
 │   ├── imports/pending/page.tsx   review unmatched imports
 │   ├── export/page.tsx             CSV export
 │   ├── tags/page.tsx               label category management
+│   ├── api-tokens/page.tsx         API token management (create/revoke)
 │   ├── ghost-activity/page.tsx     ghost user controls
 │   ├── follow-requests/page.tsx    pending follow requests
 │   └── followed-books/page.tsx     manage followed books
@@ -286,7 +287,11 @@ Used on book detail pages (community reviews), user reviews pages, recent review
 
 ### `SettingsNav` (`components/settings-nav.tsx`)
 
-Client component providing pill-style navigation across settings sub-pages. Uses `usePathname()` to highlight the active section. Rendered on all settings pages (Profile, Import, Export, Ghost Activity). The active pill uses `bg-accent text-white`; inactive pills use `bg-surface-2`.
+Client component providing pill-style navigation across settings sub-pages. Uses `usePathname()` to highlight the active section. Rendered on all settings pages (Profile, Import, Export, API Tokens, Ghost Activity). The active pill uses `bg-accent text-white`; inactive pills use `bg-surface-2`.
+
+### `APITokensForm` (`components/api-tokens-form.tsx`)
+
+Client component rendered on `/settings/api-tokens`. Manages personal API tokens for external integrations. Fetches tokens on mount via `GET /api/me/api-tokens`. Shows a create form (name input + button, disabled at 5 tokens), and a table of existing tokens with name, created date, last used date, and a "Revoke" button. Creating a token via `POST /api/me/api-tokens` shows the raw token once in a green banner with `select-all` styling. Revoking calls `DELETE /api/me/api-tokens/:id`.
 
 ### `PasswordForm` (`components/password-form.tsx`)
 

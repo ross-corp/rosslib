@@ -17,6 +17,10 @@ func optionalAuthMiddleware(app core.App) func(e *core.RequestEvent) error {
 				e.Auth = record
 			}
 		}
+		// If PocketBase JWT auth didn't match, try API token
+		if e.Auth == nil {
+			authenticateByAPIToken(app, e)
+		}
 		return e.Next()
 	}
 }
@@ -24,6 +28,17 @@ func optionalAuthMiddleware(app core.App) func(e *core.RequestEvent) error {
 // OptionalAuthFunc returns a hook function for optional auth (use with .BindFunc).
 func OptionalAuthFunc(app core.App) func(e *core.RequestEvent) error {
 	return optionalAuthMiddleware(app)
+}
+
+// APITokenAuth middleware tries to authenticate via API token if PocketBase JWT auth didn't match.
+// This should be bound before RequireAuth() on authenticated route groups.
+func APITokenAuth(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		if e.Auth == nil {
+			authenticateByAPIToken(app, e)
+		}
+		return e.Next()
+	}
 }
 
 // RequireModerator checks that the authenticated user has is_moderator = true.

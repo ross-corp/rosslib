@@ -4,7 +4,7 @@ All routes are served by the Go API on `:8080`. The webapp proxies them through 
 
 **Interactive docs:** Visit [`/docs`](http://localhost:8080/docs) for a Swagger UI with the full OpenAPI 3.0 spec. The raw spec is at [`/docs/openapi.yaml`](http://localhost:8080/docs/openapi.yaml).
 
-Auth is via a 30-day JWT in an `httpOnly` cookie named `token`. The Go API reads it via `Authorization: Bearer <token>` header — the Next.js proxy extracts the cookie and forwards it as a header.
+Auth is via a 30-day JWT in an `httpOnly` cookie named `token`. The Go API reads it via `Authorization: Bearer <token>` header — the Next.js proxy extracts the cookie and forwards it as a header. External integrations can also authenticate with personal API tokens (see **API Tokens** section below) using the same `Authorization: Bearer <token>` header.
 
 ---
 
@@ -104,6 +104,43 @@ Permanently deletes all data owned by the authenticated user: user_books, collec
 ```
 200 { "message": "All data deleted" }
 401 { "error": "Authentication required" }
+```
+
+---
+
+## API Tokens
+
+Personal access tokens for external integrations (CLI tools, Calibre, etc.). Tokens authenticate via the same `Authorization: Bearer <token>` header as JWTs. Max 5 tokens per user.
+
+### `GET /me/api-tokens`  *(auth required)*
+
+List all API tokens for the authenticated user. Never returns the raw token — only metadata.
+
+```
+200 { "tokens": [{ "id": "abc123", "name": "CLI", "created": "2024-01-15 10:30:00.000Z", "last_used_at": "2024-02-01 08:00:00.000Z" }] }
+```
+
+### `POST /me/api-tokens`  *(auth required)*
+
+Create a new API token. The raw token is returned **once** in the response — it is not stored and cannot be retrieved later.
+
+```json
+{ "name": "CLI" }
+```
+
+```
+200 { "id": "abc123", "name": "CLI", "token": "64-char-hex-string" }
+400 { "error": "Token name is required" }
+400 { "error": "Maximum of 5 API tokens reached. Delete an existing token first." }
+```
+
+### `DELETE /me/api-tokens/:tokenId`  *(auth required)*
+
+Revoke (delete) an API token. Only the token owner can delete it.
+
+```
+200 { "message": "Token deleted" }
+404 { "error": "Token not found" }
 ```
 
 ---
