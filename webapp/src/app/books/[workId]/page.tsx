@@ -14,6 +14,7 @@ import GenreRatingEditor from "@/components/genre-rating-editor";
 import ReportButton from "@/components/report-button";
 import ReviewLikeButton from "@/components/review-like-button";
 import RecommendButton from "@/components/recommend-button";
+import RecordRecentlyViewed from "@/components/record-recently-viewed";
 import { getUser, getToken } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -297,6 +298,11 @@ export default async function BookPage({
   return (
     <div className="min-h-screen">
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+        <RecordRecentlyViewed
+          workId={workId}
+          title={book.title}
+          coverUrl={book.cover_url}
+        />
         {/* ── Book header ── */}
         <div className="flex gap-8 items-start mb-10">
           {/* Cover */}
