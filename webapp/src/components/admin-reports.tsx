@@ -142,7 +142,7 @@ export default function AdminReports() {
                     <button
                       onClick={() => updateStatus(item.id, "reviewed")}
                       disabled={updatingId === item.id}
-                      className="px-3 py-1 rounded text-xs font-medium bg-green-900/30 text-green-300 hover:bg-green-900/50 transition-colors disabled:opacity-50"
+                      className="px-3 py-1 rounded text-xs font-medium bg-semantic-success-bg text-semantic-success hover:bg-semantic-success-bg/70 transition-colors disabled:opacity-50"
                     >
                       Review
                     </button>

@@ -33,6 +33,51 @@ const config: Config = {
           DEFAULT: "var(--accent)",
           hover: "var(--accent-hover)",
         },
+        semantic: {
+          error: {
+            DEFAULT: "var(--error-text)",
+            bg: "var(--error-bg)",
+            border: "var(--error-border)",
+          },
+          success: {
+            DEFAULT: "var(--success-text)",
+            bg: "var(--success-bg)",
+            border: "var(--success-border)",
+          },
+          warning: {
+            DEFAULT: "var(--warning-text)",
+            bg: "var(--warning-bg)",
+            border: "var(--warning-border)",
+          },
+          info: {
+            DEFAULT: "var(--info-text)",
+            bg: "var(--info-bg)",
+            border: "var(--info-border)",
+          },
+        },
+        danger: {
+          DEFAULT: "var(--danger-btn-text)",
+          bg: "var(--danger-btn-bg)",
+          "bg-hover": "var(--danger-btn-bg-hover)",
+        },
+        link: "var(--link-color)",
+        like: {
+          DEFAULT: "var(--like-color)",
+          hover: "var(--like-color-hover)",
+        },
+        badge: {
+          DEFAULT: "var(--badge-bg)",
+          text: "var(--badge-text)",
+        },
+        toggle: {
+          bg: "var(--toggle-bg)",
+          active: "var(--toggle-bg-active)",
+          knob: "var(--toggle-knob)",
+        },
+        progress: "var(--progress-bar)",
+      },
+      backgroundColor: {
+        overlay: "var(--overlay)",
       },
       maxWidth: {
         shell: "1280px",

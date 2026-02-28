@@ -105,8 +105,8 @@ export default function SettingsForm({
               </div>
             )}
             {avatarUploading && (
-              <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
-                <span className="text-white text-xs">...</span>
+              <div className="absolute inset-0 rounded-full bg-overlay flex items-center justify-center">
+                <span className="text-badge-text text-xs">...</span>
               </div>
             )}
           </div>
@@ -123,7 +123,7 @@ export default function SettingsForm({
               />
             </label>
             {avatarError && (
-              <p className="text-xs text-red-600 mt-1">{avatarError}</p>
+              <p className="text-xs text-semantic-error mt-1">{avatarError}</p>
             )}
           </div>
         </div>
@@ -132,12 +132,12 @@ export default function SettingsForm({
       {/* Profile fields */}
       <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+          <p className="text-sm text-semantic-error bg-semantic-error-bg border border-semantic-error-border rounded px-3 py-2">
             {error}
           </p>
         )}
         {saved && (
-          <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+          <p className="text-sm text-semantic-success bg-semantic-success-bg border border-semantic-success-border rounded px-3 py-2">
             Profile updated.
           </p>
         )}

@@ -87,7 +87,7 @@ function VerifyEmailContent() {
             <h1 className="text-2xl font-bold text-text-primary">
               Verification failed
             </h1>
-            <p className="mt-2 text-sm text-red-400">{error}</p>
+            <p className="mt-2 text-sm text-semantic-error">{error}</p>
             <Link
               href="/settings"
               className="inline-block mt-4 text-text-primary font-medium hover:underline text-sm"

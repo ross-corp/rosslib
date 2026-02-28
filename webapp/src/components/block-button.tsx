@@ -45,7 +45,7 @@ export default function BlockButton({
         <button
           onClick={handleBlock}
           disabled={loading}
-          className="text-xs px-2 py-1 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+          className="text-xs px-2 py-1 rounded border border-semantic-error-border text-danger hover:bg-danger-bg transition-colors disabled:opacity-50"
         >
           {loading ? "..." : "Confirm"}
         </button>
@@ -65,7 +65,7 @@ export default function BlockButton({
       <button
         onClick={handleUnblock}
         disabled={loading}
-        className="text-xs px-2 py-1 rounded border border-red-500/20 text-red-400/70 hover:text-red-400 hover:border-red-500/30 transition-colors disabled:opacity-50"
+        className="text-xs px-2 py-1 rounded border border-danger-bg text-danger hover:text-danger hover:border-semantic-error-border transition-colors disabled:opacity-50"
       >
         {loading ? "..." : "Unblock"}
       </button>

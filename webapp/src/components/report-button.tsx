@@ -16,7 +16,7 @@ export default function ReportButton({ contentType, contentId }: Props) {
       <button
         type="button"
         onClick={() => setShowModal(true)}
-        className="px-1.5 py-1 rounded text-text-primary hover:text-red-500 hover:bg-red-50 transition-colors"
+        className="px-1.5 py-1 rounded text-text-primary hover:text-semantic-error hover:bg-semantic-error-bg transition-colors"
         title={`Report this ${contentType}`}
       >
         <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>

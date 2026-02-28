@@ -28,10 +28,10 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  finished: "bg-emerald-900/40 text-emerald-400 border-emerald-800",
-  "currently-reading": "bg-blue-900/40 text-blue-400 border-blue-800",
-  "want-to-read": "bg-amber-900/40 text-amber-400 border-amber-800",
-  dnf: "bg-red-900/40 text-red-400 border-red-800",
+  finished: "bg-semantic-success-bg text-semantic-success border-semantic-success-border",
+  "currently-reading": "bg-semantic-info-bg text-semantic-info border-semantic-info-border",
+  "want-to-read": "bg-semantic-warning-bg text-semantic-warning border-semantic-warning-border",
+  dnf: "bg-semantic-error-bg text-semantic-error border-semantic-error-border",
   "owned-to-read": "bg-purple-900/40 text-purple-400 border-purple-800",
 };
 

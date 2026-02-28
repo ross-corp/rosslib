@@ -79,12 +79,12 @@ export default function PasswordForm() {
 
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+          <p className="text-sm text-semantic-error bg-semantic-error-bg border border-semantic-error-border rounded px-3 py-2">
             {error}
           </p>
         )}
         {saved && (
-          <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+          <p className="text-sm text-semantic-success bg-semantic-success-bg border border-semantic-success-border rounded px-3 py-2">
             {hasPassword ? "Password updated." : "Password set. You can now sign in with email and password."}
           </p>
         )}

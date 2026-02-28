@@ -291,7 +291,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                   type="button"
                   onClick={clearSelectedBook}
                   disabled={submitting}
-                  className="text-xs text-text-primary hover:text-red-500 transition-colors disabled:opacity-50"
+                  className="text-xs text-text-primary hover:text-semantic-error transition-colors disabled:opacity-50"
                 >
                   <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
                     <path d="M3 3l6 6M9 3l-6 6" />
@@ -399,7 +399,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
             >
               Cancel
             </button>
-            {error && <span className="text-xs text-red-500">{error}</span>}
+            {error && <span className="text-xs text-semantic-error">{error}</span>}
           </div>
         </form>
       )}
@@ -514,7 +514,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                             type="button"
                             onClick={() => handleDelete(link.id)}
                             disabled={deletingIds.has(link.id)}
-                            className="px-1.5 py-1 rounded text-text-primary hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                            className="px-1.5 py-1 rounded text-text-primary hover:text-semantic-error hover:bg-semantic-error-bg transition-colors disabled:opacity-50"
                             title={currentUsername === link.username ? "Delete your link" : "Remove link (moderator)"}
                           >
                             <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
@@ -576,8 +576,8 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                           >
                             Cancel
                           </button>
-                          {editError && <span className="text-xs text-red-500">{editError}</span>}
-                          {editSuccess && <span className="text-xs text-green-600">{editSuccess}</span>}
+                          {editError && <span className="text-xs text-semantic-error">{editError}</span>}
+                          {editSuccess && <span className="text-xs text-semantic-success">{editSuccess}</span>}
                         </div>
                       </form>
                     )}

@@ -404,7 +404,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
           {doneResult.imported} book{doneResult.imported !== 1 ? "s" : ""} imported successfully.
         </p>
         {doneResult.failed > 0 && (
-          <p className="text-sm text-red-600">
+          <p className="text-sm text-semantic-error">
             {doneResult.failed} book{doneResult.failed !== 1 ? "s" : ""} failed to import.
           </p>
         )}
@@ -463,7 +463,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
       <div className="space-y-8">
         {/* Summary */}
         <div className="flex flex-wrap gap-4 text-sm">
-          <span className="px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-800">
+          <span className="px-2.5 py-1 rounded-full bg-semantic-success-bg border border-semantic-success-border text-semantic-success">
             {preview.matched} matched
           </span>
           {preview.ambiguous > 0 && (
@@ -594,7 +594,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
           </section>
         )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-semantic-error">{error}</p>}
 
         {/* Action bar */}
         <div className="flex items-center gap-4 pt-2 border-t border-border">
@@ -824,7 +824,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
           </p>
         )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-semantic-error">{error}</p>}
 
         {/* Action bar */}
         <div className="flex items-center gap-4 pt-2 border-t border-border">
@@ -928,7 +928,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
         {fileName && <span className="text-xs text-text-primary truncate max-w-xs">{fileName}</span>}
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-semantic-error">{error}</p>}
 
       <button
         type="button"

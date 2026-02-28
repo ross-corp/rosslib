@@ -106,7 +106,7 @@ export default function RecommendButton({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay"
           onClick={handleClose}
         >
           <div
@@ -252,7 +252,7 @@ export default function RecommendButton({
                       />
 
                       {error && (
-                        <p className="text-xs text-red-500 mt-2">{error}</p>
+                        <p className="text-xs text-semantic-error mt-2">{error}</p>
                       )}
 
                       <button
