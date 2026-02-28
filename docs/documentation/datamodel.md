@@ -568,6 +568,23 @@ Unmatched rows from Goodreads CSV imports. Saved so users can retry or manually 
 
 Index: `(user, status)` for efficient listing of unresolved imports.
 
+### `reading_sessions`
+
+Re-read tracking. Each row represents one reading of a book, with optional dates, rating, and notes. Multiple sessions per book are allowed. The existing `user_books` record keeps the "current" status/rating/review; sessions are historical.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user | uuid FK → users (cascade) | |
+| book | uuid FK → books (cascade) | |
+| date_started | date | nullable |
+| date_finished | date | nullable |
+| rating | number | nullable; 1–5 |
+| notes | text | nullable; max 2000 chars (app-enforced) |
+| created | timestamptz | PocketBase auto-generated |
+
+Index: `(user, book)` for listing sessions by book.
+
 ---
 
 ## Planned tables (not yet in schema.go)
