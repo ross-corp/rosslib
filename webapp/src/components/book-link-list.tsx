@@ -500,8 +500,9 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                             }
                             className="px-1.5 py-1 rounded text-text-primary hover:text-text-primary hover:bg-surface-2 transition-colors"
                             title="Suggest an edit"
+                            aria-label="Suggest an edit"
                           >
-                            <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                            <svg aria-hidden="true" viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
                               <path d="M8.5 1.5l2 2L4 10H2v-2L8.5 1.5Z" />
                             </svg>
                           </button>
@@ -516,10 +517,18 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                             disabled={deletingIds.has(link.id)}
                             className="px-1.5 py-1 rounded text-text-primary hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
                             title={currentUsername === link.username ? "Delete your link" : "Remove link (moderator)"}
+                            aria-label={currentUsername === link.username ? "Delete your link" : "Remove link (moderator)"}
                           >
-                            <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                              <path d="M2 3h8M4.5 3V2h3v1M3 3v7h6V3M5 5v3M7 5v3" />
-                            </svg>
+                            {deletingIds.has(link.id) ? (
+                              <svg aria-hidden="true" className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                            ) : (
+                              <svg aria-hidden="true" viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                                <path d="M2 3h8M4.5 3V2h3v1M3 3v7h6V3M5 5v3M7 5v3" />
+                              </svg>
+                            )}
                           </button>
                         )}
                       </div>
