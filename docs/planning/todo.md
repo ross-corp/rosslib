@@ -4,9 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## stats & data
 
-
-- [ ] Backfill book_stats on a schedule. Currently `book_stats` is only refreshed when individual users change a book's status/rating. Add a background goroutine in `api/main.go` (similar to `notifications.StartPoller`) that runs `bookstats.BackfillAll` once every 24 hours to catch any drift from edge cases (deleted users, failed goroutines, import edge cases). Log the backfill duration and number of rows updated. The existing startup backfill already runs on boot — this just adds a periodic re-check.
-
 ## notifications & feed
 
 - [ ] Add feed filtering by activity type. On the feed page (`webapp/src/app/feed/page.tsx`), add a row of filter chips above the feed: "All", "Reviews", "Status Updates", "Threads", "Social". Clicking a chip passes `?type=reviewed` (or `shelved`, `created_thread`, `followed_user`, etc.) to the API. In `api/handlers/activity.go` `GetFeed`, accept a `type` query param and add a `WHERE activity_type = ?` clause when present. Multiple types could be comma-separated (e.g. `?type=rated,reviewed`). Default (no param) returns all types as before.
@@ -87,3 +84,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add reading pace calculation for currently-reading books](https://github.com/ross-corp/rosslib/pull/94) — show pages/day and estimated finish date below reading progress bar
 - [Add re-read tracking with reading sessions](https://github.com/ross-corp/rosslib/pull/95) — reading_sessions collection, CRUD API endpoints, ReadingHistory component on book detail page
 - [Add year-in-review summary page](https://github.com/ross-corp/rosslib/pull/96) — year-in-review API endpoint and page with stats, top books, genres, and month-by-month grid
+- [Add periodic book_stats backfill every 24 hours](https://github.com/ross-corp/rosslib/pull/97) — bookstats package with BackfillAll + StartPoller goroutine running on startup and every 24h
