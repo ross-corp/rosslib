@@ -206,7 +206,7 @@ Layout: `h-screen flex flex-col overflow-hidden` on the page, then inside Librar
 
 **Sidebar** — clicking a label fetches its books client-side via `GET /api/users/:username/shelves/:slug`. Clicking a tag collection fetches via `GET /api/users/:username/tags/:path`. Clicking a label value fetches via `GET /api/users/:username/labels/:keySlug/*valuePath` (includes sub-values). Nested label values are indented by depth in the sidebar, showing only the last path segment as the display name.
 
-**Top bar** — shows the current label name and book count when nothing is selected. Transforms into the bulk action toolbar when one or more books are checked:
+**Top bar** — shows the current label name, book count, and sort options when nothing is selected. Sort options: Date added (default), Title, Author, Rating. Changing the sort re-fetches the current view from the API with the `sort` query param. Transforms into the bulk action toolbar when one or more books are checked:
 - Rate — sets rating on all selected books via `PATCH /api/shelves/:shelfId/books/:olId`
 - Move to label — moves via `POST /api/shelves/:targetId/books`, then refreshes the current label
 - Labels — applies or clears a label value across all selected books via `PUT/DELETE /api/me/books/:olId/tags/:keyId`

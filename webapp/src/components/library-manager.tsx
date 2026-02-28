@@ -93,6 +93,17 @@ function buildValueTree(values: TagValue[]): ValueTreeNode[] {
   return root;
 }
 
+// ── Sort options ──────────────────────────────────────────────────────────────
+
+const SORT_OPTIONS = [
+  { value: "date_added", label: "Date added" },
+  { value: "title", label: "Title" },
+  { value: "author", label: "Author" },
+  { value: "rating", label: "Rating" },
+] as const;
+
+type SortValue = (typeof SORT_OPTIONS)[number]["value"];
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export type StatusInfo = { slug: string; name: string; count: number };
@@ -121,6 +132,7 @@ export default function LibraryManager({
       : { kind: "status", slug: initialShelf.slug, name: initialShelf.name }
   );
   const [loading, setLoading] = useState(false);
+  const [sort, setSort] = useState<SortValue>("date_added");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const [showRateMenu, setShowRateMenu] = useState(false);
@@ -140,12 +152,18 @@ export default function LibraryManager({
     setShowTagsMenu(false);
   }
 
-  async function navigateToStatus(slug: string, name: string) {
-    if (filter.kind === "status" && filter.slug === slug) return;
+  function sortQs(sortValue: SortValue) {
+    return sortValue === "date_added" ? "" : `sort=${sortValue}`;
+  }
+
+  async function navigateToStatus(slug: string, name: string, sortOverride?: SortValue) {
+    const s = sortOverride ?? sort;
+    if (!sortOverride && filter.kind === "status" && filter.slug === slug) return;
     setLoading(true);
     setSelectedIds(new Set());
     closeMenus();
-    const res = await fetch(`/api/users/${username}/books?status=${slug}`);
+    const sq = sortQs(s);
+    const res = await fetch(`/api/users/${username}/books?status=${slug}${sq ? `&${sq}` : ""}`);
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
@@ -154,12 +172,14 @@ export default function LibraryManager({
     }
   }
 
-  async function navigateToAllBooks() {
-    if (filter.kind === "all") return;
+  async function navigateToAllBooks(sortOverride?: SortValue) {
+    const s = sortOverride ?? sort;
+    if (!sortOverride && filter.kind === "all") return;
     setLoading(true);
     setSelectedIds(new Set());
     closeMenus();
-    const res = await fetch(`/api/users/${username}/books?limit=500`);
+    const sq = sortQs(s);
+    const res = await fetch(`/api/users/${username}/books?limit=500${sq ? `&${sq}` : ""}`);
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
@@ -174,12 +194,14 @@ export default function LibraryManager({
     }
   }
 
-  async function navigateToTag(slug: string, name: string) {
-    if (filter.kind === "tag" && filter.slug === slug) return;
+  async function navigateToTag(slug: string, name: string, sortOverride?: SortValue) {
+    const s = sortOverride ?? sort;
+    if (!sortOverride && filter.kind === "tag" && filter.slug === slug) return;
     setLoading(true);
     setSelectedIds(new Set());
     closeMenus();
-    const res = await fetch(`/api/users/${username}/tags/${slug}`);
+    const sq = sortQs(s);
+    const res = await fetch(`/api/users/${username}/tags/${slug}${sq ? `?${sq}` : ""}`);
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
@@ -188,17 +210,39 @@ export default function LibraryManager({
     }
   }
 
-  async function navigateToLabel(keySlug: string, keyName: string, valueSlug: string, valueName: string) {
-    if (filter.kind === "label" && filter.keySlug === keySlug && filter.valueSlug === valueSlug) return;
+  async function navigateToLabel(keySlug: string, keyName: string, valueSlug: string, valueName: string, sortOverride?: SortValue) {
+    const s = sortOverride ?? sort;
+    if (!sortOverride && filter.kind === "label" && filter.keySlug === keySlug && filter.valueSlug === valueSlug) return;
     setLoading(true);
     setSelectedIds(new Set());
     closeMenus();
-    const res = await fetch(`/api/users/${username}/labels/${keySlug}/${valueSlug}`);
+    const sq = sortQs(s);
+    const res = await fetch(`/api/users/${username}/labels/${keySlug}/${valueSlug}${sq ? `?${sq}` : ""}`);
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
       setBooks(data.books ?? []);
       setFilter({ kind: "label", keySlug, keyName, valueSlug, valueName });
+    }
+  }
+
+  async function changeSort(newSort: SortValue) {
+    if (newSort === sort) return;
+    setSort(newSort);
+    // Re-fetch current view with new sort
+    switch (filter.kind) {
+      case "status":
+        await navigateToStatus(filter.slug, filter.name, newSort);
+        break;
+      case "all":
+        await navigateToAllBooks(newSort);
+        break;
+      case "tag":
+        await navigateToTag(filter.slug, filter.name, newSort);
+        break;
+      case "label":
+        await navigateToLabel(filter.keySlug, filter.keyName, filter.valueSlug, filter.valueName, newSort);
+        break;
     }
   }
 
@@ -629,6 +673,24 @@ export default function LibraryManager({
             <span className="text-xs text-text-primary">
               {books.length} {books.length === 1 ? "book" : "books"}
             </span>
+            {books.length > 1 && (
+              <div className="ml-auto flex items-center gap-1.5">
+                <span className="text-xs text-text-secondary">Sort:</span>
+                {SORT_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => changeSort(option.value)}
+                    className={`text-xs px-2 py-1 rounded transition-colors ${
+                      sort === option.value
+                        ? "bg-surface-2 text-text-primary font-medium"
+                        : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
