@@ -1,5 +1,6 @@
 import Link from "next/link";
 import BookList from "@/components/book-list";
+import RecentlyViewedBooks from "@/components/recently-viewed-books";
 import { type StatusValue } from "@/components/shelf-picker";
 import { getToken, getUser } from "@/lib/auth";
 
@@ -292,6 +293,8 @@ export default async function SearchPage({
             <p className="text-sm text-text-secondary mb-8">
               Start typing to search for books, authors, or people.
             </p>
+
+            <RecentlyViewedBooks />
 
             {popularBooks.length > 0 && (
               <div>
