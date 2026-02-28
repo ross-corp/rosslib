@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, ReactNode } from "react";
 import { TagKey, TagValue } from "@/components/book-tag-picker";
+import ConfirmDialog from "@/components/confirm-dialog";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -123,6 +124,7 @@ export default function LibraryManager({
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
+  const [confirmMassRemove, setConfirmMassRemove] = useState(false);
   const [showRateMenu, setShowRateMenu] = useState(false);
   const [showLabelsMenu, setShowLabelsMenu] = useState(false);
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
@@ -552,7 +554,7 @@ export default function LibraryManager({
 
             {/* Remove */}
             <button
-              onClick={massRemove}
+              onClick={() => setConfirmMassRemove(true)}
               disabled={bulkWorking}
               className="text-xs px-3 py-1.5 rounded border border-red-200 text-red-500 hover:border-red-400 hover:text-red-700 disabled:opacity-50 transition-colors"
             >
@@ -729,6 +731,17 @@ export default function LibraryManager({
           )}
         </div>
       </div>
+      {confirmMassRemove && (
+        <ConfirmDialog
+          title="Remove from library"
+          message={`Remove ${selectedIds.size} book${selectedIds.size === 1 ? "" : "s"} from your library? Ratings, reviews, and reading progress will be deleted.`}
+          onConfirm={() => {
+            setConfirmMassRemove(false);
+            massRemove();
+          }}
+          onCancel={() => setConfirmMassRemove(false)}
+        />
+      )}
     </div>
   );
 }

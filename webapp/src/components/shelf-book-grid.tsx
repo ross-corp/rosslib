@@ -5,6 +5,7 @@ import { useState } from "react";
 import BookTagPicker, { TagKey } from "@/components/book-tag-picker";
 import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import QuickAddButton from "@/components/quick-add-button";
+import ConfirmDialog from "@/components/confirm-dialog";
 import type { StatusValue } from "@/components/shelf-picker";
 
 type Book = {
@@ -34,8 +35,10 @@ export default function ShelfBookGrid({
 }) {
   const [books, setBooks] = useState(initialBooks);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [confirmBook, setConfirmBook] = useState<Book | null>(null);
 
   async function removeBook(olId: string) {
+    setConfirmBook(null);
     setRemoving(olId);
     const res = await fetch(`/api/me/books/${olId}`, {
       method: "DELETE",
@@ -53,6 +56,7 @@ export default function ShelfBookGrid({
   }
 
   return (
+    <>
     <ul className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-5">
       {books.map((book) => (
         <li key={book.book_id} className="group relative flex flex-col gap-2">
@@ -105,7 +109,7 @@ export default function ShelfBookGrid({
           </div>
           {isOwner && (
             <button
-              onClick={() => removeBook(book.open_library_id)}
+              onClick={() => setConfirmBook(book)}
               disabled={removing === book.open_library_id}
               className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-surface-0 border border-border rounded px-1.5 py-0.5 text-xs text-text-primary hover:text-text-primary hover:border-border disabled:opacity-50"
             >
@@ -124,5 +128,14 @@ export default function ShelfBookGrid({
         </li>
       ))}
     </ul>
+    {confirmBook && (
+      <ConfirmDialog
+        title="Remove from library"
+        message={`Remove "${confirmBook.title}" from your library? Your rating, review, and reading progress will be deleted.`}
+        onConfirm={() => removeBook(confirmBook.open_library_id)}
+        onCancel={() => setConfirmBook(null)}
+      />
+    )}
+    </>
   );
 }
