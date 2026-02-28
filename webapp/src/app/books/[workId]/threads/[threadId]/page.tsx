@@ -1,22 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import ThreadComments from "@/components/thread-comments";
+import ThreadLockToggle from "@/components/thread-lock-toggle";
 import SimilarThreads from "@/components/similar-threads";
 import { getUser } from "@/lib/auth";
-
-type Thread = {
-  id: string;
-  book_id: string;
-  user_id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  title: string;
-  body: string;
-  spoiler: boolean;
-  created_at: string;
-  comment_count: number;
-};
 
 type Comment = {
   id: string;
@@ -31,7 +18,17 @@ type Comment = {
 };
 
 type ThreadDetail = {
-  thread: Thread;
+  id: string;
+  book: string;
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  title: string;
+  body: string;
+  spoiler: boolean;
+  created_at: string;
+  locked_at: string | null;
   comments: Comment[];
 };
 
@@ -75,7 +72,7 @@ export default async function ThreadPage({
 
   if (!data) notFound();
 
-  const { thread, comments } = data;
+  const isModerator = currentUser?.is_moderator ?? false;
 
   return (
     <div className="min-h-screen">
@@ -91,21 +88,34 @@ export default async function ThreadPage({
 
         {/* Thread header */}
         <article className="mb-10">
-          <h1 className="text-xl font-bold text-text-primary mb-3">
-            {thread.spoiler && (
-              <span className="text-xs font-medium text-amber-600 border border-amber-200 rounded px-1.5 py-0.5 mr-2 leading-none align-middle">
-                Spoiler
-              </span>
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <h1 className="text-xl font-bold text-text-primary">
+              {data.locked_at && (
+                <svg className="inline w-4 h-4 text-text-primary mr-1.5 align-text-bottom" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+                </svg>
+              )}
+              {data.spoiler && (
+                <span className="text-xs font-medium text-amber-600 border border-amber-200 rounded px-1.5 py-0.5 mr-2 leading-none align-middle">
+                  Spoiler
+                </span>
+              )}
+              {data.title}
+            </h1>
+            {isModerator && (
+              <ThreadLockToggle
+                threadId={threadId}
+                initialLockedAt={data.locked_at}
+              />
             )}
-            {thread.title}
-          </h1>
+          </div>
 
           <div className="flex items-center gap-3 mb-4">
-            <Link href={`/${thread.username}`} className="shrink-0">
-              {thread.avatar_url ? (
+            <Link href={`/${data.username}`} className="shrink-0">
+              {data.avatar_url ? (
                 <img
-                  src={thread.avatar_url}
-                  alt={thread.display_name ?? thread.username}
+                  src={data.avatar_url}
+                  alt={data.display_name ?? data.username}
                   className="w-8 h-8 rounded-full object-cover"
                 />
               ) : (
@@ -114,29 +124,29 @@ export default async function ThreadPage({
             </Link>
             <div>
               <Link
-                href={`/${thread.username}`}
+                href={`/${data.username}`}
                 className="text-sm font-medium text-text-primary hover:underline"
               >
-                {thread.display_name ?? thread.username}
+                {data.display_name ?? data.username}
               </Link>
               <p className="text-xs text-text-primary">
-                {formatDate(thread.created_at)}
+                {formatDate(data.created_at)}
               </p>
             </div>
           </div>
 
-          {thread.spoiler ? (
+          {data.spoiler ? (
             <details>
               <summary className="text-xs text-text-primary cursor-pointer select-none hover:text-text-primary transition-colors">
                 Show thread body (contains spoilers)
               </summary>
               <p className="mt-3 text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
-                {thread.body}
+                {data.body}
               </p>
             </details>
           ) : (
             <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
-              {thread.body}
+              {data.body}
             </p>
           )}
         </article>
@@ -145,9 +155,10 @@ export default async function ThreadPage({
         <section className="border-t border-border pt-8">
           <ThreadComments
             threadId={threadId}
-            initialComments={comments}
+            initialComments={data.comments}
             isLoggedIn={!!currentUser}
             currentUserId={currentUser?.user_id ?? null}
+            isLocked={!!data.locked_at}
           />
         </section>
 

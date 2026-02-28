@@ -210,6 +210,7 @@ Discussion threads on a book's page. Any logged-in user can create a thread.
 | title | varchar(500) | |
 | body | text | |
 | spoiler | boolean | default false |
+| locked_at | timestamptz | nullable; set by moderators to prevent new comments |
 | created_at | timestamptz | |
 | deleted_at | timestamptz | soft delete |
 
