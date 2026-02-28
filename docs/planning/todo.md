@@ -17,8 +17,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX polish
 
-- [ ] Add empty state illustrations for zero-data pages. For pages that show nothing when a user is new (feed, library, labels, notifications), add friendly empty state messages with call-to-action links. Feed: "Your feed is empty. Follow some readers to see their activity." with link to `/users`. Library: "No books yet. Search for a book to get started." with link to `/search`. Notifications: "No notifications. You're all caught up!" Labels: "This label is empty. Browse books to add some." Check each page for existing empty handling and add where missing. Use the same visual style (centered text, muted color, optional icon).
-
 ## blocked
 
 - [ ] Populate series data from Open Library during book lookup. **BLOCKED: depends on PR #60 (series metadata) being merged first.** Once the `series` and `book_series` collections exist, update `GetBookDetail` in `api/handlers/books.go` to auto-detect series data. The OL editions response (`/works/{workId}/editions.json`) includes a `series` array on some editions. For each edition entry, check for a `series` field. If found, find-or-create a `series` record by name and create a `book_series` link with the position number (if available). Also try the OL work's `subjects` array for series-like patterns (e.g. "Harry Potter" appearing as a subject). This is best-effort — not all OL works have series data. Log when series data is found vs. not for visibility into coverage.
@@ -67,3 +65,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add loading skeleton components](https://github.com/ross-corp/rosslib/pull/114) — Skeleton base component, composed skeletons, loading.tsx files for feed/profile/book detail/search
 - [Add keyboard shortcuts with help overlay](https://github.com/ross-corp/rosslib/pull/115) — useKeyboardShortcuts hook, shortcuts overlay modal, hint badge for logged-in users
 - [Add dark mode with light/dark/system theme toggle](https://github.com/ross-corp/rosslib/pull/116) — theme infrastructure (CSS variables, data-theme attribute, FOUC prevention), theme toggle in nav, theme API endpoint, semantic color token conversion across ~45 files
+- [Add empty state illustrations for zero-data pages](https://github.com/ross-corp/rosslib/pull/117) — reusable EmptyState component with consistent CTA links on feed, notifications, library, and label pages
