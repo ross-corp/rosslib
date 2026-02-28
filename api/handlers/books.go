@@ -531,8 +531,24 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 			AND ub.user NOT IN (SELECT blocked FROM blocks WHERE blocker = {:viewer})
 			AND ub.user NOT IN (SELECT blocker FROM blocks WHERE blocked = {:viewer})`
 		}
+
+		// Sort: viewer's own review always first, then apply requested sort
+		sortParam := e.Request.URL.Query().Get("sort")
+		var orderSuffix string
+		switch sortParam {
+		case "oldest":
+			orderSuffix = "ub.date_added ASC"
+		case "highest":
+			orderSuffix = "ub.rating DESC NULLS LAST, ub.date_added DESC"
+		case "lowest":
+			orderSuffix = "ub.rating ASC NULLS LAST, ub.date_added DESC"
+		case "most_liked":
+			orderSuffix = "like_count DESC, ub.date_added DESC"
+		default: // "newest" or unrecognized
+			orderSuffix = "ub.date_added DESC"
+		}
 		query += `
-			ORDER BY CASE WHEN ub.user = {:viewer} THEN 0 ELSE 1 END, ub.date_added DESC`
+			ORDER BY CASE WHEN ub.user = {:viewer} THEN 0 ELSE 1 END, ` + orderSuffix
 
 		err := app.DB().NewQuery(query).Bind(params).All(&reviews)
 		if err != nil {
