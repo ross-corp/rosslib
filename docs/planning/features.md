@@ -19,7 +19,7 @@ Dependencies: local embeddings endpoint (ollama or similar), GPU access on the s
 ## Integrations & external connections
 
 ### CLI tool
-- `ross` CLI that talks to the API — search, add books, update status, view shelves from the terminal
+- `ross` CLI that talks to the API — search, add books, update status, view labels from the terminal
 - Auth via API token (new `api_tokens` table, generated from settings page)
 
 ### Calibre plugin
@@ -95,6 +95,6 @@ Dependencies: local embeddings endpoint (ollama or similar), GPU access on the s
 
 ## Business
 
-- Premium tier (what would users pay for? export formats, advanced stats, unlimited shelves, early features?)
+- Premium tier (what would users pay for? export formats, advanced stats, unlimited labels, early features?)
 - Giveaways and publisher partnerships
 - Branding: tealgardens.com is available

@@ -52,7 +52,7 @@ Index: `blocked`
 
 ### `books`
 
-Global catalog. Not per-user. Records are upserted by `open_library_id` when a user first adds a book to any shelf.
+Global catalog. Not per-user. Records are upserted by `open_library_id` when a user first adds a book to any label.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -70,7 +70,7 @@ Global catalog. Not per-user. Records are upserted by `open_library_id` when a u
 
 ### `collections`
 
-A named list owned by a user. Covers default shelves, custom shelves, and tag collections.
+A named list owned by a user. Covers default labels, custom labels, and tag collections.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -79,14 +79,14 @@ A named list owned by a user. Covers default shelves, custom shelves, and tag co
 | name | varchar(255) | |
 | slug | varchar(255) | unique per user |
 | is_exclusive | boolean | default false |
-| exclusive_group | varchar(100) | nullable; shelves in the same group enforce mutual exclusivity |
+| exclusive_group | varchar(100) | nullable; labels in the same group enforce mutual exclusivity |
 | is_public | boolean | default true |
 | collection_type | varchar(20) | `'shelf'` (default) or `'tag'` |
 | created_at | timestamptz | |
 
 Unique constraint: `(user_id, slug)`
 
-**Default shelves** — created on registration (or lazily on first `/me/shelves` call):
+**Default labels** — created on registration (or lazily on first `/me/shelves` call):
 
 | name | slug | exclusive_group |
 |---|---|---|
@@ -96,19 +96,19 @@ Unique constraint: `(user_id, slug)`
 
 All three have `is_exclusive = true`. Adding a book to any of them removes it from the other two for that user.
 
-**Default tag** — created idempotently (via `ensureDefaultFavorites`) when shelves are listed:
+**Default tag** — created idempotently (via `ensureDefaultFavorites`) when labels are listed:
 
 | name | slug | collection_type | is_exclusive |
 |---|---|---|---|
 | Favorites | `favorites` | `tag` | false |
 
 **collection_type values:**
-- `'shelf'` — a bookshelf (default or custom). Shown in the shelf sidebar and profile shelf cards.
+- `'shelf'` — a label (default or custom). Shown in the label sidebar and profile label cards.
 - `'tag'` — a path-based tag. Slug may contain `/` for hierarchy (e.g. `scifi/dystopian`). Shown as tag chips on the profile page. See `docs/organization.md`.
 
 ### `user_books`
 
-Per-user book ownership. Replaces `collection_items` for user-book metadata (rating, review, dates). Status is tracked via `book_tag_values` (the Status label key), not via shelf placement.
+Per-user book ownership. Replaces `collection_items` for user-book metadata (rating, review, dates). Status is tracked via `book_tag_values` (the Status label key), not via label placement.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -135,7 +135,7 @@ Rating and review are updated via `PATCH /me/books/:olId`. Absent fields in the 
 
 ### `collection_items` (legacy)
 
-Still used for tag collections (Favorites, custom tags). Old read_status shelf data was migrated to `user_books` + status labels at startup.
+Still used for tag collections (Favorites, custom tags). Old read_status label data was migrated to `user_books` + status labels at startup.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -244,7 +244,7 @@ Append-only event log for social feeds. Written fire-and-forget from handlers �
 | target_user_id | uuid FK → users | nullable; for `followed_user` |
 | collection_id | uuid FK → collections | nullable; for `shelved` |
 | thread_id | uuid FK → threads | nullable; for `created_thread` |
-| metadata | jsonb | nullable; extra context (shelf_name, rating, review_snippet, thread_title) |
+| metadata | jsonb | nullable; extra context (label_name, rating, review_snippet, thread_title) |
 | created_at | timestamptz | |
 
 Indexes: `(user_id, created_at DESC)`, `(created_at DESC)`.
@@ -462,7 +462,7 @@ Stores the operation definition for computed (live) lists. When a user saves a s
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | `gen_random_uuid()` |
-| collection_id | uuid FK → collections | unique; the result shelf |
+| collection_id | uuid FK → collections | unique; the result label |
 | operation | varchar(50) | `union`, `intersection`, or `difference` |
 | source_collection_a | uuid | source collection A (always the user's own) |
 | source_collection_b | uuid | nullable; source collection B (for same-user operations) |
@@ -558,7 +558,7 @@ Unmatched rows from Goodreads CSV imports. Saved so users can retry or manually 
 | author | text | nullable |
 | isbn13 | text | nullable |
 | exclusive_shelf | text | nullable; Goodreads shelf name |
-| custom_shelves | json | array of shelf names |
+| custom_shelves | json | array of Goodreads shelf names |
 | rating | number | nullable; 1–5 |
 | review_text | text | nullable |
 | date_read | text | nullable |

@@ -92,7 +92,7 @@ webapp/src/app/
 ├── [username]/
 │   ├── page.tsx                    public profile (incl. computed lists section)
 │   ├── stats/page.tsx              detailed reading statistics
-│   ├── shelves/[slug]/page.tsx     shelf page (owner gets library manager)
+│   ├── shelves/[slug]/page.tsx     label page (owner gets library manager)
 │   ├── followers/page.tsx          followers list
 │   ├── following/page.tsx          following list
 │   ├── tags/[...path]/page.tsx     tag browsing page
@@ -167,7 +167,7 @@ webapp/src/app/
         ├── stats/route.ts                         ← GET reading statistics
         ├── tags/[...path]/route.ts
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
-        ├── shelves/[slug]/route.ts                ← GET (for client-side shelf switching)
+        ├── shelves/[slug]/route.ts                ← GET (for client-side label switching)
         └── timeline/route.ts                      ← GET reading timeline
 ```
 
@@ -185,7 +185,7 @@ Client component used by `Nav` for dropdown menus. Opens on hover (desktop) or c
 
 ### `LibraryManager` (`components/library-manager.tsx`)
 
-Full-page library manager rendered for shelf owners. Replaces the simple shelf grid on `[username]/shelves/[slug]` when `isOwner` is true.
+Full-page library manager rendered for label owners. Replaces the simple label grid on `[username]/shelves/[slug]` when `isOwner` is true.
 
 Layout: `h-screen flex flex-col overflow-hidden` on the page, then inside LibraryManager:
 
@@ -193,44 +193,44 @@ Layout: `h-screen flex flex-col overflow-hidden` on the page, then inside Librar
 ┌─────────────────────────────────────────────────────┐
 │ Nav                                                  │
 ├──────────┬──────────────────────────────────────────┤
-│          │ top bar (shelf name / bulk action toolbar)│
+│          │ top bar (label name / bulk action toolbar)│
 │ sidebar  ├──────────────────────────────────────────┤
 │          │                                          │
-│ Shelves  │   book cover grid (scrollable)           │
+│ Labels   │   book cover grid (scrollable)           │
 │ Custom   │                                          │
 │ Tags     │                                          │
-│ Labels   │                                          │
+│          │                                          │
 │          │                                          │
 └──────────┴──────────────────────────────────────────┘
 ```
 
-**Sidebar** — clicking a shelf fetches its books client-side via `GET /api/users/:username/shelves/:slug`. Clicking a tag collection fetches via `GET /api/users/:username/tags/:path`. Clicking a label value fetches via `GET /api/users/:username/labels/:keySlug/*valuePath` (includes sub-values). Nested label values are indented by depth in the sidebar, showing only the last path segment as the display name.
+**Sidebar** — clicking a label fetches its books client-side via `GET /api/users/:username/shelves/:slug`. Clicking a tag collection fetches via `GET /api/users/:username/tags/:path`. Clicking a label value fetches via `GET /api/users/:username/labels/:keySlug/*valuePath` (includes sub-values). Nested label values are indented by depth in the sidebar, showing only the last path segment as the display name.
 
-**Top bar** — shows the current shelf name and book count when nothing is selected. Transforms into the bulk action toolbar when one or more books are checked:
+**Top bar** — shows the current label name and book count when nothing is selected. Transforms into the bulk action toolbar when one or more books are checked:
 - Rate — sets rating on all selected books via `PATCH /api/shelves/:shelfId/books/:olId`
-- Move to shelf — moves via `POST /api/shelves/:targetId/books`, then refreshes the current shelf
+- Move to label — moves via `POST /api/shelves/:targetId/books`, then refreshes the current label
 - Labels — applies or clears a label value across all selected books via `PUT/DELETE /api/me/books/:olId/tags/:keyId`
-- Remove — removes from current shelf via `DELETE /api/shelves/:shelfId/books/:olId`
+- Remove — removes from current label via `DELETE /api/shelves/:shelfId/books/:olId`
 
-Rate, Move, and Remove require a shelf context (disabled in tag-filtered views). Labels work in both shelf and tag views since they only need the `open_library_id`.
+Rate, Move, and Remove require a label context (disabled in tag-filtered views). Labels work in both label and tag views since they only need the `open_library_id`.
 
 **Book grid** — cover images with a checkbox in the top-left. Checkboxes are invisible until hover or until at least one book is selected (at which point all checkboxes become visible). When books are selected, clicking a cover toggles selection instead of navigating to the book page.
 
 ### `ShelfBookGrid` (`components/shelf-book-grid.tsx`)
 
-Simpler read-only-ish grid used on non-owner shelf views and the tag browsing page. Supports individual book removal (owner only) and the per-book `BookTagPicker`.
+Simpler read-only-ish grid used on non-owner label views and the tag browsing page. Supports individual book removal (owner only) and the per-book `BookTagPicker`.
 
 ### `BookTagPicker` (`components/book-tag-picker.tsx`)
 
-Dropdown for managing label assignments on a single book. Lazily loads current assignments on first open. Supports toggling predefined values and adding free-form values.
+Dropdown for managing label assignments on a single book. Lazily loads current assignments on first open. Supports toggling predefined values and typing a free-form value.
 
 ### `QuickAddButton` (`components/quick-add-button.tsx`)
 
-Compact overlay button shown on book covers in `ShelfBookGrid` and `BookCoverRow` when a logged-in user is viewing another user's profile or shelf page. Appears on hover in the bottom-right corner of the book cover. The main button triggers "Want to read" (adds via `POST /api/me/books` with the want-to-read status), and a dropdown arrow reveals all status options (Want to Read, Currently Reading, Finished, etc.) plus a "Rate & review" link that navigates to the book detail page. Requires `statusValues` and `statusKeyId` props (fetched from the viewer's `GET /me/tag-keys`).
+Compact overlay button shown on book covers in `ShelfBookGrid` and `BookCoverRow` when a logged-in user is viewing another user's profile or label page. Appears on hover in the bottom-right corner of the book cover. The main button triggers "Want to read" (adds via `POST /api/me/books` with the want-to-read status), and a dropdown arrow reveals all status options (Want to Read, Currently Reading, Finished, etc.) plus a "Rate & review" link that navigates to the book detail page. Requires `statusValues` and `statusKeyId` props (fetched from the viewer's `GET /me/tag-keys`).
 
 ### `ShelfPicker` (`components/shelf-picker.tsx`)
 
-Dropdown for adding/moving/removing a single book from shelves. Used on search results and book pages.
+Dropdown for adding/moving/removing a single book from labels. Used on search results and book pages.
 
 ### `BookLinkList` (`components/book-link-list.tsx`)
 
@@ -286,7 +286,7 @@ Used on book detail pages (community reviews), user reviews pages, recent review
 
 ### `SettingsNav` (`components/settings-nav.tsx`)
 
-Client component providing pill-style navigation across settings sub-pages. Uses `usePathname()` to highlight the active section. Rendered on all settings pages (Profile, Labels, Import, Export, Ghost Activity). The active pill uses `bg-accent text-white`; inactive pills use `bg-surface-2`.
+Client component providing pill-style navigation across settings sub-pages. Uses `usePathname()` to highlight the active section. Rendered on all settings pages (Profile, Import, Export, Ghost Activity). The active pill uses `bg-accent text-white`; inactive pills use `bg-surface-2`.
 
 ### `PasswordForm` (`components/password-form.tsx`)
 
@@ -294,7 +294,7 @@ Client component rendered on the settings page below the profile form. Fetches `
 
 ### `DeleteDataForm` (`components/delete-data-form.tsx`)
 
-Client component rendered on the settings page below the password form in a "Danger zone" section. Shows a red "Delete all my data" button. Clicking it reveals a confirmation form where the user must type "delete my data" to proceed. Calls `DELETE /api/me/account/data` which removes all user-owned records (books, reviews, tags, shelves, follows, threads, notifications, etc.) but keeps the account. On success, redirects to the home page.
+Client component rendered on the settings page below the password form in a "Danger zone" section. Shows a red "Delete all my data" button. Clicking it reveals a confirmation form where the user must type "delete my data" to proceed. Calls `DELETE /api/me/account/data` which removes all user-owned records (books, reviews, tags, labels, follows, threads, notifications, etc.) but keeps the account. On success, redirects to the home page.
 
 ### `PendingImportsManager` (`components/pending-imports-manager.tsx`)
 
@@ -326,15 +326,15 @@ Client component for the `/scan` page. Three input modes: Camera (uses browser `
 
 ### `StarRating` (`components/star-rating.tsx`)
 
-Read-only star display used on shelf book cards.
+Read-only star display used on label book cards.
 
 ### `SetOperationForm` (`components/set-operation-form.tsx`)
 
-Client component on `/library/compare` "My Lists" tab. Two collection dropdown selectors, operation picker (union/intersection/difference) with descriptions, compare button, result book grid with covers and ratings, and "Save as new list" form. Calls `POST /api/me/shelves/set-operation` to compute and `POST /api/me/shelves/set-operation/save` to persist.
+Client component on `/library/compare` "My Lists" tab. Two collection dropdown selectors, operation picker (union/intersection/difference) with descriptions, compare button, result book grid with covers and ratings, and "Save as new list" form. Calls `POST /api/me/shelves/set-operation` to compute and `POST /api/me/shelves/set-operation/save` to persist. ("Shelves" in the API path is a legacy name — the user-facing term is "labels".)
 
 ### `CrossUserCompareForm` (`components/cross-user-compare-form.tsx`)
 
-Client component on `/library/compare` "Compare with a Friend" tab. Select one of your lists, enter a friend's username, load their public shelves, pick one of their lists, choose an operation, compare. Result grid with book covers and star ratings. "Save as new list" option. Calls `GET /api/users/:username/shelves` to fetch friend's shelves, `POST /api/me/shelves/cross-user-compare` to compute, and `POST /api/me/shelves/cross-user-compare/save` to persist.
+Client component on `/library/compare` "Compare with a Friend" tab. Select one of your lists, enter a friend's username, load their public labels, pick one of their lists, choose an operation, compare. Result grid with book covers and star ratings. "Save as new list" option. Calls `GET /api/users/:username/shelves` to fetch friend's labels, `POST /api/me/shelves/cross-user-compare` to compute, and `POST /api/me/shelves/cross-user-compare/save` to persist.
 
 ### `CompareTabs` (`components/compare-tabs.tsx`)
 

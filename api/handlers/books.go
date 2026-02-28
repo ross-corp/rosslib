@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -74,7 +75,7 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 
 		// Supplement with Open Library
 		ol := newOLClient()
-		olData, err := ol.get(fmt.Sprintf("/search.json?q=%s&limit=20&fields=key,title,author_name,first_publish_year,isbn,cover_i,edition_count", q))
+		olData, err := ol.get(fmt.Sprintf("/search.json?q=%s&limit=20&fields=key,title,author_name,first_publish_year,isbn,cover_i,edition_count", url.QueryEscape(q)))
 		if err == nil {
 			if docs, ok := olData["docs"].([]any); ok {
 				for _, d := range docs {

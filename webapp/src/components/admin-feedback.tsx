@@ -85,11 +85,10 @@ export default function AdminFeedback() {
           <button
             key={s}
             onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-              statusFilter === s
+            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${statusFilter === s
                 ? "bg-accent text-text-inverted"
                 : "bg-surface-2 text-text-primary hover:bg-surface-2"
-            }`}
+              }`}
           >
             {s.charAt(0).toUpperCase() + s.slice(1)}
           </button>
@@ -113,11 +112,10 @@ export default function AdminFeedback() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span
-                      className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                        item.type === "bug"
+                      className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${item.type === "bug"
                           ? "bg-red-900/30 text-red-300"
                           : "bg-purple-900/30 text-purple-300"
-                      }`}
+                        }`}
                     >
                       {item.type === "bug" ? "Bug" : "Feature"}
                     </span>
@@ -169,7 +167,7 @@ export default function AdminFeedback() {
               {item.steps_to_reproduce && (
                 <div className="mt-3">
                   <p className="text-xs font-medium text-text-primary mb-1">
-                    Steps to Reproduce
+                    Steps to Reproduce (optional, but helpful)
                   </p>
                   <p className="text-xs text-text-secondary whitespace-pre-wrap">
                     {item.steps_to_reproduce}

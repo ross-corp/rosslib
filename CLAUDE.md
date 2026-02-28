@@ -52,15 +52,15 @@ npx tsc --noEmit  # typecheck
 
 PocketBase-based API. Routes are registered in `main.go` with three groups:
 - **Public** — book search/lookup, user profiles, threads (GET)
-- **Authenticated** — user operations (account, books, tags, shelves, follows, feed, export); uses `apis.RequireAuth()`
+- **Authenticated** — user operations (account, books, tags, labels, follows, feed, export); uses `apis.RequireAuth()`
 - **Admin** — moderator-only (ghost management, link edit review)
 
 Handler files in `api/handlers/`:
 - `auth.go` — login, registration
 - `books.go` — search, lookup, details, editions, stats, ratings
 - `userbooks.go` — user book management (add, update, delete, status)
-- `users.go` — profiles, search, reviews, shelves, activity
-- `collections.go` — shelves/collections CRUD
+- `users.go` — profiles, search, reviews, labels, activity
+- `collections.go` — labels/collections CRUD
 - `tags.go` — tag key/value management
 - `threads.go` — discussion threads and comments
 - `links.go` — book links and voting
@@ -77,7 +77,7 @@ Migrations in `api/migrations/` define the PocketBase collections (schema).
 ### Webapp Structure (`webapp/src/`)
 
 - `app/` — Next.js App Router pages
-  - `[username]/` — public profile; `[username]/shelves/[slug]` for shelf pages
+  - `[username]/` — public profile; `[username]/shelves/[slug]` for label pages
   - `api/` — Next.js route handlers that proxy to the Go API (forwarding the `token` cookie)
   - `search/`, `login/`, `register/`, `settings/`, `users/`, `books/`
 - `components/` — shared React components
@@ -89,7 +89,7 @@ The webapp proxies API calls through its own Next.js route handlers (`app/api/`)
 
 - `users` — PocketBase auth collection; extended with `bio`, `is_private`, `display_name`, `avatar`, etc.
 - `books` — global catalog keyed by `open_library_id`
-- `collections` — named lists per user; `is_exclusive` + `exclusive_group` enforce mutual exclusivity
+- `collections` — named labels per user; `is_exclusive` + `exclusive_group` enforce mutual exclusivity
 - `collection_items` — books in collections; holds `rating`, `review_text`, `spoiler`, `date_read`
 - `user_books` — per-user book state (rating, review, progress, dates)
 - `follows` — asymmetric social graph (`active` / `pending`)

@@ -31,7 +31,12 @@ async function fetchNotifications(
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return { notifications: [] };
-  return res.json();
+  const json = await res.json();
+  // API returns a plain array; normalize to expected shape
+  if (Array.isArray(json)) {
+    return { notifications: json };
+  }
+  return { notifications: json.notifications ?? [], next_cursor: json.next_cursor };
 }
 
 export default async function NotificationsPage({

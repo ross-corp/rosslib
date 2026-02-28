@@ -74,8 +74,8 @@ export default async function ReviewsPage({
           <p className="text-text-primary text-sm">No reviews yet.</p>
         ) : (
           <div className="space-y-8">
-            {reviews.map((review) => (
-              <article key={review.book_id} className="flex gap-4">
+            {reviews.map((review, i) => (
+              <article key={`${review.book_id}-${i}`} className="flex gap-4">
                 {/* Cover */}
                 <Link href={`/books/${review.open_library_id}`} className="shrink-0">
                   {review.cover_url ? (

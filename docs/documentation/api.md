@@ -16,7 +16,7 @@ Auth is via a 30-day JWT in an `httpOnly` cookie named `token`. The Go API reads
 { "username": "alice", "email": "alice@example.com", "password": "..." }
 ```
 
-Creates a user and sets the `token` cookie. Also creates the three default shelves (Want to Read, Currently Reading, Read).
+Creates a user and sets the `token` cookie. Also creates the three default labels (Want to Read, Currently Reading, Read).
 
 ### `POST /auth/login`
 
@@ -36,7 +36,7 @@ Sign in or register via Google OAuth. Called by the webapp after exchanging a Go
 
 1. **Existing Google user** — finds user by `google_id`, issues JWT. Returns `200`.
 2. **Existing email user** — finds user by email, links `google_id` to the account, issues JWT. Returns `200`.
-3. **New user** — creates account with auto-derived username (from email prefix, with numeric suffix if taken), sets `display_name` from Google profile `name`, sets a random password (user authenticates via Google only), creates default shelves and status tags. Returns `200`.
+3. **New user** — creates account with auto-derived username (from email prefix, with numeric suffix if taken), sets `display_name` from Google profile `name`, sets a random password (user authenticates via Google only), creates default labels and status tags. Returns `200`.
 
 The webapp handles the full OAuth flow:
 - `GET /api/auth/google` — redirects to Google consent screen
@@ -308,7 +308,7 @@ Update metadata on a book in the user's library. Only provided fields are update
 }
 ```
 
-`selected_edition_key` and `selected_edition_cover_url` allow the user to select a specific edition of a book. When set, the edition's cover is displayed instead of the default work cover on profile pages, shelf views, and the book detail page.
+`selected_edition_key` and `selected_edition_cover_url` allow the user to select a specific edition of a book. When set, the edition's cover is displayed instead of the default work cover on profile pages, label views, and the book detail page.
 
 ### `DELETE /me/books/:olId`  *(auth required)*
 
@@ -847,13 +847,13 @@ Public endpoint — returns goal + progress for a user. Respects privacy setting
 
 ---
 
-## Shelves (collections)
+## Labels (collections)
 
-A "shelf" is a `collection` row. Default shelves (`read_status` exclusive group) enforce mutual exclusivity — adding a book to one removes it from the others in the group.
+A "label" is a `collection` row. Default labels (`read_status` exclusive group) enforce mutual exclusivity — adding a book to one removes it from the others in the group. (Note: API endpoints still use `/shelves/` in their paths for backwards compatibility.)
 
 ### `GET /users/:username/shelves`
 
-Returns all shelves for a user (default + custom + tag collections).
+Returns all labels for a user (default + custom + tag collections).
 
 ```json
 [
@@ -892,7 +892,7 @@ Computed lists include an additional `computed` object with metadata about the s
 
 ### `GET /users/:username/shelves/:slug`
 
-Returns a shelf with its full book list. Computed lists also include the `computed` object.
+Returns a label with its full book list. Computed lists also include the `computed` object.
 
 ```json
 {
@@ -915,11 +915,11 @@ Returns a shelf with its full book list. Computed lists also include the `comput
 
 ### `GET /me/shelves`  *(auth required)*
 
-Same as `GET /users/:username/shelves` but for the authenticated user. Used by the shelf picker on book pages.
+Same as `GET /users/:username/shelves` but for the authenticated user. Used by the label picker on book pages.
 
 ### `POST /me/shelves`  *(auth required)*
 
-Create a custom shelf or tag collection.
+Create a custom label or tag collection.
 
 ```json
 {
@@ -939,7 +939,7 @@ Rename or toggle visibility. Accepts `{ name?, is_public? }`.
 
 ### `DELETE /me/shelves/:id`  *(auth required)*
 
-Delete a custom shelf. Returns 403 if `exclusive_group = 'read_status'` (default shelves cannot be deleted).
+Delete a custom label. Returns 403 if `exclusive_group = 'read_status'` (default labels cannot be deleted).
 
 ### `POST /me/shelves/set-operation`  *(auth required)*
 
@@ -957,7 +957,7 @@ Returns `{ operation, collection_a, collection_b, result_count, books[] }`.
 
 ### `POST /me/shelves/set-operation/save`  *(auth required)*
 
-Same as above, but also saves the result as a new shelf. Accepts an additional `name` field. Returns `{ id, name, slug, book_count, is_continuous }`. If `is_continuous` is true, the list auto-refreshes when viewed — the operation is re-executed against the current source collections each time `GET /users/:username/shelves/:slug` is called.
+Same as above, but also saves the result as a new label. Accepts an additional `name` field. Returns `{ id, name, slug, book_count, is_continuous }`. If `is_continuous` is true, the list auto-refreshes when viewed — the operation is re-executed against the current source collections each time `GET /users/:username/shelves/:slug` is called.
 
 ```json
 {
@@ -986,7 +986,7 @@ Returns `{ operation, my_collection, their_username, their_slug, result_count, b
 
 ### `POST /me/shelves/cross-user-compare/save`  *(auth required)*
 
-Same as above, but also saves the result as a new shelf. Accepts an additional `name` field. Returns `{ id, name, slug, book_count, is_continuous }`. If `is_continuous` is true, the list auto-refreshes when viewed, resolving the other user's collection by stored username+slug on each view (respecting privacy).
+Same as above, but also saves the result as a new label. Accepts an additional `name` field. Returns `{ id, name, slug, book_count, is_continuous }`. If `is_continuous` is true, the list auto-refreshes when viewed, resolving the other user's collection by stored username+slug on each view (respecting privacy).
 
 ```json
 {
@@ -1001,7 +1001,7 @@ Same as above, but also saves the result as a new shelf. Accepts an additional `
 
 ### `POST /shelves/:shelfId/books`  *(auth required)*
 
-Add a book to a shelf. Upserts the book into the global `books` catalog. For exclusive shelves, removes the book from all other shelves in the same `exclusive_group` for this user.
+Add a book to a label. Upserts the book into the global `books` catalog. For exclusive labels, removes the book from all other labels in the same `exclusive_group` for this user.
 
 ```json
 {
@@ -1013,7 +1013,7 @@ Add a book to a shelf. Upserts the book into the global `books` catalog. For exc
 
 ### `PATCH /shelves/:shelfId/books/:olId`  *(auth required)*
 
-Update review metadata on a book in a shelf. Only provided fields are updated — absent fields are not set to null.
+Update review metadata on a book in a label. Only provided fields are updated — absent fields are not set to null.
 
 ```json
 {
@@ -1028,7 +1028,7 @@ Update review metadata on a book in a shelf. Only provided fields are updated �
 
 ### `DELETE /shelves/:shelfId/books/:olId`  *(auth required)*
 
-Remove a book from a shelf.
+Remove a book from a label.
 
 ---
 
@@ -1184,7 +1184,7 @@ Returns 404 if the key doesn't exist for this user, or if no values (exact or ne
 Exports the authenticated user's library as a CSV download. Returns `Content-Type: text/csv` with a `Content-Disposition: attachment` header.
 
 **Query parameters:**
-- `shelf` *(optional)* — collection ID to export a single shelf. Omit to export all shelves.
+- `shelf` *(optional)* — collection ID to export a single label. Omit to export all labels.
 
 **CSV columns:** Title, Author, ISBN13, Status, Rating, Review, Date Added, Date Read, Date DNF.
 
@@ -1205,16 +1205,16 @@ Accepts the confirmed preview payload and writes to the database. Returns `{ imp
 The request body includes an optional `unmatched_rows` array alongside `rows` and `shelf_mappings`. Unmatched rows are persisted to the `pending_imports` collection for later manual resolution.
 
 **`shelf_mappings` actions:**
-- `"tag"` — creates a standalone tag key per shelf (default)
-- `"create_label"` — groups the shelf as a value under a new label key specified by `label_name`
-- `"existing_label"` — adds the shelf as a value under an existing label key specified by `label_key_id`
-- `"skip"` — ignores the shelf
+- `"tag"` — creates a standalone tag key per Goodreads shelf (default)
+- `"create_label"` — groups the Goodreads shelf as a value under a new label key specified by `label_name`
+- `"existing_label"` — adds the Goodreads shelf as a value under an existing label key specified by `label_key_id`
+- `"skip"` — ignores the Goodreads shelf
 
 ### `POST /me/import/storygraph/preview`  *(auth required)*
 
 Accepts a multipart form with a `file` field containing a StoryGraph CSV export. Returns a preview without writing to the database.
 
-StoryGraph CSV columns: `Title`, `Authors`, `ISBN/UID`, `Format`, `Read Status`, `Star Rating`, `Review`, `Tags`, `Read Dates`. The lookup chain is the same as Goodreads import. Status mapping: `to-read` → `want-to-read`, `currently-reading` → `currently-reading`, `read` → `finished`, `did-not-finish` → `dnf`. Tags are imported as custom shelves/labels. Read Dates may be a range (`2024/01/15-2024/02/20`); the end date is used as `date_read`.
+StoryGraph CSV columns: `Title`, `Authors`, `ISBN/UID`, `Format`, `Read Status`, `Star Rating`, `Review`, `Tags`, `Read Dates`. The lookup chain is the same as Goodreads import. Status mapping: `to-read` → `want-to-read`, `currently-reading` → `currently-reading`, `read` → `finished`, `did-not-finish` → `dnf`. Tags are imported as custom labels. Read Dates may be a range (`2024/01/15-2024/02/20`); the end date is used as `date_read`.
 
 ### `POST /me/import/storygraph/commit`  *(auth required)*
 
