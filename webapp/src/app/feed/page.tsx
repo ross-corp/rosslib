@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ActivityCard } from "@/components/activity";
 import type { FeedResponse } from "@/components/activity";
 import { getUser, getToken } from "@/lib/auth";
+import EmptyState from "@/components/empty-state";
 
 async function fetchFeed(
   token: string,
@@ -37,17 +38,11 @@ export default async function FeedPage({
         <h1 className="text-2xl font-bold text-text-primary mb-8">Feed</h1>
 
         {feed.activities.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-text-primary text-sm">
-              No activity yet. Follow some people to see their updates here.
-            </p>
-            <Link
-              href="/users"
-              className="inline-block mt-4 text-sm text-text-primary hover:text-text-primary border border-border px-4 py-2 rounded transition-colors"
-            >
-              Browse people
-            </Link>
-          </div>
+          <EmptyState
+            message="Your feed is empty. Follow some readers to see their activity."
+            actionLabel="Browse people"
+            actionHref="/users"
+          />
         ) : (
           <>
             <div>

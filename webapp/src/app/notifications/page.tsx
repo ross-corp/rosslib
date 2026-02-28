@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getUser, getToken } from "@/lib/auth";
 import NotificationList from "./notification-list";
 import NotificationCard from "./notification-card";
+import EmptyState from "@/components/empty-state";
 
 type Notification = {
   id: string;
@@ -73,19 +74,11 @@ export default async function NotificationsPage({
         </div>
 
         {data.notifications.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-text-primary text-sm">
-              No notifications yet. Follow authors to get notified about
-              new publications, or follow books to hear about new discussions,
-              links, and reviews.
-            </p>
-            <Link
-              href="/feed"
-              className="inline-block mt-4 text-sm text-text-primary hover:text-text-primary border border-border px-4 py-2 rounded transition-colors"
-            >
-              Go to feed
-            </Link>
-          </div>
+          <EmptyState
+            message="No notifications. You're all caught up!"
+            actionLabel="Go to feed"
+            actionHref="/feed"
+          />
         ) : (
           <>
             <div className="divide-y divide-border">
