@@ -352,6 +352,10 @@ Client component on the settings page for setting an annual reading goal. Calls 
 
 Client component on user profile pages. Shows "Block" button that opens an inline confirmation prompt. After blocking, the page reloads to show the restricted view. When already blocked, shows "Unblock" button instead. Calls `POST /api/users/:username/block` and `DELETE /api/users/:username/block`.
 
+### `ReadingHistory` (`components/reading-history.tsx`)
+
+Client component on the book detail page for re-read tracking. Shows a list of past reading sessions with dates, ratings, and notes. Includes a "Log a read" button to add new sessions, and edit/delete controls on each session. Calls `GET/POST /api/me/books/:olId/sessions` and `PATCH/DELETE /api/me/sessions/:sessionId`.
+
 ---
 
 ## Adding a new page

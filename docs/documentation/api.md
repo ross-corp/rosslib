@@ -401,6 +401,56 @@ Returns 404 for unknown genre slugs.
 
 ---
 
+## Reading Sessions
+
+Re-read tracking. Each session represents one reading of a book, with optional dates, rating, and notes. The existing `user_books` record keeps the "current" status/rating/review; sessions are historical.
+
+### `GET /me/books/:olId/sessions`  *(auth required)*
+
+Returns all reading sessions for a book, ordered by most recent first.
+
+```json
+[
+  {
+    "id": "abc123",
+    "date_started": "2025-01-15",
+    "date_finished": "2025-02-01",
+    "rating": 4,
+    "notes": "Even better the second time",
+    "created": "2025-02-01T12:00:00Z"
+  }
+]
+```
+
+### `POST /me/books/:olId/sessions`  *(auth required)*
+
+Create a new reading session. The book must be in the user's library. All fields are optional.
+
+```json
+{
+  "date_started": "2025-01-15",
+  "date_finished": "2025-02-01",
+  "rating": 4,
+  "notes": "Re-read for book club"
+}
+```
+
+Returns the created session with its `id`.
+
+### `PATCH /me/sessions/:sessionId`  *(auth required)*
+
+Update a reading session. Only provided fields are changed.
+
+```json
+{ "rating": 5, "notes": "Updated notes" }
+```
+
+### `DELETE /me/sessions/:sessionId`  *(auth required)*
+
+Delete a reading session. Returns 403 if the session belongs to another user.
+
+---
+
 ## Genre Ratings
 
 Users can rate how strongly a book fits each genre on a 0–10 scale. Aggregate averages are shown publicly on book detail pages; individual ratings are visible to the authenticated user.
