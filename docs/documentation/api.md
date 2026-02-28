@@ -328,6 +328,8 @@ Returns the user's status, rating, review, progress, and edition selection for a
   "spoiler": false,
   "date_read": null,
   "date_dnf": null,
+  "date_started": "2026-02-01T00:00:00Z",
+  "date_added": "2026-01-15T12:00:00Z",
   "progress_pages": 150,
   "progress_percent": 45,
   "selected_edition_key": "OL123M",

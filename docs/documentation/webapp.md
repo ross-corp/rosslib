@@ -348,6 +348,10 @@ Client component displaying a reading goal progress bar on user profile pages. S
 
 Client component on the settings page for setting an annual reading goal. Calls `PUT /api/me/goals/:year` to create or update the goal.
 
+### `ReadingProgress` (`components/reading-progress.tsx`)
+
+Client component on the book detail page (shown when status is "currently-reading"). Lets the user update progress by page number or percentage. Displays a progress bar and, when enough data is available (at least 1 day of reading, a known page count, and `progress_pages > 0`), shows an estimated reading pace ("~X pages/day") and estimated finish date below the progress bar. Uses `date_started` (or `date_added` as fallback) for the elapsed time calculation.
+
 ### `BlockButton` (`components/block-button.tsx`)
 
 Client component on user profile pages. Shows "Block" button that opens an inline confirmation prompt. After blocking, the page reloads to show the restricted view. When already blocked, shows "Unblock" button instead. Calls `POST /api/users/:username/block` and `DELETE /api/users/:username/block`.
