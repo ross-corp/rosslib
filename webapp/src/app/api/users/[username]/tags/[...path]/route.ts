@@ -1,14 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-  _req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ username: string; path: string[] }> }
 ) {
   const { username, path } = await params;
   const tagPath = path.join("/");
+  const { searchParams } = new URL(req.url);
+  const qs = searchParams.toString();
 
   const apiRes = await fetch(
-    `${process.env.API_URL}/users/${username}/tags/${tagPath}`,
+    `${process.env.API_URL}/users/${username}/tags/${tagPath}${qs ? `?${qs}` : ""}`,
     { cache: "no-store" }
   );
 

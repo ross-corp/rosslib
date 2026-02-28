@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-  _req: Request,
+  req: NextRequest,
   {
     params,
   }: {
@@ -10,9 +10,11 @@ export async function GET(
 ) {
   const { username, keySlug, valuePath } = await params;
   const valuePathStr = valuePath.join("/");
+  const { searchParams } = new URL(req.url);
+  const qs = searchParams.toString();
 
   const apiRes = await fetch(
-    `${process.env.API_URL}/users/${username}/labels/${keySlug}/${valuePathStr}`,
+    `${process.env.API_URL}/users/${username}/labels/${keySlug}/${valuePathStr}${qs ? `?${qs}` : ""}`,
     { cache: "no-store" }
   );
 
