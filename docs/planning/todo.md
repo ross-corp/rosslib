@@ -6,8 +6,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## notifications & feed
 
-- [ ] Add feed filtering by activity type. On the feed page (`webapp/src/app/feed/page.tsx`), add a row of filter chips above the feed: "All", "Reviews", "Status Updates", "Threads", "Social". Clicking a chip passes `?type=reviewed` (or `shelved`, `created_thread`, `followed_user`, etc.) to the API. In `api/handlers/activity.go` `GetFeed`, accept a `type` query param and add a `WHERE activity_type = ?` clause when present. Multiple types could be comma-separated (e.g. `?type=rated,reviewed`). Default (no param) returns all types as before.
-
 ## profile & social
 
 - [ ] Add "friends reading this" on book detail page. On the book detail page (`webapp/src/app/books/[workId]/page.tsx`), below the book stats, show a row of avatar thumbnails for users the viewer follows who have this book in their library (any status). API: add a `GET /books/:workId/readers?followers_of=:userId` endpoint in `api/handlers/books.go` that queries `user_books` JOIN `follows` WHERE `followee_id` IN (users who have the book) AND `follower_id = :userId`. Return up to 5 users with avatar, username, and their status for this book. Only return non-private users (or users the viewer follows). Frontend: render as small avatar circles with tooltip showing username and status. Link each to their profile.
@@ -85,3 +83,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add re-read tracking with reading sessions](https://github.com/ross-corp/rosslib/pull/95) — reading_sessions collection, CRUD API endpoints, ReadingHistory component on book detail page
 - [Add year-in-review summary page](https://github.com/ross-corp/rosslib/pull/96) — year-in-review API endpoint and page with stats, top books, genres, and month-by-month grid
 - [Add periodic book_stats backfill every 24 hours](https://github.com/ross-corp/rosslib/pull/97) — bookstats package with BackfillAll + StartPoller goroutine running on startup and every 24h
+- [Add feed filtering by activity type](https://github.com/ross-corp/rosslib/pull/98) — type query param on GET /me/feed and filter chips on feed page
