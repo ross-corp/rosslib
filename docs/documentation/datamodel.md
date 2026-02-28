@@ -82,6 +82,7 @@ A named list owned by a user. Covers default labels, custom labels, and tag coll
 | exclusive_group | varchar(100) | nullable; labels in the same group enforce mutual exclusivity |
 | is_public | boolean | default true |
 | collection_type | varchar(20) | `'shelf'` (default) or `'tag'` |
+| description | text | nullable; max 1000 chars; user-provided description for the label |
 | created_at | timestamptz | |
 
 Unique constraint: `(user_id, slug)`

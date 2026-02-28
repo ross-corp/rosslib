@@ -19,6 +19,7 @@ type ShelfDetail = {
   name: string;
   slug: string;
   exclusive_group: string;
+  description?: string;
   computed?: ComputedInfo;
   books: {
     book_id: string;
@@ -244,7 +245,7 @@ export default async function ShelfPage({
           <span className="text-text-primary">{displayName}</span>
         </nav>
 
-        <div className="flex items-baseline gap-3 mb-4">
+        <div className="flex items-baseline gap-3 mb-2">
           <h1 className="text-2xl font-bold text-text-primary">{displayName}</h1>
           <span className="text-sm text-text-primary">
             {books.length} {books.length === 1 ? "book" : "books"}
@@ -255,6 +256,12 @@ export default async function ShelfPage({
             </span>
           )}
         </div>
+
+        {shelf?.description && (
+          <p className="text-sm text-text-secondary mb-4">{shelf.description}</p>
+        )}
+
+        {!shelf?.description && <div className="mb-2" />}
 
         {books.length > 1 && (
           <div className="flex items-center gap-2 mb-8">

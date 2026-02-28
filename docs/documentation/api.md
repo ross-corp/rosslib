@@ -863,12 +863,13 @@ Returns all labels for a user (default + custom + tag collections).
     "slug": "read",
     "exclusive_group": "read_status",
     "collection_type": "shelf",
-    "item_count": 42
+    "item_count": 42,
+    "description": "My finished books"
   }
 ]
 ```
 
-`collection_type` is one of `"shelf"`, `"tag"`, or `"computed"`. See `docs/organization.md` for the distinction.
+`description` is only present when non-empty (max 1000 characters). `collection_type` is one of `"shelf"`, `"tag"`, or `"computed"`. See `docs/organization.md` for the distinction.
 
 Computed lists include an additional `computed` object with metadata about the set operation:
 
@@ -892,7 +893,7 @@ Computed lists include an additional `computed` object with metadata about the s
 
 ### `GET /users/:username/shelves/:slug`
 
-Returns a label with its full book list. Computed lists also include the `computed` object.
+Returns a label with its full book list. Computed lists also include the `computed` object. `description` is only present when non-empty.
 
 ```json
 {
@@ -900,6 +901,7 @@ Returns a label with its full book list. Computed lists also include the `comput
   "name": "Read",
   "slug": "read",
   "exclusive_group": "read_status",
+  "description": "My finished books",
   "books": [
     {
       "book_id": "...",
@@ -927,15 +929,16 @@ Create a custom label or tag collection.
   "is_exclusive": false,
   "exclusive_group": null,
   "is_public": true,
-  "collection_type": "shelf"
+  "collection_type": "shelf",
+  "description": "My all-time favorite books"
 }
 ```
 
-Slug is auto-derived from `name`. Returns 409 on slug conflict.
+`description` is optional (max 1000 characters). Slug is auto-derived from `name`. Returns 409 on slug conflict.
 
 ### `PATCH /me/shelves/:id`  *(auth required)*
 
-Rename or toggle visibility. Accepts `{ name?, is_public? }`.
+Rename, toggle visibility, or update description. Accepts `{ name?, is_public?, description? }`. `description` max 1000 characters; send an empty string to clear.
 
 ### `DELETE /me/shelves/:id`  *(auth required)*
 
