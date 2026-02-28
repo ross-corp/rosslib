@@ -148,12 +148,14 @@ async function fetchBook(workId: string): Promise<BookDetail | null> {
   return res.json();
 }
 
-async function fetchBookReviews(workId: string, token?: string): Promise<BookReview[]> {
+async function fetchBookReviews(workId: string, token?: string, sort?: string): Promise<BookReview[]> {
   const headers: Record<string, string> = {};
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-  const res = await fetch(`${process.env.API_URL}/books/${workId}/reviews`, {
+  const url = new URL(`${process.env.API_URL}/books/${workId}/reviews`);
+  if (sort) url.searchParams.set("sort", sort);
+  const res = await fetch(url.toString(), {
     headers,
     cache: "no-store",
   });
@@ -259,19 +261,33 @@ function formatDate(iso: string): string {
   });
 }
 
+// ── Sort options ────────────────────────────────────────────────────────────────
+
+const REVIEW_SORT_OPTIONS = [
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "highest", label: "Highest rated" },
+  { value: "lowest", label: "Lowest rated" },
+  { value: "most_liked", label: "Most liked" },
+] as const;
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default async function BookPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ workId: string }>;
+  searchParams: Promise<{ sort?: string }>;
 }) {
   const { workId } = await params;
+  const { sort: sortParam } = await searchParams;
+  const reviewSort = REVIEW_SORT_OPTIONS.some((o) => o.value === sortParam) ? sortParam! : "newest";
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
   const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings] = await Promise.all([
     fetchBook(workId),
-    fetchBookReviews(workId, token ?? undefined),
+    fetchBookReviews(workId, token ?? undefined, reviewSort),
     fetchThreads(workId),
     fetchBookLinks(workId, token ?? undefined),
     currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
@@ -497,11 +513,33 @@ export default async function BookPage({
 
         {/* ── Community reviews ── */}
         <section className="border-t border-border pt-8">
-          <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-6">
-            {reviews.length > 0
-              ? `Reviews (${reviews.length})`
-              : "Reviews"}
-          </h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider">
+              {reviews.length > 0
+                ? `Reviews (${reviews.length})`
+                : "Reviews"}
+            </h2>
+            {reviews.length > 1 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-text-secondary">Sort by:</span>
+                <div className="flex gap-1">
+                  {REVIEW_SORT_OPTIONS.map((option) => (
+                    <Link
+                      key={option.value}
+                      href={`/books/${workId}${option.value === "newest" ? "" : `?sort=${option.value}`}`}
+                      className={`text-sm px-3 py-1 rounded-md transition-colors ${
+                        reviewSort === option.value
+                          ? "bg-surface-2 text-text-primary font-medium"
+                          : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+                      }`}
+                    >
+                      {option.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {reviews.length === 0 ? (
             <p className="text-text-primary text-sm">No reviews yet.</p>

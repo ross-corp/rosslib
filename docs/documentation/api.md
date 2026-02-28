@@ -235,7 +235,10 @@ Returns precomputed aggregate stats for a book from the `book_stats` cache table
 
 Returns all community reviews for a book. Each user appears at most once (most recent review).
 
-When a valid token is provided, reviews from users the caller follows are sorted first (`is_followed: true`), then all reviews are ordered by `date_added` descending.
+**Query params:**
+- `sort` — `newest` (default), `oldest`, `highest` (rating DESC), `lowest` (rating ASC), `most_liked` (like count DESC)
+
+The viewer's own review always appears first regardless of sort order. When authenticated, reviews from blocked/blocking users are excluded.
 
 ```json
 [
