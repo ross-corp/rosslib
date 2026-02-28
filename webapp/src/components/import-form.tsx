@@ -86,6 +86,61 @@ type TagKey = {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+/**
+ * Detect common naming patterns in Goodreads shelf names and suggest label groupings.
+ *
+ * Patterns detected:
+ * 1. Common prefix: `genre-scifi`, `genre-romance`, `genre-fantasy` → label "genre"
+ * 2. Year-based: `read-2023`, `read-2024` → label "read"
+ *
+ * Returns a map of shelf name → { label_name } for shelves that should be grouped.
+ */
+function detectShelfPatterns(shelfNames: string[]): Map<string, string> {
+  const result = new Map<string, string>();
+  if (shelfNames.length < 2) return result;
+
+  // Split each shelf by common separators (-, _)
+  // Group shelves by their prefix (first segment before separator)
+  const prefixGroups = new Map<string, { sep: string; shelves: string[] }>();
+
+  for (const shelf of shelfNames) {
+    // Try dash first, then underscore
+    for (const sep of ["-", "_"]) {
+      const idx = shelf.indexOf(sep);
+      if (idx > 0 && idx < shelf.length - 1) {
+        const prefix = shelf.substring(0, idx);
+        const key = `${prefix}${sep}`;
+        const group = prefixGroups.get(key);
+        if (group) {
+          group.shelves.push(shelf);
+        } else {
+          prefixGroups.set(key, { sep, shelves: [shelf] });
+        }
+        break; // only use first separator found
+      }
+    }
+  }
+
+  // Only suggest grouping when 2+ shelves share the same prefix
+  for (const [, { shelves }] of prefixGroups) {
+    if (shelves.length < 2) continue;
+
+    // Extract the prefix as the label name
+    const firstShelf = shelves[0];
+    const sep = firstShelf.includes("-") ? "-" : "_";
+    const prefix = firstShelf.substring(0, firstShelf.indexOf(sep));
+
+    // Humanize: replace separators with spaces, capitalize first letter
+    const labelName = prefix.replace(/[-_]/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+
+    for (const shelf of shelves) {
+      result.set(shelf, labelName);
+    }
+  }
+
+  return result;
+}
+
 function shelfLabel(slug: string): string {
   const labels: Record<string, string> = {
     "read": "Read",
@@ -370,10 +425,19 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
         counts.set(shelf, (counts.get(shelf) ?? 0) + 1);
       }
     }
-    // Initialize all custom shelves to "tag" by default
+    // Detect naming patterns (prefix groups, year-based shelves)
+    const patterns = detectShelfPatterns(Array.from(counts.keys()));
+    // Initialize mappings: use detected pattern as default, otherwise "tag"
     const mappings = new Map<string, ShelfMapping>();
     for (const shelf of counts.keys()) {
-      mappings.set(shelf, shelfMappings.get(shelf) ?? { action: "tag" });
+      if (shelfMappings.has(shelf)) {
+        // Preserve user's previous choice if they went back and re-entered configure
+        mappings.set(shelf, shelfMappings.get(shelf)!);
+      } else if (patterns.has(shelf)) {
+        mappings.set(shelf, { action: "create_label", label_name: patterns.get(shelf)! });
+      } else {
+        mappings.set(shelf, { action: "tag" });
+      }
     }
     setShelfMappings(mappings);
     // Fetch existing tag keys for "Add to existing label"
@@ -629,6 +693,11 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
     }
     const sortedShelves = Array.from(shelfCounts.entries()).sort((a, b) => b[1] - a[1]);
     const hasCustomShelves = sortedShelves.length > 0;
+    // Count how many shelves were auto-grouped by pattern detection
+    const autoGroupedCount = sortedShelves.filter(([shelf]) => {
+      const m = shelfMappings.get(shelf);
+      return m?.action === "create_label" && m.label_name;
+    }).length;
 
     return (
       <div className="space-y-8">
@@ -671,6 +740,11 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
             <p className="text-xs text-text-primary mb-3">
               Choose how to import each {source === "storygraph" ? "StoryGraph tag" : "custom Goodreads shelf"} as a label.
             </p>
+            {autoGroupedCount > 0 && (
+              <p className="text-xs text-accent mb-3">
+                {autoGroupedCount} {autoGroupedCount === 1 ? "shelf was" : "shelves were"} auto-grouped into labels based on naming patterns. You can adjust or undo these below.
+              </p>
+            )}
             <ul className="divide-y divide-border border border-border rounded-lg overflow-hidden">
               {(() => {
                 // Collect all label names entered across all shelves (sorted for stable order)
