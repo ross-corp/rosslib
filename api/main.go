@@ -189,6 +189,11 @@ func main() {
 		authed.GET("/me/recommendations", handlers.GetRecommendations(app))
 		authed.PATCH("/me/recommendations/{recId}", handlers.UpdateRecommendation(app))
 
+		// Saved searches
+		authed.GET("/me/saved-searches", handlers.GetSavedSearches(app))
+		authed.POST("/me/saved-searches", handlers.CreateSavedSearch(app))
+		authed.DELETE("/me/saved-searches/{id}", handlers.DeleteSavedSearch(app))
+
 		// Feedback
 		authed.POST("/feedback", handlers.CreateFeedback(app))
 		authed.GET("/me/feedback", handlers.GetMyFeedback(app))

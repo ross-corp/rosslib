@@ -1190,6 +1190,61 @@ Exports the authenticated user's library as a CSV download. Returns `Content-Typ
 
 ---
 
+## Saved Searches
+
+### `GET /me/saved-searches`  *(auth required)*
+
+Returns the user's saved searches, newest first. Max 20 per user.
+
+```json
+[
+  {
+    "id": "...",
+    "name": "Sci-fi favorites",
+    "query": "science fiction",
+    "filters": {
+      "sort": "rating",
+      "subject": "science fiction",
+      "language": "eng"
+    },
+    "created_at": "2026-02-28T14:00:00Z"
+  }
+]
+```
+
+`filters` may be null if no filters were active when the search was saved. Possible filter keys: `sort`, `year_min`, `year_max`, `subject`, `language`, `tab`.
+
+### `POST /me/saved-searches`  *(auth required)*
+
+Save a search query with optional filters. Max 20 per user.
+
+```json
+{
+  "name": "Sci-fi favorites",
+  "query": "science fiction",
+  "filters": { "sort": "rating", "subject": "science fiction" }
+}
+```
+
+```
+201 { "id": "...", "name": "...", "query": "...", "filters": {...}, "created_at": "..." }
+400 { "error": "name and query are required" }
+400 { "error": "name must be 100 characters or fewer" }
+400 { "error": "maximum of 20 saved searches reached" }
+```
+
+### `DELETE /me/saved-searches/:id`  *(auth required)*
+
+Delete a saved search. Only the owner can delete.
+
+```
+200 { "ok": true }
+403 { "error": "Not your saved search" }
+404 { "error": "Saved search not found" }
+```
+
+---
+
 ## Import
 
 ### `POST /me/import/goodreads/preview`  *(auth required)*
