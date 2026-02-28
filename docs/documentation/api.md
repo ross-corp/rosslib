@@ -1286,6 +1286,7 @@ Returns a chronological feed of activities from users the authenticated user fol
 
 **Query parameters:**
 - `cursor` *(optional)* — RFC3339Nano timestamp from `next_cursor` to fetch the next page.
+- `type` *(optional)* — comma-separated list of activity types to filter by (e.g. `?type=reviewed,rated`). Valid types: `shelved`, `started_book`, `finished_book`, `rated`, `reviewed`, `created_thread`, `followed_user`, `followed_author`, `created_link`. Default (omitted) returns all types.
 
 ```json
 {
