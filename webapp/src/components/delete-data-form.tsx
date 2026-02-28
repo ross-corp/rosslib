@@ -29,15 +29,15 @@ export default function DeleteDataForm() {
   }
 
   return (
-    <div className="border-t border-red-300 pt-8 mt-8">
-      <h2 className="text-lg font-bold text-red-600 mb-1">Danger zone</h2>
+    <div className="border-t border-semantic-error-border pt-8 mt-8">
+      <h2 className="text-lg font-bold text-semantic-error mb-1">Danger zone</h2>
       <p className="text-sm text-text-primary mb-5">
         Permanently delete all your books, reviews, tags, shelves, follows, threads, and notifications.
         Your account will remain but all data will be removed. This cannot be undone.
       </p>
 
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2 mb-4">
+        <p className="text-sm text-semantic-error bg-semantic-error-bg border border-semantic-error-border rounded px-3 py-2 mb-4">
           {error}
         </p>
       )}
@@ -45,7 +45,7 @@ export default function DeleteDataForm() {
       {!showConfirm ? (
         <button
           onClick={() => setShowConfirm(true)}
-          className="bg-red-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-red-700 transition-colors"
+          className="bg-danger text-badge-text px-4 py-2 rounded text-sm font-medium hover:bg-danger transition-colors"
         >
           Delete all my data
         </button>
@@ -62,13 +62,13 @@ export default function DeleteDataForm() {
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
             placeholder="delete my data"
-            className="w-full px-3 py-2 border border-border rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+            className="w-full px-3 py-2 border border-border rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-semantic-error focus:border-transparent text-sm"
           />
           <div className="flex gap-3">
             <button
               onClick={handleDelete}
               disabled={loading || confirmText !== "delete my data"}
-              className="bg-red-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-danger text-badge-text px-4 py-2 rounded text-sm font-medium hover:bg-danger transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Deleting..." : "Permanently delete all data"}
             </button>

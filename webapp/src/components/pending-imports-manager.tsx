@@ -218,7 +218,7 @@ export default function PendingImportsManager({
                 type="button"
                 onClick={() => deleteImport(item.id)}
                 disabled={dismissing === item.id}
-                className="px-3 py-1.5 text-xs text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-40"
+                className="px-3 py-1.5 text-xs text-semantic-error border border-semantic-error-border rounded-lg hover:bg-semantic-error-bg transition-colors disabled:opacity-40"
                 title="Permanently delete"
               >
                 Delete
@@ -231,7 +231,7 @@ export default function PendingImportsManager({
       {/* Search & Link modal */}
       {searchModalId && activeItem && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay"
           onClick={(e) => {
             if (e.target === e.currentTarget) closeSearchModal();
           }}

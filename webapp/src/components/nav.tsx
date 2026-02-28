@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import NotificationBell from "@/components/notification-bell";
 import NavDropdown from "@/components/nav-dropdown";
+import ThemeToggle from "@/components/theme-toggle";
 
 export default async function Nav() {
   const user = await getUser();
@@ -41,6 +42,7 @@ export default async function Nav() {
         <nav className="flex items-center gap-1 ml-auto shrink-0">
           <NavDropdown label="browse" items={browseItems} />
           <NavDropdown label="community" items={communityItems} />
+          <ThemeToggle isLoggedIn={!!user} />
           {user ? (
             <>
               <NotificationBell />

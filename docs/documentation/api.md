@@ -1859,6 +1859,28 @@ Returns the full updated preferences object (same shape as GET).
 
 ---
 
+## Theme
+
+### `GET /me/theme`  *(auth required)*
+
+Returns the user's theme preference. Defaults to `"system"` if not set.
+
+```json
+{ "theme": "system" }
+```
+
+### `PUT /me/theme`  *(auth required)*
+
+Set the user's theme preference. Valid values: `light`, `dark`, `system`.
+
+```json
+{ "theme": "dark" }
+```
+
+Returns the saved theme preference.
+
+---
+
 ## Recommendations
 
 ### `POST /me/recommendations`  *(auth required)*

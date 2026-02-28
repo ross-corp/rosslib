@@ -56,7 +56,7 @@ export default function ReviewText({ text }: Props) {
             <Link
               key={i}
               href={`/search?q=${encodeURIComponent(segment.content)}`}
-              className="text-blue-600 hover:underline"
+              className="text-link hover:underline"
             >
               {segment.content}
             </Link>
@@ -66,7 +66,7 @@ export default function ReviewText({ text }: Props) {
             <Link
               key={i}
               href={segment.url}
-              className="text-blue-600 hover:underline"
+              className="text-link hover:underline"
             >
               {segment.label}
             </Link>

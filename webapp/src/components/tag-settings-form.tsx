@@ -104,7 +104,7 @@ export default function TagSettingsForm({
             </div>
             <button
               onClick={() => deleteKey(key.id)}
-              className="text-xs text-text-primary hover:text-red-500 transition-colors"
+              className="text-xs text-text-primary hover:text-semantic-error transition-colors"
             >
               Delete
             </button>
@@ -119,7 +119,7 @@ export default function TagSettingsForm({
                 {val.name}
                 <button
                   onClick={() => deleteValue(key.id, val.id)}
-                  className="text-text-primary hover:text-red-400 transition-colors leading-none"
+                  className="text-text-primary hover:text-semantic-error transition-colors leading-none"
                   aria-label={`Remove ${val.name}`}
                 >
                   ×

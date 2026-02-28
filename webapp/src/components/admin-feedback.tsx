@@ -17,9 +17,9 @@ type FeedbackItem = {
 };
 
 const SEVERITY_CLASSES: Record<string, string> = {
-  low: "bg-blue-900/30 text-blue-300 border-blue-700",
-  medium: "bg-yellow-900/30 text-yellow-300 border-yellow-700",
-  high: "bg-red-900/30 text-red-300 border-red-700",
+  low: "bg-semantic-info-bg text-semantic-info border-semantic-info-border",
+  medium: "bg-semantic-warning-bg text-semantic-warning border-semantic-warning-border",
+  high: "bg-semantic-error-bg text-semantic-error border-semantic-error-border",
 };
 
 function formatDate(iso: string): string {
@@ -153,7 +153,7 @@ export default function AdminFeedback() {
                   <button
                     onClick={() => deleteFeedback(item.id)}
                     disabled={deletingId === item.id}
-                    className="px-3 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 bg-red-900/30 text-red-300 hover:bg-red-900/50"
+                    className="px-3 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 bg-danger-bg text-danger hover:bg-danger-bg-hover"
                   >
                     Delete
                   </button>

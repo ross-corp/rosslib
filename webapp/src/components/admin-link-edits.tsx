@@ -135,14 +135,14 @@ export default function AdminLinkEdits() {
                     <button
                       onClick={() => handleReview(edit.id, "approve")}
                       disabled={reviewingId === edit.id}
-                      className="px-3 py-1 rounded text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors disabled:opacity-50"
+                      className="px-3 py-1 rounded text-xs font-medium bg-semantic-success-bg text-semantic-success hover:bg-semantic-success-bg/70 transition-colors disabled:opacity-50"
                     >
                       Approve
                     </button>
                     <button
                       onClick={() => handleReview(edit.id, "reject")}
                       disabled={reviewingId === edit.id}
-                      className="px-3 py-1 rounded text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
+                      className="px-3 py-1 rounded text-xs font-medium bg-semantic-error-bg text-semantic-error hover:bg-semantic-error-bg/70 transition-colors disabled:opacity-50"
                     >
                       Reject
                     </button>
@@ -165,7 +165,7 @@ export default function AdminLinkEdits() {
                   <p className="text-text-primary">
                     Type:{" "}
                     {edit.proposed_type ? (
-                      <span className="font-medium text-blue-700">
+                      <span className="font-medium text-semantic-info">
                         {TYPE_LABELS[edit.proposed_type] ?? edit.proposed_type}
                       </span>
                     ) : (
@@ -175,7 +175,7 @@ export default function AdminLinkEdits() {
                   <p className="text-text-primary">
                     Note:{" "}
                     {edit.proposed_note != null ? (
-                      <span className="font-medium text-blue-700">
+                      <span className="font-medium text-semantic-info">
                         {edit.proposed_note || <span className="italic">empty</span>}
                       </span>
                     ) : (

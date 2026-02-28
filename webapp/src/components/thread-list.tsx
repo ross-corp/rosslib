@@ -202,7 +202,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
             >
               Cancel
             </button>
-            {error && <span className="text-xs text-red-500">{error}</span>}
+            {error && <span className="text-xs text-semantic-error">{error}</span>}
           </div>
         </form>
       )}

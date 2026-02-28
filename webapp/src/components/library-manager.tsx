@@ -537,7 +537,7 @@ export default function LibraryManager({
                                 setShowLabelsMenu(false);
                                 setHoveredKey(null);
                               }}
-                              className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-surface-2 transition-colors border-t border-border"
+                              className="w-full text-left px-3 py-2 text-xs text-semantic-error hover:bg-surface-2 transition-colors border-t border-border"
                             >
                               Clear
                             </button>
@@ -554,7 +554,7 @@ export default function LibraryManager({
             <button
               onClick={massRemove}
               disabled={bulkWorking}
-              className="text-xs px-3 py-1.5 rounded border border-red-200 text-red-500 hover:border-red-400 hover:text-red-700 disabled:opacity-50 transition-colors"
+              className="text-xs px-3 py-1.5 rounded border border-semantic-error-border text-semantic-error hover:border-semantic-error-border hover:text-semantic-error disabled:opacity-50 transition-colors"
             >
               {bulkWorking ? "Working..." : "Remove"}
             </button>
@@ -588,7 +588,7 @@ export default function LibraryManager({
                           <button
                             onClick={() => massRemoveTag(t)}
                             title="Remove from tag"
-                            className="px-2.5 py-2 text-sm text-text-primary hover:text-red-400 transition-colors shrink-0 leading-none"
+                            className="px-2.5 py-2 text-sm text-text-primary hover:text-semantic-error transition-colors shrink-0 leading-none"
                           >
                             ×
                           </button>
@@ -650,7 +650,7 @@ export default function LibraryManager({
                       onClick={() => toggleSelect(book.book_id)}
                       className={`absolute top-1 left-1 z-10 w-4 h-4 rounded border flex items-center justify-center transition-all ${
                         selected
-                          ? "bg-accent border-accent text-white opacity-100"
+                          ? "bg-accent border-accent text-badge-text opacity-100"
                           : `bg-surface-0 border-border ${anySelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`
                       }`}
                       aria-label={selected ? "Deselect" : "Select"}
@@ -765,7 +765,7 @@ function SidebarItem({
         <button
           onClick={onDelete}
           title="Delete"
-          className="opacity-0 group-hover:opacity-100 pr-3 text-text-primary hover:text-red-400 transition-all leading-none shrink-0"
+          className="opacity-0 group-hover:opacity-100 pr-3 text-text-primary hover:text-semantic-error transition-all leading-none shrink-0"
         >
           ×
         </button>
@@ -854,7 +854,7 @@ function TagTreeItem({
           <button
             onClick={() => onDelete(node.collection)}
             title="Delete"
-            className="opacity-0 group-hover:opacity-100 pr-3 text-text-primary hover:text-red-400 transition-all leading-none shrink-0 text-sm"
+            className="opacity-0 group-hover:opacity-100 pr-3 text-text-primary hover:text-semantic-error transition-all leading-none shrink-0 text-sm"
           >
             ×
           </button>

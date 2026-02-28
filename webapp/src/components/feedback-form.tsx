@@ -90,14 +90,14 @@ export default function FeedbackForm() {
       </div>
 
       {success && (
-        <div className="mb-4 p-3 rounded bg-green-900/30 border border-green-700 text-green-300 text-sm">
+        <div className="mb-4 p-3 rounded bg-semantic-success-bg border border-semantic-success-border text-semantic-success text-sm">
           Thank you! Your {tab === "bug" ? "bug report" : "feature request"} has
           been submitted.
         </div>
       )}
 
       {error && (
-        <div className="mb-4 p-3 rounded bg-red-900/30 border border-red-700 text-red-300 text-sm">
+        <div className="mb-4 p-3 rounded bg-semantic-error-bg border border-semantic-error-border text-semantic-error text-sm">
           {error}
         </div>
       )}

@@ -435,7 +435,7 @@ export default function BookReviewEditor({
                     type="button"
                     onClick={clearReview}
                     disabled={saving}
-                    className="text-xs text-red-400 hover:text-red-600 transition-colors disabled:opacity-50 ml-auto"
+                    className="text-xs text-semantic-error hover:text-semantic-error transition-colors disabled:opacity-50 ml-auto"
                   >
                     Clear review
                   </button>

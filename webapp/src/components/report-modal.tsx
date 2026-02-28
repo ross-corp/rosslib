@@ -54,7 +54,7 @@ export default function ReportModal({ contentType, contentId, onClose }: Props) 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -62,7 +62,7 @@ export default function ReportModal({ contentType, contentId, onClose }: Props) 
       <div className="bg-surface-0 border border-border rounded-lg p-6 w-full max-w-md mx-4 shadow-lg">
         {success ? (
           <div className="text-center py-4">
-            <p className="text-sm text-green-600 font-medium">
+            <p className="text-sm text-semantic-success font-medium">
               Report submitted. Thank you.
             </p>
           </div>
@@ -112,14 +112,14 @@ export default function ReportModal({ contentType, contentId, onClose }: Props) 
               </div>
 
               {error && (
-                <p className="text-xs text-red-500">{error}</p>
+                <p className="text-xs text-semantic-error">{error}</p>
               )}
 
               <div className="flex items-center gap-3">
                 <button
                   type="submit"
                   disabled={submitting || !reason}
-                  className="text-xs px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="text-xs px-4 py-2 rounded bg-danger text-badge-text hover:bg-danger-bg-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {submitting ? "Submitting..." : "Submit report"}
                 </button>

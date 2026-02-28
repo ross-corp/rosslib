@@ -116,7 +116,7 @@ export default function NotificationCard({ notif }: { notif: Notification }) {
           className="shrink-0 mt-1.5 group p-1 rounded hover:bg-surface-2 transition-colors"
           title="Mark as read"
         >
-          <div className="w-2 h-2 rounded-full bg-blue-500 group-hover:bg-blue-400 transition-colors" />
+          <div className="w-2 h-2 rounded-full bg-badge group-hover:bg-badge transition-colors" />
         </button>
       )}
     </div>

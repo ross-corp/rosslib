@@ -535,7 +535,7 @@ export default async function UserPage({
                           {list.computed!.operation}
                         </span>
                         {list.computed!.is_continuous && (
-                          <span className="shrink-0 text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">
+                          <span className="shrink-0 text-xs px-1.5 py-0.5 rounded bg-semantic-success-bg text-semantic-success border border-semantic-success-border">
                             Live
                           </span>
                         )}

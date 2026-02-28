@@ -148,7 +148,7 @@ export default function StatusPicker({
               <div className="flex gap-1 px-3 pb-2">
                 <button
                   onClick={removeFromLibrary}
-                  className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors"
+                  className="text-xs px-2 py-1 rounded bg-danger text-badge-text hover:bg-danger-bg-hover transition-colors"
                 >
                   Remove
                 </button>

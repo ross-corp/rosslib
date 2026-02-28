@@ -179,6 +179,10 @@ webapp/src/app/
 
 Top navigation bar. Server component that fetches the current user. Links are organized into two dropdown menus: **Browse** (Search books, Genres, Scan ISBN) and **Community** (Browse users, My feed). Notification bell, admin link, user avatar, and sign out remain as standalone items.
 
+### `ThemeToggle` (`components/theme-toggle.tsx`)
+
+Client component in the nav bar that cycles through `system` → `light` → `dark` themes. Stores the preference in `localStorage` (key: `rosslib-theme`) and applies it via `data-theme` attribute on `<html>`. For logged-in users, also persists the choice to the API via `PUT /api/me/theme`. Shows a sun icon in light mode, moon icon in dark mode, with an "auto" badge when set to system.
+
 ### `NavDropdown` (`components/nav-dropdown.tsx`)
 
 Client component used by `Nav` for dropdown menus. Opens on hover (desktop) or click (mobile). Closes when clicking outside. Takes a `label` string and an array of `{ href, label }` items.
