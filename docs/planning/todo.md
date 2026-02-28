@@ -12,7 +12,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## book detail & discovery
 
-- [ ] Add review sorting options on book detail page. In `GET /books/:workId/reviews` in `api/handlers/books.go`, accept a `sort` query param: `newest` (default — current behavior), `oldest`, `highest` (rating DESC), `lowest` (rating ASC), `most_liked` (LEFT JOIN `review_likes` GROUP BY count DESC — depends on PR #51 being merged, fall back to `newest` if review_likes table doesn't exist). On the book detail page, add a sort dropdown above the reviews section. Forward the `sort` param through the webapp proxy route.
 
 - [ ] Add "more by this author" section on book detail page. On the book detail page (`webapp/src/app/books/[workId]/page.tsx`), below the main book info, show a "More by {Author}" section. Extract the first author's OL author key from the book detail response (the `authors` field may include keys if they were fetched from OL). If an author key is available, call `GET /authors/:authorKey` and display up to 6 book covers in a horizontal row (exclude the current book). If no author key is available, search local books by author name via `GET /books/search?q={authorName}` and filter out the current book. Link "See all" to the author page.
 
@@ -77,3 +76,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add trending books section to search landing page](https://github.com/ross-corp/rosslib/pull/103) — GET /books/trending endpoint and horizontal scrollable row on search page
 - [Add recently viewed books (client-side)](https://github.com/ross-corp/rosslib/pull/104) — useRecentlyViewed hook with localStorage, RecordRecentlyViewed on book detail, recently viewed row on search page
 - [Add saved searches](https://github.com/ross-corp/rosslib/pull/105) — saved_searches collection, CRUD API endpoints, SavedSearches component with chips on search page
+- [Add review sorting options on book detail page](https://github.com/ross-corp/rosslib/pull/106) — sort query param on GET /books/:workId/reviews and sort dropdown on book detail page
