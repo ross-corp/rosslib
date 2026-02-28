@@ -1514,3 +1514,690 @@ func cleanStoryGraphAuthor(author string) string {
 
 	return author
 }
+
+// PreviewLibraryThingImport handles POST /me/import/librarything/preview
+// Streams NDJSON: progress lines followed by a final result line.
+func PreviewLibraryThingImport(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+
+		file, _, err := e.Request.FormFile("file")
+		if err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "CSV file required"})
+		}
+		defer file.Close()
+
+		// LibraryThing exports use tab-separated values
+		reader := csv.NewReader(file)
+		reader.Comma = '\t'
+		reader.LazyQuotes = true
+		headers, err := reader.Read()
+		if err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid CSV/TSV"})
+		}
+
+		colIdx := map[string]int{}
+		for i, h := range headers {
+			colIdx[strings.TrimSpace(h)] = i
+		}
+
+		// LibraryThing requires Title column
+		if _, ok := colIdx["Title"]; !ok {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Missing column: Title"})
+		}
+
+		type bookCandidate struct {
+			OLID     string   `json:"ol_id"`
+			Title    string   `json:"title"`
+			Authors  []string `json:"authors"`
+			CoverURL *string  `json:"cover_url"`
+			Year     *int     `json:"year"`
+		}
+		type previewRow struct {
+			RowID              int            `json:"row_id"`
+			Title              string         `json:"title"`
+			Author             string         `json:"author"`
+			ISBN13             string         `json:"isbn13"`
+			Rating             *float64       `json:"rating"`
+			ReviewText         *string        `json:"review_text"`
+			Spoiler            bool           `json:"spoiler"`
+			DateRead           *string        `json:"date_read"`
+			DateAdded          *string        `json:"date_added"`
+			ExclusiveShelfSlug string         `json:"exclusive_shelf_slug"`
+			CustomShelves      []string       `json:"custom_shelves"`
+			Status             string         `json:"status"`
+			Match              *bookCandidate `json:"match,omitempty"`
+		}
+
+		var csvRows [][]string
+		for {
+			row, err := reader.Read()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				continue
+			}
+			csvRows = append(csvRows, row)
+		}
+
+		results := make([]previewRow, len(csvRows))
+		ol := newOLClient()
+		gb := newGBClient()
+
+		var wg sync.WaitGroup
+		sem := make(chan struct{}, 5)
+
+		getCol := func(row []string, name string) string {
+			if idx, ok := colIdx[name]; ok && idx < len(row) {
+				return strings.TrimSpace(row[idx])
+			}
+			return ""
+		}
+
+		// Set up NDJSON streaming
+		w := e.Response
+		w.Header().Set("Content-Type", "application/x-ndjson")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Streaming not supported"})
+		}
+		enc := json.NewEncoder(w)
+
+		type progressMsg struct {
+			Index int
+			Row   previewRow
+		}
+		ch := make(chan progressMsg, len(csvRows))
+
+		for i, row := range csvRows {
+			wg.Add(1)
+			go func(i int, row []string) {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+
+				pr := previewRow{
+					RowID: i,
+					Title: getCol(row, "Title"),
+				}
+
+				// LibraryThing uses "Author (First, Last)" — convert "Last, First" to "First Last"
+				rawAuthor := getCol(row, "Author (First, Last)")
+				if rawAuthor == "" {
+					rawAuthor = getCol(row, "Author (Last, First)")
+				}
+				pr.Author = cleanLibraryThingAuthor(rawAuthor)
+
+				// ISBN — LT may use "ISBN" or "ISBNs" columns; strip brackets
+				isbn := strings.Trim(getCol(row, "ISBN"), "[] ")
+				if isbn == "" {
+					// Try ISBNs column (may have multiple, semicolon-separated)
+					isbns := getCol(row, "ISBNs")
+					if isbns != "" {
+						for _, candidate := range strings.Split(isbns, ",") {
+							candidate = strings.Trim(candidate, "[] ")
+							if len(candidate) >= 10 {
+								isbn = candidate
+								break
+							}
+						}
+					}
+				}
+				pr.ISBN13 = isbn
+
+				// Rating — LT uses 0-5 scale (sometimes 0-10 with halves)
+				if r, err := strconv.ParseFloat(getCol(row, "Rating"), 64); err == nil && r > 0 {
+					// LT ratings > 5 are on a 10-point scale; normalize to 5
+					if r > 5 {
+						r = r / 2.0
+					}
+					pr.Rating = &r
+				}
+
+				if review := getCol(row, "Review"); review != "" {
+					pr.ReviewText = &review
+				}
+
+				// Date Read
+				if dr := getCol(row, "Date Read"); dr != "" {
+					pr.DateRead = &dr
+				}
+
+				// Date Added (LT uses "Entry Date")
+				if da := getCol(row, "Entry Date"); da != "" {
+					pr.DateAdded = &da
+				}
+
+				// Map status from Collections
+				collections := getCol(row, "Collections")
+				pr.ExclusiveShelfSlug = mapLibraryThingStatus(collections, pr.DateRead != nil)
+
+				// Parse Collections (semicolon-separated) and Tags (comma-separated) as custom shelves
+				statusCollections := map[string]bool{
+					"currently reading": true, "to read": true, "wishlist": true,
+					"read but unowned": true, "your library": true,
+				}
+				if collections != "" {
+					for _, c := range strings.Split(collections, ",") {
+						c = strings.TrimSpace(c)
+						if c != "" && !statusCollections[strings.ToLower(c)] {
+							pr.CustomShelves = append(pr.CustomShelves, c)
+						}
+					}
+				}
+				if tags := getCol(row, "Tags"); tags != "" {
+					for _, t := range strings.Split(tags, ",") {
+						t = strings.TrimSpace(t)
+						if t != "" {
+							pr.CustomShelves = append(pr.CustomShelves, t)
+						}
+					}
+				}
+				if pr.CustomShelves == nil {
+					pr.CustomShelves = []string{}
+				}
+
+				found := false
+				var olID, matchTitle, coverURL string
+				var authors []string
+
+				// 1. Check local DB by ISBN
+				if isbn != "" {
+					existing, localErr := app.FindRecordsByFilter("books",
+						"isbn13 = {:isbn}",
+						"", 1, 0,
+						map[string]any{"isbn": isbn},
+					)
+					if localErr == nil && len(existing) > 0 {
+						rec := existing[0]
+						olID = rec.GetString("open_library_id")
+						matchTitle = rec.GetString("title")
+						coverURL = rec.GetString("cover_url")
+						if a := rec.GetString("authors"); a != "" {
+							authors = strings.Split(a, ", ")
+						}
+						found = olID != ""
+					}
+				}
+
+				// 2. OL direct ISBN endpoint
+				if isbn != "" && !found {
+					data, err := ol.get(fmt.Sprintf("/isbn/%s.json", isbn))
+					if err == nil {
+						if works, ok := data["works"].([]any); ok && len(works) > 0 {
+							if w, ok := works[0].(map[string]any); ok {
+								if key, ok := w["key"].(string); ok {
+									olID = strings.TrimPrefix(key, "/works/")
+									found = true
+								}
+							}
+						}
+						if t, ok := data["title"].(string); ok {
+							matchTitle = t
+						}
+						if covers, ok := data["covers"].([]any); ok && len(covers) > 0 {
+							if coverID, ok := covers[0].(float64); ok {
+								coverURL = fmt.Sprintf("https://covers.openlibrary.org/b/id/%.0f-M.jpg", coverID)
+							}
+						}
+					}
+				}
+
+				// 3. OL search by ISBN
+				if isbn != "" && !found {
+					data, err := ol.get(fmt.Sprintf("/search.json?isbn=%s&fields=key,title,author_name,first_publish_year,cover_i&limit=1", url.QueryEscape(isbn)))
+					if err == nil {
+						olID, matchTitle, coverURL, authors, found = extractOLSearchResult(data)
+					}
+				}
+
+				// 4. OL search by title+author
+				if !found && pr.Title != "" {
+					cleaned := cleanLibraryThingTitle(pr.Title)
+					cleanedAuthor := cleanLibraryThingSearchAuthor(pr.Author)
+					q := "title=" + url.QueryEscape(cleaned)
+					if cleanedAuthor != "" {
+						q += "&author=" + url.QueryEscape(cleanedAuthor)
+					}
+					data, err := ol.get(fmt.Sprintf("/search.json?%s&fields=key,title,author_name,first_publish_year,cover_i&limit=1", q))
+					if err == nil {
+						olID, matchTitle, coverURL, authors, found = extractOLSearchResult(data)
+					}
+				}
+
+				// 5. OL search by title only
+				if !found && pr.Title != "" {
+					cleaned := cleanLibraryThingTitle(pr.Title)
+					data, err := ol.get(fmt.Sprintf("/search.json?title=%s&fields=key,title,author_name,first_publish_year,cover_i&limit=1", url.QueryEscape(cleaned)))
+					if err == nil {
+						id, mt, cu, au, ok := extractOLSearchResult(data)
+						if ok && titleMatchesResult(cleaned, mt) {
+							olID, matchTitle, coverURL, authors, found = id, mt, cu, au, ok
+						}
+					}
+				}
+
+				// 6. Google Books fallback
+				if !found {
+					olID, matchTitle, coverURL, authors, found = googleBooksLookup(gb, ol, isbn, cleanLibraryThingTitle(pr.Title), cleanLibraryThingSearchAuthor(pr.Author))
+				}
+
+				if found {
+					pr.Status = "matched"
+					match := bookCandidate{
+						OLID:    olID,
+						Title:   matchTitle,
+						Authors: authors,
+					}
+					if match.Title == "" {
+						match.Title = pr.Title
+					}
+					if len(match.Authors) == 0 && pr.Author != "" {
+						match.Authors = []string{pr.Author}
+					}
+					if coverURL != "" {
+						match.CoverURL = &coverURL
+					}
+					pr.Match = &match
+				} else {
+					pr.Status = "unmatched"
+				}
+
+				ch <- progressMsg{Index: i, Row: pr}
+			}(i, row)
+		}
+
+		go func() {
+			wg.Wait()
+			close(ch)
+		}()
+
+		processed := 0
+		for msg := range ch {
+			results[msg.Index] = msg.Row
+			processed++
+			_ = enc.Encode(map[string]any{
+				"type":    "progress",
+				"current": processed,
+				"total":   len(csvRows),
+				"title":   msg.Row.Title,
+			})
+			flusher.Flush()
+		}
+
+		matched := 0
+		for _, r := range results {
+			if r.Status == "matched" {
+				matched++
+			}
+		}
+
+		// Build deduplicated shelf summary with counts
+		shelfCounts := map[string]int{}
+		for _, r := range results {
+			for _, s := range r.CustomShelves {
+				shelfCounts[s]++
+			}
+		}
+		type shelfSummary struct {
+			Name  string `json:"name"`
+			Count int    `json:"count"`
+		}
+		shelves := make([]shelfSummary, 0, len(shelfCounts))
+		for name, count := range shelfCounts {
+			shelves = append(shelves, shelfSummary{Name: name, Count: count})
+		}
+		sort.Slice(shelves, func(i, j int) bool {
+			return shelves[i].Count > shelves[j].Count
+		})
+
+		_ = enc.Encode(map[string]any{
+			"type":      "result",
+			"total":     len(results),
+			"matched":   matched,
+			"ambiguous":  0,
+			"unmatched": len(results) - matched,
+			"rows":      results,
+			"shelves":   shelves,
+		})
+		flusher.Flush()
+
+		return nil
+	}
+}
+
+// CommitLibraryThingImport handles POST /me/import/librarything/commit
+func CommitLibraryThingImport(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+
+		data := struct {
+			Rows []struct {
+				RowID              int      `json:"row_id"`
+				OLID               string   `json:"ol_id"`
+				Title              string   `json:"title"`
+				CoverURL           string   `json:"cover_url"`
+				Authors            string   `json:"authors"`
+				PublicationYear    int      `json:"publication_year"`
+				ISBN13             string   `json:"isbn13"`
+				Rating             float64  `json:"rating"`
+				ReviewText         string   `json:"review_text"`
+				Spoiler            bool     `json:"spoiler"`
+				DateRead           string   `json:"date_read"`
+				DateAdded          string   `json:"date_added"`
+				ExclusiveShelfSlug string   `json:"exclusive_shelf_slug"`
+				CustomShelves      []string `json:"custom_shelves"`
+			} `json:"rows"`
+			UnmatchedRows []struct {
+				Title              string   `json:"title"`
+				Author             string   `json:"author"`
+				ISBN13             string   `json:"isbn13"`
+				Rating             float64  `json:"rating"`
+				ReviewText         string   `json:"review_text"`
+				DateRead           string   `json:"date_read"`
+				DateAdded          string   `json:"date_added"`
+				ExclusiveShelfSlug string   `json:"exclusive_shelf_slug"`
+				CustomShelves      []string `json:"custom_shelves"`
+			} `json:"unmatched_rows"`
+			ShelfMappings []struct {
+				Shelf      string `json:"shelf"`
+				Action     string `json:"action"`
+				LabelName  string `json:"label_name"`
+				LabelKeyID string `json:"label_key_id"`
+			} `json:"shelf_mappings"`
+		}{}
+		if err := e.BindBody(&data); err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
+		}
+
+		// Build tag map from shelf mappings
+		type tagMapping struct {
+			KeyID   string
+			ValueID string
+		}
+		tagMap := map[string]tagMapping{}
+		for _, sm := range data.ShelfMappings {
+			switch sm.Action {
+			case "tag":
+				key, val, err := ensureTagKey(app, user.Id, sm.Shelf, "select_multiple")
+				if err != nil {
+					continue
+				}
+				tagMap[sm.Shelf] = tagMapping{KeyID: key.Id, ValueID: val.Id}
+
+			case "create_label":
+				if sm.LabelName == "" {
+					continue
+				}
+				key, _, err := ensureTagKey(app, user.Id, sm.LabelName, "select_multiple")
+				if err != nil {
+					continue
+				}
+				val, err := ensureTagValue(app, key.Id, sm.Shelf)
+				if err != nil {
+					continue
+				}
+				tagMap[sm.Shelf] = tagMapping{KeyID: key.Id, ValueID: val.Id}
+
+			case "existing_label":
+				if sm.LabelKeyID == "" {
+					continue
+				}
+				key, err := app.FindRecordById("tag_keys", sm.LabelKeyID)
+				if err != nil || key.GetString("user") != user.Id {
+					continue
+				}
+				val, err := ensureTagValue(app, key.Id, sm.Shelf)
+				if err != nil {
+					continue
+				}
+				tagMap[sm.Shelf] = tagMapping{KeyID: key.Id, ValueID: val.Id}
+			}
+		}
+
+		// Collect shelves mapped to DNF status
+		dnfShelves := map[string]bool{}
+		for _, sm := range data.ShelfMappings {
+			if sm.Action == "map_dnf" {
+				dnfShelves[sm.Shelf] = true
+			}
+		}
+
+		imported := 0
+		failed := 0
+		var errors []string
+
+		for _, b := range data.Rows {
+			if b.OLID == "" {
+				failed++
+				errors = append(errors, fmt.Sprintf("No match for row %d: %s", b.RowID, b.Title))
+				continue
+			}
+
+			book, err := upsertBook(app, b.OLID, b.Title, b.CoverURL, b.ISBN13, b.Authors, b.PublicationYear)
+			if err != nil {
+				failed++
+				errors = append(errors, fmt.Sprintf("Failed to save book: %s — %v", b.Title, err))
+				continue
+			}
+
+			existing, _ := app.FindRecordsByFilter("user_books",
+				"user = {:user} && book = {:book}",
+				"", 1, 0,
+				map[string]any{"user": user.Id, "book": book.Id},
+			)
+			var ub *core.Record
+			if len(existing) > 0 {
+				ub = existing[0]
+			} else {
+				coll, err := app.FindCollectionByNameOrId("user_books")
+				if err != nil {
+					failed++
+					errors = append(errors, fmt.Sprintf("Failed to create user_book: %s — %v", b.Title, err))
+					continue
+				}
+				ub = core.NewRecord(coll)
+				ub.Set("user", user.Id)
+				ub.Set("book", book.Id)
+			}
+
+			if b.Rating > 0 {
+				ub.Set("rating", b.Rating)
+			}
+			if b.ReviewText != "" {
+				ub.Set("review_text", b.ReviewText)
+			}
+			if b.DateRead != "" {
+				ub.Set("date_read", b.DateRead)
+			}
+			dateAdded := b.DateAdded
+			if dateAdded == "" {
+				dateAdded = time.Now().UTC().Format(time.RFC3339)
+			}
+			ub.Set("date_added", dateAdded)
+
+			if err := app.Save(ub); err != nil {
+				failed++
+				errors = append(errors, fmt.Sprintf("Failed to save user_book: %s — %v", b.Title, err))
+				continue
+			}
+
+			// Map status
+			statusSlug := mapLibraryThingStatusSlug(b.ExclusiveShelfSlug)
+			if statusSlug != "" {
+				setStatusTag(app, user.Id, book.Id, statusSlug)
+			}
+
+			// Assign custom shelf tags
+			for _, shelf := range b.CustomShelves {
+				tm, ok := tagMap[shelf]
+				if !ok {
+					continue
+				}
+				dup, _ := app.FindRecordsByFilter("book_tag_values",
+					"user = {:user} && book = {:book} && tag_key = {:key} && tag_value = {:val}",
+					"", 1, 0,
+					map[string]any{"user": user.Id, "book": book.Id, "key": tm.KeyID, "val": tm.ValueID},
+				)
+				if len(dup) > 0 {
+					continue
+				}
+				btvColl, err := app.FindCollectionByNameOrId("book_tag_values")
+				if err != nil {
+					continue
+				}
+				btv := core.NewRecord(btvColl)
+				btv.Set("user", user.Id)
+				btv.Set("book", book.Id)
+				btv.Set("tag_key", tm.KeyID)
+				btv.Set("tag_value", tm.ValueID)
+				_ = app.Save(btv)
+			}
+
+			// Override status to DNF if any custom shelf is mapped to DNF
+			for _, shelf := range b.CustomShelves {
+				if dnfShelves[shelf] {
+					setStatusTag(app, user.Id, book.Id, "dnf")
+					break
+				}
+			}
+
+			imported++
+			refreshBookStats(app, book.Id)
+		}
+
+		// Persist unmatched rows to pending_imports
+		pendingSaved := 0
+		if len(data.UnmatchedRows) > 0 {
+			piColl, piErr := app.FindCollectionByNameOrId("pending_imports")
+			if piErr == nil {
+				for _, u := range data.UnmatchedRows {
+					if u.Title == "" {
+						continue
+					}
+					pi := core.NewRecord(piColl)
+					pi.Set("user", user.Id)
+					pi.Set("source", "librarything")
+					pi.Set("title", u.Title)
+					pi.Set("author", u.Author)
+					pi.Set("isbn13", u.ISBN13)
+					pi.Set("exclusive_shelf", u.ExclusiveShelfSlug)
+					if u.CustomShelves != nil {
+						pi.Set("custom_shelves", u.CustomShelves)
+					} else {
+						pi.Set("custom_shelves", []string{})
+					}
+					if u.Rating > 0 {
+						pi.Set("rating", u.Rating)
+					}
+					pi.Set("review_text", u.ReviewText)
+					pi.Set("date_read", u.DateRead)
+					pi.Set("date_added", u.DateAdded)
+					pi.Set("status", "unmatched")
+					if err := app.Save(pi); err == nil {
+						pendingSaved++
+					}
+				}
+			}
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{
+			"imported":      imported,
+			"failed":        failed,
+			"errors":        errors,
+			"pending_saved": pendingSaved,
+		})
+	}
+}
+
+// mapLibraryThingStatus determines the exclusive shelf slug from LT Collections.
+// LibraryThing collections: "Currently Reading" → currently-reading,
+// "To Read"/"Wishlist" → to-read, "Read but unowned"/has date read → read.
+func mapLibraryThingStatus(collections string, hasDateRead bool) string {
+	lower := strings.ToLower(collections)
+	if strings.Contains(lower, "currently reading") {
+		return "currently-reading"
+	}
+	if strings.Contains(lower, "to read") || strings.Contains(lower, "wishlist") {
+		return "to-read"
+	}
+	if strings.Contains(lower, "read but unowned") || hasDateRead {
+		return "read"
+	}
+	return ""
+}
+
+// mapLibraryThingStatusSlug maps the LT exclusive shelf slug to internal status.
+func mapLibraryThingStatusSlug(slug string) string {
+	switch strings.ToLower(strings.TrimSpace(slug)) {
+	case "to-read":
+		return "want-to-read"
+	case "currently-reading":
+		return "currently-reading"
+	case "read":
+		return "finished"
+	default:
+		return ""
+	}
+}
+
+// cleanLibraryThingAuthor converts "Last, First" format to "First Last".
+func cleanLibraryThingAuthor(author string) string {
+	author = strings.TrimSpace(author)
+	if author == "" {
+		return ""
+	}
+	// LT format is typically "Last, First" — reverse it
+	if idx := strings.Index(author, ","); idx > 0 {
+		last := strings.TrimSpace(author[:idx])
+		first := strings.TrimSpace(author[idx+1:])
+		if first != "" && last != "" {
+			return first + " " + last
+		}
+	}
+	return author
+}
+
+// cleanLibraryThingTitle strips subtitle/series info from LT titles.
+func cleanLibraryThingTitle(title string) string {
+	title = strings.TrimSpace(title)
+
+	// Strip trailing parenthetical (series info)
+	for {
+		idx := strings.LastIndex(title, "(")
+		if idx <= 0 {
+			break
+		}
+		title = strings.TrimSpace(title[:idx])
+	}
+
+	// Strip subtitle after colon
+	if idx := strings.Index(title, ":"); idx > 0 {
+		title = strings.TrimSpace(title[:idx])
+	}
+
+	return strings.TrimSpace(title)
+}
+
+// cleanLibraryThingSearchAuthor returns a cleaned author suitable for OL search.
+func cleanLibraryThingSearchAuthor(author string) string {
+	author = strings.TrimSpace(author)
+	if author == "" {
+		return ""
+	}
+
+	lower := strings.ToLower(author)
+	if lower == "unknown" || lower == "anonymous" || lower == "various" {
+		return ""
+	}
+
+	return author
+}

@@ -157,6 +157,8 @@ func main() {
 		authed.POST("/me/import/goodreads/commit", handlers.CommitGoodreadsImport(app))
 		authed.POST("/me/import/storygraph/preview", handlers.PreviewStoryGraphImport(app))
 		authed.POST("/me/import/storygraph/commit", handlers.CommitStoryGraphImport(app))
+		authed.POST("/me/import/librarything/preview", handlers.PreviewLibraryThingImport(app))
+		authed.POST("/me/import/librarything/commit", handlers.CommitLibraryThingImport(app))
 		authed.GET("/me/imports/pending", handlers.GetPendingImports(app))
 		authed.PATCH("/me/imports/pending/{id}", handlers.ResolvePendingImport(app))
 		authed.DELETE("/me/imports/pending/{id}", handlers.DeletePendingImport(app))

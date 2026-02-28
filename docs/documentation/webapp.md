@@ -76,7 +76,7 @@ webapp/src/app/
 ├── series/[seriesId]/page.tsx     series detail — ordered book list with covers & reading progress
 ├── settings/
 │   ├── page.tsx                    profile settings
-│   ├── import/page.tsx             CSV import (Goodreads & StoryGraph tabs)
+│   ├── import/page.tsx             CSV import (Goodreads, StoryGraph & LibraryThing tabs)
 │   ├── imports/pending/page.tsx   review unmatched imports
 │   ├── export/page.tsx             CSV export
 │   ├── tags/page.tsx               label category management

@@ -6,10 +6,13 @@ import ImportForm from "@/components/import-form";
 const tabs = [
   { key: "goodreads" as const, label: "Goodreads" },
   { key: "storygraph" as const, label: "StoryGraph" },
+  { key: "librarything" as const, label: "LibraryThing" },
 ];
 
+type ImportSource = "goodreads" | "storygraph" | "librarything";
+
 export default function ImportTabs({ username }: { username: string }) {
-  const [active, setActive] = useState<"goodreads" | "storygraph">("goodreads");
+  const [active, setActive] = useState<ImportSource>("goodreads");
 
   return (
     <div>
