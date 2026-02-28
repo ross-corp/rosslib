@@ -2,13 +2,7 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination. Items are ordered by priority — nephewbot picks the top unchecked item.
 
-## quick wins
-
-- [ ] Add "date started" tracking for books. Add a `date_started` column (timestamptz, nullable) to `user_books` via a new migration in `api/migrations/`. Update `PATCH /me/books/:olId` in `api/handlers/userbooks.go` to accept `date_started` in the request body and persist it. When a book's status is changed to "Currently Reading" via `setStatusLabel` and `date_started` is null, auto-set it to `now()`. Return `date_started` in the book detail and user book responses. On the book detail page (`webapp/src/app/books/[workId]/page.tsx`), show "Started: {date}" when set. Include in CSV export.
-
 ## stats & data
-
-- [ ] Add reading pace calculation for currently-reading books. In the reading progress component (`webapp/src/components/reading-progress.tsx`), when a book has `progress_pages > 0` and `date_started` (or `date_added` as fallback), calculate pages per day = `progress_pages / days_elapsed`. Show estimated finish date = `today + (total_pages - progress_pages) / pages_per_day`. Display below the progress bar as "~X pages/day · Est. finish: {date}". Only show when there's enough data (at least 1 day of reading and a known total page count). This is purely frontend — no API changes needed.
 
 - [ ] Add re-read tracking. Create a `reading_sessions` table via migration: `id` (uuid PK), `user_id` (FK → users), `book_id` (FK → books), `date_started` (timestamptz nullable), `date_finished` (timestamptz nullable), `rating` (smallint nullable 1-5), `notes` (text nullable), `created_at`. Unique constraint: none (multiple sessions per book allowed). API endpoints in a new `api/handlers/sessions.go`: `GET /me/books/:olId/sessions` (list sessions), `POST /me/books/:olId/sessions` (create), `PATCH /me/sessions/:sessionId` (update), `DELETE /me/sessions/:sessionId`. The existing `user_books` record keeps the "current" status/rating/review; sessions are historical. On the book detail page, add a "Reading History" section below the user's review showing past reads with dates and ratings. Webapp proxy routes: `GET/POST /api/me/books/:olId/sessions`, `PATCH/DELETE /api/me/sessions/:sessionId`.
 
@@ -93,3 +87,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add confirmation dialog when removing books from library](https://github.com/ross-corp/rosslib/pull/91) — reusable ConfirmDialog component, applied to shelf grid, library manager bulk remove, and shelf picker
 - [Wire toast notifications into all user actions](https://github.com/ross-corp/rosslib/pull/92) — extend existing toast system to cover import, quick-add, bulk library ops, settings, export, block, and reading progress
 - [Use BookCoverPlaceholder consistently across all book cover fallbacks](https://github.com/ross-corp/rosslib/pull/93) — replace plain div fallbacks with BookCoverPlaceholder in 18 files
+- [Add reading pace calculation for currently-reading books](https://github.com/ross-corp/rosslib/pull/94) — show pages/day and estimated finish date below reading progress bar
