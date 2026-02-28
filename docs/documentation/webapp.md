@@ -152,6 +152,8 @@ webapp/src/app/
     ├── me/books/[olId]/genre-ratings/route.ts       ← GET, PUT user genre ratings
     ├── me/account/route.ts                         ← GET account info (has_password, has_google)
     ├── me/account/data/route.ts                   ← DELETE all user data
+    ├── me/avatar/route.ts                           ← POST upload avatar
+    ├── me/banner/route.ts                           ← POST upload banner
     ├── me/password/route.ts                        ← PUT set/change password
     ├── me/notifications/route.ts                  ← GET list notifications
     ├── me/notifications/unread-count/route.ts     ← GET unread count

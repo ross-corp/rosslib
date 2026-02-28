@@ -78,6 +78,7 @@ func main() {
 		// Profile
 		authed.PATCH("/users/me", handlers.UpdateProfile(app))
 		authed.POST("/me/avatar", handlers.UploadAvatar(app))
+		authed.POST("/me/banner", handlers.UploadBanner(app))
 
 		// Reading goals
 		authed.GET("/me/goals", handlers.GetMyGoals(app))
