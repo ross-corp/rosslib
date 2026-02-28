@@ -17,8 +17,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX polish
 
-- [ ] Add dark mode. Add a `theme` preference to the user — either in `localStorage` for unauthenticated users or as a `theme` column on `users` (varchar(10), default `'system'`, values `'light'`, `'dark'`, `'system'`). In `webapp/src/app/layout.tsx`, read the theme preference and apply a `data-theme` attribute to `<html>`. Define CSS custom properties for all colors in `globals.css` under `[data-theme="light"]` and `[data-theme="dark"]` selectors. For `system`, use `prefers-color-scheme` media query. Add a theme toggle (sun/moon icon) in the nav bar. Convert existing hardcoded colors to use the CSS custom properties. This is a larger task — start with the infrastructure (toggle, CSS variables, layout attribute) and convert colors page by page.
-
 - [ ] Add empty state illustrations for zero-data pages. For pages that show nothing when a user is new (feed, library, labels, notifications), add friendly empty state messages with call-to-action links. Feed: "Your feed is empty. Follow some readers to see their activity." with link to `/users`. Library: "No books yet. Search for a book to get started." with link to `/search`. Notifications: "No notifications. You're all caught up!" Labels: "This label is empty. Browse books to add some." Check each page for existing empty handling and add where missing. Use the same visual style (centered text, muted color, optional icon).
 
 ## blocked
@@ -68,3 +66,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add API token generation for integrations](https://github.com/ross-corp/rosslib/pull/113) — api_tokens collection, CRUD endpoints, Bearer token auth in middleware, settings UI
 - [Add loading skeleton components](https://github.com/ross-corp/rosslib/pull/114) — Skeleton base component, composed skeletons, loading.tsx files for feed/profile/book detail/search
 - [Add keyboard shortcuts with help overlay](https://github.com/ross-corp/rosslib/pull/115) — useKeyboardShortcuts hook, shortcuts overlay modal, hint badge for logged-in users
+- [Add dark mode with light/dark/system theme toggle](https://github.com/ross-corp/rosslib/pull/116) — theme infrastructure (CSS variables, data-theme attribute, FOUC prevention), theme toggle in nav, theme API endpoint, semantic color token conversion across ~45 files
