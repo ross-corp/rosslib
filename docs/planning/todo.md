@@ -8,8 +8,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## profile & social
 
-- [ ] Add follow suggestions on feed page. When the feed is empty or at the bottom of the feed, show a "People you might like" section. API: add `GET /me/suggested-follows?limit=5` endpoint in `api/handlers/users.go`. Logic: find users who have the most books in common with the current user (JOIN `user_books` on matching `book_id`, exclude already-followed and blocked users), ordered by overlap count descending. Return user profile data (username, display_name, avatar, books_in_common count). Frontend: render as user cards with follow buttons and "X books in common" label. Show on the feed page in a sidebar or below the feed.
-
 - [ ] Add profile banner image. Add a `banner_url` column (text, nullable) to `users` via migration. Add `POST /me/banner` endpoint in `api/handlers/userdata.go` (same pattern as `POST /me/avatar` — multipart upload, resize to 1200x300 max, store in PocketBase file storage). Return the banner URL in `GET /users/:username` profile response. On the profile page (`webapp/src/app/[username]/page.tsx`), render the banner as a full-width image behind the avatar/name area. On the settings page, add a banner upload field below the avatar upload in the existing `SettingsForm`.
 
 - [ ] Add "favorite genres" display on profile. On the user profile page, below the bio section, show a row of genre chips representing the user's most-read genres. Derive from the user's finished books' `subjects` field: parse the comma-separated subjects, count occurrences, display the top 5 as colored chips (reuse the genre color scheme from the genres page). This is computed at render time from existing data — no new API endpoint needed, just include genre distribution in the existing `GET /users/:username` response or compute it client-side from the user's books data.
@@ -83,3 +81,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add periodic book_stats backfill every 24 hours](https://github.com/ross-corp/rosslib/pull/97) — bookstats package with BackfillAll + StartPoller goroutine running on startup and every 24h
 - [Add feed filtering by activity type](https://github.com/ross-corp/rosslib/pull/98) — type query param on GET /me/feed and filter chips on feed page
 - [Add friends reading this on book detail page](https://github.com/ross-corp/rosslib/pull/99) — GET /books/:workId/readers endpoint and avatar row on book detail page
+- [Add follow suggestions on feed page](https://github.com/ross-corp/rosslib/pull/100) — GET /me/suggested-follows endpoint and FollowSuggestions component on feed page
