@@ -10,8 +10,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## search & browse
 
-- [ ] Add trending books section to search landing page. Create a `GET /books/trending?period=week&limit=10` endpoint in `api/handlers/books.go`. Query `user_books` for books with the most new `user_books` rows created in the past 7 (or 30) days, grouped by `book_id`, ordered by count descending. Return book data with the activity count. On the search page (`webapp/src/app/search/page.tsx`), when no query is entered (the empty/landing state from PR #79), show a "Trending This Week" section alongside or instead of "Popular Books". Render as a horizontal scrollable book cover row.
-
 - [ ] Add recently viewed books (client-side). In the webapp, create a `useRecentlyViewed` hook in `webapp/src/lib/recently-viewed.ts` that stores the last 10 viewed book IDs + titles + covers in `localStorage`. Update the book detail page (`webapp/src/app/books/[workId]/page.tsx`) to call `addToRecentlyViewed(book)` on mount. On the search page, when no query is entered, show a "Recently Viewed" row above trending/popular books if the list is non-empty. Render as a book cover row with titles. No API changes needed — purely client-side state.
 
 - [ ] Add saved searches. Create a `saved_searches` table via migration: `id` (uuid PK), `user_id` (FK → users, cascade), `name` (varchar(100)), `query` (text), `filters` (jsonb — stores genre, language, year_min, year_max, sort, tab), `created_at`. API endpoints in a new `api/handlers/searches.go`: `GET /me/saved-searches` (list), `POST /me/saved-searches` (create, max 20 per user), `DELETE /me/saved-searches/:id`. On the search page, when filters are active, show a "Save this search" button that opens a name input. Show saved searches as chips above the search bar. Clicking a chip populates the query and filters. Webapp proxy routes: `GET/POST/DELETE /api/me/saved-searches`.
@@ -80,3 +78,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add follow suggestions on feed page](https://github.com/ross-corp/rosslib/pull/100) — GET /me/suggested-follows endpoint and FollowSuggestions component on feed page
 - [Add profile banner image](https://github.com/ross-corp/rosslib/pull/101) — banner file field on users, POST /me/banner endpoint, banner display on profile page, upload in settings
 - [Add favorite genres display on user profile](https://github.com/ross-corp/rosslib/pull/102) — top 5 genre chips derived from finished books' subjects, displayed below bio on profile page
+- [Add trending books section to search landing page](https://github.com/ross-corp/rosslib/pull/103) — GET /books/trending endpoint and horizontal scrollable row on search page
