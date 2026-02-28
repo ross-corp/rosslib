@@ -10,8 +10,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## search & browse
 
-- [ ] Add saved searches. Create a `saved_searches` table via migration: `id` (uuid PK), `user_id` (FK → users, cascade), `name` (varchar(100)), `query` (text), `filters` (jsonb — stores genre, language, year_min, year_max, sort, tab), `created_at`. API endpoints in a new `api/handlers/searches.go`: `GET /me/saved-searches` (list), `POST /me/saved-searches` (create, max 20 per user), `DELETE /me/saved-searches/:id`. On the search page, when filters are active, show a "Save this search" button that opens a name input. Show saved searches as chips above the search bar. Clicking a chip populates the query and filters. Webapp proxy routes: `GET/POST/DELETE /api/me/saved-searches`.
-
 ## book detail & discovery
 
 - [ ] Add review sorting options on book detail page. In `GET /books/:workId/reviews` in `api/handlers/books.go`, accept a `sort` query param: `newest` (default — current behavior), `oldest`, `highest` (rating DESC), `lowest` (rating ASC), `most_liked` (LEFT JOIN `review_likes` GROUP BY count DESC — depends on PR #51 being merged, fall back to `newest` if review_likes table doesn't exist). On the book detail page, add a sort dropdown above the reviews section. Forward the `sort` param through the webapp proxy route.
@@ -78,3 +76,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add favorite genres display on user profile](https://github.com/ross-corp/rosslib/pull/102) — top 5 genre chips derived from finished books' subjects, displayed below bio on profile page
 - [Add trending books section to search landing page](https://github.com/ross-corp/rosslib/pull/103) — GET /books/trending endpoint and horizontal scrollable row on search page
 - [Add recently viewed books (client-side)](https://github.com/ross-corp/rosslib/pull/104) — useRecentlyViewed hook with localStorage, RecordRecentlyViewed on book detail, recently viewed row on search page
+- [Add saved searches](https://github.com/ross-corp/rosslib/pull/105) — saved_searches collection, CRUD API endpoints, SavedSearches component with chips on search page
