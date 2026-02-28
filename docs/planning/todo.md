@@ -8,8 +8,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## profile & social
 
-- [ ] Add "favorite genres" display on profile. On the user profile page, below the bio section, show a row of genre chips representing the user's most-read genres. Derive from the user's finished books' `subjects` field: parse the comma-separated subjects, count occurrences, display the top 5 as colored chips (reuse the genre color scheme from the genres page). This is computed at render time from existing data — no new API endpoint needed, just include genre distribution in the existing `GET /users/:username` response or compute it client-side from the user's books data.
-
 ## search & browse
 
 - [ ] Add trending books section to search landing page. Create a `GET /books/trending?period=week&limit=10` endpoint in `api/handlers/books.go`. Query `user_books` for books with the most new `user_books` rows created in the past 7 (or 30) days, grouped by `book_id`, ordered by count descending. Return book data with the activity count. On the search page (`webapp/src/app/search/page.tsx`), when no query is entered (the empty/landing state from PR #79), show a "Trending This Week" section alongside or instead of "Popular Books". Render as a horizontal scrollable book cover row.
@@ -81,3 +79,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add friends reading this on book detail page](https://github.com/ross-corp/rosslib/pull/99) — GET /books/:workId/readers endpoint and avatar row on book detail page
 - [Add follow suggestions on feed page](https://github.com/ross-corp/rosslib/pull/100) — GET /me/suggested-follows endpoint and FollowSuggestions component on feed page
 - [Add profile banner image](https://github.com/ross-corp/rosslib/pull/101) — banner file field on users, POST /me/banner endpoint, banner display on profile page, upload in settings
+- [Add favorite genres display on user profile](https://github.com/ross-corp/rosslib/pull/102) — top 5 genre chips derived from finished books' subjects, displayed below bio on profile page
