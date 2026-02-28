@@ -4,8 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## quick wins
 
-- [ ] Add sort options to label detail page. On `GET /users/:username/shelves/:slug` in `api/handlers/users.go`, accept a `sort` query param with values `title`, `author`, `date_added` (default), `rating`. Apply `ORDER BY` accordingly in the SQL query. In the webapp at `webapp/src/app/[username]/library/[slug]/page.tsx`, add a sort dropdown (same pattern as the existing sort dropdown on `/users` page from PR #80). Forward the `sort` param through the Next.js proxy route. Default to `date_added` descending.
-
 - [ ] Add confirmation dialog when removing a book from library. In `webapp/src/components/shelf-picker.tsx` (or wherever the "Remove from library" action lives), wrap the `DELETE /api/me/books/:olId` call with a confirmation modal: "Remove *{title}* from your library? Your rating, review, and reading progress will be deleted." Use a simple dialog component — no external dependency needed. The confirm button should be red/destructive styled. Cancel closes the dialog with no action.
 
 - [ ] Add toast notifications for user actions. Create a minimal toast system in `webapp/src/components/toast.tsx` — a React context provider with `useToast()` hook exposing `toast.success(message)` and `toast.error(message)`. Render toasts as fixed-position banners in the bottom-right, auto-dismiss after 4 seconds. Wire it into existing actions: book added to library, status changed, review saved, follow/unfollow, import complete. No external dependency — just a context + CSS transitions.
@@ -94,3 +92,7 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
   - [ ] Same pattern detection for year-based Goodreads shelf names (e.g. `read-2023`, `read-2024` → label "read", values "2023", "2024")
 
 - [ ] LLM-powered fuzzy matching for failed import lookups. When standard book lookups fail to find a match during import, fall back to a "power mode" that uses an LLM to generate title/author permutations (alternate spellings, subtitle variations, series name removal, etc.) and retry searches with each permutation until possible matches are found. Present the candidate matches to the user for confirmation.
+
+## Pending PRs
+
+- [Add sort options to owner library view and tag/label endpoints](https://github.com/ross-corp/rosslib/pull/90) — sort dropdown in LibraryManager + sort param on tags/labels API endpoints
