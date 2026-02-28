@@ -316,6 +316,10 @@ Client component rendered on the settings page. Displays toggle switches for eac
 
 Client component for liking/unliking reviews. Shows a heart icon with like count. Toggling calls `POST /api/books/:workId/reviews/:userId/like`. Disabled for the user's own reviews. Used on the book detail page's community reviews section. Unauthenticated users see a static like count (no button).
 
+### `ReviewComments` (`components/review-comments.tsx`)
+
+Client component for viewing and posting comments on reviews. Shows a comment count toggle button below each review. When expanded, loads comments via `GET /api/books/:workId/reviews/:userId/comments` and displays them in a threaded view with avatars and timestamps. Logged-in users see a text input to post new comments via `POST`. Comment authors can delete their own comments via `DELETE /api/review-comments/:commentId`. Generates a `review_comment` notification for the review author.
+
 ### `GenreRatingEditor` (`components/genre-rating-editor.tsx`)
 
 Client component for genre dimension ratings on book detail pages. Shows aggregate community ratings as horizontal bar charts (genre name, progress bar, average/10, rater count). Logged-in users can expand an editor with 0–10 sliders for each of the 12 predefined genres (Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children). Setting a slider to 0 removes the rating. Saves via `PUT /api/me/books/:olId/genre-ratings` and refreshes aggregate data on save.
