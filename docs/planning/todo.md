@@ -15,8 +15,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## settings & account
 
-- [ ] Add LibraryThing CSV import. Add `POST /me/import/librarything/preview` and `POST /me/import/librarything/commit` endpoints in `api/handlers/imports.go`, following the same pattern as Goodreads and StoryGraph imports. LibraryThing CSV format: columns include `Title`, `Author (First, Last)`, `ISBN`, `Rating`, `Review`, `Date Read`, `Collections` (semicolon-separated), `Tags` (comma-separated). Map LT collections and tags to labels. Status mapping: "Currently Reading" → Currently Reading, "To Read" / "Wishlist" → Want to Read, "Read but unowned" / books with a Date Read → Finished. On the import page, add a "LibraryThing" tab alongside Goodreads and StoryGraph (extends PR #61's tabbed UI).
-
 - [ ] Add API token generation for integrations. Create an `api_tokens` table via migration: `id` (uuid PK), `user_id` (FK → users, cascade), `name` (varchar(100) — user-chosen label like "CLI" or "Calibre"), `token_hash` (text — SHA-256 hash), `last_used_at` (timestamptz nullable), `created_at`. API endpoints: `GET /me/api-tokens` (list tokens — return name, created_at, last_used_at, never the raw token), `POST /me/api-tokens` (create — return the raw token once, hash and store), `DELETE /me/api-tokens/:id`. In auth middleware, also check for `Authorization: Bearer <token>` against `api_tokens` (hash the incoming token and look up). Add a "Developer" or "API Tokens" section to settings page with create/revoke UI. Max 5 tokens per user.
 
 ## UX polish
@@ -72,3 +70,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add thread locking for moderators](https://github.com/ross-corp/rosslib/pull/109) — locked_at column on threads, lock/unlock endpoints, locked banner and mod toggle on frontend
 - [Add review comments / discussion under reviews](https://github.com/ross-corp/rosslib/pull/110) — review_comments collection, GET/POST/DELETE endpoints, ReviewComments component on book detail page with notifications
 - [Add label descriptions](https://github.com/ross-corp/rosslib/pull/111) — description column on collections, create/edit UI in library manager, render on visitor shelf detail page
+- [Add LibraryThing CSV import](https://github.com/ross-corp/rosslib/pull/112) — LibraryThing TSV import with preview/commit endpoints, tab-delimited parsing, author name reversal, collections/tags as labels
