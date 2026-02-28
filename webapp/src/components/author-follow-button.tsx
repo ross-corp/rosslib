@@ -34,7 +34,7 @@ export default function AuthorFollowButton({
       className={`text-sm px-3 py-1.5 rounded border transition-colors disabled:opacity-50 ${
         following
           ? "border-border text-text-primary hover:border-border hover:text-text-primary"
-          : "border-accent bg-accent text-white hover:bg-surface-3"
+          : "border-accent bg-accent text-text-inverted hover:bg-accent-hover"
       }`}
     >
       {loading ? "..." : following ? "Following" : "Follow"}

@@ -106,7 +106,7 @@ export default function StatusPicker({
         disabled={loading}
         className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 whitespace-nowrap ${
           currentValue
-            ? "border-accent bg-accent text-white hover:bg-surface-3"
+            ? "border-accent bg-accent text-text-inverted hover:bg-accent-hover"
             : "border-border text-text-primary hover:border-border-strong hover:text-text-primary"
         }`}
       >

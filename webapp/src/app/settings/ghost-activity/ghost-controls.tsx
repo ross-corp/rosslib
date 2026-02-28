@@ -91,7 +91,7 @@ export default function GhostControls({
         <button
           onClick={seed}
           disabled={seeding}
-          className="text-sm px-4 py-2 rounded border border-accent bg-accent text-white hover:bg-surface-3 transition-colors disabled:opacity-50"
+          className="text-sm px-4 py-2 rounded border border-accent bg-accent text-text-inverted hover:bg-accent-hover transition-colors disabled:opacity-50"
         >
           {seeding ? "Seeding..." : "Seed ghosts"}
         </button>

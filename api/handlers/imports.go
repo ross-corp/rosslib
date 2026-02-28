@@ -402,7 +402,7 @@ func CommitGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 			} `json:"unmatched_rows"`
 			ShelfMappings []struct {
 				Shelf      string `json:"shelf"`
-				Action     string `json:"action"` // "tag", "skip", "create_label", "existing_label"
+				Action     string `json:"action"` // "tag", "skip", "create_label", "existing_label", "map_dnf"
 				LabelName  string `json:"label_name"`
 				LabelKeyID string `json:"label_key_id"`
 			} `json:"shelf_mappings"`
@@ -453,6 +453,14 @@ func CommitGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 					continue
 				}
 				tagMap[sm.Shelf] = tagMapping{KeyID: key.Id, ValueID: val.Id}
+			}
+		}
+
+		// Collect shelves mapped to DNF status
+		dnfShelves := map[string]bool{}
+		for _, sm := range data.ShelfMappings {
+			if sm.Action == "map_dnf" {
+				dnfShelves[sm.Shelf] = true
 			}
 		}
 
@@ -547,6 +555,14 @@ func CommitGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 				btv.Set("tag_key", tm.KeyID)
 				btv.Set("tag_value", tm.ValueID)
 				_ = app.Save(btv)
+			}
+
+			// Override status to DNF if any custom shelf is mapped to DNF
+			for _, shelf := range b.CustomShelves {
+				if dnfShelves[shelf] {
+					setStatusTag(app, user.Id, book.Id, "dnf")
+					break
+				}
 			}
 
 			imported++
@@ -1291,6 +1307,14 @@ func CommitStoryGraphImport(app core.App) func(e *core.RequestEvent) error {
 			}
 		}
 
+		// Collect shelves mapped to DNF status
+		dnfShelves := map[string]bool{}
+		for _, sm := range data.ShelfMappings {
+			if sm.Action == "map_dnf" {
+				dnfShelves[sm.Shelf] = true
+			}
+		}
+
 		imported := 0
 		failed := 0
 		var errors []string
@@ -1380,6 +1404,14 @@ func CommitStoryGraphImport(app core.App) func(e *core.RequestEvent) error {
 				btv.Set("tag_key", tm.KeyID)
 				btv.Set("tag_value", tm.ValueID)
 				_ = app.Save(btv)
+			}
+
+			// Override status to DNF if any custom shelf is mapped to DNF
+			for _, shelf := range b.CustomShelves {
+				if dnfShelves[shelf] {
+					setStatusTag(app, user.Id, book.Id, "dnf")
+					break
+				}
 			}
 
 			imported++

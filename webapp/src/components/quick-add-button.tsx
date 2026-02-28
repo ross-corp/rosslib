@@ -63,7 +63,7 @@ export default function QuickAddButton({
   if (added) {
     return (
       <div className="absolute bottom-1 right-1 z-10">
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent text-white">
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent text-text-inverted">
           Added
         </span>
       </div>

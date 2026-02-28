@@ -149,7 +149,7 @@ export default function AdminUserList() {
                         <button
                           onClick={() => saveAuthorKey(u)}
                           disabled={savingAuthor === u.user_id}
-                          className="px-2 py-0.5 rounded text-xs font-medium bg-accent text-white hover:bg-surface-3 disabled:opacity-50"
+                          className="px-2 py-0.5 rounded text-xs font-medium bg-accent text-text-inverted hover:bg-accent-hover disabled:opacity-50"
                         >
                           Save
                         </button>
@@ -179,7 +179,7 @@ export default function AdminUserList() {
                       disabled={toggling === u.user_id}
                       className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
                         u.is_moderator
-                          ? "bg-accent text-white hover:bg-surface-3"
+                          ? "bg-accent text-text-inverted hover:bg-accent-hover"
                           : "bg-surface-2 text-text-primary hover:bg-surface-2"
                       } disabled:opacity-50`}
                     >

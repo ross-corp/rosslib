@@ -154,7 +154,7 @@ function CommentItem({
                 <button
                   type="submit"
                   disabled={submitting || !replyBody.trim()}
-                  className="text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-surface-3 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="text-xs px-3 py-1.5 rounded bg-accent text-text-inverted hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {submitting ? "Posting..." : "Reply"}
                 </button>
@@ -329,7 +329,7 @@ export default function ThreadComments({
             <button
               type="submit"
               disabled={submitting || !newComment.trim()}
-              className="text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-surface-3 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="text-xs px-3 py-1.5 rounded bg-accent text-text-inverted hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? "Posting..." : "Comment"}
             </button>

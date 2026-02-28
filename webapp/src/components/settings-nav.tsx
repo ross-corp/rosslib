@@ -24,7 +24,7 @@ export default function SettingsNav() {
             href={href}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
               isActive
-                ? "bg-accent text-white"
+                ? "bg-accent text-text-inverted"
                 : "bg-surface-2 text-text-primary hover:bg-surface-3"
             }`}
           >

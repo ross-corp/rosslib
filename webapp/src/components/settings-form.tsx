@@ -199,7 +199,7 @@ export default function SettingsForm({
           <button
             type="submit"
             disabled={loading}
-            className="bg-accent text-white px-4 py-2 rounded text-sm font-medium hover:bg-surface-3 transition-colors disabled:opacity-50"
+            className="bg-accent text-text-inverted px-4 py-2 rounded text-sm font-medium hover:bg-surface-3 transition-colors disabled:opacity-50"
           >
             {loading ? "Saving..." : "Save"}
           </button>

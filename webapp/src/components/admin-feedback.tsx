@@ -87,7 +87,7 @@ export default function AdminFeedback() {
             onClick={() => setStatusFilter(s)}
             className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
               statusFilter === s
-                ? "bg-accent text-white"
+                ? "bg-accent text-text-inverted"
                 : "bg-surface-2 text-text-primary hover:bg-surface-2"
             }`}
           >

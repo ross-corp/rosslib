@@ -260,7 +260,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
           <button
             type="button"
             onClick={() => setShowForm(true)}
-            className="text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-surface-3 transition-colors"
+            className="text-xs px-3 py-1.5 rounded bg-accent text-text-inverted hover:bg-accent-hover transition-colors"
           >
             Suggest link
           </button>
@@ -378,7 +378,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
             <button
               type="submit"
               disabled={submitting || !toWorkId.trim()}
-              className="text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-surface-3 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="text-xs px-3 py-1.5 rounded bg-accent text-text-inverted hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? "Adding..." : "Add link"}
             </button>
@@ -564,7 +564,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                           <button
                             type="submit"
                             disabled={editSubmitting}
-                            className="text-xs px-3 py-1 rounded bg-accent text-white hover:bg-surface-3 disabled:opacity-50 transition-colors"
+                            className="text-xs px-3 py-1 rounded bg-accent text-text-inverted hover:bg-accent-hover disabled:opacity-50 transition-colors"
                           >
                             {editSubmitting ? "Submitting..." : "Propose edit"}
                           </button>

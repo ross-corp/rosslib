@@ -138,7 +138,7 @@ export default function ReadingProgress({
             onClick={() => setMode("page")}
             className={`px-2 py-1 transition-colors ${
               mode === "page"
-                ? "bg-accent text-white"
+                ? "bg-accent text-text-inverted"
                 : "text-text-primary hover:text-text-primary"
             }`}
           >
@@ -149,7 +149,7 @@ export default function ReadingProgress({
             onClick={() => setMode("percent")}
             className={`px-2 py-1 transition-colors ${
               mode === "percent"
-                ? "bg-accent text-white"
+                ? "bg-accent text-text-inverted"
                 : "text-text-primary hover:text-text-primary"
             }`}
           >
@@ -195,7 +195,7 @@ export default function ReadingProgress({
           type="button"
           onClick={saveProgress}
           disabled={saving}
-          className="text-xs px-2.5 py-1 rounded bg-accent text-white hover:bg-surface-3 disabled:opacity-50 transition-colors"
+          className="text-xs px-2.5 py-1 rounded bg-accent text-text-inverted hover:bg-accent-hover disabled:opacity-50 transition-colors"
         >
           {saving ? "..." : "Update"}
         </button>

@@ -308,7 +308,7 @@ export default function PendingImportsManager({
                           resolveImport(searchModalId, book.open_library_id)
                         }
                         disabled={resolving === searchModalId}
-                        className="px-3 py-1.5 text-xs font-medium bg-accent text-white rounded-lg hover:bg-surface-3 transition-colors disabled:opacity-40 shrink-0"
+                        className="px-3 py-1.5 text-xs font-medium bg-accent text-text-inverted rounded-lg hover:bg-surface-3 transition-colors disabled:opacity-40 shrink-0"
                       >
                         {resolving === searchModalId ? "Linking..." : "Link"}
                       </button>

@@ -84,7 +84,7 @@ export default function FollowRequestsList({
             <button
               onClick={() => accept(req.user_id)}
               disabled={loading[req.user_id]}
-              className="text-sm px-3 py-1.5 rounded border border-accent bg-accent text-white hover:bg-surface-3 transition-colors disabled:opacity-50"
+              className="text-sm px-3 py-1.5 rounded border border-accent bg-accent text-text-inverted hover:bg-accent-hover transition-colors disabled:opacity-50"
             >
               Accept
             </button>

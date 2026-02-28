@@ -278,7 +278,7 @@ export default function CrossUserCompareForm({
       <button
         onClick={compute}
         disabled={!canCompute || loading}
-        className="px-4 py-2 text-sm bg-accent text-white rounded hover:bg-surface-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-4 py-2 text-sm bg-accent text-text-inverted rounded hover:bg-surface-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "Computing..." : "Compare"}
       </button>
@@ -383,7 +383,7 @@ export default function CrossUserCompareForm({
                       <button
                         onClick={saveAsNewList}
                         disabled={!saveName.trim() || saving}
-                        className="px-3 py-1.5 text-sm bg-accent text-white rounded hover:bg-surface-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-1.5 text-sm bg-accent text-text-inverted rounded hover:bg-surface-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {saving ? "Saving..." : "Save"}
                       </button>

@@ -349,7 +349,7 @@ export default async function SearchPage({
                 href={buildSearchParams(base, { sort: opt.value })}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   sort === opt.value
-                    ? "border-accent text-text-primary bg-accent text-white"
+                    ? "border-accent bg-accent text-text-inverted"
                     : "border-border text-text-primary hover:border-border-strong hover:text-text-primary"
                 }`}
               >
@@ -369,7 +369,7 @@ export default async function SearchPage({
                 href={buildSearchParams(base, { subject: subject === genre.toLowerCase() ? "" : genre.toLowerCase() })}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   subject === genre.toLowerCase()
-                    ? "border-accent bg-accent text-white"
+                    ? "border-accent bg-accent text-text-inverted"
                     : "border-border text-text-primary hover:border-border-strong hover:text-text-primary"
                 }`}
               >
@@ -389,7 +389,7 @@ export default async function SearchPage({
                 href={buildSearchParams(base, { language: language === lang.code ? "" : lang.code })}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   language === lang.code
-                    ? "border-accent bg-accent text-white"
+                    ? "border-accent bg-accent text-text-inverted"
                     : "border-border text-text-primary hover:border-border-strong hover:text-text-primary"
                 }`}
               >
@@ -430,7 +430,7 @@ export default async function SearchPage({
               />
               <button
                 type="submit"
-                className="text-xs px-2.5 py-1 rounded-full border border-accent bg-accent text-white hover:bg-surface-3 transition-colors"
+                className="text-xs px-2.5 py-1 rounded-full border border-accent bg-accent text-text-inverted hover:bg-accent-hover transition-colors"
               >
                 Apply
               </button>

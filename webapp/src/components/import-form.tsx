@@ -72,7 +72,7 @@ type PendingImport = {
 };
 
 type ShelfMapping = {
-  action: "tag" | "skip" | "create_label" | "existing_label";
+  action: "tag" | "skip" | "create_label" | "existing_label" | "map_dnf";
   label_name?: string;
   label_key_id?: string;
 };
@@ -123,6 +123,8 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
   const [matchedExpanded, setMatchedExpanded] = useState(false);
   // shelf name → mapping config
   const [shelfMappings, setShelfMappings] = useState<Map<string, ShelfMapping>>(new Map());
+  // shelves currently editing a new label name (input visible until Enter/blur)
+  const [editingLabel, setEditingLabel] = useState<Set<string>>(new Set());
   // User's existing tag keys (for "Add to existing label")
   const [existingTagKeys, setExistingTagKeys] = useState<TagKey[]>([]);
   // Preview progress
@@ -600,7 +602,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
             type="button"
             onClick={enterConfigure}
             disabled={selectedCount === 0}
-            className="px-4 py-2 bg-accent text-white text-sm rounded-lg hover:bg-surface-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-accent text-text-inverted text-sm rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Next: Configure labels
           </button>
@@ -670,85 +672,150 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
               Choose how to import each {source === "storygraph" ? "StoryGraph tag" : "custom Goodreads shelf"} as a label.
             </p>
             <ul className="divide-y divide-border border border-border rounded-lg overflow-hidden">
-              {sortedShelves.map(([shelf, count]) => {
-                const mapping = shelfMappings.get(shelf) ?? { action: "tag" as const };
-                return (
-                  <li key={shelf} className="px-4 py-2.5 space-y-2">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm text-text-primary">{shelf}</span>
-                        <span className="text-xs text-text-primary ml-2">
-                          ({count} book{count !== 1 ? "s" : ""})
-                        </span>
-                      </div>
-                      <select
-                        className="text-xs border border-border rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong"
-                        value={mapping.action}
-                        onChange={(e) =>
-                          setShelfMappings((prev) => {
-                            const next = new Map(prev);
-                            const action = e.target.value as ShelfMapping["action"];
-                            next.set(shelf, { action });
-                            return next;
-                          })
-                        }
-                      >
-                        <option value="tag">Tag</option>
-                        <option value="create_label">Create label</option>
-                        {existingTagKeys.length > 0 && (
-                          <option value="existing_label">Add to existing label</option>
-                        )}
-                        <option value="skip">Skip</option>
-                      </select>
-                    </div>
-                    {mapping.action === "create_label" && (
-                      <div className="flex items-center gap-2 pl-0">
-                        <label className="text-xs text-text-primary shrink-0">Label name:</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Genre, Source"
-                          className="text-xs border border-border rounded px-2 py-1.5 flex-1 max-w-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong"
-                          value={mapping.label_name ?? ""}
-                          onChange={(e) =>
-                            setShelfMappings((prev) => {
-                              const next = new Map(prev);
-                              next.set(shelf, { ...mapping, label_name: e.target.value });
-                              return next;
-                            })
-                          }
-                        />
-                        <span className="text-xs text-text-primary">
-                          (becomes a value under this label)
-                        </span>
-                      </div>
-                    )}
-                    {mapping.action === "existing_label" && (
-                      <div className="flex items-center gap-2 pl-0">
-                        <label className="text-xs text-text-primary shrink-0">Label:</label>
+              {(() => {
+                // Collect all label names entered across all shelves (sorted for stable order)
+                const labelNameSet = new Set<string>();
+                for (const [, m] of shelfMappings) {
+                  if (m.action === "create_label" && m.label_name?.trim()) {
+                    labelNameSet.add(m.label_name.trim());
+                  }
+                }
+                const allLabelNames = Array.from(labelNameSet).sort();
+                return sortedShelves.map(([shelf, count]) => {
+                  const mapping = shelfMappings.get(shelf) ?? { action: "tag" as const };
+                  const isEditing = editingLabel.has(shelf);
+                  const showInput = isEditing || (mapping.action === "create_label" && !mapping.label_name?.trim());
+                  return (
+                    <li key={shelf} className="px-4 py-2.5 space-y-2">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm text-text-primary">{shelf}</span>
+                          <span className="text-xs text-text-tertiary ml-2">
+                            ({count} book{count !== 1 ? "s" : ""})
+                          </span>
+                        </div>
                         <select
                           className="text-xs border border-border rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong"
-                          value={mapping.label_key_id ?? ""}
-                          onChange={(e) =>
+                          value={mapping.action}
+                          onChange={(e) => {
+                            const action = e.target.value as ShelfMapping["action"];
                             setShelfMappings((prev) => {
                               const next = new Map(prev);
-                              next.set(shelf, { ...mapping, label_key_id: e.target.value });
+                              next.set(shelf, { action });
                               return next;
-                            })
-                          }
+                            });
+                            if (action === "create_label") {
+                              setEditingLabel((prev) => new Set(prev).add(shelf));
+                            } else {
+                              setEditingLabel((prev) => { const next = new Set(prev); next.delete(shelf); return next; });
+                            }
+                          }}
                         >
-                          <option value="">Select a label...</option>
-                          {existingTagKeys.map((k) => (
-                            <option key={k.id} value={k.id}>{k.name}</option>
-                          ))}
+                          <option value="tag">Tag</option>
+                          <option value="create_label">Create label</option>
+                          {existingTagKeys.length > 0 && (
+                            <option value="existing_label">Add to existing label</option>
+                          )}
+                          <option value="map_dnf">Map to DNF</option>
+                          <option value="skip">Skip</option>
                         </select>
-                        <span className="text-xs text-text-primary">
-                          (becomes a value under this label)
-                        </span>
                       </div>
-                    )}
-                  </li>
-                );
-              })}
+                      {/* Label pills — always visible when labels exist */}
+                      {allLabelNames.length > 0 && mapping.action !== "existing_label" && mapping.action !== "skip" && mapping.action !== "map_dnf" && !showInput && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {allLabelNames.map((name) => {
+                            const isActive = mapping.action === "create_label" && mapping.label_name?.trim() === name;
+                            return (
+                              <button
+                                key={name}
+                                type="button"
+                                className={isActive ? "tag-pill-active cursor-pointer" : "tag-pill cursor-pointer"}
+                                onClick={() =>
+                                  setShelfMappings((prev) => {
+                                    const next = new Map(prev);
+                                    if (isActive) {
+                                      next.set(shelf, { action: "tag" });
+                                    } else {
+                                      next.set(shelf, { action: "create_label", label_name: name });
+                                    }
+                                    return next;
+                                  })
+                                }
+                              >
+                                {name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {/* Text input for creating a new label name */}
+                      {showInput && (
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs text-text-primary shrink-0">Label name:</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Genre, Source"
+                            autoFocus
+                            className="text-xs border border-border rounded px-2 py-1.5 flex-1 max-w-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong"
+                            value={mapping.label_name ?? ""}
+                            onChange={(e) =>
+                              setShelfMappings((prev) => {
+                                const next = new Map(prev);
+                                next.set(shelf, { action: "create_label", label_name: e.target.value });
+                                return next;
+                              })
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                            onBlur={() => {
+                              setEditingLabel((prev) => { const next = new Set(prev); next.delete(shelf); return next; });
+                              // If blurred with empty value, revert to tag
+                              if (!mapping.label_name?.trim()) {
+                                setShelfMappings((prev) => {
+                                  const next = new Map(prev);
+                                  next.set(shelf, { action: "tag" });
+                                  return next;
+                                });
+                              }
+                            }}
+                          />
+                          <span className="text-xs text-text-tertiary">
+                            (becomes a value under this label)
+                          </span>
+                        </div>
+                      )}
+                      {mapping.action === "existing_label" && (
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs text-text-primary shrink-0">Label:</label>
+                          <select
+                            className="text-xs border border-border rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong"
+                            value={mapping.label_key_id ?? ""}
+                            onChange={(e) =>
+                              setShelfMappings((prev) => {
+                                const next = new Map(prev);
+                                next.set(shelf, { ...mapping, label_key_id: e.target.value });
+                                return next;
+                              })
+                            }
+                          >
+                            <option value="">Select a label...</option>
+                            {existingTagKeys.map((k) => (
+                              <option key={k.id} value={k.id}>{k.name}</option>
+                            ))}
+                          </select>
+                          <span className="text-xs text-text-tertiary">
+                            (becomes a value under this label)
+                          </span>
+                        </div>
+                      )}
+                    </li>
+                  );
+                });
+              })()}
             </ul>
           </section>
         ) : (
@@ -764,7 +831,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
           <button
             type="button"
             onClick={handleCommit}
-            className="px-4 py-2 bg-accent text-white text-sm rounded-lg hover:bg-surface-3 transition-colors"
+            className="px-4 py-2 bg-accent text-text-inverted text-sm rounded-lg hover:bg-accent-hover transition-colors"
           >
             Import {selectedCount} book{selectedCount !== 1 ? "s" : ""}
           </button>
@@ -867,7 +934,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
         type="button"
         onClick={handlePreview}
         disabled={!fileName}
-        className="px-4 py-2 bg-accent text-white text-sm rounded-lg hover:bg-surface-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="px-4 py-2 bg-accent text-text-inverted text-sm rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
         Preview import
       </button>

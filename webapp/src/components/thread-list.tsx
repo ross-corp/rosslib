@@ -117,7 +117,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
           <button
             type="button"
             onClick={() => setShowForm(true)}
-            className="text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-surface-3 transition-colors"
+            className="text-xs px-3 py-1.5 rounded bg-accent text-text-inverted hover:bg-accent-hover transition-colors"
           >
             New thread
           </button>
@@ -183,7 +183,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
             <button
               type="submit"
               disabled={submitting || !title.trim() || !body.trim()}
-              className="text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-surface-3 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="text-xs px-3 py-1.5 rounded bg-accent text-text-inverted hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? "Posting..." : "Post thread"}
             </button>

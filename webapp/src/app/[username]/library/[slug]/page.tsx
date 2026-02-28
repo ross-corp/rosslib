@@ -287,7 +287,7 @@ export default async function ShelfPage({
                   href={`/${username}/library/${s.slug}`}
                   className={`text-sm px-3 py-1 rounded border transition-colors ${
                     s.slug === slug
-                      ? "border-accent bg-accent text-white"
+                      ? "border-accent bg-accent text-text-inverted"
                       : "border-border text-text-primary hover:border-border hover:text-text-primary"
                   }`}
                 >
