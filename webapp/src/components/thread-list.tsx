@@ -15,6 +15,7 @@ type Thread = {
   spoiler: boolean;
   created_at: string;
   comment_count: number;
+  locked_at: string | null;
 };
 
 type SimilarThread = Thread & { similarity: number };
@@ -231,6 +232,11 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-medium text-text-primary truncate">
+                      {thread.locked_at && (
+                        <svg className="inline w-3.5 h-3.5 text-text-primary mr-1.5 align-text-bottom" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+                        </svg>
+                      )}
                       {thread.spoiler && (
                         <span className="text-[10px] font-medium text-amber-600 border border-amber-200 rounded px-1 py-0.5 mr-2 leading-none">
                           Spoiler

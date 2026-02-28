@@ -352,6 +352,10 @@ Client component on the settings page for setting an annual reading goal. Calls 
 
 Client component on user profile pages. Shows "Block" button that opens an inline confirmation prompt. After blocking, the page reloads to show the restricted view. When already blocked, shows "Unblock" button instead. Calls `POST /api/users/:username/block` and `DELETE /api/users/:username/block`.
 
+### `ThreadLockToggle` (`components/thread-lock-toggle.tsx`)
+
+Client component shown on the thread detail page for moderators only. Renders a Lock/Unlock toggle button. Calls `POST /api/threads/:threadId/lock` or `POST /api/threads/:threadId/unlock` and updates the button state optimistically.
+
 ---
 
 ## Adding a new page

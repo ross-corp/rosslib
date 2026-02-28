@@ -1386,14 +1386,15 @@ Returns all discussion threads for a book, ordered by most recent first.
     "body": "I just finished and...",
     "spoiler": true,
     "created_at": "2026-02-25T14:00:00Z",
-    "comment_count": 3
+    "comment_count": 3,
+    "locked_at": null
   }
 ]
 ```
 
 ### `GET /threads/:threadId`
 
-Returns a single thread with all its comments.
+Returns a single thread with all its comments. Includes `locked_at` (null if unlocked, ISO timestamp if locked).
 
 ```json
 {
@@ -1436,9 +1437,29 @@ Create a new discussion thread on a book. Records a `created_thread` activity an
 
 Soft-delete a thread (author only). Returns 204.
 
+### `POST /threads/:threadId/lock`  *(auth required, moderator only)*
+
+Lock a thread, preventing new comments. Returns the locked timestamp.
+
+```
+200 { "locked_at": "2024-01-15T10:30:00Z" }
+403 { "error": "Moderator access required" }
+404 { "error": "Thread not found" }
+```
+
+### `POST /threads/:threadId/unlock`  *(auth required, moderator only)*
+
+Unlock a previously locked thread, re-enabling comments.
+
+```
+200 { "locked_at": null }
+403 { "error": "Moderator access required" }
+404 { "error": "Thread not found" }
+```
+
 ### `POST /threads/:threadId/comments`  *(auth required)*
 
-Add a comment to a thread. Set `parent_id` to reply to a top-level comment (one level of nesting only).
+Add a comment to a thread. Set `parent_id` to reply to a top-level comment (one level of nesting only). Returns 403 if the thread is locked.
 
 ```json
 { "body": "I think it meant...", "parent_id": null }
@@ -1450,6 +1471,7 @@ Add a comment to a thread. Set `parent_id` to reply to a top-level comment (one 
 201 { "id": "...", "created_at": "..." }
 400 { "error": "comment must be 5,000 characters or fewer" }
 400 { "error": "replies can only be one level deep" }
+403 { "error": "This thread is locked." }
 ```
 
 ### `DELETE /threads/:threadId/comments/:commentId`  *(auth required)*
