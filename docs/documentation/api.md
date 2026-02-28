@@ -156,6 +156,29 @@ Returns up to 12 popular books from the local catalog, ordered by reads count. D
 
 Returns an empty array if no books have stats yet.
 
+### `GET /books/trending?period=week&limit=10`
+
+Returns books with the most new `user_books` activity in a recent time window. Queries `user_books` rows created in the last 7 days (default) or 30 days, grouped by book, ordered by activity count descending. Used on the search landing page as a "Trending This Week" section.
+
+**Query parameters:**
+- `period` — `week` (default, 7 days) or `month` (30 days)
+- `limit` — max books to return (default 10, max 50)
+
+```json
+[
+  {
+    "key": "OL82592W",
+    "title": "The Great Gatsby",
+    "authors": ["F. Scott Fitzgerald"],
+    "cover_url": "https://covers.openlibrary.org/b/id/8410459-M.jpg",
+    "publish_year": 1925,
+    "activity_count": 8
+  }
+]
+```
+
+Returns an empty array if no recent activity.
+
 ### `GET /books/lookup?isbn=<isbn>`
 
 Looks up a single book by ISBN via Open Library. Upserts the result into the local `books` table and returns it. Returns 404 if not found.
