@@ -160,6 +160,8 @@ webapp/src/app/
     ├── me/notification-preferences/route.ts     ← GET, PUT notification prefs
     ├── me/recommendations/route.ts               ← GET, POST recommendations
     ├── me/recommendations/[recId]/route.ts       ← PATCH update recommendation status
+    ├── me/saved-searches/route.ts                ← GET, POST saved searches
+    ├── me/saved-searches/[id]/route.ts           ← DELETE saved search
     ├── users/route.ts                             ← GET search users
     └── users/[username]/
         ├── followers/route.ts                     ← GET followers list
@@ -351,6 +353,10 @@ Client component on the settings page for setting an annual reading goal. Calls 
 ### `BlockButton` (`components/block-button.tsx`)
 
 Client component on user profile pages. Shows "Block" button that opens an inline confirmation prompt. After blocking, the page reloads to show the restricted view. When already blocked, shows "Unblock" button instead. Calls `POST /api/users/:username/block` and `DELETE /api/users/:username/block`.
+
+### `SavedSearches` (`components/saved-searches.tsx`)
+
+Client component rendered on the search page for logged-in users. Shows saved searches as clickable chips above the search bar — clicking a chip populates the query and filters. Each chip has a small "x" button to delete the saved search. When filters or a query are active, shows a "Save this search" link that reveals a name input. Max 20 saved searches per user. Calls `GET /api/me/saved-searches`, `POST /api/me/saved-searches`, and `DELETE /api/me/saved-searches/:id`.
 
 ---
 
