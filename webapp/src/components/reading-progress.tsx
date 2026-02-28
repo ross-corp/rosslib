@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/toast";
 
 type Props = {
   openLibraryId: string;
@@ -24,6 +25,7 @@ export default function ReadingProgress({
   const [percent, setPercent] = useState(initialPercent?.toString() ?? "");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const toast = useToast();
 
   const [deviceTotalPages, setDeviceTotalPages] = useState(
     initialDeviceTotalPages?.toString() ?? ""
@@ -77,9 +79,11 @@ export default function ReadingProgress({
     setSaving(false);
     if (res.ok) {
       setMessage("Saved");
+      toast.success("Progress updated");
       setTimeout(() => setMessage(null), 2000);
     } else {
       setMessage("Failed to save");
+      toast.error("Failed to update progress");
     }
   }
 

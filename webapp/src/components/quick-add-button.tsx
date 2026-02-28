@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { StatusValue } from "@/components/shelf-picker";
+import { useToast } from "@/components/toast";
 
 export default function QuickAddButton({
   openLibraryId,
@@ -21,6 +22,7 @@ export default function QuickAddButton({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (!open) return;
@@ -50,7 +52,10 @@ export default function QuickAddButton({
       }),
     });
     setLoading(false);
-    if (res.ok) setAdded(true);
+    if (res.ok) {
+      setAdded(true);
+      toast.success(`Added to ${value.name}`);
+    }
   }
 
   async function quickAdd() {

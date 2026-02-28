@@ -348,6 +348,10 @@ Client component displaying a reading goal progress bar on user profile pages. S
 
 Client component on the settings page for setting an annual reading goal. Calls `PUT /api/me/goals/:year` to create or update the goal.
 
+### `Toast` (`components/toast.tsx`)
+
+Global toast notification system. `ToastProvider` wraps the app in `layout.tsx` and renders fixed-position banners in the bottom-right corner. The `useToast()` hook exposes `toast.success(message)` and `toast.error(message)`. Toasts auto-dismiss after 4 seconds with a slide-in animation. Used across the app for feedback on user actions: book added/moved/removed, follow/unfollow, review saved, import complete, profile updated, export download, block/unblock, reading progress updated, and bulk library operations.
+
 ### `BlockButton` (`components/block-button.tsx`)
 
 Client component on user profile pages. Shows "Block" button that opens an inline confirmation prompt. After blocking, the page reloads to show the restricted view. When already blocked, shows "Unblock" button instead. Calls `POST /api/users/:username/block` and `DELETE /api/users/:username/block`.
