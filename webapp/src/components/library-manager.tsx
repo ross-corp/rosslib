@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, ReactNode } from "react";
 import { TagKey, TagValue } from "@/components/book-tag-picker";
+import EmptyState from "@/components/empty-state";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -637,7 +638,11 @@ export default function LibraryManager({
           {loading ? (
             <p className="text-sm text-text-primary">Loading...</p>
           ) : books.length === 0 ? (
-            <p className="text-sm text-text-primary">No books here yet.</p>
+            <EmptyState
+              message="No books yet. Search for a book to get started."
+              actionLabel="Search books"
+              actionHref="/search"
+            />
           ) : (
             <ul className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3">
               {books.map((book) => {

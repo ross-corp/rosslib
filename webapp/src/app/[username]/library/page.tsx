@@ -4,6 +4,7 @@ import ShelfBookGrid from "@/components/shelf-book-grid";
 import { getUser } from "@/lib/auth";
 import { TagKey } from "@/components/book-tag-picker";
 import Link from "next/link";
+import EmptyState from "@/components/empty-state";
 
 type StatusBook = {
   book_id: string;
@@ -145,7 +146,11 @@ export default async function LibraryIndexPage({
             tagKeys={[]}
           />
         ) : (
-          <p className="text-sm text-text-tertiary">No books yet.</p>
+          <EmptyState
+            message="No books yet. Search for a book to get started."
+            actionLabel="Search books"
+            actionHref="/search"
+          />
         )}
       </main>
     </div>

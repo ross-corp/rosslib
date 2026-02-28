@@ -324,6 +324,10 @@ Client component for genre dimension ratings on book detail pages. Shows aggrega
 
 Client component for the `/scan` page. Three input modes: Camera (uses browser `BarcodeDetector` API for real-time EAN-13 scanning on supported devices), Upload (sends image to `POST /api/books/scan` for server-side barcode detection via gozxing), and Enter ISBN (manual input via `GET /api/books/lookup`). Detected books are displayed with cover, metadata, and a StatusPicker for quick library addition. Supports scanning multiple books in a session with a history list.
 
+### `EmptyState` (`components/empty-state.tsx`)
+
+Reusable component for zero-data states across the app. Renders a centered message with an optional call-to-action link. Used on the feed page, notifications page, library pages (owner and visitor), and shelf/label views. Keeps empty state styling consistent: centered `py-16` container, `text-sm` message text, bordered button link.
+
 ### `StarRating` (`components/star-rating.tsx`)
 
 Read-only star display used on label book cards.
