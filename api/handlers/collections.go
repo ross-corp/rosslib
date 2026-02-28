@@ -325,24 +325,38 @@ func GetShelfDetail(app core.App) func(e *core.RequestEvent) error {
 		}
 		shelf := shelves[0]
 
+		sortParam := e.Request.URL.Query().Get("sort")
+		var orderClause string
+		switch sortParam {
+		case "title":
+			orderClause = "b.title ASC"
+		case "author":
+			orderClause = "b.authors ASC, b.title ASC"
+		case "rating":
+			orderClause = "ci.rating DESC NULLS LAST, ci.created DESC"
+		default:
+			orderClause = "ci.created DESC"
+		}
+
 		type bookRow struct {
 			BookID         string   `db:"book_id" json:"book_id"`
 			OLID           string   `db:"open_library_id" json:"open_library_id"`
 			Title          string   `db:"title" json:"title"`
 			CoverURL       *string  `db:"cover_url" json:"cover_url"`
+			Authors        *string  `db:"authors" json:"authors"`
 			AddedAt        string   `db:"added_at" json:"added_at"`
 			Rating         *float64 `db:"rating" json:"rating"`
 			SeriesPosition *int     `db:"series_position" json:"series_position"`
 		}
 		var books []bookRow
 		_ = app.DB().NewQuery(`
-			SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url,
+			SELECT b.id as book_id, b.open_library_id, b.title, b.cover_url, b.authors,
 				   ci.created as added_at, ci.rating,
 				   (SELECT bs.position FROM book_series bs WHERE bs.book = b.id LIMIT 1) as series_position
 			FROM collection_items ci
 			JOIN books b ON ci.book = b.id
 			WHERE ci.collection = {:coll}
-			ORDER BY ci.created DESC
+			ORDER BY ` + orderClause + `
 		`).Bind(map[string]any{"coll": shelf.Id}).All(&books)
 		if books == nil {
 			books = []bookRow{}

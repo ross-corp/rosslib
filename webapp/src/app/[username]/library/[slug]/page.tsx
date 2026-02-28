@@ -46,10 +46,12 @@ type StatusBooksResponse = {
 
 async function fetchShelf(
   username: string,
-  slug: string
+  slug: string,
+  sort?: string
 ): Promise<ShelfDetail | null> {
+  const qs = sort ? `?sort=${sort}` : "";
   const res = await fetch(
-    `${process.env.API_URL}/users/${username}/shelves/${slug}`,
+    `${process.env.API_URL}/users/${username}/shelves/${slug}${qs}`,
     { cache: "no-store" }
   );
   if (!res.ok) return null;
@@ -58,10 +60,12 @@ async function fetchShelf(
 
 async function fetchStatusBooks(
   username: string,
-  slug: string
+  slug: string,
+  sort?: string
 ): Promise<StatusBooksResponse | null> {
+  const sortParam = sort ? `&sort=${sort}` : "";
   const res = await fetch(
-    `${process.env.API_URL}/users/${username}/books?status=${slug}`,
+    `${process.env.API_URL}/users/${username}/books?status=${slug}&limit=1000${sortParam}`,
     { cache: "no-store" }
   );
   if (!res.ok) return null;
@@ -127,20 +131,31 @@ const STATUS_SLUGS = new Set([
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+const SORT_OPTIONS = [
+  { value: "date_added", label: "Date added" },
+  { value: "title", label: "Title" },
+  { value: "author", label: "Author" },
+  { value: "rating", label: "Rating" },
+] as const;
+
 export default async function ShelfPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string; slug: string }>;
+  searchParams: Promise<{ sort?: string }>;
 }) {
   const { username, slug } = await params;
+  const { sort: sortParam } = await searchParams;
+  const sort = SORT_OPTIONS.some((o) => o.value === sortParam) ? sortParam : "date_added";
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
   const isOwner = currentUser?.username === username;
 
   const isStatusSlug = STATUS_SLUGS.has(slug);
 
   const [shelf, statusBooks, allShelves, tagKeys, userBooksSummary, viewerTagKeys] = await Promise.all([
-    isStatusSlug ? Promise.resolve(null) : fetchShelf(username, slug),
-    isStatusSlug ? fetchStatusBooks(username, slug) : Promise.resolve(null),
+    isStatusSlug ? Promise.resolve(null) : fetchShelf(username, slug, sort),
+    isStatusSlug ? fetchStatusBooks(username, slug, sort) : Promise.resolve(null),
     fetchUserShelves(username),
     isOwner ? fetchTagKeys(username) : Promise.resolve([] as TagKey[]),
     isOwner ? fetchUserBooksSummary(username) : Promise.resolve({ statuses: [], unstatused_count: 0 } as UserBooksResponse),
@@ -229,7 +244,7 @@ export default async function ShelfPage({
           <span className="text-text-primary">{displayName}</span>
         </nav>
 
-        <div className="flex items-baseline gap-3 mb-8">
+        <div className="flex items-baseline gap-3 mb-4">
           <h1 className="text-2xl font-bold text-text-primary">{displayName}</h1>
           <span className="text-sm text-text-primary">
             {books.length} {books.length === 1 ? "book" : "books"}
@@ -240,6 +255,27 @@ export default async function ShelfPage({
             </span>
           )}
         </div>
+
+        {books.length > 1 && (
+          <div className="flex items-center gap-2 mb-8">
+            <span className="text-sm text-text-secondary">Sort by:</span>
+            <div className="flex gap-1">
+              {SORT_OPTIONS.map((option) => (
+                <Link
+                  key={option.value}
+                  href={`/${username}/library/${slug}${option.value === "date_added" ? "" : `?sort=${option.value}`}`}
+                  className={`text-sm px-3 py-1 rounded-md transition-colors ${
+                    sort === option.value
+                      ? "bg-surface-2 text-text-primary font-medium"
+                      : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+                  }`}
+                >
+                  {option.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {allShelves.length > 1 && (
           <div className="flex flex-wrap gap-2 mb-8">

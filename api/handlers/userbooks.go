@@ -428,6 +428,19 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 			limit = 8
 		}
 
+		sortParam := e.Request.URL.Query().Get("sort")
+		var orderClause string
+		switch sortParam {
+		case "title":
+			orderClause = "b.title ASC"
+		case "author":
+			orderClause = "b.authors ASC, b.title ASC"
+		case "rating":
+			orderClause = "ub.rating DESC NULLS LAST, ub.date_added DESC"
+		default:
+			orderClause = "ub.date_added DESC"
+		}
+
 		// If status filter provided, return flat list
 		if statusFilter != "" {
 			type bookRow struct {
@@ -455,7 +468,7 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 						JOIN tag_keys tk ON btv.tag_key = tk.id
 						WHERE btv.user = ub.user AND btv.book = ub.book AND tk.slug = 'status'
 					)
-					ORDER BY ub.date_added DESC
+					ORDER BY ` + orderClause + `
 					LIMIT {:limit}
 				`).Bind(map[string]any{"user": targetUser.Id, "limit": limit}).All(&books)
 				if err != nil || books == nil {
@@ -473,7 +486,7 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 					JOIN tag_keys tk ON btv.tag_key = tk.id
 					JOIN tag_values tv ON btv.tag_value = tv.id
 					WHERE ub.user = {:user} AND tk.slug = 'status' AND tv.slug = {:status}
-					ORDER BY ub.date_added DESC
+					ORDER BY ` + orderClause + `
 					LIMIT {:limit}
 				`).Bind(map[string]any{"user": targetUser.Id, "status": statusFilter, "limit": limit}).All(&books)
 				if err != nil || books == nil {
