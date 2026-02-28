@@ -8,8 +8,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## profile & social
 
-- [ ] Add profile banner image. Add a `banner_url` column (text, nullable) to `users` via migration. Add `POST /me/banner` endpoint in `api/handlers/userdata.go` (same pattern as `POST /me/avatar` — multipart upload, resize to 1200x300 max, store in PocketBase file storage). Return the banner URL in `GET /users/:username` profile response. On the profile page (`webapp/src/app/[username]/page.tsx`), render the banner as a full-width image behind the avatar/name area. On the settings page, add a banner upload field below the avatar upload in the existing `SettingsForm`.
-
 - [ ] Add "favorite genres" display on profile. On the user profile page, below the bio section, show a row of genre chips representing the user's most-read genres. Derive from the user's finished books' `subjects` field: parse the comma-separated subjects, count occurrences, display the top 5 as colored chips (reuse the genre color scheme from the genres page). This is computed at render time from existing data — no new API endpoint needed, just include genre distribution in the existing `GET /users/:username` response or compute it client-side from the user's books data.
 
 ## search & browse
@@ -82,3 +80,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add feed filtering by activity type](https://github.com/ross-corp/rosslib/pull/98) — type query param on GET /me/feed and filter chips on feed page
 - [Add friends reading this on book detail page](https://github.com/ross-corp/rosslib/pull/99) — GET /books/:workId/readers endpoint and avatar row on book detail page
 - [Add follow suggestions on feed page](https://github.com/ross-corp/rosslib/pull/100) — GET /me/suggested-follows endpoint and FollowSuggestions component on feed page
+- [Add profile banner image](https://github.com/ross-corp/rosslib/pull/101) — banner file field on users, POST /me/banner endpoint, banner display on profile page, upload in settings
