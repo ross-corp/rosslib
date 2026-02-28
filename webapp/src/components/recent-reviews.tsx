@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Stars } from "@/components/activity";
 import ReviewText from "@/components/review-text";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 export type ReviewItem = {
   book_id: string;
@@ -33,7 +34,7 @@ function ReviewCard({ review }: { review: ReviewItem }) {
             className="w-10 h-14 object-cover rounded shadow-sm"
           />
         ) : (
-          <div className="w-10 h-14 rounded bg-surface-2" />
+          <BookCoverPlaceholder title={review.title} author={review.authors} className="w-10 h-14" />
         )}
       </Link>
       <div className="flex-1 min-w-0">

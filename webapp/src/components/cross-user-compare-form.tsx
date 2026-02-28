@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 type Shelf = {
   id: string;
@@ -317,11 +318,7 @@ export default function CrossUserCompareForm({
                           className="w-full aspect-[2/3] object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
                         />
                       ) : (
-                        <div className="w-full aspect-[2/3] bg-surface-2 rounded shadow-sm flex items-end p-2 group-hover:shadow-md transition-shadow">
-                          <span className="text-xs text-text-primary leading-tight line-clamp-3">
-                            {book.title}
-                          </span>
-                        </div>
+                        <BookCoverPlaceholder title={book.title} className="w-full aspect-[2/3]" />
                       )}
                     </Link>
                     <div className="min-w-0">

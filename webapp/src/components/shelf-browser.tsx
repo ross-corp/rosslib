@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 type StatusBook = {
   book_id: string;
@@ -104,11 +105,7 @@ export default function ShelfBrowser({
                       className="w-full aspect-[2/3] object-cover rounded shadow-sm group-hover:shadow-md transition-shadow"
                     />
                   ) : (
-                    <div className="w-full aspect-[2/3] rounded bg-surface-2 flex items-center justify-center">
-                      <span className="text-[10px] text-text-tertiary text-center px-1 line-clamp-3">
-                        {book.title}
-                      </span>
-                    </div>
+                    <BookCoverPlaceholder title={book.title} className="w-full aspect-[2/3]" />
                   )}
                   <p className="mt-1 text-xs text-text-secondary truncate group-hover:text-text-primary">
                     {book.title}

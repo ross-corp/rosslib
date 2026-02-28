@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { formatTime } from "@/components/activity";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 type Recommendation = {
   id: string;
@@ -71,7 +72,7 @@ export default function RecommendationList({
                 className="w-16 h-24 rounded object-cover bg-surface-2"
               />
             ) : (
-              <div className="w-16 h-24 rounded bg-surface-2" />
+              <BookCoverPlaceholder title={rec.book.title} author={rec.book.authors} className="w-16 h-24" />
             )}
           </Link>
 

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getUser, getToken } from "@/lib/auth";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 type SeriesBook = {
   book_id: string;
@@ -136,11 +137,7 @@ export default async function SeriesPage({
                     className="w-12 h-[72px] object-cover rounded shadow-sm bg-surface-2"
                   />
                 ) : (
-                  <div className="w-12 h-[72px] bg-surface-2 rounded shadow-sm flex items-end p-1">
-                    <span className="text-[9px] text-text-tertiary leading-tight line-clamp-3">
-                      {book.title}
-                    </span>
-                  </div>
+                  <BookCoverPlaceholder title={book.title} author={book.authors} className="w-12 h-[72px]" />
                 )}
               </div>
 

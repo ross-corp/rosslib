@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 type PendingImport = {
   id: string;
@@ -289,9 +290,7 @@ export default function PendingImportsManager({
                           className="w-10 h-14 object-cover rounded shrink-0"
                         />
                       ) : (
-                        <div className="w-10 h-14 bg-surface-2 rounded shrink-0 flex items-center justify-center text-xs text-text-primary">
-                          ?
-                        </div>
+                        <BookCoverPlaceholder title={book.title} className="w-10 h-14 shrink-0" />
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-text-primary truncate">
