@@ -25,9 +25,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## import improvements
 
-- [ ] Auto-predict label names from Goodreads shelf naming patterns. If a user has Goodreads shelves with a common prefix (e.g. `genre-scifi`, `genre-romance`, `genre-fantasy`), detect the prefix and suggest it as the label name (e.g. "genre") with the suffix as the value. Same logic for year-based Goodreads shelves (e.g. `read-2023`, `read-2024`) — detect the year pattern and suggest "read" as the label with the year as the value.
-  - [ ] Same pattern detection for year-based Goodreads shelf names (e.g. `read-2023`, `read-2024` → label "read", values "2023", "2024")
-
 - [ ] LLM-powered fuzzy matching for failed import lookups. When standard book lookups fail to find a match during import, fall back to a "power mode" that uses an LLM to generate title/author permutations (alternate spellings, subtitle variations, series name removal, etc.) and retry searches with each permutation until possible matches are found. Present the candidate matches to the user for confirmation.
 
 ## Pending PRs
@@ -63,3 +60,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add keyboard shortcuts with help overlay](https://github.com/ross-corp/rosslib/pull/115) — useKeyboardShortcuts hook, shortcuts overlay modal, hint badge for logged-in users
 - [Add dark mode with light/dark/system theme toggle](https://github.com/ross-corp/rosslib/pull/116) — theme infrastructure (CSS variables, data-theme attribute, FOUC prevention), theme toggle in nav, theme API endpoint, semantic color token conversion across ~45 files
 - [Add empty state illustrations for zero-data pages](https://github.com/ross-corp/rosslib/pull/117) — reusable EmptyState component with consistent CTA links on feed, notifications, library, and label pages
+- [Auto-predict label names from shelf naming patterns](https://github.com/ross-corp/rosslib/pull/121) — detect common prefix and year-based patterns in Goodreads/StoryGraph shelf names and auto-group them into labels during import
