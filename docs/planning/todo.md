@@ -4,7 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## stats & data
 
-- [ ] Add "year in review" summary page. Create a `GET /users/:username/year-in-review?year=2025` endpoint in `api/handlers/users.go` that returns: total books finished, total pages read (sum of `books.page_count` for finished books), average rating, highest-rated book, most common genres (from `genre_ratings` or `books.subjects`), books per month breakdown, longest book, shortest book. All data derived from existing `user_books` + `books` tables filtered by `date_read` year. Respects profile privacy. Create the page at `webapp/src/app/[username]/year-in-review/page.tsx` with cards for each stat and a month-by-month grid of book covers. Link from the stats page and profile. this should also be adjustable to past years, IE not just the latest year
 
 - [ ] Backfill book_stats on a schedule. Currently `book_stats` is only refreshed when individual users change a book's status/rating. Add a background goroutine in `api/main.go` (similar to `notifications.StartPoller`) that runs `bookstats.BackfillAll` once every 24 hours to catch any drift from edge cases (deleted users, failed goroutines, import edge cases). Log the backfill duration and number of rows updated. The existing startup backfill already runs on boot — this just adds a periodic re-check.
 
@@ -87,3 +86,4 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Use BookCoverPlaceholder consistently across all book cover fallbacks](https://github.com/ross-corp/rosslib/pull/93) — replace plain div fallbacks with BookCoverPlaceholder in 18 files
 - [Add reading pace calculation for currently-reading books](https://github.com/ross-corp/rosslib/pull/94) — show pages/day and estimated finish date below reading progress bar
 - [Add re-read tracking with reading sessions](https://github.com/ross-corp/rosslib/pull/95) — reading_sessions collection, CRUD API endpoints, ReadingHistory component on book detail page
+- [Add year-in-review summary page](https://github.com/ross-corp/rosslib/pull/96) — year-in-review API endpoint and page with stats, top books, genres, and month-by-month grid
