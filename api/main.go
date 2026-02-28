@@ -40,6 +40,7 @@ func main() {
 
 		// ── Books (optional auth) ────────────────────────────────
 		se.Router.GET("/books/{workId}/reviews", handlers.GetBookReviews(app)).BindFunc(handlers.OptionalAuthFunc(app))
+		se.Router.GET("/books/{workId}/reviews/{userId}/comments", handlers.GetReviewComments(app))
 		se.Router.GET("/books/{workId}/links", handlers.GetBookLinks(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/books/{workId}/threads", handlers.GetBookThreads(app))
 
@@ -168,6 +169,10 @@ func main() {
 		// Review likes
 		authed.POST("/books/{workId}/reviews/{userId}/like", handlers.ToggleReviewLike(app))
 		authed.GET("/books/{workId}/reviews/{userId}/like", handlers.GetReviewLikeStatus(app))
+
+		// Review comments
+		authed.POST("/books/{workId}/reviews/{userId}/comments", handlers.AddReviewComment(app))
+		authed.DELETE("/review-comments/{commentId}", handlers.DeleteReviewComment(app))
 
 		// Book links
 		authed.POST("/books/{workId}/links", handlers.CreateBookLink(app))

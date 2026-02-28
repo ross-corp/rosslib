@@ -269,6 +269,24 @@ Check if the current user has liked a specific review.
 
 Returns `{ "liked": true }` or `{ "liked": false }`.
 
+### `GET /books/:workId/reviews/:userId/comments`
+
+List comments on a review, ordered chronologically. Returns an array of comment objects with `id`, `user_id`, `username`, `display_name`, `avatar_url`, `body`, `created_at`.
+
+### `POST /books/:workId/reviews/:userId/comments`  *(auth required)*
+
+Add a comment to a review. The review must exist (non-empty `review_text` on the user's `user_books` record).
+
+```json
+{ "body": "Great review, I totally agree!" }
+```
+
+`body` is required, max 2000 characters. Generates a `review_comment` notification for the review author (unless commenting on own review).
+
+### `DELETE /review-comments/:commentId`  *(auth required)*
+
+Soft-delete a review comment. Only the comment author or a moderator can delete.
+
 ---
 
 ## User Books
@@ -1843,7 +1861,8 @@ Returns the current user's notification preferences. If no preferences row exist
   "book_new_review": true,
   "review_liked": true,
   "thread_mention": true,
-  "book_recommendation": true
+  "book_recommendation": true,
+  "review_comment": true
 }
 ```
 

@@ -418,6 +418,7 @@ books ──< book_stats               (precomputed aggregate stats)
 users ──< pending_imports          (unmatched import rows)
 users ──< reports                  (content reports, reviewer)
 users ──< review_likes >── books, users  (review likes)
+users ──< review_comments >── books, users  (review comments)
 
 ```
 
@@ -435,6 +436,23 @@ Likes on user reviews. Each row represents a user liking another user's review o
 
 Unique constraint: `(user, book, review_user)` — one like per user per review.
 Index: `(book, review_user)` for efficient like count queries.
+
+### `review_comments`
+
+Comments on user reviews. Any authenticated user can comment on a review. Supports soft delete.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user | uuid FK → users (cascade) | the commenter |
+| book | uuid FK → books (cascade) | the book being reviewed |
+| review_user | uuid FK → users (cascade) | the review author |
+| body | text | required; max 2000 chars |
+| deleted_at | timestamptz | nullable; soft delete |
+| created | timestamptz | PocketBase auto-generated |
+
+Index: `(book, review_user)` for listing comments on a review.
+Index: `user` for user-scoped queries.
 
 ### `genre_ratings`
 
