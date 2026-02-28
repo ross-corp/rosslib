@@ -82,6 +82,7 @@ type MyBookStatus = {
   date_read: string | null;
   date_dnf: string | null;
   date_started: string | null;
+  date_added: string | null;
   progress_pages: number | null;
   progress_percent: number | null;
   device_total_pages: number | null;
@@ -435,6 +436,8 @@ export default async function BookPage({
                   initialPercent={myStatus.progress_percent}
                   pageCount={book.page_count}
                   initialDeviceTotalPages={myStatus.device_total_pages}
+                  dateStarted={myStatus.date_started}
+                  dateAdded={myStatus.date_added}
                 />
               </div>
             )}

@@ -260,6 +260,7 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 				"status_value_id": nil, "status_name": nil, "status_slug": nil,
 				"rating": nil, "review_text": nil, "spoiler": false,
 				"date_read": nil, "date_dnf": nil, "date_started": nil,
+				"date_added": nil,
 				"progress_pages": nil, "progress_percent": nil,
 				"selected_edition_key": nil, "selected_edition_cover_url": nil,
 			})
@@ -283,6 +284,7 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 			"date_read":                 nil,
 			"date_dnf":                  nil,
 			"date_started":              nil,
+			"date_added":                nil,
 			"progress_pages":            nil,
 			"progress_percent":          nil,
 			"selected_edition_key":      nil,
@@ -306,6 +308,9 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 			}
 			if ds := ub.GetString("date_started"); ds != "" {
 				result["date_started"] = ds
+			}
+			if da := ub.GetString("date_added"); da != "" {
+				result["date_added"] = da
 			}
 			if pp := ub.GetInt("progress_pages"); pp > 0 {
 				result["progress_pages"] = pp
