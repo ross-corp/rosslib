@@ -23,8 +23,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## BUGS
 
-- [ ] in the feed, when a user finishes and rates something at the same time, those should be flattened into one event. "user finished X and rated it Y stars"
-
 - [ ] http://huey.taila415c.ts.net:3000/search?type=authors on the "popular on rosslib", this always shows books, but when I've selected authors I should see authors, and so for people
 
 ## import improvements
@@ -36,6 +34,7 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## Pending PRs
 
+- [Fix: flatten simultaneous finish + rate into one feed event](https://github.com/ross-corp/rosslib/pull/119) — merge near-simultaneous finished_book + rated activities into a single "finished and rated" feed event
 - [Fix library sidebar counts not updating on re-label](https://github.com/ross-corp/rosslib/pull/118) — optimistic count updates in sidebar when moving books between statuses or removing them
 - [Add sort options to owner library view and tag/label endpoints](https://github.com/ross-corp/rosslib/pull/90) — sort dropdown in LibraryManager + sort param on tags/labels API endpoints
 - [Add confirmation dialog when removing books from library](https://github.com/ross-corp/rosslib/pull/91) — reusable ConfirmDialog component, applied to shelf grid, library manager bulk remove, and shelf picker
