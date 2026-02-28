@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import StarRatingInput from "@/components/star-rating-input";
 import ReviewText from "@/components/review-text";
+import { useToast } from "@/components/toast";
 
 type BookSuggestion = {
   key: string;
@@ -61,6 +62,7 @@ export default function BookReviewEditor({
 
   // savedRating tracks what's persisted so we know if a star click is a change
   const [savedRating, setSavedRating] = useState<number | null>(initialRating);
+  const toast = useToast();
 
   async function patchFields(body: Record<string, unknown>) {
     setSaving(true);
@@ -189,8 +191,10 @@ export default function BookReviewEditor({
       setSavedRating(rating);
       setMessage("Saved");
       setTimeout(() => setMessage(null), 2000);
+      toast.success("Review saved");
     } else {
       setMessage("Failed to save");
+      toast.error("Failed to save review");
     }
   }
 

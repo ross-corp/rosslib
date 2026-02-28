@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useToast } from "@/components/toast";
 
 export type StatusValue = {
   id: string;
@@ -28,6 +29,7 @@ export default function StatusPicker({
   const [loading, setLoading] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (!open) return;
@@ -61,7 +63,10 @@ export default function StatusPicker({
         }),
       });
       setLoading(false);
-      if (res.ok) setActiveValueId(value.id);
+      if (res.ok) {
+        setActiveValueId(value.id);
+        toast.success(`Added to ${value.name}`);
+      }
     } else {
       // Change status via tag endpoint
       const res = await fetch(`/api/me/books/${openLibraryId}/tags/${statusKeyId}`, {
@@ -70,7 +75,10 @@ export default function StatusPicker({
         body: JSON.stringify({ value_id: value.id }),
       });
       setLoading(false);
-      if (res.ok) setActiveValueId(value.id);
+      if (res.ok) {
+        setActiveValueId(value.id);
+        toast.success(`Moved to ${value.name}`);
+      }
     }
   }
 
@@ -85,7 +93,10 @@ export default function StatusPicker({
     });
 
     setLoading(false);
-    if (res.ok) setActiveValueId(null);
+    if (res.ok) {
+      setActiveValueId(null);
+      toast.success("Removed from library");
+    }
   }
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/toast";
 
 export default function FollowButton({
   username,
@@ -11,6 +12,7 @@ export default function FollowButton({
 }) {
   const [status, setStatus] = useState(initialFollowStatus);
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   async function toggle() {
     setLoading(true);
@@ -22,9 +24,12 @@ export default function FollowButton({
     if (res.ok) {
       if (isUnfollow) {
         setStatus("none");
+        toast.success(`Unfollowed ${username}`);
       } else {
         const data = await res.json();
-        setStatus(data.status === "pending" ? "pending" : "active");
+        const newStatus = data.status === "pending" ? "pending" : "active";
+        setStatus(newStatus);
+        toast.success(newStatus === "pending" ? `Follow request sent to ${username}` : `Following ${username}`);
       }
     }
   }

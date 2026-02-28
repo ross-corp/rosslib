@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import Nav from "@/components/nav";
 import SearchFocusHandler from "@/components/search-focus-handler";
+import { ToastProvider } from "@/components/toast";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -31,6 +32,7 @@ export default function RootLayout({
         className="font-sans antialiased bg-surface-0 text-text-primary"
         suppressHydrationWarning
       >
+        <ToastProvider>
         <Nav />
         <SearchFocusHandler />
         <main className="max-w-shell mx-auto px-6 py-8">{children}</main>
@@ -43,6 +45,7 @@ export default function RootLayout({
             </div>
           </div>
         </footer>
+        </ToastProvider>
       </body>
     </html>
   );
