@@ -87,6 +87,7 @@ webapp/src/app/
 ├── library/compare/page.tsx        compare lists (set operations)
 ├── notifications/page.tsx          notification center
 ├── recommendations/page.tsx       received book recommendations
+├── feed/page.tsx                  activity feed (with follow suggestions)
 ├── feedback/page.tsx              bug report & feature request form
 ├── admin/page.tsx                 admin panel (moderator only)
 ├── [username]/
@@ -160,6 +161,7 @@ webapp/src/app/
     ├── me/notification-preferences/route.ts     ← GET, PUT notification prefs
     ├── me/recommendations/route.ts               ← GET, POST recommendations
     ├── me/recommendations/[recId]/route.ts       ← PATCH update recommendation status
+    ├── me/suggested-follows/route.ts             ← GET follow suggestions
     ├── users/route.ts                             ← GET search users
     └── users/[username]/
         ├── followers/route.ts                     ← GET followers list
@@ -255,6 +257,10 @@ Client component that renders a small flag icon button. When clicked, opens a `R
 ### `ReportModal` (`components/report-modal.tsx`)
 
 Client component that renders a modal overlay for submitting content reports. Shows a reason radio group (spam, harassment, inappropriate, other) and an optional details textarea. Calls `POST /api/reports`. Displays success message and auto-closes on completion.
+
+### `FollowSuggestions` (`components/follow-suggestions.tsx`)
+
+Client component showing follow suggestions based on books in common. Fetches `GET /api/me/suggested-follows` on mount and renders a list of user cards with avatar, display name, books-in-common count, and a follow button. Shown on the feed page when the feed is empty and at the bottom of the feed. Hides itself if no suggestions are available.
 
 ### `FeedbackForm` (`components/feedback-form.tsx`)
 

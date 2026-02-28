@@ -86,6 +86,7 @@ func main() {
 
 		// Feed
 		authed.GET("/me/feed", handlers.GetFeed(app))
+		authed.GET("/me/suggested-follows", handlers.GetSuggestedFollows(app))
 
 		// User books
 		authed.POST("/me/books", handlers.AddBook(app))
