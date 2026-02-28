@@ -1479,6 +1479,83 @@ Returns threads on the same book whose titles are similar to the given thread. S
 
 ---
 
+## Book Quotes
+
+Users can save quotes/highlights from books. Quotes can be public (visible to everyone on the book page) or private (visible only to the quote author).
+
+### `GET /books/:workId/quotes?page=1`
+
+Returns public quotes for a book, paginated (20 per page), ordered by newest first.
+
+```json
+[
+  {
+    "id": "...",
+    "user_id": "...",
+    "username": "alice",
+    "display_name": "Alice",
+    "avatar_url": "/api/files/users/.../avatar.jpg",
+    "text": "So we beat on, boats against the current...",
+    "page_number": 180,
+    "note": "The famous closing line",
+    "created_at": "2026-02-28T14:00:00Z"
+  }
+]
+```
+
+`page_number`, `note`, `display_name`, and `avatar_url` may be null.
+
+### `GET /me/books/:olId/quotes`  *(auth required)*
+
+Returns the authenticated user's quotes for a book (both public and private), ordered by newest first.
+
+```json
+[
+  {
+    "id": "...",
+    "text": "So we beat on...",
+    "page_number": 180,
+    "note": "The famous closing line",
+    "is_public": true,
+    "created_at": "2026-02-28T14:00:00Z"
+  }
+]
+```
+
+### `POST /me/books/:olId/quotes`  *(auth required)*
+
+Create a new quote for a book.
+
+```json
+{
+  "text": "So we beat on, boats against the current...",
+  "page_number": 180,
+  "note": "The famous closing line",
+  "is_public": true
+}
+```
+
+`text` is required (max 2000 chars). `page_number`, `note` (max 500 chars), and `is_public` (default true) are optional.
+
+```
+200 { "id": "...", "text": "...", "created_at": "..." }
+400 { "error": "text is required" }
+400 { "error": "text must be 2000 characters or fewer" }
+404 { "error": "Book not found" }
+```
+
+### `DELETE /me/quotes/:quoteId`  *(auth required)*
+
+Delete a quote owned by the authenticated user. Returns 204.
+
+```
+204 (no content)
+403 { "error": "Not your quote" }
+404 { "error": "Quote not found" }
+```
+
+---
+
 ## Community Links
 
 User-submitted book-to-book connections (sequel, prequel, similar, etc.). Links are upvotable — sorted by vote count on book pages. Both books must exist in the local catalog.

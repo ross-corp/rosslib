@@ -131,6 +131,7 @@ webapp/src/app/
     ├── shelves/[shelfId]/books/[olId]/route.ts    ← GET, PATCH, DELETE
     ├── books/[workId]/series/route.ts              ← GET, POST series memberships
     ├── series/[seriesId]/route.ts                 ← GET series detail with books
+    ├── books/[workId]/quotes/route.ts               ← GET public quotes for a book
     ├── books/[workId]/reviews/[userId]/like/route.ts ← POST toggle, GET check review like
     ├── books/[workId]/links/route.ts              ← GET, POST community links
     ├── links/[linkId]/route.ts                    ← DELETE community link
@@ -149,7 +150,9 @@ webapp/src/app/
     ├── books/scan/route.ts                            ← POST barcode scan
     ├── books/lookup/route.ts                          ← GET ISBN lookup
     ├── books/[workId]/genre-ratings/route.ts         ← GET aggregate genre ratings
+    ├── me/books/[olId]/quotes/route.ts               ← GET, POST user's quotes for a book
     ├── me/books/[olId]/genre-ratings/route.ts       ← GET, PUT user genre ratings
+    ├── me/quotes/[quoteId]/route.ts                 ← DELETE user's quote
     ├── me/account/route.ts                         ← GET account info (has_password, has_google)
     ├── me/account/data/route.ts                   ← DELETE all user data
     ├── me/password/route.ts                        ← PUT set/change password
@@ -235,6 +238,10 @@ Dropdown for adding/moving/removing a single book from labels. Used on search re
 ### `BookLinkList` (`components/book-link-list.tsx`)
 
 Client component for community links (related books) on book detail pages. Shows links grouped by relationship type (sequel, prequel, companion, similar, etc.), sorted by upvote count. Logged-in users can upvote/unvote links, suggest new ones via an inline form, and propose edits to existing links (edit pencil icon). Proposed edits are submitted for moderator review. Target book is selected via a search-as-you-type dropdown that queries `/api/books/search` with 400ms debounce.
+
+### `BookQuoteList` (`components/book-quote-list.tsx`)
+
+Client component for the Quotes section on book detail pages. Displays public quotes from community members and the current user's own quotes (including private ones). Shows an "Add quote" button when the user has the book in their library. The add form accepts quote text (max 2000 chars), optional page number, optional note (max 500 chars), and a "Visible to others" checkbox (defaults to checked). Users can delete their own quotes. Private quotes show a "Private" badge. Calls `GET /api/books/:workId/quotes`, `GET /api/me/books/:olId/quotes`, `POST /api/me/books/:olId/quotes`, and `DELETE /api/me/quotes/:quoteId`.
 
 ### `AdminUserList` (`components/admin-user-list.tsx`)
 

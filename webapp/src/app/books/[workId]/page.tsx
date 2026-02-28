@@ -14,6 +14,7 @@ import GenreRatingEditor from "@/components/genre-rating-editor";
 import ReportButton from "@/components/report-button";
 import ReviewLikeButton from "@/components/review-like-button";
 import RecommendButton from "@/components/recommend-button";
+import BookQuoteList from "@/components/book-quote-list";
 import { getUser, getToken } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -127,6 +128,19 @@ type TagKey = {
   values: StatusValue[];
 };
 
+type BookQuote = {
+  id: string;
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  text: string;
+  page_number: number | null;
+  note: string | null;
+  is_public?: boolean;
+  created_at: string;
+};
+
 type AggregateGenreRating = {
   genre: string;
   average: number;
@@ -228,6 +242,30 @@ async function fetchAggregateGenreRatings(
   return res.json();
 }
 
+async function fetchBookQuotes(workId: string): Promise<BookQuote[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/books/${workId}/quotes`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchMyBookQuotes(
+  token: string,
+  workId: string
+): Promise<BookQuote[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/me/books/${workId}/quotes`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
 async function fetchMyGenreRatings(
   token: string,
   workId: string
@@ -269,7 +307,7 @@ export default async function BookPage({
   const { workId } = await params;
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings] = await Promise.all([
+  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings, bookQuotes, myBookQuotes] = await Promise.all([
     fetchBook(workId),
     fetchBookReviews(workId, token ?? undefined),
     fetchThreads(workId),
@@ -284,6 +322,10 @@ export default async function BookPage({
     fetchAggregateGenreRatings(workId),
     currentUser && token
       ? fetchMyGenreRatings(token, workId)
+      : Promise.resolve([]),
+    fetchBookQuotes(workId),
+    currentUser && token
+      ? fetchMyBookQuotes(token, workId)
       : Promise.resolve([]),
   ]);
 
@@ -608,6 +650,17 @@ export default async function BookPage({
               ))}
             </div>
           )}
+        </section>
+
+        {/* ── Quotes ── */}
+        <section className="border-t border-border pt-8 mt-10">
+          <BookQuoteList
+            workId={workId}
+            initialQuotes={bookQuotes}
+            myQuotes={myBookQuotes}
+            isLoggedIn={!!currentUser}
+            hasStatus={!!myStatus}
+          />
         </section>
 
         {/* ── Editions ── */}

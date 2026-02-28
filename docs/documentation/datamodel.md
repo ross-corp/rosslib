@@ -570,6 +570,25 @@ Index: `(user, status)` for efficient listing of unresolved imports.
 
 ---
 
+### `book_quotes`
+
+User-saved quotes/highlights from books. Can be public (shown on book pages) or private (visible only to the author).
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user | uuid FK → users (cascade) | quote author |
+| book | uuid FK → books (cascade) | source book |
+| text | text | required; max 2000 chars |
+| page_number | integer | nullable; page where the quote appears |
+| note | text | nullable; user's annotation; max 500 chars |
+| is_public | boolean | default true; false = visible only to author |
+| created | timestamptz | PocketBase auto-generated |
+
+Indexes: `book` (for listing quotes by book), `(user, book)` (for listing a user's quotes on a book).
+
+---
+
 ## Planned tables (not yet in schema.go)
 
 These are designed but not built. Do not reference them in code until they exist.
