@@ -1220,6 +1220,16 @@ StoryGraph CSV columns: `Title`, `Authors`, `ISBN/UID`, `Format`, `Read Status`,
 
 Accepts the confirmed preview payload and writes to the database. Returns `{ imported, failed, errors, pending_saved }`. Same request body format and `shelf_mappings` actions as the Goodreads commit endpoint. Unmatched rows are saved with `source: "storygraph"`.
 
+### `POST /me/import/librarything/preview`  *(auth required)*
+
+Accepts a multipart form with a `file` field containing a LibraryThing TSV export. Returns a preview without writing to the database.
+
+LibraryThing TSV columns: `Title`, `Author (First, Last)`, `ISBN`, `ISBNs`, `Rating`, `Review`, `Date Read`, `Entry Date`, `Collections`, `Tags`. The export is tab-separated. Author names in "Last, First" format are reversed to "First Last". Collections and Tags are both imported as custom labels. Status mapping: "Currently Reading" → `currently-reading`, "To Read"/"Wishlist" → `to-read` (want-to-read), "Read but unowned" or books with a Date Read → `read` (finished). Ratings > 5 are normalized from a 10-point to a 5-point scale.
+
+### `POST /me/import/librarything/commit`  *(auth required)*
+
+Accepts the confirmed preview payload and writes to the database. Returns `{ imported, failed, errors, pending_saved }`. Same request body format and `shelf_mappings` actions as the Goodreads commit endpoint. Unmatched rows are saved with `source: "librarything"`.
+
 ---
 
 ## Pending Imports
