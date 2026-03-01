@@ -12,8 +12,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## search & browse
 
-- [ ] Add pagination to followed authors settings page. In `webapp/src/app/settings/followed-authors/page.tsx`, all followed authors are fetched at once from `GET /me/followed-authors` with no pagination. Same fix as followed books: update `GET /me/followed-authors` in `api/handlers/books.go` to accept `limit` (default 50) and `offset` query params, return `{ authors, total }`. Frontend adds "Load more" button.
-
 ## book detail & discovery
 
 - [ ] Show book series position badge on book covers across the app. The `GET /books/:workId` response includes a `series` array with `{ series_id, name, position }`, and the book detail page shows series badges. But book covers on profile pages, shelf grids, search results, and feed items don't show series info. In `webapp/src/components/shelf-book-grid.tsx` and any other component that renders a grid of book covers, if series data is available, render a small badge (e.g. "#3" in a rounded pill) in the bottom-left corner of the cover image. This requires passing series data through from the API response where available.
