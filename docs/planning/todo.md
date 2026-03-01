@@ -10,8 +10,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## profile & social
 
-- [ ] Add blocked users list page. Create `GET /me/blocks` endpoint — add route `authed.GET("/me/blocks", handlers.GetBlockedUsers(app))` in `api/main.go`. The handler in `api/handlers/blocks.go` should query `SELECT u.id, u.username, u.display_name, u.avatar FROM blocks b JOIN users u ON b.blocked = u.id WHERE b.blocker = :userId ORDER BY b.created DESC` and return the list with avatar URLs. Add proxy route `webapp/src/app/api/me/blocks/route.ts`. Create settings page `webapp/src/app/settings/blocked/page.tsx` with a list of blocked users, each with an "Unblock" button that calls `DELETE /api/users/:username/block`. Add "Blocked users" link to `SettingsNav` component in `webapp/src/components/settings-nav.tsx`.
-
 - [ ] Add followed authors list page at `/settings/followed-authors`. Create `webapp/src/app/settings/followed-authors/page.tsx` — server component that fetches `GET ${API_URL}/me/followed-authors` with the auth token. Display each author as a card with name and an "Unfollow" button calling `DELETE /api/authors/:authorKey/follow`. Add "Followed authors" link to `SettingsNav` in `webapp/src/components/settings-nav.tsx`.
 
 ## search & browse
