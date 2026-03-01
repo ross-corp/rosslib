@@ -119,6 +119,22 @@ type BookLinkItem = {
   created_at: string;
 };
 
+type SeriesBook = {
+  book_id: string;
+  open_library_id: string;
+  title: string;
+  cover_url: string | null;
+  authors: string | null;
+  position: number | null;
+};
+
+type SeriesDetail = {
+  id: string;
+  name: string;
+  description: string;
+  books: SeriesBook[];
+};
+
 type TagKey = {
   id: string;
   name: string;
@@ -243,6 +259,14 @@ async function fetchMyGenreRatings(
   return res.json();
 }
 
+async function fetchSeriesDetail(seriesId: string): Promise<SeriesDetail | null> {
+  const res = await fetch(`${process.env.API_URL}/series/${seriesId}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function renderStars(rating: number): string {
@@ -288,6 +312,12 @@ export default async function BookPage({
   ]);
 
   if (!book) notFound();
+
+  // Fetch series detail for the first series (if any)
+  const firstSeries = book.series && book.series.length > 0 ? book.series[0] : null;
+  const seriesDetail = firstSeries
+    ? await fetchSeriesDetail(firstSeries.series_id)
+    : null;
 
   // Extract the Status key and its values for the StatusPicker
   const statusKey = tagKeys?.find((k) => k.slug === "status") ?? null;
@@ -460,6 +490,56 @@ export default async function BookPage({
             )}
           </div>
         </div>
+
+        {/* ── Series navigation ── */}
+        {seriesDetail && seriesDetail.books.length > 1 && (
+          <section className="mb-10 border-t border-border pt-8">
+            <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-4">
+              <Link
+                href={`/series/${seriesDetail.id}`}
+                className="hover:underline"
+              >
+                {seriesDetail.name}
+              </Link>
+            </h2>
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {seriesDetail.books.slice(0, 6).map((sb) => {
+                const isCurrent = sb.open_library_id === workId;
+                return (
+                  <Link
+                    key={sb.book_id}
+                    href={`/books/${sb.open_library_id}`}
+                    className={`shrink-0 w-20 group ${isCurrent ? "opacity-100" : "opacity-70 hover:opacity-100"} transition-opacity`}
+                  >
+                    <div className={`relative ${isCurrent ? "ring-2 ring-text-tertiary rounded" : ""}`}>
+                      {sb.cover_url ? (
+                        <img
+                          src={sb.cover_url}
+                          alt={sb.title}
+                          className="w-20 h-[120px] object-cover rounded shadow-sm bg-surface-2"
+                        />
+                      ) : (
+                        <div className="w-20 h-[120px] bg-surface-2 rounded shadow-sm flex items-end p-1.5">
+                          <span className="text-[9px] text-text-tertiary leading-tight line-clamp-4">
+                            {sb.title}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {sb.position != null && (
+                      <p className="text-[10px] text-text-tertiary mt-1 text-center">
+                        #{sb.position}
+                      </p>
+                    )}
+                    <p className={`text-xs mt-0.5 text-center line-clamp-2 leading-tight ${isCurrent ? "font-medium text-text-primary" : "text-text-secondary group-hover:text-text-primary"}`}>
+                      {sb.title}
+                    </p>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* ── User's review (rate / write / edit / delete) ── */}
         {myStatus && (
