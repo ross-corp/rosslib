@@ -21,6 +21,7 @@ type BookResult = {
 
 type BookSearchResponse = {
   total: number;
+  page: number;
   results: BookResult[];
 };
 
@@ -100,19 +101,21 @@ async function searchBooks(
   yearMax: string,
   subject: string,
   language: string,
+  page: string,
 ): Promise<BookSearchResponse> {
-  if (!q.trim()) return { total: 0, results: [] };
+  if (!q.trim()) return { total: 0, page: 1, results: [] };
   const params = new URLSearchParams({ q });
   if (sort) params.set("sort", sort);
   if (yearMin) params.set("year_min", yearMin);
   if (yearMax) params.set("year_max", yearMax);
   if (subject) params.set("subject", subject);
   if (language) params.set("language", language);
+  if (page && page !== "1") params.set("page", page);
   const res = await fetch(
     `${process.env.API_URL}/books/search?${params}`,
     { cache: "no-store" }
   );
-  if (!res.ok) return { total: 0, results: [] };
+  if (!res.ok) return { total: 0, page: 1, results: [] };
   return res.json();
 }
 
@@ -173,6 +176,7 @@ function buildSearchParams(base: {
   year_max: string;
   subject: string;
   language: string;
+  page: string;
 }, overrides: Partial<typeof base> = {}) {
   const merged = { ...base, ...overrides };
   const p = new URLSearchParams({ type: merged.type });
@@ -182,6 +186,7 @@ function buildSearchParams(base: {
   if (merged.year_max) p.set("year_max", merged.year_max);
   if (merged.subject) p.set("subject", merged.subject);
   if (merged.language) p.set("language", merged.language);
+  if (merged.page && merged.page !== "1") p.set("page", merged.page);
   return `/search?${p}`;
 }
 
@@ -198,6 +203,7 @@ export default async function SearchPage({
     year_max?: string;
     subject?: string;
     language?: string;
+    page?: string;
   }>;
 }) {
   const {
@@ -208,17 +214,18 @@ export default async function SearchPage({
     year_max = "",
     subject = "",
     language = "",
+    page = "1",
   } = await searchParams;
   const activeTab = type === "authors" ? "authors" : type === "people" ? "people" : "books";
 
-  const base = { q, type: activeTab, sort, year_min, year_max, subject, language };
+  const base = { q, type: activeTab, sort, year_min, year_max, subject, language, page };
 
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
   const hasQuery = q.trim().length > 0;
 
   const [bookData, users, authorData, tagKeys, statusMap, popularBooks] = await Promise.all([
-    hasQuery && activeTab === "books" ? searchBooks(q, sort, year_min, year_max, subject, language) : Promise.resolve({ total: 0, results: [] }),
+    hasQuery && activeTab === "books" ? searchBooks(q, sort, year_min, year_max, subject, language, page) : Promise.resolve({ total: 0, page: 1, results: [] }),
     hasQuery && activeTab === "people" ? searchUsers(q) : Promise.resolve([]),
     hasQuery && activeTab === "authors" ? searchAuthors(q) : Promise.resolve({ total: 0, results: [] }),
     currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
@@ -255,7 +262,7 @@ export default async function SearchPage({
         {/* Tab selector */}
         <div className="flex gap-1 mb-6 border-b border-border">
           <Link
-            href={buildSearchParams(base, { type: "books", sort: "", year_min: "", year_max: "", subject: "", language: "" })}
+            href={buildSearchParams(base, { type: "books", sort: "", year_min: "", year_max: "", subject: "", language: "", page: "1" })}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "books"
                 ? "border-accent text-text-primary"
@@ -265,7 +272,7 @@ export default async function SearchPage({
             Books
           </Link>
           <Link
-            href={buildSearchParams(base, { type: "authors", sort: "", year_min: "", year_max: "", subject: "", language: "" })}
+            href={buildSearchParams(base, { type: "authors", sort: "", year_min: "", year_max: "", subject: "", language: "", page: "1" })}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "authors"
                 ? "border-accent text-text-primary"
@@ -275,7 +282,7 @@ export default async function SearchPage({
             Authors
           </Link>
           <Link
-            href={buildSearchParams(base, { type: "people", sort: "", year_min: "", year_max: "", subject: "", language: "" })}
+            href={buildSearchParams(base, { type: "people", sort: "", year_min: "", year_max: "", subject: "", language: "", page: "1" })}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "people"
                 ? "border-accent text-text-primary"
@@ -346,7 +353,7 @@ export default async function SearchPage({
             {SORT_OPTIONS.map((opt) => (
               <Link
                 key={opt.value}
-                href={buildSearchParams(base, { sort: opt.value })}
+                href={buildSearchParams(base, { sort: opt.value, page: "1" })}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   sort === opt.value
                     ? "border-accent bg-accent text-text-inverted"
@@ -366,7 +373,7 @@ export default async function SearchPage({
             {GENRE_OPTIONS.map((genre) => (
               <Link
                 key={genre}
-                href={buildSearchParams(base, { subject: subject === genre.toLowerCase() ? "" : genre.toLowerCase() })}
+                href={buildSearchParams(base, { subject: subject === genre.toLowerCase() ? "" : genre.toLowerCase(), page: "1" })}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   subject === genre.toLowerCase()
                     ? "border-accent bg-accent text-text-inverted"
@@ -386,7 +393,7 @@ export default async function SearchPage({
             {LANGUAGE_OPTIONS.map((lang) => (
               <Link
                 key={lang.code}
-                href={buildSearchParams(base, { language: language === lang.code ? "" : lang.code })}
+                href={buildSearchParams(base, { language: language === lang.code ? "" : lang.code, page: "1" })}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   language === lang.code
                     ? "border-accent bg-accent text-text-inverted"
@@ -436,7 +443,7 @@ export default async function SearchPage({
               </button>
               {hasYearFilter && (
                 <Link
-                  href={buildSearchParams(base, { year_min: "", year_max: "" })}
+                  href={buildSearchParams(base, { year_min: "", year_max: "", page: "1" })}
                   className="text-xs px-2.5 py-1 rounded-full border border-border text-text-primary hover:border-border-strong hover:text-text-primary transition-colors"
                 >
                   Clear
@@ -450,7 +457,7 @@ export default async function SearchPage({
         {activeTab === "books" && q && hasAnyFilter && (
           <div className="mb-5">
             <Link
-              href={buildSearchParams({ q, type: "books", sort, year_min: "", year_max: "", subject: "", language: "" })}
+              href={buildSearchParams({ q, type: "books", sort, year_min: "", year_max: "", subject: "", language: "", page: "1" })}
               className="text-xs text-text-primary hover:text-text-primary underline transition-colors"
             >
               Clear all filters
@@ -483,12 +490,42 @@ export default async function SearchPage({
 
         {/* Book results */}
         {activeTab === "books" && hasQuery && (
-          <BookList
-            books={bookData.results}
-            statusValues={statusValues}
-            statusKeyId={statusKeyId}
-            bookStatusMap={bookStatusMap}
-          />
+          <>
+            <BookList
+              books={bookData.results}
+              statusValues={statusValues}
+              statusKeyId={statusKeyId}
+              bookStatusMap={bookStatusMap}
+            />
+            {/* Pagination */}
+            {bookData.results.length > 0 && (
+              <div className="flex items-center justify-between mt-6 max-w-md">
+                {parseInt(page) > 1 ? (
+                  <Link
+                    href={buildSearchParams(base, { page: String(parseInt(page) - 1) })}
+                    className="text-sm px-4 py-2 rounded border border-border text-text-primary hover:border-border-strong hover:text-text-primary transition-colors"
+                  >
+                    Previous page
+                  </Link>
+                ) : (
+                  <span />
+                )}
+                <span className="text-xs text-text-secondary">
+                  Page {page}
+                </span>
+                {bookData.results.length >= 20 && parseInt(page) * 20 < bookData.total ? (
+                  <Link
+                    href={buildSearchParams(base, { page: String(parseInt(page) + 1) })}
+                    className="text-sm px-4 py-2 rounded border border-border text-text-primary hover:border-border-strong hover:text-text-primary transition-colors"
+                  >
+                    Next page
+                  </Link>
+                ) : (
+                  <span />
+                )}
+              </div>
+            )}
+          </>
         )}
 
         {/* Author results */}

@@ -110,15 +110,20 @@ Permanently deletes all data owned by the authenticated user: user_books, collec
 
 ## Books
 
-### `GET /books/search?q=<title>[&sort=reads|rating][&year_min=N][&year_max=N]`
+### `GET /books/search?q=<title>[&page=1][&sort=reads|rating][&year_min=N][&year_max=N]`
 
-Searches both Meilisearch (local catalog) and Open Library concurrently. Local matches appear first, followed by external results deduplicated by work ID. Returns up to 20 results.
+Searches both local catalog and Open Library concurrently. Local matches appear first, followed by external results deduplicated by work ID. Returns up to 20 results per page.
 
-Optional `year_min` and `year_max` filter results by publication year. Meilisearch uses its `publication_year` filterable attribute; Open Library uses the `first_publish_year` range parameter. Books without a year are excluded when a year filter is active.
+**Query parameters:**
+- `q` *(required)* — search query
+- `page` *(optional, default 1)* — page number for pagination. Each page returns up to 20 results.
+- `sort` *(optional)* — sort order: `reads` (most read) or `rating` (highest rated)
+- `year_min` / `year_max` *(optional)* — filter by publication year range
 
 ```json
 {
   "total": 1234,
+  "page": 1,
   "results": [
     {
       "key": "/works/OL82592W",

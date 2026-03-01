@@ -13,18 +13,27 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// SearchBooks handles GET /books/search?q=...
+// SearchBooks handles GET /books/search?q=...&page=1
 func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		q := e.Request.URL.Query().Get("q")
 		if q == "" {
-			return e.JSON(http.StatusOK, map[string]any{"total": 0, "results": []any{}})
+			return e.JSON(http.StatusOK, map[string]any{"total": 0, "page": 1, "results": []any{}})
 		}
+
+		const perPage = 20
+		page := 1
+		if p := e.Request.URL.Query().Get("page"); p != "" {
+			if n, err := strconv.Atoi(p); err == nil && n > 0 {
+				page = n
+			}
+		}
+		offset := (page - 1) * perPage
 
 		// Search local books first
 		localBooks, _ := app.FindRecordsByFilter("books",
 			"title LIKE {:q} || authors LIKE {:q}",
-			"-created", 20, 0,
+			"-created", perPage, offset,
 			map[string]any{"q": "%" + q + "%"},
 		)
 
@@ -77,7 +86,12 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 
 		// Supplement with Open Library
 		ol := newOLClient()
-		olData, err := ol.get(fmt.Sprintf("/search.json?q=%s&limit=20&fields=key,title,author_name,first_publish_year,isbn,cover_i,edition_count", url.QueryEscape(q)))
+		olOffset := offset
+		if len(localBooks) > 0 {
+			// If local results filled this page, push OL offset further to avoid overlap
+			olOffset = offset
+		}
+		olData, err := ol.get(fmt.Sprintf("/search.json?q=%s&limit=%d&offset=%d&fields=key,title,author_name,first_publish_year,isbn,cover_i,edition_count,numFound", url.QueryEscape(q), perPage, olOffset))
 		if err == nil {
 			if docs, ok := olData["docs"].([]any); ok {
 				for _, d := range docs {
@@ -132,14 +146,22 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 		if results == nil {
 			results = []map[string]any{}
 		}
+		// Cap to perPage results
+		if len(results) > perPage {
+			results = results[:perPage]
+		}
+
+		// Estimate total from OL numFound (which is the most complete source)
 		total := len(results)
-		if total > 20 {
-			results = results[:20]
-			total = 20
+		if olData != nil {
+			if numFound, ok := olData["numFound"].(float64); ok && int(numFound) > total {
+				total = int(numFound)
+			}
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{
 			"total":   total,
+			"page":    page,
 			"results": results,
 		})
 	}
