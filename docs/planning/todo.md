@@ -10,8 +10,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## profile & social
 
-- [ ] Add CTA link to followed authors empty state. In `webapp/src/app/settings/followed-authors/page.tsx`, when `authors` is an empty array, the `FollowedAuthorsList` component renders but provides no guidance on how to follow authors. Add an empty state message like "You haven't followed any authors yet. Follow authors on their profile pages to get notified about new publications." with a link to `/search` (Authors tab) so users can discover authors to follow.
-
 ## search & browse
 
 - [ ] Add sort options to genre detail page. The genre detail page at `webapp/src/app/genres/[slug]/page.tsx` shows books in a genre but has no sort controls, while the shelf detail page at `webapp/src/app/[username]/shelves/[slug]/page.tsx` already supports sorting (date_added, title, author, rating). Add a sort dropdown to the genre page that passes a `sort` query parameter to `GET /api/genres/:slug/books`. Supported values: `title` (A-Z), `rating` (highest first), `year` (newest first). Default to the current behavior (no explicit sort). The API handler in `api/handlers/books.go` (`GenreBooksHandler` or equivalent) needs to accept and apply the `sort` query param.
