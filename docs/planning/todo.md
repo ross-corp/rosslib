@@ -4,17 +4,51 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## BUGS
 
+- [ ] Fix `CreateBookLink` accepting arbitrary `link_type` values without validation. In `api/handlers/links.go`, the `CreateBookLink` handler reads `link_type` from the request body but never validates it against the allowed set (`sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`). Add a `validLinkTypes` map at the top of the file and return 400 with `"invalid link_type"` if the submitted type is not in the set. Same validation should be added to `ProposeLinkEdit` for the `proposed_type` field.
+
+- [ ] Fix series page crashing on non-404 API errors. In `webapp/src/app/series/[seriesId]/page.tsx`, the `fetchSeries` function only handles 404 (calls `notFound()`), but a 500 or 503 from the API will throw an unhandled error and crash the page. Wrap the fetch in a try-catch and return a user-friendly error message (e.g. "Failed to load series. Please try again later.") for non-404 errors instead of crashing.
+
 ## stats & data
+
+- [ ] Add `total_pages_read` to the user profile stats card. The `GET /users/:username/stats` endpoint already returns `total_pages_read` (sum of `page_count` across finished books), but the profile page at `webapp/src/app/[username]/page.tsx` doesn't display it. In the stats row (where `books_read`, `reviews`, `followers_count` are shown), add a "Pages read" stat that formats the number with commas (e.g. "14,320 pages read"). Only show it when the value is greater than 0.
+
+- [ ] Add `books_by_month` chart to the user stats page. The `GET /users/:username/stats` endpoint returns `books_by_month` (array of `{year, month, count}` for the current year), but the stats page at `webapp/src/app/[username]/stats/page.tsx` doesn't render it. Add a horizontal bar chart or grid below the existing stats showing each month of the current year with the count of books finished. Use colored bars proportional to the max month count. Label months as "Jan", "Feb", etc.
 
 ## notifications & feed
 
+- [ ] Add delete button to individual notifications. The `DELETE /me/notifications/:notifId` API endpoint exists and is registered in `api/main.go`, and there's a webapp proxy route at `webapp/src/app/api/me/notifications/[notifId]/route.ts`. But the notifications page at `webapp/src/app/notifications/page.tsx` only shows a "Mark all read" button and per-notification "mark read" — there's no way to delete individual notifications. Add a small trash icon button (or "×" dismiss) to each notification item that calls `DELETE /api/me/notifications/:notifId` and removes it from the list optimistically.
+
+- [ ] Show notification count badge on the settings nav link for pending follow requests. In `webapp/src/components/settings-nav.tsx`, the "Follow requests" pill link doesn't indicate how many pending requests exist. Fetch `GET /api/me/follow-requests` on mount and show a numeric badge (e.g. red circle with count) next to the "Follow requests" pill when the count is > 0. This helps users notice pending requests without clicking into the page.
+
 ## profile & social
+
+- [ ] Add reading goal progress bar to user profile page. The `GET /users/:username/goals/:year` endpoint exists and returns `{ target, progress }`, and the `ReadingGoalCard` component exists at `webapp/src/components/reading-goal-card.tsx`. But the user profile page at `webapp/src/app/[username]/page.tsx` doesn't render it. In the server component, fetch `GET ${API_URL}/users/:username/goals/${currentYear}` (using current year). If a goal exists, render `<ReadingGoalCard target={goal.target} progress={goal.progress} year={currentYear} />` in the profile sidebar, below the stats section.
+
+- [ ] Add "Followed authors" list to user profile page. Users can follow authors (via `GET /me/followed-authors`), and there's a settings page to manage them, but followed authors are never displayed on the public profile. On `webapp/src/app/[username]/page.tsx`, if the user is viewing their own profile, fetch `GET ${API_URL}/me/followed-authors` and render a "Followed authors" section in the sidebar showing up to 5 author names as links to `/authors/:authorKey`. Include a "View all" link to `/settings/followed-authors` when there are more than 5.
+
+- [ ] Add CTA link to followed authors empty state. In `webapp/src/app/settings/followed-authors/page.tsx`, when `authors` is an empty array, the `FollowedAuthorsList` component renders but provides no guidance on how to follow authors. Add an empty state message like "You haven't followed any authors yet. Follow authors on their profile pages to get notified about new publications." with a link to `/search` (Authors tab) so users can discover authors to follow.
 
 ## search & browse
 
+- [ ] Add sort options to genre detail page. The genre detail page at `webapp/src/app/genres/[slug]/page.tsx` shows books in a genre but has no sort controls, while the shelf detail page at `webapp/src/app/[username]/shelves/[slug]/page.tsx` already supports sorting (date_added, title, author, rating). Add a sort dropdown to the genre page that passes a `sort` query parameter to `GET /api/genres/:slug/books`. Supported values: `title` (A-Z), `rating` (highest first), `year` (newest first). Default to the current behavior (no explicit sort). The API handler in `api/handlers/books.go` (`GenreBooksHandler` or equivalent) needs to accept and apply the `sort` query param.
+
+- [ ] Add pagination to followed books settings page. In `webapp/src/app/settings/followed-books/page.tsx`, all followed books are fetched at once from `GET /me/followed-books` with no pagination. If a user follows many books, this could be slow. Add a "Load more" button that fetches the next page. Update `GET /me/followed-books` in `api/handlers/books.go` to accept `limit` (default 50) and `offset` query params, and return `{ books, total }` so the frontend knows if there are more.
+
+- [ ] Add pagination to followed authors settings page. In `webapp/src/app/settings/followed-authors/page.tsx`, all followed authors are fetched at once from `GET /me/followed-authors` with no pagination. Same fix as followed books: update `GET /me/followed-authors` in `api/handlers/books.go` to accept `limit` (default 50) and `offset` query params, return `{ authors, total }`. Frontend adds "Load more" button.
+
 ## book detail & discovery
 
+- [ ] Show book series position badge on book covers across the app. The `GET /books/:workId` response includes a `series` array with `{ series_id, name, position }`, and the book detail page shows series badges. But book covers on profile pages, shelf grids, search results, and feed items don't show series info. In `webapp/src/components/shelf-book-grid.tsx` and any other component that renders a grid of book covers, if series data is available, render a small badge (e.g. "#3" in a rounded pill) in the bottom-left corner of the cover image. This requires passing series data through from the API response where available.
+
+- [ ] Add "date started" display to book detail page reading status area. The `date_started` field was added to `user_books` via migration `1700000016_add_date_started.go` and is read by the book detail page (`webapp/src/app/books/[workId]/page.tsx` line 84). But the reading status section of the book detail page doesn't display it alongside "Date read" and "Date DNF". In the `BookReviewEditor` component at `webapp/src/components/book-review-editor.tsx`, show the `date_started` value when the book status is "Currently Reading" or "Finished", formatted as "Started: Jan 15, 2026".
+
+- [ ] Add community link count to book cards in search results. In `webapp/src/app/search/page.tsx`, book search results show title, author, year, and cover but don't indicate how many community links (related books) exist. Fetch `GET /books/:workId/stats` for each result (or add a `link_count` field to the search response) and show a small chain/link icon with count (e.g. "🔗 3") when > 0. This helps users discover books with rich community connections.
+
 ## settings & account
+
+- [ ] Add user feedback history page. The `GET /me/feedback` endpoint exists and is registered in `api/main.go` (returns the user's submitted bug reports and feature requests), and there's a proxy route at `webapp/src/app/api/me/feedback/route.ts`. But there's no page to view your own feedback submissions. Create `webapp/src/app/settings/feedback/page.tsx` that fetches `GET /api/me/feedback`, renders each item with type badge (bug/feature), title, status (open/closed), and a delete button calling `DELETE /api/me/feedback/:feedbackId`. Add a "My feedback" link to the settings nav in `webapp/src/components/settings-nav.tsx`.
+
+- [ ] Add email change functionality to settings page. Currently users can change their password and display name in settings, but there's no way to change their email address. Add `PUT /me/email` endpoint in `api/handlers/auth.go` that accepts `{ new_email, current_password }`, verifies the password, checks the new email isn't already in use, updates `users.email`, sets `email_verified = false`, and sends a new verification email. Add corresponding proxy route and form component on the settings page below the password form.
 
 ## UX polish
 
@@ -26,15 +60,35 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 - [ ] Add responsive hamburger menu for mobile navigation. In `webapp/src/components/nav.tsx`, wrap the desktop nav links in a container that hides below `md:` breakpoint. Add a hamburger button (`☰`) visible only below `md:` that toggles a full-width dropdown panel with all nav links stacked vertically. Use a client component with `useState` for the open/close toggle. Close the menu when a link is clicked or when clicking outside.
 
+- [ ] Add `aria-label` attributes to nav bar interactive elements. In `webapp/src/components/nav.tsx`, none of the nav links, buttons, or icons have `aria-label` attributes. Add `aria-label` to: the search input ("Search books"), the notification bell icon ("Notifications"), the user avatar dropdown ("User menu"), the "Browse" dropdown ("Browse menu"), the "Community" dropdown ("Community menu"), and the sign-out button ("Sign out"). This improves screen reader accessibility.
+
+- [ ] Add `role="alert"` to form validation error messages. Across login (`webapp/src/app/login/page.tsx`), register (`webapp/src/app/register/page.tsx`), forgot-password (`webapp/src/app/forgot-password/page.tsx`), and reset-password (`webapp/src/app/reset-password/page.tsx`), error messages are displayed as styled `<p>` elements but are not announced to screen readers. Add `role="alert"` and `aria-live="assertive"` to the error message containers so screen readers announce validation failures immediately.
+
+- [ ] Add Escape key handler to close dropdowns. In `webapp/src/components/shelf-picker.tsx`, `webapp/src/components/book-tag-picker.tsx`, and `webapp/src/components/nav-dropdown.tsx`, dropdowns close when clicking outside but don't respond to the Escape key. Add a `useEffect` that listens for `keydown` events and closes the dropdown when `event.key === "Escape"`. This is a standard accessibility pattern for dropdown menus.
+
+- [ ] Add relative timestamps to feed activity items. In `webapp/src/app/feed/page.tsx` (or the feed components), activity timestamps are shown as full dates. Add a relative time display (e.g. "2 hours ago", "3 days ago") using a simple helper function that calculates the difference between now and the activity's `created_at`. Show the relative time as the primary display and the full date as a `title` attribute on hover.
+
+- [ ] Add user library book count to profile page header. The profile page at `webapp/src/app/[username]/page.tsx` shows `books_read` (finished books) and `currently_reading_count`, but doesn't show the total number of books in the user's library (across all statuses). Add a "Library" stat to the stats row that shows the total count. This can be derived from the shelves response: sum of `item_count` across all read-status shelves (want-to-read + currently-reading + read), or add a `total_books` field to the `GET /users/:username` profile response in `api/handlers/users.go`.
+
+## data integrity
+
+- [ ] Add `self_link` check to `CreateBookLink`. In `api/handlers/links.go`, the `CreateBookLink` handler does not verify that `from_book_id != to_book_id`. A user can create a link from a book to itself, which is meaningless. Add a check after resolving both book IDs: if they're the same, return 400 with `"cannot link a book to itself"`.
+
+- [ ] Add length validation to thread title and comment body. In `api/handlers/threads.go`, the `CreateThread` handler accepts `title` and `body` from the request but the API docs say title is max 500 chars and body is max 10,000 chars. Verify these limits are enforced in the handler code. If not, add validation: `if len(title) > 500 { return 400 "title must be 500 characters or fewer" }` and `if len(body) > 10000 { return 400 "body must be 10,000 characters or fewer" }`. Same for `AddComment`: body max 5,000 chars.
+
+- [ ] Add rate limit to recommendation sending. In `api/handlers/recommendations.go`, `SendRecommendation` has no rate limiting — a user could spam another user with recommendations. Add a check that a user cannot send more than 10 recommendations in a 24-hour window. Query `SELECT COUNT(*) FROM recommendations WHERE sender = :userId AND created >= datetime('now', '-1 day')`. Return 429 with `"too many recommendations, try again later"` if the limit is exceeded.
+
 ## blocked
 
 ## API gaps
 
-- [ ] Add `GET /books/{workId}/similar-threads?title=` endpoint. The API docs document this for finding similar threads before creating a new one, and the completed.md says it was implemented with `pg_trgm`, but the route is not registered in `api/main.go` and no handler function exists. Create `SimilarThreads` handler in `api/handlers/threads.go` that queries `SELECT id, title, username, comment_count, similarity(title, :title) as sim FROM threads WHERE book = :book AND deleted_at IS NULL AND similarity(title, :title) > 0.3 ORDER BY sim DESC LIMIT 5`. Register as `se.Router.GET("/books/{workId}/similar-threads", handlers.SimilarThreads(app))` in main.go (public route).
-
-- [ ] Add `GET /threads/{threadId}/similar` endpoint. Similar to the above but for an existing thread — finds threads on the same book with similar titles. Create handler in `api/handlers/threads.go` that loads the thread, gets its book_id and title, then queries other threads on the same book with `similarity(title, :title) > 0.3`. Register as `se.Router.GET("/threads/{threadId}/similar", handlers.GetSimilarThreads(app))` in main.go (public route). On the thread detail page component, add a "Similar Discussions" section below the comments.
+- [ ] Add `GET /books/{workId}/similar-threads?title=` endpoint handler. The webapp proxy routes exist (`webapp/src/app/api/books/[workId]/similar-threads/route.ts` and `webapp/src/app/api/threads/[threadId]/similar/route.ts`) and `completed.md` references this as done, but NO handler function exists in `api/handlers/threads.go` and NO route is registered in `api/main.go`. Create `SimilarThreads` handler in `api/handlers/threads.go` that queries threads on the same book with `similarity(title, :title) > 0.3` (using pg_trgm) and returns up to 5 matches. Register `se.Router.GET("/books/{workId}/similar-threads", handlers.SimilarThreads(app))`. Also create `GetSimilarThreads` handler for `GET /threads/{threadId}/similar` and register it.
 
 - [ ] Add `GET /me/books/{olId}/editions` convenience endpoint. Currently to select an edition, the frontend must call `GET /books/{workId}/editions` (which proxies to Open Library) and then `PATCH /me/books/{olId}` to save the selection. Add a new endpoint that returns the user's currently selected edition alongside the full editions list. Register `authed.GET("/me/books/{olId}/editions", handlers.GetMyBookEditions(app))` in main.go. The handler should return `{ "selected_edition_key": "...", "selected_edition_cover_url": "...", "editions": [...] }` by combining the user_books selection with the OL editions response.
+
+- [ ] Add `GET /books/:workId/followers/count` public endpoint for book follow counts. Currently the only way to see how many users follow a book is to be authenticated and check your own follow status. Add a public endpoint in `api/handlers/books.go` that returns `{ "follower_count": N }` by counting rows in `book_follows WHERE book_id = :bookId`. Register as `se.Router.GET("/books/{workId}/followers/count", handlers.GetBookFollowerCount(app))` in main.go. Display this count on the book detail page next to the follow button as "N followers".
+
+- [ ] Add `blocked_at` timestamp to block list response. In `api/handlers/blocks.go`, the `GetBlockedUsers` handler returns blocked user info but doesn't include when the block was created. Include the `created` timestamp from the `blocks` record in the response as `blocked_at`. In `webapp/src/app/settings/blocked/page.tsx`, display the block date next to each blocked user (e.g. "Blocked on Jan 15, 2026").
 
 ## series improvements
 
