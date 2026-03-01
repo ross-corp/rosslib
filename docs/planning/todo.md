@@ -14,8 +14,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## book detail & discovery
 
-- [ ] Show series navigation on book detail page. On `webapp/src/app/books/[workId]/page.tsx`, when the book has series memberships (the `series` array from `GET /books/:workId`), display a horizontal row of other books in the same series below the series badge. Fetch the series detail from `GET /api/series/:seriesId` (already exists) and render up to 6 book covers with title, position number, and a link to each book's detail page. Highlight the current book. Only show for the first series if the book belongs to multiple.
-
 - [ ] Add description to series pages. Add `description` text field to the `series` PocketBase collection in a new migration file `api/migrations/`. Update `GET /series/{seriesId}` handler in `api/handlers/series.go` to return the `description` field. Add `PUT /series/{seriesId}` endpoint (auth required) to update the description — register in `main.go` authed group. On the series page (`webapp/src/app/series/[seriesId]/page.tsx`), display the description below the series name. Add an inline edit button for logged-in users that reveals a textarea to update the description via `PUT /api/series/:seriesId`.
 
 - [ ] Add genre chips to book search results. In `api/handlers/books.go` `SearchBooks`, for local books that have a `subjects` column, include a `subjects` array (split comma-separated string, take first 3) in each result object. On the frontend search results (`webapp/src/app/search/page.tsx`), render up to 3 small genre/subject chips below each book result's title and author. Each chip links to `/genres/:slug` (slugify the subject name).
