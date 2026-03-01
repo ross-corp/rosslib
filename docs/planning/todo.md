@@ -12,8 +12,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## search & browse
 
-- [ ] Add search within user's library. Add `GET /users/{username}/books/search?q=` endpoint — register in `api/main.go` under the optional-auth group. The handler in `api/handlers/userbooks.go` should query `user_books JOIN books WHERE user = :userId AND (b.title LIKE '%q%' OR b.authors LIKE '%q%')`, respecting privacy via `canViewProfile`. Return same format as `GetUserBooks`. On the frontend, add a search input above the book grid in `webapp/src/components/library-manager.tsx` that calls `GET /api/users/:username/books/search?q=` and filters the displayed books client-side or fetches from the API with debounce (400ms).
-
 ## book detail & discovery
 
 - [ ] Show series navigation on book detail page. On `webapp/src/app/books/[workId]/page.tsx`, when the book has series memberships (the `series` array from `GET /books/:workId`), display a horizontal row of other books in the same series below the series badge. Fetch the series detail from `GET /api/series/:seriesId` (already exists) and render up to 6 book covers with title, position number, and a link to each book's detail page. Highlight the current book. Only show for the first series if the book belongs to multiple.
