@@ -51,6 +51,7 @@ type UserProfile = {
   following_count: number;
   friends_count: number;
   books_read: number;
+  currently_reading_count: number;
   reviews_count: number;
   books_this_year: number;
   average_rating: number | null;
@@ -362,6 +363,12 @@ export default async function UserPage({
                 <span className="font-semibold text-text-primary">{profile.books_read}</span>{" "}
                 <span className="text-text-tertiary">read</span>
               </span>
+              {profile.currently_reading_count > 0 && (
+                <span className="text-sm text-text-secondary">
+                  <span className="font-semibold text-text-primary">{profile.currently_reading_count}</span>{" "}
+                  <span className="text-text-tertiary">reading</span>
+                </span>
+              )}
               <Link
                 href={`/${profile.username}/reviews`}
                 className="text-sm text-text-secondary hover:text-text-primary transition-colors"

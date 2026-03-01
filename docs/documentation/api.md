@@ -667,6 +667,7 @@ Returns a user profile. With a valid token, also returns `is_following` for the 
   "following_count": 5,
   "friends_count": 3,
   "books_read": 42,
+  "currently_reading_count": 2,
   "author_key": null
 }
 ```

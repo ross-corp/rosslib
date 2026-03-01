@@ -197,14 +197,20 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			WHERE f1.follower = {:id} AND f1.status = 'active' AND f2.status = 'active'
 		`).Bind(map[string]any{"id": user.Id}).One(&friendsCount)
 
-		// Count books read & reviews
-		var booksRead, reviewsCount countResult
+		// Count books read, currently reading & reviews
+		var booksRead, currentlyReading, reviewsCount countResult
 		_ = app.DB().NewQuery(`
 			SELECT COUNT(DISTINCT btv.book) as count
 			FROM book_tag_values btv
 			JOIN tag_values tv ON btv.tag_value = tv.id
 			WHERE btv.user = {:id} AND tv.slug = 'finished'
 		`).Bind(map[string]any{"id": user.Id}).One(&booksRead)
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(DISTINCT btv.book) as count
+			FROM book_tag_values btv
+			JOIN tag_values tv ON btv.tag_value = tv.id
+			WHERE btv.user = {:id} AND tv.slug = 'currently-reading'
+		`).Bind(map[string]any{"id": user.Id}).One(&currentlyReading)
 		_ = app.DB().NewQuery(`
 			SELECT COUNT(*) as count FROM user_books
 			WHERE user = {:id} AND review_text != '' AND review_text IS NOT NULL
@@ -252,8 +258,9 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			"followers_count": followersCount.Count,
 			"following_count": followingCount.Count,
 			"friends_count":   friendsCount.Count,
-			"books_read":      booksRead.Count,
-			"reviews_count":   reviewsCount.Count,
+			"books_read":              booksRead.Count,
+			"currently_reading_count": currentlyReading.Count,
+			"reviews_count":           reviewsCount.Count,
 			"books_this_year": booksThisYear.Count,
 			"average_rating":  avgRating.Avg,
 			"is_restricted":   isRestricted,
