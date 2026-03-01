@@ -4,8 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## BUGS
 
-- [ ] Fix series page crashing on non-404 API errors. In `webapp/src/app/series/[seriesId]/page.tsx`, the `fetchSeries` function only handles 404 (calls `notFound()`), but a 500 or 503 from the API will throw an unhandled error and crash the page. Wrap the fetch in a try-catch and return a user-friendly error message (e.g. "Failed to load series. Please try again later.") for non-404 errors instead of crashing.
-
 ## stats & data
 
 - [ ] Add `total_pages_read` to the user profile stats card. The `GET /users/:username/stats` endpoint already returns `total_pages_read` (sum of `page_count` across finished books), but the profile page at `webapp/src/app/[username]/page.tsx` doesn't display it. In the stats row (where `books_read`, `reviews`, `followers_count` are shown), add a "Pages read" stat that formats the number with commas (e.g. "14,320 pages read"). Only show it when the value is greater than 0.
