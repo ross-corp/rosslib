@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@eslint/eslintrc": "^3.3.4",
     "next": "15.1.6",
     "pocketbase": "^0.26.8",
     "react": "^19.0.0",
