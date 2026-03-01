@@ -14,8 +14,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## book detail & discovery
 
-- [ ] Add genre chips to book search results. In `api/handlers/books.go` `SearchBooks`, for local books that have a `subjects` column, include a `subjects` array (split comma-separated string, take first 3) in each result object. On the frontend search results (`webapp/src/app/search/page.tsx`), render up to 3 small genre/subject chips below each book result's title and author. Each chip links to `/genres/:slug` (slugify the subject name).
-
 ## settings & account
 
 - [ ] Add "sent recommendations" tab to recommendations page. Add `GET /me/recommendations/sent` endpoint — register `authed.GET("/me/recommendations/sent", handlers.GetSentRecommendations(app))` in `api/main.go`. Handler in `api/handlers/recommendations.go` queries `SELECT r.*, u.username, u.display_name, u.avatar, b.title, b.open_library_id, b.cover_url FROM recommendations r JOIN users u ON r.recipient = u.id JOIN books b ON r.book = b.id WHERE r.sender = :userId ORDER BY r.created DESC`. Add proxy route `webapp/src/app/api/me/recommendations/sent/route.ts`. On `webapp/src/app/recommendations/page.tsx`, add tabs "Received" / "Sent" — the Sent tab shows recommendations the user has sent, with recipient name, book cover, note, and status badge.
