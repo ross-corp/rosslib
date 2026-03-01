@@ -18,8 +18,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX polish
 
-- [ ] Add `loading.tsx` skeleton files for the four highest-traffic pages. Create `webapp/src/app/search/loading.tsx` (grid of 8 skeleton cards with pulsing placeholder for cover, title line, author line), `webapp/src/app/books/[workId]/loading.tsx` (skeleton with cover placeholder, title bar, description lines, review placeholders), `webapp/src/app/[username]/loading.tsx` (avatar circle, name bar, stats row, book grid skeletons), and `webapp/src/app/notifications/loading.tsx` (list of 5 notification row skeletons). Each skeleton should use Tailwind's `animate-pulse` with `bg-surface-2 rounded` placeholder divs matching the approximate layout of the real page.
-
 - [ ] Add `not-found.tsx` for book and user pages. Create `webapp/src/app/books/[workId]/not-found.tsx` — display "Book not found" with a search link. Create `webapp/src/app/[username]/not-found.tsx` — display "User not found" with a link to `/users`. In the corresponding `page.tsx` files, call `notFound()` (from `next/navigation`) when the API returns 404 instead of showing a generic error.
 
 - [ ] Add keyboard shortcut hint that works cross-platform. In `webapp/src/components/nav.tsx`, the search bar shows "⌘K" which is Mac-only. Detect the user's OS via `navigator.userAgent` or `navigator.platform` in a client component and show "Ctrl+K" on Windows/Linux and "⌘K" on Mac. Extract this into a small `KeyboardShortcutHint` client component that accepts a `keys` prop like `{ mac: "⌘K", other: "Ctrl+K" }`.
