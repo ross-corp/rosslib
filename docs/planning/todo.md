@@ -16,8 +16,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## settings & account
 
-- [ ] Add account deletion endpoint. Add `DELETE /me/account` (auth required) to `api/main.go` with handler in `api/handlers/userdata.go`. The handler should first call the existing `DeleteAllData` logic to remove all user-owned data, then delete the user record itself from the `users` collection. On the settings page danger zone (`webapp/src/components/delete-data-form.tsx`), add a second button "Delete my account permanently" below the existing "Delete all my data" button, with a confirmation that requires typing "delete my account". This calls `DELETE /api/me/account` and clears the auth cookie, redirecting to the home page.
-
 ## UX polish
 
 - [ ] Add `loading.tsx` skeleton files for the four highest-traffic pages. Create `webapp/src/app/search/loading.tsx` (grid of 8 skeleton cards with pulsing placeholder for cover, title line, author line), `webapp/src/app/books/[workId]/loading.tsx` (skeleton with cover placeholder, title bar, description lines, review placeholders), `webapp/src/app/[username]/loading.tsx` (avatar circle, name bar, stats row, book grid skeletons), and `webapp/src/app/notifications/loading.tsx` (list of 5 notification row skeletons). Each skeleton should use Tailwind's `animate-pulse` with `bg-surface-2 rounded` placeholder divs matching the approximate layout of the real page.
