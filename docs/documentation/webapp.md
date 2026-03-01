@@ -294,7 +294,7 @@ Used on book detail pages (community reviews), user reviews pages, recent review
 
 ### `SettingsNav` (`components/settings-nav.tsx`)
 
-Client component providing pill-style navigation across settings sub-pages. Uses `usePathname()` to highlight the active section. Rendered on all settings pages (Profile, Import, Export, Ghost Activity). The active pill uses `bg-accent text-white`; inactive pills use `bg-surface-2`.
+Client component providing pill-style navigation across settings sub-pages. Uses `usePathname()` to highlight the active section. Rendered on all settings pages (Profile, Import, Export, Ghost Activity). The active pill uses `bg-accent text-white`; inactive pills use `bg-surface-2`. Fetches pending follow request count on mount and displays a red numeric badge on the "Follow requests" pill when count > 0.
 
 ### `PasswordForm` (`components/password-form.tsx`)
 
