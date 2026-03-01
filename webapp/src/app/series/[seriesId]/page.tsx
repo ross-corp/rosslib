@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getUser, getToken } from "@/lib/auth";
+import SeriesDescription from "@/components/series-description";
 
 type SeriesBook = {
   book_id: string;
@@ -75,11 +76,11 @@ export default async function SeriesPage({
           {series.name}
         </h1>
 
-        {series.description && (
-          <p className="text-sm text-text-secondary mb-6 leading-relaxed">
-            {series.description}
-          </p>
-        )}
+        <SeriesDescription
+          seriesId={series.id}
+          initialDescription={series.description ?? ""}
+          isLoggedIn={!!currentUser}
+        />
 
         <div className="flex items-center gap-4 mb-8 text-sm text-text-tertiary">
           <span>

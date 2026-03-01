@@ -139,6 +139,7 @@ func main() {
 		authed.DELETE("/threads/{threadId}/comments/{commentId}", handlers.DeleteComment(app))
 
 		// Series
+		authed.PUT("/series/{seriesId}", handlers.UpdateSeriesDescription(app))
 		authed.POST("/books/{workId}/series", handlers.AddBookToSeries(app))
 
 		// Book scan

@@ -571,6 +571,16 @@ Returns series details with an ordered list of books. If authenticated, each boo
 }
 ```
 
+### `PUT /series/:seriesId`  *(auth required)*
+
+Update a series description.
+
+```json
+{ "description": "A fantasy trilogy by J.R.R. Tolkien." }
+```
+
+Returns `200` with the updated series `{ id, name, description }`.
+
 ### `POST /books/:workId/series`  *(auth required)*
 
 Add a book to a series. Finds or creates the series by name.

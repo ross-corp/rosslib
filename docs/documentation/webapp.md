@@ -132,7 +132,7 @@ webapp/src/app/
     ├── shelves/[shelfId]/books/route.ts
     ├── shelves/[shelfId]/books/[olId]/route.ts    ← GET, PATCH, DELETE
     ├── books/[workId]/series/route.ts              ← GET, POST series memberships
-    ├── series/[seriesId]/route.ts                 ← GET series detail with books
+    ├── series/[seriesId]/route.ts                 ← GET series detail, PUT update description
     ├── books/[workId]/reviews/[userId]/like/route.ts ← POST toggle, GET check review like
     ├── books/[workId]/links/route.ts              ← GET, POST community links
     ├── links/[linkId]/route.ts                    ← DELETE community link
@@ -362,6 +362,10 @@ Client component on user profile pages. Shows "Block" button that opens an inlin
 ### `UserActivityList` (`components/user-activity-list.tsx`)
 
 Client component that renders a list of activity items with cursor-based "Load more" pagination. Used on the user profile page sidebar. Receives initial activities and cursor from the server component, then fetches additional pages via `GET /api/users/:username/activity?cursor=`.
+
+### `SeriesDescription` (`components/series-description.tsx`)
+
+Client component for displaying and inline-editing a series description. Receives `seriesId`, `initialDescription`, and `isLoggedIn` as props. Logged-in users see an "Edit description" / "Add description" button that reveals a textarea. Saves via `PUT /api/series/:seriesId`.
 
 ---
 

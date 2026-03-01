@@ -137,6 +137,41 @@ func GetSeriesDetail(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// UpdateSeriesDescription handles PUT /series/{seriesId}
+func UpdateSeriesDescription(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
+		}
+
+		seriesID := e.Request.PathValue("seriesId")
+
+		series, err := app.FindRecordById("series", seriesID)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Series not found"})
+		}
+
+		data := struct {
+			Description string `json:"description"`
+		}{}
+		if err := e.BindBody(&data); err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
+		}
+
+		series.Set("description", strings.TrimSpace(data.Description))
+		if err := app.Save(series); err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to update series"})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{
+			"id":          series.Id,
+			"name":        series.GetString("name"),
+			"description": series.GetString("description"),
+		})
+	}
+}
+
 // AddBookToSeries handles POST /books/{workId}/series
 func AddBookToSeries(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
