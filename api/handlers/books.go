@@ -699,25 +699,45 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusOK, []any{})
 		}
 
+		// Batch-check which reviewers the viewer follows
+		followedSet := map[string]bool{}
+		if viewerID != "" {
+			var reviewerIDs []string
+			for _, r := range reviews {
+				if r.UserID != viewerID {
+					reviewerIDs = append(reviewerIDs, r.UserID)
+				}
+			}
+			if len(reviewerIDs) > 0 {
+				type followRow struct {
+					Followee string `db:"followee"`
+				}
+				var followRows []followRow
+				placeholders := ""
+				bindParams := map[string]any{"viewer": viewerID}
+				for i, id := range reviewerIDs {
+					key := fmt.Sprintf("uid%d", i)
+					if i > 0 {
+						placeholders += ", "
+					}
+					placeholders += "{:" + key + "}"
+					bindParams[key] = id
+				}
+				followQuery := fmt.Sprintf(`SELECT followee FROM follows WHERE follower = {:viewer} AND followee IN (%s) AND status = 'active'`, placeholders)
+				_ = app.DB().NewQuery(followQuery).Bind(bindParams).All(&followRows)
+				for _, f := range followRows {
+					followedSet[f.Followee] = true
+				}
+			}
+		}
+
 		// Build response with avatar URLs
 		var result []map[string]any
 		for _, r := range reviews {
 			var avatarURL *string
 			if r.Avatar != nil && *r.Avatar != "" {
-				// We need the user's collection ID for avatar URL
 				url := fmt.Sprintf("/api/files/users/%s/%s", r.UserID, *r.Avatar)
 				avatarURL = &url
-			}
-
-			// Check if viewer follows this reviewer
-			isFollowed := false
-			if viewerID != "" && viewerID != r.UserID {
-				follows, err := app.FindRecordsByFilter("follows",
-					"follower = {:f} && followee = {:t} && status = 'active'",
-					"", 1, 0,
-					map[string]any{"f": viewerID, "t": r.UserID},
-				)
-				isFollowed = err == nil && len(follows) > 0
 			}
 
 			result = append(result, map[string]any{
@@ -731,7 +751,7 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 				"spoiler":      r.Spoiler,
 				"date_read":    r.DateRead,
 				"date_added":   r.DateAdded,
-				"is_followed":  isFollowed,
+				"is_followed":  followedSet[r.UserID],
 				"like_count":   r.LikeCount,
 				"liked_by_me":  r.LikedByMe > 0,
 			})
