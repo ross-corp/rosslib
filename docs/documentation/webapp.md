@@ -302,7 +302,10 @@ Client component rendered on the settings page below the profile form. Fetches `
 
 ### `DeleteDataForm` (`components/delete-data-form.tsx`)
 
-Client component rendered on the settings page below the password form in a "Danger zone" section. Shows a red "Delete all my data" button. Clicking it reveals a confirmation form where the user must type "delete my data" to proceed. Calls `DELETE /api/me/account/data` which removes all user-owned records (books, reviews, tags, labels, follows, threads, notifications, etc.) but keeps the account. On success, redirects to the home page.
+Client component rendered on the settings page below the password form in a "Danger zone" section. Contains two destructive actions:
+
+1. **Delete all my data** — red button that reveals a confirmation form requiring the user to type "delete my data". Calls `DELETE /api/me/account/data` to remove all user-owned records (books, reviews, tags, labels, follows, threads, notifications, etc.) while keeping the account. Redirects to home on success.
+2. **Delete my account permanently** — second red button below, requiring the user to type "delete my account". Calls `DELETE /api/me/account` to remove all data **and** the user account itself. The proxy clears the auth cookie, and the user is redirected to the home page.
 
 ### `PendingImportsManager` (`components/pending-imports-manager.tsx`)
 

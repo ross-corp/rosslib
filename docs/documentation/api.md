@@ -106,6 +106,18 @@ Permanently deletes all data owned by the authenticated user: user_books, collec
 401 { "error": "Authentication required" }
 ```
 
+### `DELETE /me/account`  *(auth required)*
+
+Permanently deletes all data owned by the authenticated user **and** the user account itself. The webapp proxy clears the auth cookie on success.
+
+**Request body:** none
+
+```
+200 { "message": "Account deleted" }
+401 { "error": "Authentication required" }
+500 { "error": "Failed to delete account" }
+```
+
 ---
 
 ## Books
