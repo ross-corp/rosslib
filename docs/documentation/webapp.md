@@ -171,6 +171,7 @@ webapp/src/app/
         ├── stats/route.ts                         ← GET reading statistics
         ├── tags/[...path]/route.ts
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
+        ├── books/search/route.ts                   ← GET search within user's library
         ├── shelves/[slug]/route.ts                ← GET (for client-side label switching)
         └── timeline/route.ts                      ← GET reading timeline
 ```
@@ -209,6 +210,8 @@ Layout: `h-screen flex flex-col overflow-hidden` on the page, then inside Librar
 ```
 
 **Sidebar** — clicking a label fetches its books client-side via `GET /api/users/:username/shelves/:slug`. Clicking a tag collection fetches via `GET /api/users/:username/tags/:path`. Clicking a label value fetches via `GET /api/users/:username/labels/:keySlug/*valuePath` (includes sub-values). Nested label values are indented by depth in the sidebar, showing only the last path segment as the display name.
+
+**Search** — a search input in the top bar lets users search within the current library by title or author. Typing triggers a debounced (400ms) API call to `GET /api/users/:username/books/search?q=`. Results replace the displayed book grid while the search is active. Clearing the search restores the original view. Search state is also cleared when navigating to a different sidebar filter.
 
 **Top bar** — shows the current label name and book count when nothing is selected. Transforms into the bulk action toolbar when one or more books are checked:
 - Rate — sets rating on all selected books via `PATCH /api/shelves/:shelfId/books/:olId`

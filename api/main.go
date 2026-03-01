@@ -52,6 +52,7 @@ func main() {
 		se.Router.GET("/users/{username}", handlers.GetProfile(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/reviews", handlers.GetUserReviews(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/books", handlers.GetUserBooks(app)).BindFunc(handlers.OptionalAuthFunc(app))
+		se.Router.GET("/users/{username}/books/search", handlers.SearchUserBooks(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/shelves", handlers.GetUserShelves(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/shelves/{slug}", handlers.GetShelfDetail(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/tag-keys", handlers.GetUserTagKeys(app)).BindFunc(handlers.OptionalAuthFunc(app))

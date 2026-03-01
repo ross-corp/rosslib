@@ -358,6 +358,32 @@ Returns a map of all the user's books to their status slugs.
 { "OL82592W": "read", "OL27448W": "currently-reading" }
 ```
 
+### `GET /users/:username/books/search?q=<query>`  *(optional auth)*
+
+Search within a user's library by book title or author. Respects profile privacy (returns 403 for private profiles the viewer doesn't follow). Returns up to 50 results ordered by date added descending.
+
+**Query parameters:**
+- `q` *(required)* — search query, matched via case-insensitive LIKE against title and authors
+- `limit` *(optional, default 50, max 100)* — maximum results
+
+```json
+{
+  "books": [
+    {
+      "book_id": "...",
+      "open_library_id": "OL82592W",
+      "title": "The Great Gatsby",
+      "cover_url": "https://...",
+      "authors": "F. Scott Fitzgerald",
+      "rating": 4,
+      "added_at": "2024-06-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+Returns an empty `books` array if `q` is empty or no matches are found.
+
 ---
 
 ## Genres

@@ -618,6 +618,72 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// SearchUserBooks handles GET /users/{username}/books/search?q=
+func SearchUserBooks(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		username := e.Request.PathValue("username")
+		q := strings.TrimSpace(e.Request.URL.Query().Get("q"))
+		if q == "" {
+			return e.JSON(http.StatusOK, map[string]any{"books": []any{}})
+		}
+
+		users, err := app.FindRecordsByFilter("users",
+			"username = {:username}", "", 1, 0,
+			map[string]any{"username": username},
+		)
+		if err != nil || len(users) == 0 {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "User not found"})
+		}
+		targetUser := users[0]
+
+		viewerID := ""
+		if e.Auth != nil {
+			viewerID = e.Auth.Id
+		}
+		if !canViewProfile(app, viewerID, targetUser) {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Profile is private"})
+		}
+
+		limit, _ := strconv.Atoi(e.Request.URL.Query().Get("limit"))
+		if limit <= 0 || limit > 100 {
+			limit = 50
+		}
+
+		likePattern := "%" + q + "%"
+
+		type bookRow struct {
+			BookID   string   `db:"book_id" json:"book_id"`
+			OLID     string   `db:"open_library_id" json:"open_library_id"`
+			Title    string   `db:"title" json:"title"`
+			CoverURL *string  `db:"cover_url" json:"cover_url"`
+			Authors  *string  `db:"authors" json:"authors"`
+			Rating   *float64 `db:"rating" json:"rating"`
+			AddedAt  string   `db:"added_at" json:"added_at"`
+		}
+		var books []bookRow
+		err = app.DB().NewQuery(`
+			SELECT b.id as book_id, b.open_library_id, b.title,
+				   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
+				   b.authors, ub.rating, ub.date_added as added_at
+			FROM user_books ub
+			JOIN books b ON ub.book = b.id
+			WHERE ub.user = {:user}
+			AND (b.title LIKE {:q} OR b.authors LIKE {:q})
+			ORDER BY ub.date_added DESC
+			LIMIT {:limit}
+		`).Bind(map[string]any{
+			"user":  targetUser.Id,
+			"q":     likePattern,
+			"limit": limit,
+		}).All(&books)
+		if err != nil || books == nil {
+			books = []bookRow{}
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"books": books})
+	}
+}
+
 // setStatusTag sets the status tag for a user's book.
 func setStatusTag(app core.App, userID, bookID, statusSlug string) {
 	if statusSlug == "" {

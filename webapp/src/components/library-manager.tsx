@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, ReactNode } from "react";
+import { useState, useRef, useCallback, ReactNode } from "react";
 import { TagKey, TagValue } from "@/components/book-tag-picker";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -128,6 +128,29 @@ export default function LibraryManager({
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const [showTagsMenu, setShowTagsMenu] = useState(false);
   const [localShelves, setLocalShelves] = useState(allShelves);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Book[] | null>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const doSearch = useCallback(
+    (q: string) => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+      if (!q.trim()) {
+        setSearchResults(null);
+        return;
+      }
+      searchTimerRef.current = setTimeout(async () => {
+        const res = await fetch(
+          `/api/users/${username}/books/search?q=${encodeURIComponent(q.trim())}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data.books ?? []);
+        }
+      }, 400);
+    },
+    [username]
+  );
 
   // ── Navigation ───────────────────────────────────────────────────────────────
 
@@ -140,10 +163,17 @@ export default function LibraryManager({
     setShowTagsMenu(false);
   }
 
+  function clearSearch() {
+    setSearchQuery("");
+    setSearchResults(null);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+  }
+
   async function navigateToStatus(slug: string, name: string) {
     if (filter.kind === "status" && filter.slug === slug) return;
     setLoading(true);
     setSelectedIds(new Set());
+    clearSearch();
     closeMenus();
     const res = await fetch(`/api/users/${username}/books?status=${slug}`);
     setLoading(false);
@@ -158,6 +188,7 @@ export default function LibraryManager({
     if (filter.kind === "all") return;
     setLoading(true);
     setSelectedIds(new Set());
+    clearSearch();
     closeMenus();
     const res = await fetch(`/api/users/${username}/books?limit=500`);
     setLoading(false);
@@ -178,6 +209,7 @@ export default function LibraryManager({
     if (filter.kind === "tag" && filter.slug === slug) return;
     setLoading(true);
     setSelectedIds(new Set());
+    clearSearch();
     closeMenus();
     const res = await fetch(`/api/users/${username}/tags/${slug}`);
     setLoading(false);
@@ -192,6 +224,7 @@ export default function LibraryManager({
     if (filter.kind === "label" && filter.keySlug === keySlug && filter.valueSlug === valueSlug) return;
     setLoading(true);
     setSelectedIds(new Set());
+    clearSearch();
     closeMenus();
     const res = await fetch(`/api/users/${username}/labels/${keySlug}/${valueSlug}`);
     setLoading(false);
@@ -352,6 +385,7 @@ export default function LibraryManager({
 
   const tagCollections = localShelves.filter((s) => s.collection_type === "tag");
   const tagTree = buildTagTree(tagCollections);
+  const displayedBooks = searchResults !== null ? searchResults : books;
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -627,8 +661,22 @@ export default function LibraryManager({
                   : filter.name}
             </span>
             <span className="text-xs text-text-primary">
-              {books.length} {books.length === 1 ? "book" : "books"}
+              {searchResults !== null
+                ? `${searchResults.length} result${searchResults.length === 1 ? "" : "s"}`
+                : `${books.length} ${books.length === 1 ? "book" : "books"}`}
             </span>
+            <div className="ml-auto">
+              <input
+                type="text"
+                placeholder="Search library..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  doSearch(e.target.value);
+                }}
+                className="text-sm px-3 py-1 rounded border border-border bg-surface-0 text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-accent w-48"
+              />
+            </div>
           </div>
         )}
 
@@ -636,11 +684,13 @@ export default function LibraryManager({
         <div className="flex-1 overflow-y-auto p-5">
           {loading ? (
             <p className="text-sm text-text-primary">Loading...</p>
-          ) : books.length === 0 ? (
-            <p className="text-sm text-text-primary">No books here yet.</p>
+          ) : displayedBooks.length === 0 ? (
+            <p className="text-sm text-text-primary">
+              {searchResults !== null ? "No books match your search." : "No books here yet."}
+            </p>
           ) : (
             <ul className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3">
-              {books.map((book) => {
+              {displayedBooks.map((book) => {
                 const selected = selectedIds.has(book.book_id);
                 const anySelected = selectedIds.size > 0;
                 return (
