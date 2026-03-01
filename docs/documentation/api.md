@@ -1349,13 +1349,15 @@ Returns detailed reading statistics for a user. Respects privacy settings — re
     { "rating": 5, "count": 8 }
   ],
   "total_books": 47,
-  "total_reviews": 15
+  "total_reviews": 15,
+  "total_pages_read": 14320
 }
 ```
 
 - `books_by_year` — finished books grouped by year (from `date_read`), descending
 - `books_by_month` — finished books in the current year grouped by month
 - `rating_distribution` — count of books per star rating (1-5)
+- `total_pages_read` — sum of `page_count` across all finished books (only books with known page counts)
 
 ### `GET /users/:username/activity`
 

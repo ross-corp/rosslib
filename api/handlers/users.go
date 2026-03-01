@@ -388,6 +388,27 @@ func GetUserStats(app core.App) func(e *core.RequestEvent) error {
 			WHERE user = {:uid} AND review_text IS NOT NULL AND review_text != ''
 		`).Bind(map[string]any{"uid": uid}).One(&totalReviews)
 
+		// Total pages read (sum page_count for finished books)
+		type sumResult struct {
+			Total *int `db:"total"`
+		}
+		var totalPages sumResult
+		_ = app.DB().NewQuery(`
+			SELECT COALESCE(SUM(b.page_count), 0) as total
+			FROM user_books ub
+			JOIN books b ON ub.book = b.id
+			JOIN book_tag_values btv ON btv.user = ub.user AND btv.book = ub.book
+			JOIN tag_values tv ON btv.tag_value = tv.id
+			WHERE ub.user = {:uid}
+			  AND tv.slug = 'finished'
+			  AND b.page_count IS NOT NULL AND b.page_count > 0
+		`).Bind(map[string]any{"uid": uid}).One(&totalPages)
+
+		totalPagesRead := 0
+		if totalPages.Total != nil {
+			totalPagesRead = *totalPages.Total
+		}
+
 		return e.JSON(http.StatusOK, map[string]any{
 			"books_by_year":       booksByYear,
 			"books_by_month":      booksByMonth,
@@ -395,6 +416,7 @@ func GetUserStats(app core.App) func(e *core.RequestEvent) error {
 			"rating_distribution": ratingDistribution,
 			"total_books":         totalBooks.Count,
 			"total_reviews":       totalReviews.Count,
+			"total_pages_read":    totalPagesRead,
 		})
 	}
 }
