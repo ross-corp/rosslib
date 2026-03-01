@@ -14,8 +14,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## book detail & discovery
 
-- [ ] Add "date started" display to book detail page reading status area. The `date_started` field was added to `user_books` via migration `1700000016_add_date_started.go` and is read by the book detail page (`webapp/src/app/books/[workId]/page.tsx` line 84). But the reading status section of the book detail page doesn't display it alongside "Date read" and "Date DNF". In the `BookReviewEditor` component at `webapp/src/components/book-review-editor.tsx`, show the `date_started` value when the book status is "Currently Reading" or "Finished", formatted as "Started: Jan 15, 2026".
-
 - [ ] Add community link count to book cards in search results. In `webapp/src/app/search/page.tsx`, book search results show title, author, year, and cover but don't indicate how many community links (related books) exist. Fetch `GET /books/:workId/stats` for each result (or add a `link_count` field to the search response) and show a small chain/link icon with count (e.g. "🔗 3") when > 0. This helps users discover books with rich community connections.
 
 ## settings & account
