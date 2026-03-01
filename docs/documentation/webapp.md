@@ -92,7 +92,7 @@ webapp/src/app/
 ├── feedback/page.tsx              bug report & feature request form
 ├── admin/page.tsx                 admin panel (moderator only)
 ├── [username]/
-│   ├── page.tsx                    public profile (incl. computed lists section)
+│   ├── page.tsx                    public profile (incl. computed lists, followed authors sidebar)
 │   ├── stats/page.tsx              detailed reading statistics
 │   ├── shelves/[slug]/page.tsx     label page (owner gets library manager)
 │   ├── followers/page.tsx          followers list

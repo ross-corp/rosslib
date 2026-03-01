@@ -160,6 +160,11 @@ async function fetchRecentReviews(username: string): Promise<ReviewItem[]> {
   return res.json();
 }
 
+type FollowedAuthor = {
+  author_key: string;
+  author_name: string;
+};
+
 type ViewerTagKey = {
   id: string;
   name: string;
@@ -181,6 +186,15 @@ async function fetchGoal(
     { cache: "no-store", headers }
   );
   if (!res.ok) return null;
+  return res.json();
+}
+
+async function fetchFollowedAuthors(token: string): Promise<FollowedAuthor[]> {
+  const res = await fetch(`${process.env.API_URL}/me/followed-authors`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
   return res.json();
 }
 
@@ -209,8 +223,8 @@ export default async function UserPage({
 
   const currentYear = new Date().getFullYear();
 
-  const [userBooks, shelves, tagKeys, activityData, recentReviews, viewerTagKeys, readingGoal] = isRestricted
-    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, [] as UserShelf[], [] as TagKey[], { activities: [] } as ActivityResponse, [] as ReviewItem[], [] as ViewerTagKey[], null as ReadingGoal | null]
+  const [userBooks, shelves, tagKeys, activityData, recentReviews, viewerTagKeys, readingGoal, followedAuthors] = isRestricted
+    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, [] as UserShelf[], [] as TagKey[], { activities: [] } as ActivityResponse, [] as ReviewItem[], [] as ViewerTagKey[], null as ReadingGoal | null, [] as FollowedAuthor[]]
     : await Promise.all([
         fetchUserBooks(username),
         fetchUserShelves(username),
@@ -219,6 +233,7 @@ export default async function UserPage({
         fetchRecentReviews(username),
         !isOwnProfile && token ? fetchViewerTagKeys(token) : Promise.resolve([] as ViewerTagKey[]),
         fetchGoal(username, currentYear, token ?? undefined),
+        isOwnProfile && token ? fetchFollowedAuthors(token) : Promise.resolve([] as FollowedAuthor[]),
       ]);
 
   // Extract status values for QuickAddButton (viewer adding books to their own library)
@@ -641,6 +656,32 @@ export default async function UserPage({
                   </p>
                 </div>
               ) : null}
+
+              {isOwnProfile && followedAuthors.length > 0 && (
+                <div className="mt-6">
+                  <h2 className="section-heading mb-2">Followed Authors</h2>
+                  <ul className="space-y-1.5">
+                    {followedAuthors.slice(0, 5).map((author) => (
+                      <li key={author.author_key}>
+                        <Link
+                          href={`/authors/${author.author_key}`}
+                          className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                        >
+                          {author.author_name || author.author_key}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  {followedAuthors.length > 5 && (
+                    <Link
+                      href="/settings/followed-authors"
+                      className="block mt-2 text-xs text-text-tertiary hover:text-text-primary transition-colors"
+                    >
+                      View all {followedAuthors.length} →
+                    </Link>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
