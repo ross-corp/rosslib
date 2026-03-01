@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getUser, getToken } from "@/lib/auth";
-import { formatTime } from "@/components/activity";
 import RecommendationList from "./recommendation-list";
+import SentRecommendationList from "./sent-recommendation-list";
 
 type Recommendation = {
   id: string;
@@ -10,6 +10,25 @@ type Recommendation = {
   status: string;
   created_at: string;
   sender: {
+    user_id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+  book: {
+    open_library_id: string;
+    title: string;
+    cover_url: string | null;
+    authors: string | null;
+  };
+};
+
+type SentRecommendation = {
+  id: string;
+  note: string | null;
+  status: string;
+  created_at: string;
+  recipient: {
     user_id: string;
     username: string;
     display_name: string | null;
@@ -38,17 +57,36 @@ async function fetchRecommendations(
   return res.json();
 }
 
+async function fetchSentRecommendations(
+  token: string
+): Promise<SentRecommendation[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/me/recommendations/sent`,
+    {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export default async function RecommendationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ tab?: string; status?: string }>;
 }) {
   const [user, token] = await Promise.all([getUser(), getToken()]);
   if (!user || !token) redirect("/login");
 
-  const { status } = await searchParams;
+  const { tab, status } = await searchParams;
+  const activeTab = tab === "sent" ? "sent" : "received";
   const filter = status || "pending";
-  const recommendations = await fetchRecommendations(token, filter);
+
+  const [recommendations, sentRecommendations] = await Promise.all([
+    activeTab === "received" ? fetchRecommendations(token, filter) : Promise.resolve([]),
+    activeTab === "sent" ? fetchSentRecommendations(token) : Promise.resolve([]),
+  ]);
 
   return (
     <div className="min-h-screen">
@@ -57,33 +95,75 @@ export default async function RecommendationsPage({
           Recommendations
         </h1>
 
-        {/* Status filter tabs */}
+        {/* Received / Sent tabs */}
         <div className="flex gap-1 mb-6 border-b border-border">
-          {["pending", "seen", "dismissed", "all"].map((s) => (
-            <Link
-              key={s}
-              href={`/recommendations?status=${s}`}
-              className={`px-3 py-2 text-xs font-medium transition-colors ${
-                filter === s
-                  ? "text-text-primary border-b-2 border-text-primary"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </Link>
-          ))}
+          <Link
+            href="/recommendations"
+            className={`px-3 py-2 text-sm font-medium transition-colors ${
+              activeTab === "received"
+                ? "text-text-primary border-b-2 border-text-primary"
+                : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            Received
+          </Link>
+          <Link
+            href="/recommendations?tab=sent"
+            className={`px-3 py-2 text-sm font-medium transition-colors ${
+              activeTab === "sent"
+                ? "text-text-primary border-b-2 border-text-primary"
+                : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            Sent
+          </Link>
         </div>
 
-        {recommendations.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-text-secondary text-sm">
-              {filter === "pending"
-                ? "No pending recommendations."
-                : "No recommendations found."}
-            </p>
-          </div>
-        ) : (
-          <RecommendationList recommendations={recommendations} />
+        {activeTab === "received" && (
+          <>
+            {/* Status filter tabs */}
+            <div className="flex gap-1 mb-6 border-b border-border">
+              {["pending", "seen", "dismissed", "all"].map((s) => (
+                <Link
+                  key={s}
+                  href={`/recommendations?status=${s}`}
+                  className={`px-3 py-2 text-xs font-medium transition-colors ${
+                    filter === s
+                      ? "text-text-primary border-b-2 border-text-primary"
+                      : "text-text-secondary hover:text-text-primary"
+                  }`}
+                >
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </Link>
+              ))}
+            </div>
+
+            {recommendations.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-text-secondary text-sm">
+                  {filter === "pending"
+                    ? "No pending recommendations."
+                    : "No recommendations found."}
+                </p>
+              </div>
+            ) : (
+              <RecommendationList recommendations={recommendations} />
+            )}
+          </>
+        )}
+
+        {activeTab === "sent" && (
+          <>
+            {sentRecommendations.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-text-secondary text-sm">
+                  You haven&apos;t sent any recommendations yet.
+                </p>
+              </div>
+            ) : (
+              <SentRecommendationList recommendations={sentRecommendations} />
+            )}
+          </>
         )}
       </main>
     </div>

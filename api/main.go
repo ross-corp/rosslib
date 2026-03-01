@@ -192,6 +192,7 @@ func main() {
 
 		// Recommendations
 		authed.POST("/me/recommendations", handlers.SendRecommendation(app))
+		authed.GET("/me/recommendations/sent", handlers.GetSentRecommendations(app))
 		authed.GET("/me/recommendations", handlers.GetRecommendations(app))
 		authed.PATCH("/me/recommendations/{recId}", handlers.UpdateRecommendation(app))
 

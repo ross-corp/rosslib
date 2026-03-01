@@ -88,7 +88,7 @@ webapp/src/app/
 ├── scan/page.tsx                   ISBN barcode scanner
 ├── library/compare/page.tsx        compare lists (set operations)
 ├── notifications/page.tsx          notification center
-├── recommendations/page.tsx       received book recommendations
+├── recommendations/page.tsx       book recommendations (Received / Sent tabs)
 ├── feedback/page.tsx              bug report & feature request form
 ├── admin/page.tsx                 admin panel (moderator only)
 ├── [username]/
@@ -163,6 +163,7 @@ webapp/src/app/
     ├── me/followed-authors/route.ts              ← GET followed authors list
     ├── me/notification-preferences/route.ts     ← GET, PUT notification prefs
     ├── me/recommendations/route.ts               ← GET, POST recommendations
+    ├── me/recommendations/sent/route.ts          ← GET sent recommendations
     ├── me/recommendations/[recId]/route.ts       ← PATCH update recommendation status
     ├── users/route.ts                             ← GET search users
     └── users/[username]/

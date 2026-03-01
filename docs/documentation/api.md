@@ -1955,6 +1955,33 @@ List received recommendations for the current user.
 
 Returns an array of recommendation objects, each including sender info (username, display_name, avatar_url) and book info (open_library_id, title, cover_url, authors).
 
+### `GET /me/recommendations/sent`  *(auth required)*
+
+List recommendations the current user has sent. Returns up to 50 results ordered by newest first.
+
+```json
+[
+  {
+    "id": "...",
+    "note": "You'll love this!",
+    "status": "pending",
+    "created_at": "2026-02-25T14:00:00Z",
+    "recipient": {
+      "user_id": "...",
+      "username": "bob",
+      "display_name": "Bob",
+      "avatar_url": "/api/files/users/..."
+    },
+    "book": {
+      "open_library_id": "OL82592W",
+      "title": "The Great Gatsby",
+      "cover_url": "https://...",
+      "authors": "F. Scott Fitzgerald"
+    }
+  }
+]
+```
+
 ### `PATCH /me/recommendations/:recId`  *(auth required)*
 
 Update a recommendation's status. Only the recipient can update.
