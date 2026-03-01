@@ -207,6 +207,9 @@ func main() {
 		admin.POST("/ghosts/seed", handlers.SeedGhosts(app))
 		admin.POST("/ghosts/simulate", handlers.SimulateGhosts(app))
 		admin.GET("/ghosts/status", handlers.GetGhostStatus(app))
+		admin.GET("/users", handlers.GetAdminUsers(app))
+		admin.PUT("/users/{userId}/moderator", handlers.SetModerator(app))
+		admin.PUT("/users/{userId}/author", handlers.SetAuthorKey(app))
 		admin.GET("/link-edits", handlers.GetPendingLinkEdits(app))
 		admin.PUT("/link-edits/{editId}", handlers.ReviewLinkEdit(app))
 
