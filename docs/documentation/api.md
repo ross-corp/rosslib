@@ -132,13 +132,14 @@ Searches both local catalog and Open Library concurrently. Local matches appear 
       "publish_year": 1925,
       "isbn": ["9780743273565"],
       "cover_url": "https://covers.openlibrary.org/b/id/8410459-M.jpg",
-      "edition_count": 120
+      "edition_count": 120,
+      "subjects": ["Fiction", "Classic Literature", "American Literature"]
     }
   ]
 }
 ```
 
-`authors`, `isbn`, and `cover_url` may be null.
+`authors`, `isbn`, `cover_url`, and `subjects` may be null. For local books, `subjects` is derived from the book's comma-separated subjects column (first 3). For Open Library results, `subjects` comes from the OL search response (first 3).
 
 ### `GET /books/popular`
 

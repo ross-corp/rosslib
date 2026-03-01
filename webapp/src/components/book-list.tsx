@@ -1,9 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import StarRating from "@/components/star-rating";
 import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import StatusPicker, { type StatusValue } from "@/components/shelf-picker";
+
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
 
 type BookResult = {
   key: string;
@@ -14,6 +19,7 @@ type BookResult = {
   average_rating: number | null;
   rating_count: number;
   already_read_count: number;
+  subjects: string[] | null;
 };
 
 export default function BookList({
@@ -27,6 +33,8 @@ export default function BookList({
   statusKeyId: string | null;
   bookStatusMap: Record<string, string> | null;
 }) {
+  const router = useRouter();
+
   if (books.length === 0) return null;
 
   return (
@@ -81,6 +89,24 @@ export default function BookList({
                     </span>
                   )}
                 </div>
+                {book.subjects && book.subjects.length > 0 && (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {book.subjects.slice(0, 3).map((subject) => (
+                      <span
+                        key={subject}
+                        role="link"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/genres/${slugify(subject)}`);
+                        }}
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-surface-2 text-text-secondary hover:bg-surface-3 cursor-pointer transition-colors"
+                      >
+                        {subject}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </Link>
             {statusValues && statusKeyId && (

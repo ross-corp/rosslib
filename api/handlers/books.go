@@ -71,6 +71,19 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 				alreadyReadCount = s.GetInt("reads_count")
 			}
 
+			var subjects []string
+			if s := b.GetString("subjects"); s != "" {
+				for _, part := range strings.Split(s, ",") {
+					part = strings.TrimSpace(part)
+					if part != "" {
+						subjects = append(subjects, part)
+						if len(subjects) >= 3 {
+							break
+						}
+					}
+				}
+			}
+
 			results = append(results, map[string]any{
 				"key":                olid,
 				"title":              b.GetString("title"),
@@ -81,6 +94,7 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 				"average_rating":    avgRating,
 				"rating_count":      ratingCount,
 				"already_read_count": alreadyReadCount,
+				"subjects":          subjects,
 			})
 		}
 
@@ -91,7 +105,7 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 			// If local results filled this page, push OL offset further to avoid overlap
 			olOffset = offset
 		}
-		olData, err := ol.get(fmt.Sprintf("/search.json?q=%s&limit=%d&offset=%d&fields=key,title,author_name,first_publish_year,isbn,cover_i,edition_count,numFound", url.QueryEscape(q), perPage, olOffset))
+		olData, err := ol.get(fmt.Sprintf("/search.json?q=%s&limit=%d&offset=%d&fields=key,title,author_name,first_publish_year,isbn,cover_i,edition_count,subject,numFound", url.QueryEscape(q), perPage, olOffset))
 		if err == nil {
 			if docs, ok := olData["docs"].([]any); ok {
 				for _, d := range docs {
@@ -128,6 +142,19 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 						pubYear = &y
 					}
 
+					// Extract subjects from OL search results (take first 3)
+					var olSubjects []string
+					if subjectList, ok := doc["subject"].([]any); ok {
+						for _, s := range subjectList {
+							if str, ok := s.(string); ok && str != "" {
+								olSubjects = append(olSubjects, str)
+								if len(olSubjects) >= 3 {
+									break
+								}
+							}
+						}
+					}
+
 					results = append(results, map[string]any{
 						"key":                key,
 						"title":              doc["title"],
@@ -138,6 +165,7 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 						"average_rating":    nil,
 						"rating_count":      0,
 						"already_read_count": 0,
+						"subjects":          olSubjects,
 					})
 				}
 			}
