@@ -8,8 +8,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## notifications & feed
 
-- [ ] Add notification deletion endpoint. Add `DELETE /me/notifications/{notifId}` to `api/main.go` (authed group) with a handler in `api/handlers/notifications.go` that finds the notification by ID, verifies `user = auth.Id`, and deletes it. Return 200 `{ "ok": true }` or 404. Add corresponding proxy route `webapp/src/app/api/me/notifications/[notifId]/route.ts` exporting DELETE. Add a dismiss/delete button (small X icon) on each notification card in `webapp/src/app/notifications/page.tsx`.
-
 ## profile & social
 
 - [ ] Add blocked users list page. Create `GET /me/blocks` endpoint — add route `authed.GET("/me/blocks", handlers.GetBlockedUsers(app))` in `api/main.go`. The handler in `api/handlers/blocks.go` should query `SELECT u.id, u.username, u.display_name, u.avatar FROM blocks b JOIN users u ON b.blocked = u.id WHERE b.blocker = :userId ORDER BY b.created DESC` and return the list with avatar URLs. Add proxy route `webapp/src/app/api/me/blocks/route.ts`. Create settings page `webapp/src/app/settings/blocked/page.tsx` with a list of blocked users, each with an "Unblock" button that calls `DELETE /api/users/:username/block`. Add "Blocked users" link to `SettingsNav` component in `webapp/src/components/settings-nav.tsx`.
