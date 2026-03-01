@@ -12,8 +12,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## search & browse
 
-- [ ] Add pagination to book search results. Currently `api/handlers/books.go` `SearchBooks` returns at most 20 results with no pagination. Add `page` query param (default 1). For local results, use `OFFSET = (page-1)*20`. For OL results, add `&offset=` to the OL search URL. On the frontend (`webapp/src/app/search/page.tsx`), add "Next page" / "Previous page" buttons below search results, passing `page` as a URL query param.
-
 - [ ] Add search within user's library. Add `GET /users/{username}/books/search?q=` endpoint — register in `api/main.go` under the optional-auth group. The handler in `api/handlers/userbooks.go` should query `user_books JOIN books WHERE user = :userId AND (b.title LIKE '%q%' OR b.authors LIKE '%q%')`, respecting privacy via `canViewProfile`. Return same format as `GetUserBooks`. On the frontend, add a search input above the book grid in `webapp/src/components/library-manager.tsx` that calls `GET /api/users/:username/books/search?q=` and filters the displayed books client-side or fetches from the API with debounce (400ms).
 
 ## book detail & discovery
