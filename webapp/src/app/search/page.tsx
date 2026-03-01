@@ -17,6 +17,7 @@ type BookResult = {
   rating_count: number;
   already_read_count: number;
   subjects: string[] | null;
+  link_count: number;
 };
 
 type BookSearchResponse = {

@@ -145,13 +145,14 @@ Searches both local catalog and Open Library concurrently. Local matches appear 
       "isbn": ["9780743273565"],
       "cover_url": "https://covers.openlibrary.org/b/id/8410459-M.jpg",
       "edition_count": 120,
-      "subjects": ["Fiction", "Classic Literature", "American Literature"]
+      "subjects": ["Fiction", "Classic Literature", "American Literature"],
+      "link_count": 3
     }
   ]
 }
 ```
 
-`authors`, `isbn`, `cover_url`, and `subjects` may be null. For local books, `subjects` is derived from the book's comma-separated subjects column (first 3). For Open Library results, `subjects` comes from the OL search response (first 3).
+`authors`, `isbn`, `cover_url`, and `subjects` may be null. `link_count` is the number of community links (related books) for local books; 0 for Open Library-only results. For local books, `subjects` is derived from the book's comma-separated subjects column (first 3). For Open Library results, `subjects` comes from the OL search response (first 3).
 
 ### `GET /books/popular`
 

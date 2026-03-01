@@ -20,6 +20,7 @@ type BookResult = {
   rating_count: number;
   already_read_count: number;
   subjects: string[] | null;
+  link_count?: number;
 };
 
 export default function BookList({
@@ -86,6 +87,12 @@ export default function BookList({
                   {book.already_read_count > 0 && (
                     <span className="text-xs text-text-primary">
                       {book.already_read_count.toLocaleString()} reads
+                    </span>
+                  )}
+                  {book.link_count != null && book.link_count > 0 && (
+                    <span className="text-xs text-text-secondary" title={`${book.link_count} community link${book.link_count === 1 ? "" : "s"}`}>
+                      <svg className="inline-block w-3 h-3 mr-0.5 -mt-px" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M6.354 5.5H4a3 3 0 0 0 0 6h3a3 3 0 0 0 2.83-4H9.4a2 2 0 0 1-1.4 3H5a2 2 0 1 1 0-4h1.354zm3.292 5H12a3 3 0 1 0 0-6H9a3 3 0 0 0-2.83 4h.429A2 2 0 0 1 8 5.5h3a2 2 0 1 1 0 4H9.646z"/></svg>
+                      {book.link_count}
                     </span>
                   )}
                 </div>

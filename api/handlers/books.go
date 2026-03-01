@@ -56,6 +56,29 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 			}
 		}
 
+		// Batch-fetch link counts for all local books
+		linkCountMap := map[string]int{} // bookId -> count
+		if len(localBooks) > 0 {
+			type linkCountRow struct {
+				BookID string `db:"from_book"`
+				Count  int    `db:"count"`
+			}
+			var linkCounts []linkCountRow
+			var bookIDs []any
+			for _, b := range localBooks {
+				bookIDs = append(bookIDs, b.Id)
+			}
+			_ = app.DB().NewQuery(`
+				SELECT from_book, COUNT(*) as count
+				FROM book_links
+				WHERE from_book IN {:ids} AND (deleted_at IS NULL OR deleted_at = '')
+				GROUP BY from_book
+			`).Bind(map[string]any{"ids": bookIDs}).All(&linkCounts)
+			for _, lc := range linkCounts {
+				linkCountMap[lc.BookID] = lc.Count
+			}
+		}
+
 		for _, b := range localBooks {
 			olid := b.GetString("open_library_id")
 			seenOLIDs[olid] = true
@@ -95,6 +118,7 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 				"rating_count":      ratingCount,
 				"already_read_count": alreadyReadCount,
 				"subjects":          subjects,
+				"link_count":        linkCountMap[b.Id],
 			})
 		}
 
@@ -166,6 +190,7 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 						"rating_count":      0,
 						"already_read_count": 0,
 						"subjects":          olSubjects,
+						"link_count":        0,
 					})
 				}
 			}
