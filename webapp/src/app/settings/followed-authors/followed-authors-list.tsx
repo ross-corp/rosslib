@@ -10,11 +10,15 @@ type FollowedAuthor = {
 
 export default function FollowedAuthorsList({
   initialAuthors,
+  initialTotal,
 }: {
   initialAuthors: FollowedAuthor[];
+  initialTotal: number;
 }) {
   const [authors, setAuthors] = useState(initialAuthors);
+  const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const [loadingMore, setLoadingMore] = useState(false);
 
   async function unfollow(authorKey: string) {
     setLoading((prev) => ({ ...prev, [authorKey]: true }));
@@ -23,8 +27,22 @@ export default function FollowedAuthorsList({
     });
     if (res.ok) {
       setAuthors((prev) => prev.filter((a) => a.author_key !== authorKey));
+      setTotal((prev) => prev - 1);
     }
     setLoading((prev) => ({ ...prev, [authorKey]: false }));
+  }
+
+  async function loadMore() {
+    setLoadingMore(true);
+    const res = await fetch(
+      `/api/me/followed-authors?limit=50&offset=${authors.length}`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      setAuthors((prev) => [...prev, ...data.authors]);
+      setTotal(data.total);
+    }
+    setLoadingMore(false);
   }
 
   if (authors.length === 0) {
@@ -69,6 +87,17 @@ export default function FollowedAuthorsList({
           </button>
         </div>
       ))}
+      {authors.length < total && (
+        <div className="pt-4 text-center">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="text-sm px-4 py-2 rounded border border-border text-text-primary hover:border-border hover:text-text-primary transition-colors disabled:opacity-50"
+          >
+            {loadingMore ? "Loading..." : "Load more"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -684,17 +684,17 @@ Check if you follow an author. Returns `{ "following": true/false }`.
 
 ### `GET /me/followed-authors`  *(auth required)*
 
-List authors you follow.
+List authors you follow. Supports pagination via `limit` (default 50, max 50) and `offset` (default 0) query params.
 
 ```json
 {
   "authors": [
     {
       "author_key": "OL26320A",
-      "author_name": "J.R.R. Tolkien",
-      "created_at": "2026-02-25T14:00:00Z"
+      "author_name": "J.R.R. Tolkien"
     }
-  ]
+  ],
+  "total": 1
 }
 ```
 

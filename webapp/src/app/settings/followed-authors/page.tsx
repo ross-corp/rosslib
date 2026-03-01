@@ -8,12 +8,17 @@ type FollowedAuthor = {
   author_name: string;
 };
 
-async function fetchFollowedAuthors(token: string): Promise<FollowedAuthor[]> {
-  const res = await fetch(`${process.env.API_URL}/me/followed-authors`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
-  if (!res.ok) return [];
+async function fetchFollowedAuthors(
+  token: string
+): Promise<{ authors: FollowedAuthor[]; total: number }> {
+  const res = await fetch(
+    `${process.env.API_URL}/me/followed-authors?limit=50&offset=0`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }
+  );
+  if (!res.ok) return { authors: [], total: 0 };
   return res.json();
 }
 
@@ -21,7 +26,7 @@ export default async function FollowedAuthorsPage() {
   const [user, token] = await Promise.all([getUser(), getToken()]);
   if (!user || !token) redirect("/login");
 
-  const authors = await fetchFollowedAuthors(token);
+  const { authors, total } = await fetchFollowedAuthors(token);
 
   return (
     <div className="min-h-screen">
@@ -43,7 +48,7 @@ export default async function FollowedAuthorsPage() {
           Authors you follow will notify you when they have new publications.
         </p>
 
-        <FollowedAuthorsList initialAuthors={authors} />
+        <FollowedAuthorsList initialAuthors={authors} initialTotal={total} />
       </main>
     </div>
   );

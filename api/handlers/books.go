@@ -1145,25 +1145,37 @@ func UnfollowAuthor(app core.App) func(e *core.RequestEvent) error {
 func GetFollowedAuthors(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		user := e.Auth
+
+		limit, _ := strconv.Atoi(e.Request.URL.Query().Get("limit"))
+		if limit <= 0 || limit > 50 {
+			limit = 50
+		}
+		offset, _ := strconv.Atoi(e.Request.URL.Query().Get("offset"))
+		if offset < 0 {
+			offset = 0
+		}
+
+		var total int
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) FROM author_follows WHERE "user" = {:user}
+		`).Bind(map[string]any{"user": user.Id}).Row(&total)
+
 		records, err := app.FindRecordsByFilter("author_follows",
-			"user = {:user}", "-created", 100, 0,
+			"user = {:user}", "-created", limit, offset,
 			map[string]any{"user": user.Id},
 		)
 		if err != nil {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{"authors": []any{}, "total": 0})
 		}
 
-		var results []map[string]any
-		for _, r := range records {
-			results = append(results, map[string]any{
+		results := make([]map[string]any, len(records))
+		for i, r := range records {
+			results[i] = map[string]any{
 				"author_key":  r.GetString("author_key"),
 				"author_name": r.GetString("author_name"),
-			})
+			}
 		}
-		if results == nil {
-			results = []map[string]any{}
-		}
-		return e.JSON(http.StatusOK, results)
+		return e.JSON(http.StatusOK, map[string]any{"authors": results, "total": total})
 	}
 }
 
