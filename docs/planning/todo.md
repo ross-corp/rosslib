@@ -2,24 +2,83 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination. Items are ordered by priority — nephewbot picks the top unchecked item.
 
+## BUGS
+
+- [ ] Admin user management routes missing from `api/main.go`. The API docs (`docs/documentation/api.md`) document `GET /admin/users`, `PUT /admin/users/:userId/moderator`, and `PUT /admin/users/:userId/author`, and the frontend has `AdminUserList` component and proxy routes (`webapp/src/app/api/admin/users/`), but the handler functions don't exist in `api/handlers/` and the routes aren't registered in `api/main.go`. Create the three handler functions in a new `api/handlers/admin.go` file — `GetAdminUsers` (paginated user list with search by username/display_name/email, includes `is_moderator` and `author_key`), `SetModerator` (set `is_moderator` bool), and `SetAuthorKey` (set `author_key` string). Register them under the `admin` route group in `main.go`: `admin.GET("/users", ...)`, `admin.PUT("/users/{userId}/moderator", ...)`, `admin.PUT("/users/{userId}/author", ...)`.
+
+- [ ] Author follow status check endpoint missing. The API docs document `GET /authors/{authorKey}/follow` returning `{ "following": true/false }`, and the frontend `AuthorFollowButton` component likely calls it, but the route is not registered in `api/main.go`. Add `authed.GET("/authors/{authorKey}/follow", handlers.CheckAuthorFollow(app))` to main.go. The handler should query `author_follows` for `user = auth.Id AND author_key = pathParam` and return `{ "following": true/false }`.
+
+- [ ] Book follow status check endpoint missing. The API docs document `GET /books/{workId}/follow` returning `{ "following": true/false }`, but the route is not registered in `api/main.go`. Add `authed.GET("/books/{workId}/follow", handlers.CheckBookFollow(app))` to main.go. The handler should look up the book by `open_library_id`, then query `book_follows` for `user = auth.Id AND book = bookId` and return `{ "following": true/false }`.
+
+- [ ] `ShouldNotify` function in `api/handlers/notification_preferences.go` is defined but never called. The notification fanout code in `threads.go` (thread comments, @mentions), `books.go` (book follow notifications), `reviewlikes.go` (review liked), and `recommendations.go` (book recommendation) should call `ShouldNotify(app, recipientID, notifType)` before creating notification records. Check each notification creation site and wrap it: only insert into the `notifications` collection if `ShouldNotify` returns true. Notification types to check: `book_new_thread`, `book_new_link`, `book_new_review`, `review_liked`, `thread_mention`, `book_recommendation`.
+
+- [ ] `GetBookReviews` in `api/handlers/books.go` has an N+1 query: for each review, it runs a separate `FindRecordsByFilter` on the `follows` table to check `is_followed` (line ~715). Refactor to batch this — after fetching all reviews, collect all reviewer user IDs, then run a single query `SELECT followee FROM follows WHERE follower = :viewer AND followee IN (:ids) AND status = 'active'` and build a set of followed IDs to check against in the loop.
+
 ## stats & data
+
+- [ ] Add total pages read stat to `GET /users/{username}/stats`. In `api/handlers/users.go` `GetUserStats`, add a query that sums `b.page_count` for all finished books (join `user_books` → `books` → `book_tag_values` where status = 'finished' and `b.page_count IS NOT NULL`). Return as `total_pages_read` in the response. On the frontend stats page (`webapp/src/app/[username]/stats/page.tsx`), display it as a stat card alongside existing total_books and total_reviews.
+
+- [ ] Add "currently reading count" to `GET /users/{username}` profile response. In `api/handlers/users.go` `GetProfile`, add a query counting books with status tag slug = `currently-reading` for the user (same pattern as the `booksRead` query but filtering for `currently-reading` instead of `finished`). Return as `currently_reading_count`. Display on the profile page (`webapp/src/app/[username]/page.tsx`) alongside the existing stats row.
 
 ## notifications & feed
 
+- [ ] Add pagination to `GET /users/{username}/activity`. Currently `api/handlers/activity.go` `GetUserActivity` hard-limits to 30 results with no pagination. Add cursor-based pagination matching the pattern used in `GetFeed` — accept a `cursor` query param (RFC3339Nano timestamp), add `AND a.created < :cursor` to the WHERE clause, and return `next_cursor` from the last result's timestamp. On the frontend (`webapp/src/app/[username]/page.tsx`), add a "Load more" button that passes the cursor.
+
+- [ ] Add notification deletion endpoint. Add `DELETE /me/notifications/{notifId}` to `api/main.go` (authed group) with a handler in `api/handlers/notifications.go` that finds the notification by ID, verifies `user = auth.Id`, and deletes it. Return 200 `{ "ok": true }` or 404. Add corresponding proxy route `webapp/src/app/api/me/notifications/[notifId]/route.ts` exporting DELETE. Add a dismiss/delete button (small X icon) on each notification card in `webapp/src/app/notifications/page.tsx`.
+
 ## profile & social
+
+- [ ] Add blocked users list page. Create `GET /me/blocks` endpoint — add route `authed.GET("/me/blocks", handlers.GetBlockedUsers(app))` in `api/main.go`. The handler in `api/handlers/blocks.go` should query `SELECT u.id, u.username, u.display_name, u.avatar FROM blocks b JOIN users u ON b.blocked = u.id WHERE b.blocker = :userId ORDER BY b.created DESC` and return the list with avatar URLs. Add proxy route `webapp/src/app/api/me/blocks/route.ts`. Create settings page `webapp/src/app/settings/blocked/page.tsx` with a list of blocked users, each with an "Unblock" button that calls `DELETE /api/users/:username/block`. Add "Blocked users" link to `SettingsNav` component in `webapp/src/components/settings-nav.tsx`.
+
+- [ ] Add followed authors list page at `/settings/followed-authors`. Create `webapp/src/app/settings/followed-authors/page.tsx` — server component that fetches `GET ${API_URL}/me/followed-authors` with the auth token. Display each author as a card with name and an "Unfollow" button calling `DELETE /api/authors/:authorKey/follow`. Add "Followed authors" link to `SettingsNav` in `webapp/src/components/settings-nav.tsx`.
 
 ## search & browse
 
+- [ ] Add pagination to book search results. Currently `api/handlers/books.go` `SearchBooks` returns at most 20 results with no pagination. Add `page` query param (default 1). For local results, use `OFFSET = (page-1)*20`. For OL results, add `&offset=` to the OL search URL. On the frontend (`webapp/src/app/search/page.tsx`), add "Next page" / "Previous page" buttons below search results, passing `page` as a URL query param.
+
+- [ ] Add search within user's library. Add `GET /users/{username}/books/search?q=` endpoint — register in `api/main.go` under the optional-auth group. The handler in `api/handlers/userbooks.go` should query `user_books JOIN books WHERE user = :userId AND (b.title LIKE '%q%' OR b.authors LIKE '%q%')`, respecting privacy via `canViewProfile`. Return same format as `GetUserBooks`. On the frontend, add a search input above the book grid in `webapp/src/components/library-manager.tsx` that calls `GET /api/users/:username/books/search?q=` and filters the displayed books client-side or fetches from the API with debounce (400ms).
+
 ## book detail & discovery
 
+- [ ] Show series navigation on book detail page. On `webapp/src/app/books/[workId]/page.tsx`, when the book has series memberships (the `series` array from `GET /books/:workId`), display a horizontal row of other books in the same series below the series badge. Fetch the series detail from `GET /api/series/:seriesId` (already exists) and render up to 6 book covers with title, position number, and a link to each book's detail page. Highlight the current book. Only show for the first series if the book belongs to multiple.
+
+- [ ] Add description to series pages. Add `description` text field to the `series` PocketBase collection in a new migration file `api/migrations/`. Update `GET /series/{seriesId}` handler in `api/handlers/series.go` to return the `description` field. Add `PUT /series/{seriesId}` endpoint (auth required) to update the description — register in `main.go` authed group. On the series page (`webapp/src/app/series/[seriesId]/page.tsx`), display the description below the series name. Add an inline edit button for logged-in users that reveals a textarea to update the description via `PUT /api/series/:seriesId`.
+
+- [ ] Add genre chips to book search results. In `api/handlers/books.go` `SearchBooks`, for local books that have a `subjects` column, include a `subjects` array (split comma-separated string, take first 3) in each result object. On the frontend search results (`webapp/src/app/search/page.tsx`), render up to 3 small genre/subject chips below each book result's title and author. Each chip links to `/genres/:slug` (slugify the subject name).
 
 ## settings & account
 
+- [ ] Add "sent recommendations" tab to recommendations page. Add `GET /me/recommendations/sent` endpoint — register `authed.GET("/me/recommendations/sent", handlers.GetSentRecommendations(app))` in `api/main.go`. Handler in `api/handlers/recommendations.go` queries `SELECT r.*, u.username, u.display_name, u.avatar, b.title, b.open_library_id, b.cover_url FROM recommendations r JOIN users u ON r.recipient = u.id JOIN books b ON r.book = b.id WHERE r.sender = :userId ORDER BY r.created DESC`. Add proxy route `webapp/src/app/api/me/recommendations/sent/route.ts`. On `webapp/src/app/recommendations/page.tsx`, add tabs "Received" / "Sent" — the Sent tab shows recommendations the user has sent, with recipient name, book cover, note, and status badge.
+
+- [ ] Add account deletion endpoint. Add `DELETE /me/account` (auth required) to `api/main.go` with handler in `api/handlers/userdata.go`. The handler should first call the existing `DeleteAllData` logic to remove all user-owned data, then delete the user record itself from the `users` collection. On the settings page danger zone (`webapp/src/components/delete-data-form.tsx`), add a second button "Delete my account permanently" below the existing "Delete all my data" button, with a confirmation that requires typing "delete my account". This calls `DELETE /api/me/account` and clears the auth cookie, redirecting to the home page.
+
 ## UX polish
+
+- [ ] Add `loading.tsx` skeleton files for the four highest-traffic pages. Create `webapp/src/app/search/loading.tsx` (grid of 8 skeleton cards with pulsing placeholder for cover, title line, author line), `webapp/src/app/books/[workId]/loading.tsx` (skeleton with cover placeholder, title bar, description lines, review placeholders), `webapp/src/app/[username]/loading.tsx` (avatar circle, name bar, stats row, book grid skeletons), and `webapp/src/app/notifications/loading.tsx` (list of 5 notification row skeletons). Each skeleton should use Tailwind's `animate-pulse` with `bg-surface-2 rounded` placeholder divs matching the approximate layout of the real page.
+
+- [ ] Add `not-found.tsx` for book and user pages. Create `webapp/src/app/books/[workId]/not-found.tsx` — display "Book not found" with a search link. Create `webapp/src/app/[username]/not-found.tsx` — display "User not found" with a link to `/users`. In the corresponding `page.tsx` files, call `notFound()` (from `next/navigation`) when the API returns 404 instead of showing a generic error.
+
+- [ ] Add keyboard shortcut hint that works cross-platform. In `webapp/src/components/nav.tsx`, the search bar shows "⌘K" which is Mac-only. Detect the user's OS via `navigator.userAgent` or `navigator.platform` in a client component and show "Ctrl+K" on Windows/Linux and "⌘K" on Mac. Extract this into a small `KeyboardShortcutHint` client component that accepts a `keys` prop like `{ mac: "⌘K", other: "Ctrl+K" }`.
+
+- [ ] Truncate long author bios on author pages. In `webapp/src/app/authors/[authorKey]/page.tsx` (or the component rendering the bio), if the bio text exceeds 500 characters, truncate it and show a "Read more" toggle button. Use a client component with `useState` to toggle between truncated (first 500 chars + "...") and full text. Apply `prose` class from Tailwind typography plugin for better bio formatting.
+
+- [ ] Add responsive hamburger menu for mobile navigation. In `webapp/src/components/nav.tsx`, wrap the desktop nav links in a container that hides below `md:` breakpoint. Add a hamburger button (`☰`) visible only below `md:` that toggles a full-width dropdown panel with all nav links stacked vertically. Use a client component with `useState` for the open/close toggle. Close the menu when a link is clicked or when clicking outside.
 
 ## blocked
 
-## BUGS
+## API gaps
+
+- [ ] Add `GET /books/{workId}/similar-threads?title=` endpoint. The API docs document this for finding similar threads before creating a new one, and the completed.md says it was implemented with `pg_trgm`, but the route is not registered in `api/main.go` and no handler function exists. Create `SimilarThreads` handler in `api/handlers/threads.go` that queries `SELECT id, title, username, comment_count, similarity(title, :title) as sim FROM threads WHERE book = :book AND deleted_at IS NULL AND similarity(title, :title) > 0.3 ORDER BY sim DESC LIMIT 5`. Register as `se.Router.GET("/books/{workId}/similar-threads", handlers.SimilarThreads(app))` in main.go (public route).
+
+- [ ] Add `GET /threads/{threadId}/similar` endpoint. Similar to the above but for an existing thread — finds threads on the same book with similar titles. Create handler in `api/handlers/threads.go` that loads the thread, gets its book_id and title, then queries other threads on the same book with `similarity(title, :title) > 0.3`. Register as `se.Router.GET("/threads/{threadId}/similar", handlers.GetSimilarThreads(app))` in main.go (public route). On the thread detail page component, add a "Similar Discussions" section below the comments.
+
+- [ ] Add `GET /me/books/{olId}/editions` convenience endpoint. Currently to select an edition, the frontend must call `GET /books/{workId}/editions` (which proxies to Open Library) and then `PATCH /me/books/{olId}` to save the selection. Add a new endpoint that returns the user's currently selected edition alongside the full editions list. Register `authed.GET("/me/books/{olId}/editions", handlers.GetMyBookEditions(app))` in main.go. The handler should return `{ "selected_edition_key": "...", "selected_edition_cover_url": "...", "editions": [...] }` by combining the user_books selection with the OL editions response.
+
+## series improvements
+
+- [ ] Add series deletion endpoint for empty series. Add `DELETE /series/{seriesId}` (auth required) to `api/main.go`. The handler in `api/handlers/series.go` should check that the series has zero `book_series` links (no books), then delete it. Return 400 if the series still has books, 200 on success. This prevents orphaned series records from accumulating.
+
+- [ ] Add series edit endpoint. Add `PATCH /series/{seriesId}` (auth required) to `api/main.go`. The handler in `api/handlers/series.go` should accept `{ "name": "...", "description": "..." }` and update the series record. Only the `name` and `description` fields should be updatable. Return 200 with the updated series. On the series page (`webapp/src/app/series/[seriesId]/page.tsx`), add an edit button for logged-in users that opens an inline form to rename the series or edit its description.
 
 ## import improvements
 
