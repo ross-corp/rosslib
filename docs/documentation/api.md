@@ -789,6 +789,21 @@ Follow a user. Status is `active` immediately (private account approval not yet 
 
 Unfollow a user.
 
+### `GET /me/blocks`  *(auth required)*
+
+List all users the current user has blocked, ordered by most recently blocked first.
+
+```json
+[
+  {
+    "id": "user_id",
+    "username": "blockeduser",
+    "display_name": "Blocked User",
+    "avatar_url": "/api/files/..."
+  }
+]
+```
+
 ### `POST /users/:username/block`  *(auth required)*
 
 Block a user. Also removes any existing follow relationship in both directions. Returns `{ "blocked": true }`.

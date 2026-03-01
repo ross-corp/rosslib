@@ -115,6 +115,55 @@ func UnblockUser(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// GetBlockedUsers handles GET /me/blocks
+func GetBlockedUsers(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+
+		blocks, err := app.FindRecordsByFilter("blocks",
+			"blocker = {:userId}",
+			"-created", 100, 0,
+			map[string]any{"userId": user.Id},
+		)
+		if err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to fetch blocks"})
+		}
+
+		type blockedUser struct {
+			ID          string  `json:"id"`
+			Username    string  `json:"username"`
+			DisplayName *string `json:"display_name"`
+			AvatarURL   *string `json:"avatar_url"`
+		}
+
+		result := make([]blockedUser, 0, len(blocks))
+		for _, b := range blocks {
+			blockedID := b.GetString("blocked")
+			u, err := app.FindRecordById("users", blockedID)
+			if err != nil {
+				continue
+			}
+			bu := blockedUser{
+				ID:       u.Id,
+				Username: u.GetString("username"),
+			}
+			if dn := u.GetString("display_name"); dn != "" {
+				bu.DisplayName = &dn
+			}
+			if avatar := u.GetString("avatar"); avatar != "" {
+				avatarURL := "/api/files/" + u.Collection().Id + "/" + u.Id + "/" + avatar
+				bu.AvatarURL = &avatarURL
+			}
+			result = append(result, bu)
+		}
+
+		return e.JSON(http.StatusOK, result)
+	}
+}
+
 // CheckBlock handles GET /users/{username}/block
 func CheckBlock(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {

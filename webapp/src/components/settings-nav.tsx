@@ -8,6 +8,7 @@ const navItems = [
   { label: "Labels", href: "/settings/tags" },
   { label: "Import", href: "/settings/import" },
   { label: "Export", href: "/settings/export" },
+  { label: "Blocked users", href: "/settings/blocked" },
   { label: "Ghost Activity", href: "/settings/ghost-activity" },
 ];
 

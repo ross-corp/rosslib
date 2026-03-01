@@ -123,6 +123,7 @@ func main() {
 		authed.DELETE("/users/{username}/follow", handlers.UnfollowUser(app))
 
 		// Block
+		authed.GET("/me/blocks", handlers.GetBlockedUsers(app))
 		authed.POST("/users/{username}/block", handlers.BlockUser(app))
 		authed.DELETE("/users/{username}/block", handlers.UnblockUser(app))
 		authed.GET("/users/{username}/block", handlers.CheckBlock(app))
