@@ -10,6 +10,7 @@ type StatusBook = {
   cover_url: string | null;
   rating: number | null;
   added_at: string;
+  series_position?: number | null;
 };
 
 type StatusGroup = {
@@ -97,19 +98,26 @@ export default function ShelfBrowser({
                   href={`/books/${book.open_library_id}`}
                   className="group"
                 >
-                  {book.cover_url ? (
-                    <img
-                      src={book.cover_url}
-                      alt={book.title}
-                      className="w-full aspect-[2/3] object-cover rounded shadow-sm group-hover:shadow-md transition-shadow"
-                    />
-                  ) : (
-                    <div className="w-full aspect-[2/3] rounded bg-surface-2 flex items-center justify-center">
-                      <span className="text-[10px] text-text-tertiary text-center px-1 line-clamp-3">
-                        {book.title}
+                  <div className="relative">
+                    {book.cover_url ? (
+                      <img
+                        src={book.cover_url}
+                        alt={book.title}
+                        className="w-full aspect-[2/3] object-cover rounded shadow-sm group-hover:shadow-md transition-shadow"
+                      />
+                    ) : (
+                      <div className="w-full aspect-[2/3] rounded bg-surface-2 flex items-center justify-center">
+                        <span className="text-[10px] text-text-tertiary text-center px-1 line-clamp-3">
+                          {book.title}
+                        </span>
+                      </div>
+                    )}
+                    {book.series_position != null && (
+                      <span className="absolute bottom-1 left-1 bg-surface-0/80 backdrop-blur-sm text-[10px] font-mono font-medium text-text-secondary border border-border rounded px-1 py-0.5 leading-none">
+                        #{book.series_position}
                       </span>
-                    </div>
-                  )}
+                    )}
+                  </div>
                   <p className="mt-1 text-xs text-text-secondary truncate group-hover:text-text-primary">
                     {book.title}
                   </p>

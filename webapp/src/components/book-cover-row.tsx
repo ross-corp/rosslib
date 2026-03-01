@@ -13,6 +13,7 @@ type Book = {
   progress_percent?: number | null;
   page_count?: number | null;
   device_total_pages?: number | null;
+  series_position?: number | null;
 };
 
 const sizeClasses = {
@@ -59,6 +60,7 @@ export default function BookCoverRow({
           <div key={book.book_id} className="shrink-0 group relative">
             <Link
               href={`/books/${book.open_library_id}`}
+              className="relative block"
             >
               {book.cover_url ? (
                 <img
@@ -71,6 +73,11 @@ export default function BookCoverRow({
                   title={book.title}
                   className={sizeClasses[size]}
                 />
+              )}
+              {book.series_position != null && (
+                <span className="absolute bottom-1 left-1 bg-surface-0/80 backdrop-blur-sm text-[10px] font-mono font-medium text-text-secondary border border-border rounded px-1 py-0.5 leading-none">
+                  #{book.series_position}
+                </span>
               )}
               {pct != null && (
                 <div className="mt-1">

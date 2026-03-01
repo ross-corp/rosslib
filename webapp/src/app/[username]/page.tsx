@@ -23,6 +23,7 @@ type StatusBook = {
   progress_pages?: number | null;
   progress_percent?: number | null;
   page_count?: number | null;
+  series_position?: number | null;
 };
 
 type StatusGroup = {
