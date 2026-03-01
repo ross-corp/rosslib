@@ -6,8 +6,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## stats & data
 
-- [ ] Add `total_pages_read` to the user profile stats card. The `GET /users/:username/stats` endpoint already returns `total_pages_read` (sum of `page_count` across finished books), but the profile page at `webapp/src/app/[username]/page.tsx` doesn't display it. In the stats row (where `books_read`, `reviews`, `followers_count` are shown), add a "Pages read" stat that formats the number with commas (e.g. "14,320 pages read"). Only show it when the value is greater than 0.
-
 - [ ] Add `books_by_month` chart to the user stats page. The `GET /users/:username/stats` endpoint returns `books_by_month` (array of `{year, month, count}` for the current year), but the stats page at `webapp/src/app/[username]/stats/page.tsx` doesn't render it. Add a horizontal bar chart or grid below the existing stats showing each month of the current year with the count of books finished. Use colored bars proportional to the max month count. Label months as "Jan", "Feb", etc.
 
 ## notifications & feed
