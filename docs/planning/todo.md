@@ -6,13 +6,7 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## stats & data
 
-- [ ] Add `books_by_month` chart to the user stats page. The `GET /users/:username/stats` endpoint returns `books_by_month` (array of `{year, month, count}` for the current year), but the stats page at `webapp/src/app/[username]/stats/page.tsx` doesn't render it. Add a horizontal bar chart or grid below the existing stats showing each month of the current year with the count of books finished. Use colored bars proportional to the max month count. Label months as "Jan", "Feb", etc.
-
 ## notifications & feed
-
-- [ ] Add delete button to individual notifications. The `DELETE /me/notifications/:notifId` API endpoint exists and is registered in `api/main.go`, and there's a webapp proxy route at `webapp/src/app/api/me/notifications/[notifId]/route.ts`. But the notifications page at `webapp/src/app/notifications/page.tsx` only shows a "Mark all read" button and per-notification "mark read" — there's no way to delete individual notifications. Add a small trash icon button (or "×" dismiss) to each notification item that calls `DELETE /api/me/notifications/:notifId` and removes it from the list optimistically.
-
-- [ ] Show notification count badge on the settings nav link for pending follow requests. In `webapp/src/components/settings-nav.tsx`, the "Follow requests" pill link doesn't indicate how many pending requests exist. Fetch `GET /api/me/follow-requests` on mount and show a numeric badge (e.g. red circle with count) next to the "Follow requests" pill when the count is > 0. This helps users notice pending requests without clicking into the page.
 
 ## profile & social
 
