@@ -12,8 +12,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## search & browse
 
-- [ ] Add sort options to genre detail page. The genre detail page at `webapp/src/app/genres/[slug]/page.tsx` shows books in a genre but has no sort controls, while the shelf detail page at `webapp/src/app/[username]/shelves/[slug]/page.tsx` already supports sorting (date_added, title, author, rating). Add a sort dropdown to the genre page that passes a `sort` query parameter to `GET /api/genres/:slug/books`. Supported values: `title` (A-Z), `rating` (highest first), `year` (newest first). Default to the current behavior (no explicit sort). The API handler in `api/handlers/books.go` (`GenreBooksHandler` or equivalent) needs to accept and apply the `sort` query param.
-
 - [ ] Add pagination to followed books settings page. In `webapp/src/app/settings/followed-books/page.tsx`, all followed books are fetched at once from `GET /me/followed-books` with no pagination. If a user follows many books, this could be slow. Add a "Load more" button that fetches the next page. Update `GET /me/followed-books` in `api/handlers/books.go` to accept `limit` (default 50) and `offset` query params, and return `{ books, total }` so the frontend knows if there are more.
 
 - [ ] Add pagination to followed authors settings page. In `webapp/src/app/settings/followed-authors/page.tsx`, all followed authors are fetched at once from `GET /me/followed-authors` with no pagination. Same fix as followed books: update `GET /me/followed-authors` in `api/handlers/books.go` to accept `limit` (default 50) and `offset` query params, return `{ authors, total }`. Frontend adds "Load more" button.
