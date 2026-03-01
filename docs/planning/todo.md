@@ -12,8 +12,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## search & browse
 
-- [ ] Add pagination to followed books settings page. In `webapp/src/app/settings/followed-books/page.tsx`, all followed books are fetched at once from `GET /me/followed-books` with no pagination. If a user follows many books, this could be slow. Add a "Load more" button that fetches the next page. Update `GET /me/followed-books` in `api/handlers/books.go` to accept `limit` (default 50) and `offset` query params, and return `{ books, total }` so the frontend knows if there are more.
-
 - [ ] Add pagination to followed authors settings page. In `webapp/src/app/settings/followed-authors/page.tsx`, all followed authors are fetched at once from `GET /me/followed-authors` with no pagination. Same fix as followed books: update `GET /me/followed-authors` in `api/handlers/books.go` to accept `limit` (default 50) and `offset` query params, return `{ authors, total }`. Frontend adds "Load more" button.
 
 ## book detail & discovery
