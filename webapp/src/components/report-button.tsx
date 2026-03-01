@@ -18,8 +18,9 @@ export default function ReportButton({ contentType, contentId }: Props) {
         onClick={() => setShowModal(true)}
         className="px-1.5 py-1 rounded text-text-primary hover:text-red-500 hover:bg-red-50 transition-colors"
         title={`Report this ${contentType}`}
+        aria-label={`Report this ${contentType}`}
       >
-        <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <svg aria-hidden="true" viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
           <path d="M2 1v10M2 1h7l-2 3 2 3H2" />
         </svg>
       </button>
