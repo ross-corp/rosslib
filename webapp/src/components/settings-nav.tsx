@@ -9,6 +9,7 @@ const navItems = [
   { label: "Import", href: "/settings/import" },
   { label: "Export", href: "/settings/export" },
   { label: "Blocked users", href: "/settings/blocked" },
+  { label: "Followed authors", href: "/settings/followed-authors" },
   { label: "Ghost Activity", href: "/settings/ghost-activity" },
 ];
 

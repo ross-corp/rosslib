@@ -83,6 +83,7 @@ webapp/src/app/
 │   ├── ghost-activity/page.tsx     ghost user controls
 │   ├── follow-requests/page.tsx    pending follow requests
 │   ├── followed-books/page.tsx     manage followed books
+│   ├── followed-authors/page.tsx   manage followed authors
 │   └── blocked/page.tsx            manage blocked users
 ├── scan/page.tsx                   ISBN barcode scanner
 ├── library/compare/page.tsx        compare lists (set operations)
@@ -159,6 +160,7 @@ webapp/src/app/
     ├── me/notifications/read-all/route.ts         ← POST mark all read
     ├── me/notifications/[notifId]/route.ts         ← DELETE delete notification
     ├── me/notifications/[notifId]/read/route.ts   ← POST mark one read
+    ├── me/followed-authors/route.ts              ← GET followed authors list
     ├── me/notification-preferences/route.ts     ← GET, PUT notification prefs
     ├── me/recommendations/route.ts               ← GET, POST recommendations
     ├── me/recommendations/[recId]/route.ts       ← PATCH update recommendation status
