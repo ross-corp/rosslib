@@ -8,8 +8,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## notifications & feed
 
-- [ ] Add pagination to `GET /users/{username}/activity`. Currently `api/handlers/activity.go` `GetUserActivity` hard-limits to 30 results with no pagination. Add cursor-based pagination matching the pattern used in `GetFeed` — accept a `cursor` query param (RFC3339Nano timestamp), add `AND a.created < :cursor` to the WHERE clause, and return `next_cursor` from the last result's timestamp. On the frontend (`webapp/src/app/[username]/page.tsx`), add a "Load more" button that passes the cursor.
-
 - [ ] Add notification deletion endpoint. Add `DELETE /me/notifications/{notifId}` to `api/main.go` (authed group) with a handler in `api/handlers/notifications.go` that finds the notification by ID, verifies `user = auth.Id`, and deletes it. Return 200 `{ "ok": true }` or 404. Add corresponding proxy route `webapp/src/app/api/me/notifications/[notifId]/route.ts` exporting DELETE. Add a dismiss/delete button (small X icon) on each notification card in `webapp/src/app/notifications/page.tsx`.
 
 ## profile & social
