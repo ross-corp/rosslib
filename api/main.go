@@ -177,9 +177,11 @@ func main() {
 		authed.POST("/links/{linkId}/edits", handlers.ProposeLinkEdit(app))
 
 		// Author/book follows
+		authed.GET("/authors/{authorKey}/follow", handlers.CheckAuthorFollow(app))
 		authed.POST("/authors/{authorKey}/follow", handlers.FollowAuthor(app))
 		authed.DELETE("/authors/{authorKey}/follow", handlers.UnfollowAuthor(app))
 		authed.GET("/me/followed-authors", handlers.GetFollowedAuthors(app))
+		authed.GET("/books/{workId}/follow", handlers.CheckBookFollow(app))
 		authed.POST("/books/{workId}/follow", handlers.FollowBook(app))
 		authed.DELETE("/books/{workId}/follow", handlers.UnfollowBook(app))
 		authed.GET("/me/followed-books", handlers.GetFollowedBooks(app))

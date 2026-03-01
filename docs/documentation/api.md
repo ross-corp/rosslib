@@ -482,6 +482,10 @@ Unfollow a book.
 200 { "message": "Not following" }
 ```
 
+### `GET /books/:workId/follow`  *(auth required)*
+
+Check if you follow a book. Returns `{ "following": true/false }`. Returns `{ "following": false }` if the book is not in the local catalog.
+
 ### `GET /me/followed-books`  *(auth required)*
 
 List books you follow, newest first.

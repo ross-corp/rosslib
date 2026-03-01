@@ -1001,6 +1001,21 @@ func splitAuthors(s string) []string {
 	return result
 }
 
+// CheckAuthorFollow handles GET /authors/{authorKey}/follow
+func CheckAuthorFollow(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		authorKey := e.Request.PathValue("authorKey")
+
+		existing, _ := app.FindRecordsByFilter("author_follows",
+			"user = {:user} && author_key = {:key}",
+			"", 1, 0,
+			map[string]any{"user": user.Id, "key": authorKey},
+		)
+		return e.JSON(http.StatusOK, map[string]any{"following": len(existing) > 0})
+	}
+}
+
 // FollowAuthor handles POST /authors/{authorKey}/follow
 func FollowAuthor(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
@@ -1079,6 +1094,29 @@ func GetFollowedAuthors(app core.App) func(e *core.RequestEvent) error {
 			results = []map[string]any{}
 		}
 		return e.JSON(http.StatusOK, results)
+	}
+}
+
+// CheckBookFollow handles GET /books/{workId}/follow
+func CheckBookFollow(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		workID := e.Request.PathValue("workId")
+
+		books, _ := app.FindRecordsByFilter("books",
+			"open_library_id = {:id}", "", 1, 0,
+			map[string]any{"id": workID},
+		)
+		if len(books) == 0 {
+			return e.JSON(http.StatusOK, map[string]any{"following": false})
+		}
+
+		existing, _ := app.FindRecordsByFilter("book_follows",
+			"user = {:user} && book = {:book}",
+			"", 1, 0,
+			map[string]any{"user": user.Id, "book": books[0].Id},
+		)
+		return e.JSON(http.StatusOK, map[string]any{"following": len(existing) > 0})
 	}
 }
 
