@@ -4,8 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## BUGS
 
-- [ ] `ShouldNotify` function in `api/handlers/notification_preferences.go` is defined but never called. The notification fanout code in `threads.go` (thread comments, @mentions), `books.go` (book follow notifications), `reviewlikes.go` (review liked), and `recommendations.go` (book recommendation) should call `ShouldNotify(app, recipientID, notifType)` before creating notification records. Check each notification creation site and wrap it: only insert into the `notifications` collection if `ShouldNotify` returns true. Notification types to check: `book_new_thread`, `book_new_link`, `book_new_review`, `review_liked`, `thread_mention`, `book_recommendation`.
-
 - [ ] `GetBookReviews` in `api/handlers/books.go` has an N+1 query: for each review, it runs a separate `FindRecordsByFilter` on the `follows` table to check `is_followed` (line ~715). Refactor to batch this — after fetching all reviews, collect all reviewer user IDs, then run a single query `SELECT followee FROM follows WHERE follower = :viewer AND followee IN (:ids) AND status = 'active'` and build a set of followed IDs to check against in the loop.
 
 ## stats & data
