@@ -16,8 +16,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## settings & account
 
-- [ ] Add "sent recommendations" tab to recommendations page. Add `GET /me/recommendations/sent` endpoint — register `authed.GET("/me/recommendations/sent", handlers.GetSentRecommendations(app))` in `api/main.go`. Handler in `api/handlers/recommendations.go` queries `SELECT r.*, u.username, u.display_name, u.avatar, b.title, b.open_library_id, b.cover_url FROM recommendations r JOIN users u ON r.recipient = u.id JOIN books b ON r.book = b.id WHERE r.sender = :userId ORDER BY r.created DESC`. Add proxy route `webapp/src/app/api/me/recommendations/sent/route.ts`. On `webapp/src/app/recommendations/page.tsx`, add tabs "Received" / "Sent" — the Sent tab shows recommendations the user has sent, with recipient name, book cover, note, and status badge.
-
 - [ ] Add account deletion endpoint. Add `DELETE /me/account` (auth required) to `api/main.go` with handler in `api/handlers/userdata.go`. The handler should first call the existing `DeleteAllData` logic to remove all user-owned data, then delete the user record itself from the `users` collection. On the settings page danger zone (`webapp/src/components/delete-data-form.tsx`), add a second button "Delete my account permanently" below the existing "Delete all my data" button, with a confirmation that requires typing "delete my account". This calls `DELETE /api/me/account` and clears the auth cookie, redirecting to the home page.
 
 ## UX polish
