@@ -537,17 +537,20 @@ Check if you follow a book. Returns `{ "following": true/false }`. Returns `{ "f
 
 ### `GET /me/followed-books`  *(auth required)*
 
-List books you follow, newest first.
+List books you follow, newest first. Supports pagination via `limit` (default 50, max 50) and `offset` (default 0) query params.
 
 ```json
-[
-  {
-    "open_library_id": "OL82592W",
-    "title": "The Name of the Wind",
-    "authors": ["Patrick Rothfuss"],
-    "cover_url": "https://covers.openlibrary.org/b/id/1234567-M.jpg"
-  }
-]
+{
+  "books": [
+    {
+      "open_library_id": "OL82592W",
+      "title": "The Name of the Wind",
+      "authors": ["Patrick Rothfuss"],
+      "cover_url": "https://covers.openlibrary.org/b/id/1234567-M.jpg"
+    }
+  ],
+  "total": 73
+}
 ```
 
 `authors` and `cover_url` may be null.

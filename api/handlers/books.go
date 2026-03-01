@@ -1259,6 +1259,21 @@ func UnfollowBook(app core.App) func(e *core.RequestEvent) error {
 func GetFollowedBooks(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		user := e.Auth
+
+		limit, _ := strconv.Atoi(e.Request.URL.Query().Get("limit"))
+		if limit <= 0 || limit > 50 {
+			limit = 50
+		}
+		offset, _ := strconv.Atoi(e.Request.URL.Query().Get("offset"))
+		if offset < 0 {
+			offset = 0
+		}
+
+		var total int
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) FROM book_follows WHERE "user" = {:user}
+		`).Bind(map[string]any{"user": user.Id}).Row(&total)
+
 		type bookRow struct {
 			OLID     string  `db:"open_library_id" json:"open_library_id"`
 			Title    string  `db:"title" json:"title"`
@@ -1272,9 +1287,10 @@ func GetFollowedBooks(app core.App) func(e *core.RequestEvent) error {
 			JOIN books b ON bf.book = b.id
 			WHERE bf.user = {:user}
 			ORDER BY bf.created DESC
-		`).Bind(map[string]any{"user": user.Id}).All(&books)
+			LIMIT {:limit} OFFSET {:offset}
+		`).Bind(map[string]any{"user": user.Id, "limit": limit, "offset": offset}).All(&books)
 		if err != nil {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{"books": []any{}, "total": 0})
 		}
 		result := make([]map[string]any, len(books))
 		for i, b := range books {
@@ -1285,6 +1301,6 @@ func GetFollowedBooks(app core.App) func(e *core.RequestEvent) error {
 				"cover_url":       b.CoverURL,
 			}
 		}
-		return e.JSON(http.StatusOK, result)
+		return e.JSON(http.StatusOK, map[string]any{"books": result, "total": total})
 	}
 }
