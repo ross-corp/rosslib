@@ -6,8 +6,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## stats & data
 
-- [ ] Add "currently reading count" to `GET /users/{username}` profile response. In `api/handlers/users.go` `GetProfile`, add a query counting books with status tag slug = `currently-reading` for the user (same pattern as the `booksRead` query but filtering for `currently-reading` instead of `finished`). Return as `currently_reading_count`. Display on the profile page (`webapp/src/app/[username]/page.tsx`) alongside the existing stats row.
-
 ## notifications & feed
 
 - [ ] Add pagination to `GET /users/{username}/activity`. Currently `api/handlers/activity.go` `GetUserActivity` hard-limits to 30 results with no pagination. Add cursor-based pagination matching the pattern used in `GetFeed` — accept a `cursor` query param (RFC3339Nano timestamp), add `AND a.created < :cursor` to the WHERE clause, and return `next_cursor` from the last result's timestamp. On the frontend (`webapp/src/app/[username]/page.tsx`), add a "Load more" button that passes the cursor.
