@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import FollowButton from "@/components/follow-button";
 import BlockButton from "@/components/block-button";
-import { ActivityCard } from "@/components/activity";
 import type { ActivityItem } from "@/components/activity";
+import UserActivityList from "@/components/user-activity-list";
 import { getUser, getToken } from "@/lib/auth";
 import BookCoverRow from "@/components/book-cover-row";
 import ReadingStats from "@/components/reading-stats";
@@ -135,14 +135,19 @@ async function fetchTagKeys(username: string): Promise<TagKey[]> {
   return res.json();
 }
 
-async function fetchRecentActivity(username: string): Promise<ActivityItem[]> {
+type ActivityResponse = {
+  activities: ActivityItem[];
+  next_cursor?: string | null;
+};
+
+async function fetchRecentActivity(username: string): Promise<ActivityResponse> {
   const res = await fetch(
-    `${process.env.API_URL}/users/${username}/activity?limit=10`,
+    `${process.env.API_URL}/users/${username}/activity`,
     { cache: "no-store" }
   );
-  if (!res.ok) return [];
+  if (!res.ok) return { activities: [] };
   const data = await res.json();
-  return data.activities || [];
+  return { activities: data.activities || [], next_cursor: data.next_cursor };
 }
 
 async function fetchRecentReviews(username: string): Promise<ReviewItem[]> {
@@ -203,8 +208,8 @@ export default async function UserPage({
 
   const currentYear = new Date().getFullYear();
 
-  const [userBooks, shelves, tagKeys, recentActivity, recentReviews, viewerTagKeys, readingGoal] = isRestricted
-    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, [] as UserShelf[], [] as TagKey[], [] as ActivityItem[], [] as ReviewItem[], [] as ViewerTagKey[], null as ReadingGoal | null]
+  const [userBooks, shelves, tagKeys, activityData, recentReviews, viewerTagKeys, readingGoal] = isRestricted
+    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, [] as UserShelf[], [] as TagKey[], { activities: [] } as ActivityResponse, [] as ReviewItem[], [] as ViewerTagKey[], null as ReadingGoal | null]
     : await Promise.all([
         fetchUserBooks(username),
         fetchUserShelves(username),
@@ -606,20 +611,16 @@ export default async function UserPage({
           {/* Sidebar — 1/3 */}
           <div className="mt-10 lg:mt-0">
             <div className="lg:sticky lg:top-20">
-              {recentActivity.length > 0 ? (
+              {activityData.activities.length > 0 ? (
                 <div>
                   <h2 className="section-heading mb-2">
                     Recent Activity
                   </h2>
-                  <div>
-                    {recentActivity.map((item) => (
-                      <ActivityCard
-                        key={item.id}
-                        item={item}
-                        showUser={false}
-                      />
-                    ))}
-                  </div>
+                  <UserActivityList
+                    initialActivities={activityData.activities}
+                    initialCursor={activityData.next_cursor}
+                    username={username}
+                  />
                 </div>
               ) : isOwnProfile ? (
                 <div>

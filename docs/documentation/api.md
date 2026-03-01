@@ -1362,7 +1362,12 @@ Returns detailed reading statistics for a user. Respects privacy settings — re
 
 ### `GET /users/:username/activity`
 
-Returns recent activity for a specific user. Same response format as `/me/feed`. Cursor-based pagination.
+Returns recent activity for a specific user. Same response format as `/me/feed`.
+
+**Query parameters:**
+- `cursor` *(optional)* — RFC3339Nano timestamp from a previous `next_cursor` value. Only returns activities created before this timestamp.
+
+Returns `{ "activities": [...], "next_cursor": "..." }`. `next_cursor` is `null` when there are no more results. Each page returns up to 30 items.
 
 ---
 

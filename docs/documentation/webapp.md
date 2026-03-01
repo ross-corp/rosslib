@@ -352,6 +352,10 @@ Client component on the settings page for setting an annual reading goal. Calls 
 
 Client component on user profile pages. Shows "Block" button that opens an inline confirmation prompt. After blocking, the page reloads to show the restricted view. When already blocked, shows "Unblock" button instead. Calls `POST /api/users/:username/block` and `DELETE /api/users/:username/block`.
 
+### `UserActivityList` (`components/user-activity-list.tsx`)
+
+Client component that renders a list of activity items with cursor-based "Load more" pagination. Used on the user profile page sidebar. Receives initial activities and cursor from the server component, then fetches additional pages via `GET /api/users/:username/activity?cursor=`.
+
 ---
 
 ## Adding a new page

@@ -232,16 +232,28 @@ func GetUserActivity(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusForbidden, map[string]any{"error": "Profile is private"})
 		}
 
+		cursor := e.Request.URL.Query().Get("cursor")
+		limit := 30
+
 		query := activitySelectClause + `
 			WHERE a.user = {:user}
-			ORDER BY a.created DESC
-			LIMIT 30
 		`
+		params := map[string]any{"user": targetUser.Id}
+
+		if cursor != "" {
+			query += " AND a.created < {:cursor}"
+			params["cursor"] = cursor
+		}
+		query += " ORDER BY a.created DESC LIMIT {:limit}"
+		params["limit"] = limit
 
 		var rows []activityRow
-		err = app.DB().NewQuery(query).Bind(map[string]any{"user": targetUser.Id}).All(&rows)
+		err = app.DB().NewQuery(query).Bind(params).All(&rows)
 		if err != nil {
-			return e.JSON(http.StatusOK, map[string]any{"activities": []any{}})
+			return e.JSON(http.StatusOK, map[string]any{
+				"activities":  []any{},
+				"next_cursor": nil,
+			})
 		}
 
 		result := make([]map[string]any, 0, len(rows))
@@ -249,6 +261,14 @@ func GetUserActivity(app core.App) func(e *core.RequestEvent) error {
 			result = append(result, enrichActivity(app, row))
 		}
 
-		return e.JSON(http.StatusOK, map[string]any{"activities": result})
+		var nextCursor any
+		if len(rows) == limit {
+			nextCursor = rows[len(rows)-1].Created
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{
+			"activities":  result,
+			"next_cursor": nextCursor,
+		})
 	}
 }
