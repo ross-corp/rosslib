@@ -186,6 +186,8 @@ Returns book details by its bare OL work ID (e.g. `OL82592W`). Fetches enriched 
 
 The `authors` field returns an array of objects with `name` (string) and `key` (string or null). The `key` is the bare OL author ID (e.g. `OL23919A`) when available from Open Library, or `null` for local-only records. Includes a `subjects` array (up to 10 strings) sourced from the Open Library work's `subjects` field, with a fallback to the local book record's comma-separated `subjects` column. Response also includes a `series` array (or null) with the book's series memberships, each containing `series_id`, `name`, and `position`.
 
+**Auto-populated series data:** On first view of a book that has no series links, the endpoint automatically checks the Open Library editions response for `series` fields and the work's subjects for series-like patterns (e.g. containing "trilogy", "saga", etc.). When found, series and book_series records are created automatically. This is best-effort — not all OL works have series data. Series population is logged for visibility into coverage.
+
 ```json
 { "authors": [{ "name": "Author Name", "key": "OL23919A" }] }
 ```

@@ -3,8 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -242,6 +244,159 @@ func ScanBook(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// seriesPositionRegex matches patterns like "Book 3", "#5", "Vol. 2", etc.
+var seriesPositionRegex = regexp.MustCompile(`(?i)(?:book|#|no\.?|vol\.?|volume|part)\s*(\d+)`)
+
+// populateSeriesFromOL checks Open Library edition data for series information
+// and creates series + book_series records if none exist yet. This is best-effort;
+// errors are logged but never surface to the caller.
+func populateSeriesFromOL(app core.App, ol *cachedOLClient, bookRec *core.Record, workID string, subjects []string) {
+	// Skip if book already has series links
+	type countResult struct {
+		Count int `db:"count"`
+	}
+	var existing countResult
+	_ = app.DB().NewQuery(`SELECT COUNT(*) as count FROM book_series WHERE book = {:book}`).
+		Bind(map[string]any{"book": bookRec.Id}).One(&existing)
+	if existing.Count > 0 {
+		return
+	}
+
+	type seriesCandidate struct {
+		Name     string
+		Position *int
+	}
+	var candidates []seriesCandidate
+	seen := map[string]bool{}
+
+	// 1. Check OL editions for series field
+	editionsData, err := ol.get(fmt.Sprintf("/works/%s/editions.json?limit=50", workID))
+	if err == nil {
+		if entries, ok := editionsData["entries"].([]any); ok {
+			for _, entry := range entries {
+				ed, ok := entry.(map[string]any)
+				if !ok {
+					continue
+				}
+				if seriesList, ok := ed["series"].([]any); ok {
+					for _, s := range seriesList {
+						name, ok := s.(string)
+						if !ok || name == "" {
+							continue
+						}
+						name = strings.TrimSpace(name)
+						// Try to extract position number from series string
+						// e.g. "Harry Potter #3" or "Discworld Book 15"
+						var pos *int
+						if matches := seriesPositionRegex.FindStringSubmatch(name); len(matches) > 1 {
+							if n, err := strconv.Atoi(matches[1]); err == nil {
+								pos = &n
+							}
+							// Strip the position part to get the clean series name
+							cleanName := strings.TrimSpace(seriesPositionRegex.ReplaceAllString(name, ""))
+							// Remove trailing punctuation like commas, semicolons
+							cleanName = strings.TrimRight(cleanName, " ,;:-")
+							if cleanName != "" {
+								name = cleanName
+							}
+						}
+						nameKey := strings.ToLower(name)
+						if seen[nameKey] {
+							continue
+						}
+						seen[nameKey] = true
+						candidates = append(candidates, seriesCandidate{Name: name, Position: pos})
+					}
+				}
+			}
+		}
+	}
+
+	// 2. Check subjects for series-like patterns (e.g. "Harry Potter" as a subject
+	// that matches a known series naming pattern). Only use subjects if we found
+	// nothing from editions, since subjects are less reliable.
+	// Skip generic/common subjects that aren't series names.
+	if len(candidates) == 0 && len(subjects) > 0 {
+		seriesKeywords := []string{"series", "trilogy", "saga", "chronicles", "cycle", "quartet", "duology"}
+		for _, subj := range subjects {
+			lower := strings.ToLower(subj)
+			for _, kw := range seriesKeywords {
+				if strings.Contains(lower, kw) {
+					// Clean up: remove the keyword suffix to get the series name
+					name := strings.TrimSpace(subj)
+					nameKey := strings.ToLower(name)
+					if !seen[nameKey] {
+						seen[nameKey] = true
+						candidates = append(candidates, seriesCandidate{Name: name, Position: nil})
+					}
+					break
+				}
+			}
+		}
+	}
+
+	if len(candidates) == 0 {
+		log.Printf("[Series] No series data found for work %s", workID)
+		return
+	}
+
+	log.Printf("[Series] Found %d series candidate(s) for work %s: %v", len(candidates), workID, func() []string {
+		names := make([]string, len(candidates))
+		for i, c := range candidates {
+			if c.Position != nil {
+				names[i] = fmt.Sprintf("%s (#%d)", c.Name, *c.Position)
+			} else {
+				names[i] = c.Name
+			}
+		}
+		return names
+	}())
+
+	// Find-or-create series and book_series links
+	for _, c := range candidates {
+		// Find or create the series record
+		existingSeries, _ := app.FindRecordsByFilter("series",
+			"name = {:name}", "", 1, 0,
+			map[string]any{"name": c.Name},
+		)
+
+		var seriesRec *core.Record
+		if len(existingSeries) > 0 {
+			seriesRec = existingSeries[0]
+		} else {
+			coll, err := app.FindCollectionByNameOrId("series")
+			if err != nil {
+				log.Printf("[Series] Failed to find series collection: %v", err)
+				continue
+			}
+			seriesRec = core.NewRecord(coll)
+			seriesRec.Set("name", c.Name)
+			if err := app.Save(seriesRec); err != nil {
+				log.Printf("[Series] Failed to create series %q: %v", c.Name, err)
+				continue
+			}
+		}
+
+		// Create book_series link
+		bsColl, err := app.FindCollectionByNameOrId("book_series")
+		if err != nil {
+			log.Printf("[Series] Failed to find book_series collection: %v", err)
+			continue
+		}
+		bs := core.NewRecord(bsColl)
+		bs.Set("book", bookRec.Id)
+		bs.Set("series", seriesRec.Id)
+		if c.Position != nil {
+			bs.Set("position", *c.Position)
+		}
+		if err := app.Save(bs); err != nil {
+			log.Printf("[Series] Failed to link book to series %q: %v", c.Name, err)
+			continue
+		}
+		log.Printf("[Series] Linked book %s to series %q (position: %v)", workID, c.Name, c.Position)
+	}
+}
+
 // GetBookDetail handles GET /books/{workId}
 func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
@@ -386,6 +541,11 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 
 		if subjects == nil {
 			subjects = []string{}
+		}
+
+		// Auto-populate series data from Open Library if not already present
+		if len(localBooks) > 0 {
+			populateSeriesFromOL(app, ol, localBooks[0], workID, subjects)
 		}
 
 		// Get series memberships
