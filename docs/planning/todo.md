@@ -4,8 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## BUGS
 
-- [ ] Fix `CreateBookLink` accepting arbitrary `link_type` values without validation. In `api/handlers/links.go`, the `CreateBookLink` handler reads `link_type` from the request body but never validates it against the allowed set (`sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`). Add a `validLinkTypes` map at the top of the file and return 400 with `"invalid link_type"` if the submitted type is not in the set. Same validation should be added to `ProposeLinkEdit` for the `proposed_type` field.
-
 - [ ] Fix series page crashing on non-404 API errors. In `webapp/src/app/series/[seriesId]/page.tsx`, the `fetchSeries` function only handles 404 (calls `notFound()`), but a 500 or 503 from the API will throw an unhandled error and crash the page. Wrap the fetch in a try-catch and return a user-friendly error message (e.g. "Failed to load series. Please try again later.") for non-404 errors instead of crashing.
 
 ## stats & data
