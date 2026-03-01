@@ -403,6 +403,10 @@ func fanOutMentionNotifications(app core.App, commenter *core.Record, thread *co
 		}
 		mentioned := users[0]
 
+		if !ShouldNotify(app, mentioned.Id, "thread_mention") {
+			continue
+		}
+
 		notifColl, err := app.FindCollectionByNameOrId("notifications")
 		if err != nil {
 			continue

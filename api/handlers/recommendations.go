@@ -86,6 +86,10 @@ func SendRecommendation(app core.App) func(e *core.RequestEvent) error {
 		bookTitle := book.GetString("title")
 
 		go func() {
+			if !ShouldNotify(app, recipient.Id, "book_recommendation") {
+				return
+			}
+
 			notifsColl, err := app.FindCollectionByNameOrId("notifications")
 			if err != nil {
 				return

@@ -89,12 +89,9 @@ func ToggleReviewLike(app core.App) func(e *core.RequestEvent) error {
 
 		// Send notification to review author
 		go func() {
-			// Get review author's username for the notification
-			reviewUser, err := app.FindRecordById("users", reviewUserID)
-			if err != nil {
+			if !ShouldNotify(app, reviewUserID, "review_liked") {
 				return
 			}
-			_ = reviewUser // we only need the review author ID as recipient
 
 			likerUsername := user.GetString("username")
 			bookTitle := book.GetString("title")
