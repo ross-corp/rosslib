@@ -403,7 +403,7 @@ Returns an empty `books` array if `q` is empty or no matches are found.
 
 ### `GET /genres`
 
-Returns the list of predefined genres with book counts from the local catalog.
+Returns genres derived from the `subjects` field on books in the local catalog, with book counts. Sorted by book count descending.
 
 ```json
 [
@@ -420,9 +420,14 @@ Returns the list of predefined genres with book counts from the local catalog.
 ]
 ```
 
-### `GET /genres/:slug/books?page=1&limit=20`
+### `GET /genres/:slug/books?page=1&limit=20&sort=title|rating|year`
 
-Returns books matching a genre, browsing the local Meilisearch index (or DB fallback) without requiring a search query. Paginated.
+Returns books matching a genre from the local catalog, filtered by the `subjects` field on books. Paginated.
+
+**Query parameters:**
+- `page` *(optional, default 1)* — page number
+- `limit` *(optional, default 20, max 100)* — results per page
+- `sort` *(optional)* — sort order: `title` (A-Z), `rating` (highest first), `year` (newest first). Default: no explicit sort.
 
 ```json
 {

@@ -40,9 +40,11 @@ type TagKey = {
 async function fetchGenreBooks(
   slug: string,
   page: number,
+  sort?: string,
 ): Promise<GenreBooksResponse | null> {
+  const sortParam = sort ? `&sort=${sort}` : "";
   const res = await fetch(
-    `${process.env.API_URL}/genres/${slug}/books?page=${page}&limit=20`,
+    `${process.env.API_URL}/genres/${slug}/books?page=${page}&limit=20${sortParam}`,
     { cache: "no-store" },
   );
   if (res.status === 404) return null;
@@ -70,21 +72,29 @@ async function fetchStatusMap(token: string): Promise<Record<string, string>> {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
+const SORT_OPTIONS = [
+  { value: "default", label: "Default" },
+  { value: "title", label: "Title" },
+  { value: "rating", label: "Rating" },
+  { value: "year", label: "Year" },
+] as const;
+
 export default async function GenreDetailPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; sort?: string }>;
 }) {
   const { slug } = await params;
-  const { page: pageParam = "1" } = await searchParams;
+  const { page: pageParam = "1", sort: sortParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam, 10) || 1);
+  const sort = SORT_OPTIONS.some((o) => o.value === sortParam) ? sortParam : "default";
 
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
   const [data, tagKeys, statusMap] = await Promise.all([
-    fetchGenreBooks(slug, page),
+    fetchGenreBooks(slug, page, sort === "default" ? undefined : sort),
     currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
     currentUser && token ? fetchStatusMap(token) : Promise.resolve(null),
   ]);
@@ -114,9 +124,35 @@ export default async function GenreDetailPage({
         <h1 className="text-2xl font-bold text-text-primary mb-1">
           {data.genre}
         </h1>
-        <p className="text-sm text-text-primary mb-8">
+        <p className="text-sm text-text-primary mb-4">
           {data.total.toLocaleString()} book{data.total === 1 ? "" : "s"}
         </p>
+
+        {data.total > 1 && (
+          <div className="flex items-center gap-2 mb-8">
+            <span className="text-sm text-text-secondary">Sort by:</span>
+            <div className="flex gap-1">
+              {SORT_OPTIONS.map((option) => {
+                const qs = new URLSearchParams();
+                if (option.value !== "default") qs.set("sort", option.value);
+                const href = `/genres/${slug}${qs.toString() ? `?${qs.toString()}` : ""}`;
+                return (
+                  <Link
+                    key={option.value}
+                    href={href}
+                    className={`text-sm px-3 py-1 rounded-md transition-colors ${
+                      sort === option.value
+                        ? "bg-surface-2 text-text-primary font-medium"
+                        : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+                    }`}
+                  >
+                    {option.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {data.results.length === 0 ? (
           <p className="text-sm text-text-primary">
@@ -135,7 +171,7 @@ export default async function GenreDetailPage({
           <div className="flex items-center gap-4 mt-8">
             {page > 1 ? (
               <Link
-                href={`/genres/${slug}?page=${page - 1}`}
+                href={`/genres/${slug}?page=${page - 1}${sort !== "default" ? `&sort=${sort}` : ""}`}
                 className="text-sm text-text-primary hover:text-text-primary transition-colors"
               >
                 &larr; Previous
@@ -148,7 +184,7 @@ export default async function GenreDetailPage({
             </span>
             {hasNext && (
               <Link
-                href={`/genres/${slug}?page=${page + 1}`}
+                href={`/genres/${slug}?page=${page + 1}${sort !== "default" ? `&sort=${sort}` : ""}`}
                 className="text-sm text-text-primary hover:text-text-primary transition-colors ml-auto"
               >
                 Next &rarr;
