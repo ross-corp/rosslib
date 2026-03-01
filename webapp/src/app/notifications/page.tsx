@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getUser, getToken } from "@/lib/auth";
 import NotificationList from "./notification-list";
-import NotificationCard from "./notification-card";
 
 type Notification = {
   id: string;
@@ -64,50 +63,13 @@ export default async function NotificationsPage({
               Recommendations
             </Link>
           </div>
-          {data.notifications.length > 0 && (
-            <NotificationList
-              notifications={data.notifications}
-              nextCursor={data.next_cursor}
-            />
-          )}
         </div>
 
-        {data.notifications.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-text-primary text-sm">
-              No notifications yet. Follow authors to get notified about
-              new publications, or follow books to hear about new discussions,
-              links, and reviews.
-            </p>
-            <Link
-              href="/feed"
-              className="inline-block mt-4 text-sm text-text-primary hover:text-text-primary border border-border px-4 py-2 rounded transition-colors"
-            >
-              Go to feed
-            </Link>
-          </div>
-        ) : (
-          <>
-            <div className="divide-y divide-border">
-              {data.notifications.map((notif) => (
-                <NotificationCard key={notif.id} notif={notif} />
-              ))}
-            </div>
-
-            {data.next_cursor && (
-              <div className="mt-8 text-center">
-                <Link
-                  href={`/notifications?cursor=${encodeURIComponent(data.next_cursor)}`}
-                  className="text-sm text-text-primary hover:text-text-primary border border-border px-4 py-2 rounded transition-colors"
-                >
-                  Load more
-                </Link>
-              </div>
-            )}
-          </>
-        )}
+        <NotificationList
+          notifications={data.notifications}
+          nextCursor={data.next_cursor}
+        />
       </main>
     </div>
   );
 }
-

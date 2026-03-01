@@ -146,6 +146,7 @@ func main() {
 		authed.GET("/me/notifications", handlers.GetNotifications(app))
 		authed.GET("/me/notifications/unread-count", handlers.GetUnreadCount(app))
 		authed.POST("/me/notifications/{notifId}/read", handlers.MarkNotificationRead(app))
+		authed.DELETE("/me/notifications/{notifId}", handlers.DeleteNotification(app))
 		authed.POST("/me/notifications/read-all", handlers.MarkAllRead(app))
 
 		// Notification preferences

@@ -1837,6 +1837,10 @@ Returns the count of unread notifications.
 
 Mark a single notification as read. Returns `{ "ok": true }`. Returns 404 if the notification doesn't exist or doesn't belong to the user.
 
+### `DELETE /me/notifications/:notifId`  *(auth required)*
+
+Delete a single notification. Returns `{ "ok": true }`. Returns 404 if the notification doesn't exist, 403 if it doesn't belong to the current user.
+
 ### `POST /me/notifications/read-all`  *(auth required)*
 
 Mark all unread notifications as read. Returns `{ "ok": true }`.

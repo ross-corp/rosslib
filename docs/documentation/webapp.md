@@ -156,6 +156,7 @@ webapp/src/app/
     ├── me/notifications/route.ts                  ← GET list notifications
     ├── me/notifications/unread-count/route.ts     ← GET unread count
     ├── me/notifications/read-all/route.ts         ← POST mark all read
+    ├── me/notifications/[notifId]/route.ts         ← DELETE delete notification
     ├── me/notifications/[notifId]/read/route.ts   ← POST mark one read
     ├── me/notification-preferences/route.ts     ← GET, PUT notification prefs
     ├── me/recommendations/route.ts               ← GET, POST recommendations
