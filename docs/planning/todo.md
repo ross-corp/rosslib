@@ -10,8 +10,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## profile & social
 
-- [ ] Add "Followed authors" list to user profile page. Users can follow authors (via `GET /me/followed-authors`), and there's a settings page to manage them, but followed authors are never displayed on the public profile. On `webapp/src/app/[username]/page.tsx`, if the user is viewing their own profile, fetch `GET ${API_URL}/me/followed-authors` and render a "Followed authors" section in the sidebar showing up to 5 author names as links to `/authors/:authorKey`. Include a "View all" link to `/settings/followed-authors` when there are more than 5.
-
 - [ ] Add CTA link to followed authors empty state. In `webapp/src/app/settings/followed-authors/page.tsx`, when `authors` is an empty array, the `FollowedAuthorsList` component renders but provides no guidance on how to follow authors. Add an empty state message like "You haven't followed any authors yet. Follow authors on their profile pages to get notified about new publications." with a link to `/search` (Authors tab) so users can discover authors to follow.
 
 ## search & browse
