@@ -6,6 +6,15 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
+var validLinkTypes = map[string]bool{
+	"sequel":       true,
+	"prequel":      true,
+	"companion":    true,
+	"mentioned_in": true,
+	"similar":      true,
+	"adaptation":   true,
+}
+
 // GetBookLinks handles GET /books/{workId}/links
 func GetBookLinks(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
@@ -113,6 +122,9 @@ func CreateBookLink(app core.App) func(e *core.RequestEvent) error {
 		}{}
 		if err := e.BindBody(&data); err != nil || data.ToOpenLibraryID == "" || data.LinkType == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "to_open_library_id and link_type required"})
+		}
+		if !validLinkTypes[data.LinkType] {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "invalid link_type"})
 		}
 
 		toBooks, _ := app.FindRecordsByFilter("books",
@@ -240,6 +252,9 @@ func ProposeLinkEdit(app core.App) func(e *core.RequestEvent) error {
 		}{}
 		if err := e.BindBody(&data); err != nil {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
+		}
+		if data.ProposedType != "" && !validLinkTypes[data.ProposedType] {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "invalid link_type"})
 		}
 
 		coll, err := app.FindCollectionByNameOrId("book_link_edits")

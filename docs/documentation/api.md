@@ -1604,6 +1604,8 @@ Submit a community link from this book to another.
 }
 ```
 
+Valid `link_type` values: `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`. Returns 400 with `"invalid link_type"` for any other value.
+
 Returns 201 with `{ id, created_at }`. Auto-upvotes by the creator. Returns 409 if the user already submitted this exact link.
 
 ### `DELETE /links/:linkId`  *(auth required)*
@@ -1620,7 +1622,7 @@ Remove upvote. Returns 204.
 
 ### `POST /links/:linkId/edits`  *(auth required)*
 
-Propose an edit to a community link. At least one of `proposed_type` or `proposed_note` must be provided. Only one pending edit per user per link.
+Propose an edit to a community link. At least one of `proposed_type` or `proposed_note` must be provided. Only one pending edit per user per link. If `proposed_type` is provided, it must be one of: `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`.
 
 ```json
 {
