@@ -6,8 +6,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## stats & data
 
-- [ ] Add total pages read stat to `GET /users/{username}/stats`. In `api/handlers/users.go` `GetUserStats`, add a query that sums `b.page_count` for all finished books (join `user_books` → `books` → `book_tag_values` where status = 'finished' and `b.page_count IS NOT NULL`). Return as `total_pages_read` in the response. On the frontend stats page (`webapp/src/app/[username]/stats/page.tsx`), display it as a stat card alongside existing total_books and total_reviews.
-
 - [ ] Add "currently reading count" to `GET /users/{username}` profile response. In `api/handlers/users.go` `GetProfile`, add a query counting books with status tag slug = `currently-reading` for the user (same pattern as the `booksRead` query but filtering for `currently-reading` instead of `finished`). Return as `currently_reading_count`. Display on the profile page (`webapp/src/app/[username]/page.tsx`) alongside the existing stats row.
 
 ## notifications & feed
