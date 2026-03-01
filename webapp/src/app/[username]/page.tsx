@@ -55,6 +55,7 @@ type UserProfile = {
   reviews_count: number;
   books_this_year: number;
   average_rating: number | null;
+  total_pages_read: number;
   is_restricted: boolean;
   is_blocked: boolean;
   author_key: string | null;
@@ -383,6 +384,14 @@ export default async function UserPage({
                 </span>{" "}
                 <span className="text-text-tertiary">reviews</span>
               </Link>
+              {profile.total_pages_read > 0 && (
+                <span className="text-sm text-text-secondary">
+                  <span className="font-semibold text-text-primary">
+                    {profile.total_pages_read.toLocaleString()}
+                  </span>{" "}
+                  <span className="text-text-tertiary">pages read</span>
+                </span>
+              )}
             </>
           )}
           <Link

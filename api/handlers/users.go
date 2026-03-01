@@ -238,6 +238,27 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			WHERE user = {:id} AND rating > 0
 		`).Bind(map[string]any{"id": user.Id}).One(&avgRating)
 
+		// Total pages read (sum page_count for finished books)
+		type sumResult struct {
+			Total *int `db:"total"`
+		}
+		var totalPages sumResult
+		_ = app.DB().NewQuery(`
+			SELECT COALESCE(SUM(b.page_count), 0) as total
+			FROM user_books ub
+			JOIN books b ON ub.book = b.id
+			JOIN book_tag_values btv ON btv.user = ub.user AND btv.book = ub.book
+			JOIN tag_values tv ON btv.tag_value = tv.id
+			WHERE ub.user = {:id}
+			  AND tv.slug = 'finished'
+			  AND b.page_count IS NOT NULL AND b.page_count > 0
+		`).Bind(map[string]any{"id": user.Id}).One(&totalPages)
+
+		totalPagesRead := 0
+		if totalPages.Total != nil {
+			totalPagesRead = *totalPages.Total
+		}
+
 		// Avatar URL
 		var avatarURL *string
 		if av := user.GetString("avatar"); av != "" {
@@ -262,9 +283,10 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			"currently_reading_count": currentlyReading.Count,
 			"reviews_count":           reviewsCount.Count,
 			"books_this_year": booksThisYear.Count,
-			"average_rating":  avgRating.Avg,
-			"is_restricted":   isRestricted,
-			"is_blocked":      blockedByViewer,
+			"average_rating":    avgRating.Avg,
+			"total_pages_read": totalPagesRead,
+			"is_restricted":    isRestricted,
+			"is_blocked":       blockedByViewer,
 		}
 
 		return e.JSON(http.StatusOK, result)
