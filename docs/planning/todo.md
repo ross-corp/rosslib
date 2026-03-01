@@ -4,8 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## BUGS
 
-- [ ] `GetBookReviews` in `api/handlers/books.go` has an N+1 query: for each review, it runs a separate `FindRecordsByFilter` on the `follows` table to check `is_followed` (line ~715). Refactor to batch this — after fetching all reviews, collect all reviewer user IDs, then run a single query `SELECT followee FROM follows WHERE follower = :viewer AND followee IN (:ids) AND status = 'active'` and build a set of followed IDs to check against in the loop.
-
 ## stats & data
 
 - [ ] Add total pages read stat to `GET /users/{username}/stats`. In `api/handlers/users.go` `GetUserStats`, add a query that sums `b.page_count` for all finished books (join `user_books` → `books` → `book_tag_values` where status = 'finished' and `b.page_count IS NOT NULL`). Return as `total_pages_read` in the response. On the frontend stats page (`webapp/src/app/[username]/stats/page.tsx`), display it as a stat card alongside existing total_books and total_reviews.
