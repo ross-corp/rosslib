@@ -14,8 +14,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## book detail & discovery
 
-- [ ] Add community link count to book cards in search results. In `webapp/src/app/search/page.tsx`, book search results show title, author, year, and cover but don't indicate how many community links (related books) exist. Fetch `GET /books/:workId/stats` for each result (or add a `link_count` field to the search response) and show a small chain/link icon with count (e.g. "🔗 3") when > 0. This helps users discover books with rich community connections.
-
 ## settings & account
 
 - [ ] Add user feedback history page. The `GET /me/feedback` endpoint exists and is registered in `api/main.go` (returns the user's submitted bug reports and feature requests), and there's a proxy route at `webapp/src/app/api/me/feedback/route.ts`. But there's no page to view your own feedback submissions. Create `webapp/src/app/settings/feedback/page.tsx` that fetches `GET /api/me/feedback`, renders each item with type badge (bug/feature), title, status (open/closed), and a delete button calling `DELETE /api/me/feedback/:feedbackId`. Add a "My feedback" link to the settings nav in `webapp/src/components/settings-nav.tsx`.
