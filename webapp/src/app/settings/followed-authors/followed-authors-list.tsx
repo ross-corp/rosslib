@@ -29,9 +29,19 @@ export default function FollowedAuthorsList({
 
   if (authors.length === 0) {
     return (
-      <p className="text-sm text-text-primary">
-        You aren&apos;t following any authors yet. Follow an author from their page to get notified about new publications.
-      </p>
+      <div className="text-sm text-text-primary space-y-2">
+        <p>
+          You aren&apos;t following any authors yet. Follow authors on their profile pages to get notified about new publications.
+        </p>
+        <p>
+          <Link
+            href="/search?tab=authors"
+            className="text-accent hover:underline"
+          >
+            Browse authors
+          </Link>
+        </p>
+      </div>
     );
   }
 
