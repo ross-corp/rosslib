@@ -135,6 +135,10 @@ func CreateBookLink(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusNotFound, map[string]any{"error": "Target book not found"})
 		}
 
+		if fromBooks[0].Id == toBooks[0].Id {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "cannot link a book to itself"})
+		}
+
 		coll, err := app.FindCollectionByNameOrId("book_links")
 		if err != nil {
 			return err
