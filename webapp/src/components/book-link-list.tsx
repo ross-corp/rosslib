@@ -292,8 +292,9 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                   onClick={clearSelectedBook}
                   disabled={submitting}
                   className="text-xs text-text-primary hover:text-red-500 transition-colors disabled:opacity-50"
+                  aria-label="Clear selected book"
                 >
-                  <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                  <svg aria-hidden="true" viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
                     <path d="M3 3l6 6M9 3l-6 6" />
                   </svg>
                 </button>
@@ -472,8 +473,10 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                                 : "text-text-primary hover:text-text-primary hover:bg-surface-2"
                             } disabled:opacity-50`}
                             title={link.user_voted ? "Remove upvote" : "Upvote"}
+                            aria-label={link.user_voted ? "Remove upvote" : "Upvote"}
                           >
                             <svg
+                              aria-hidden="true"
                               viewBox="0 0 12 12"
                               className="w-3 h-3"
                               fill={link.user_voted ? "currentColor" : "none"}
@@ -500,8 +503,9 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                             }
                             className="px-1.5 py-1 rounded text-text-primary hover:text-text-primary hover:bg-surface-2 transition-colors"
                             title="Suggest an edit"
+                            aria-label="Suggest an edit"
                           >
-                            <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                            <svg aria-hidden="true" viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
                               <path d="M8.5 1.5l2 2L4 10H2v-2L8.5 1.5Z" />
                             </svg>
                           </button>
@@ -516,8 +520,9 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                             disabled={deletingIds.has(link.id)}
                             className="px-1.5 py-1 rounded text-text-primary hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
                             title={currentUsername === link.username ? "Delete your link" : "Remove link (moderator)"}
+                            aria-label={currentUsername === link.username ? "Delete your link" : "Remove link (moderator)"}
                           >
-                            <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                            <svg aria-hidden="true" viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
                               <path d="M2 3h8M4.5 3V2h3v1M3 3v7h6V3M5 5v3M7 5v3" />
                             </svg>
                           </button>
