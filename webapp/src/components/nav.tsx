@@ -34,6 +34,7 @@ export default async function Nav() {
             name="q"
             type="search"
             placeholder="Search books..."
+            aria-label="Search books"
             className="w-full px-3 py-1 pr-12 text-sm bg-surface-2 border border-border rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent focus:border-transparent"
           />
           <KeyboardShortcutHint
@@ -56,10 +57,11 @@ export default async function Nav() {
               <Link
                 href={`/${user.username}`}
                 className="nav-link text-text-primary"
+                aria-label="User menu"
               >
                 {user.username}
               </Link>
-              <Link href="/api/auth/logout" className="nav-link">
+              <Link href="/api/auth/logout" className="nav-link" aria-label="Sign out">
                 sign out
               </Link>
             </>

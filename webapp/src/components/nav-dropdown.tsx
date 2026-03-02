@@ -33,6 +33,9 @@ export default function NavDropdown({
       <button
         onClick={() => setOpen((o) => !o)}
         className="nav-link flex items-center gap-1"
+        aria-label={`${label.charAt(0).toUpperCase() + label.slice(1)} menu`}
+        aria-expanded={open}
+        aria-haspopup="true"
       >
         {label}
         <svg
