@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import DeleteDataForm from "@/components/delete-data-form";
+import EmailForm from "@/components/email-form";
 import EmailVerificationBanner from "@/components/email-verification-banner";
 import NotificationPreferences from "@/components/notification-preferences";
 import PasswordForm from "@/components/password-form";
@@ -79,6 +80,8 @@ export default async function SettingsPage() {
         <ReadingGoalForm initialGoal={currentGoal} />
 
         <PasswordForm />
+
+        <EmailForm />
 
         <DeleteDataForm />
       </main>

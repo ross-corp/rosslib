@@ -95,6 +95,23 @@ Set or change the user's password. If the user already has a password, `current_
 401 { "error": "current password is incorrect" }
 ```
 
+### `PUT /me/email`  *(auth required)*
+
+Change the user's email address. Requires the current password for verification. Sets `email_verified` to `false` on the account after the change.
+
+```json
+{ "new_email": "newemail@example.com", "current_password": "current-pass" }
+```
+
+```
+200 { "message": "Email updated" }
+400 { "error": "New email and current password are required" }
+400 { "error": "Invalid email address" }
+400 { "error": "Current password is incorrect" }
+400 { "error": "New email is the same as the current email" }
+409 { "error": "Email is already in use" }
+```
+
 ### `DELETE /me/account/data`  *(auth required)*
 
 Permanently deletes all data owned by the authenticated user: user_books, collection_items, collections, tag_keys, tag_values, book_tag_values, genre_ratings, threads, thread_comments, follows, author_follows, book_follows, notifications, activities, book_links, book_link_votes, and book_link_edits. The user account itself is **not** deleted.

@@ -305,6 +305,10 @@ Client component providing pill-style navigation across settings sub-pages. Uses
 
 Client component rendered on the settings page below the profile form. Fetches `GET /api/me/account` on mount to determine whether the user has a password and/or Google linked, then shows the appropriate form: "Set password" for OAuth-only users, or "Change password" (with current password verification) for users who already have one. Calls `PUT /api/me/password`.
 
+### `EmailForm` (`components/email-form.tsx`)
+
+Client component rendered on the settings page below the password form. Fetches `GET /api/me/account` on mount to display the current email. Provides a form with "New email" and "Current password" fields. Calls `PUT /api/me/email` to change the email address. On success, the account's `email_verified` is set to false and the email verification banner will reappear.
+
 ### `DeleteDataForm` (`components/delete-data-form.tsx`)
 
 Client component rendered on the settings page below the password form in a "Danger zone" section. Contains two destructive actions:

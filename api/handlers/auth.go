@@ -229,6 +229,55 @@ func GetAccount(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// ChangeEmail handles PUT /me/email.
+func ChangeEmail(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+
+		data := struct {
+			NewEmail        string `json:"new_email"`
+			CurrentPassword string `json:"current_password"`
+		}{}
+		if err := e.BindBody(&data); err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
+		}
+
+		if data.NewEmail == "" || data.CurrentPassword == "" {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "New email and current password are required"})
+		}
+
+		if !strings.Contains(data.NewEmail, "@") {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid email address"})
+		}
+
+		if !user.ValidatePassword(data.CurrentPassword) {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Current password is incorrect"})
+		}
+
+		// Check if the new email is the same as the current one.
+		if strings.EqualFold(user.Email(), data.NewEmail) {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "New email is the same as the current email"})
+		}
+
+		// Check if the new email is already in use.
+		existing, _ := app.FindAuthRecordByEmail("users", data.NewEmail)
+		if existing != nil {
+			return e.JSON(http.StatusConflict, map[string]any{"error": "Email is already in use"})
+		}
+
+		user.Set("email", data.NewEmail)
+		user.Set("email_verified", false)
+		if err := app.Save(user); err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": err.Error()})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"message": "Email updated"})
+	}
+}
+
 // ChangePassword handles PUT /me/password.
 func ChangePassword(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {

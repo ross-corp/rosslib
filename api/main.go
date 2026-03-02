@@ -78,6 +78,7 @@ func main() {
 		// Account
 		authed.GET("/me/account", handlers.GetAccount(app))
 		authed.PUT("/me/password", handlers.ChangePassword(app))
+		authed.PUT("/me/email", handlers.ChangeEmail(app))
 		authed.DELETE("/me/account/data", handlers.DeleteAllData(app))
 		authed.DELETE("/me/account", handlers.DeleteAccount(app))
 
