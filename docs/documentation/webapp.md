@@ -81,6 +81,7 @@ webapp/src/app/
 │   ├── export/page.tsx             CSV export
 │   ├── tags/page.tsx               label category management
 │   ├── ghost-activity/page.tsx     ghost user controls
+│   ├── feedback/page.tsx           view and delete submitted feedback
 │   ├── follow-requests/page.tsx    pending follow requests
 │   ├── followed-books/page.tsx     manage followed books
 │   ├── followed-authors/page.tsx   manage followed authors
@@ -267,6 +268,10 @@ Client component that renders a modal overlay for submitting content reports. Sh
 ### `FeedbackForm` (`components/feedback-form.tsx`)
 
 Client component for the `/feedback` page. Two-tab form for submitting bug reports or feature requests. Bug report tab includes title, description, steps to reproduce, and severity dropdown. Feature request tab includes title and description. Calls `POST /api/feedback`.
+
+### `FeedbackList` (`app/settings/feedback/feedback-list.tsx`)
+
+Client component for the `/settings/feedback` page. Displays the user's submitted bug reports and feature requests in a list. Each item shows type badge (Bug/Feature), status badge (Open/Closed), severity badge (for bugs), title, description preview (2-line clamp), and submission date. Each item has a "Delete" button that calls `DELETE /api/me/feedback/:id` and optimistically removes the item from the list.
 
 ### `AdminLinkEdits` (`components/admin-link-edits.tsx`)
 

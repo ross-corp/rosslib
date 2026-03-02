@@ -13,6 +13,7 @@ const navItems = [
   { label: "Follow requests", href: "/settings/follow-requests" },
   { label: "Followed authors", href: "/settings/followed-authors" },
   { label: "Ghost Activity", href: "/settings/ghost-activity" },
+  { label: "My Feedback", href: "/settings/feedback" },
 ];
 
 export default function SettingsNav() {
