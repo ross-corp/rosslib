@@ -18,8 +18,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX polish
 
-- [ ] Add Escape key handler to close dropdowns. In `webapp/src/components/shelf-picker.tsx`, `webapp/src/components/book-tag-picker.tsx`, and `webapp/src/components/nav-dropdown.tsx`, dropdowns close when clicking outside but don't respond to the Escape key. Add a `useEffect` that listens for `keydown` events and closes the dropdown when `event.key === "Escape"`. This is a standard accessibility pattern for dropdown menus.
-
 - [ ] Add relative timestamps to feed activity items. In `webapp/src/app/feed/page.tsx` (or the feed components), activity timestamps are shown as full dates. Add a relative time display (e.g. "2 hours ago", "3 days ago") using a simple helper function that calculates the difference between now and the activity's `created_at`. Show the relative time as the primary display and the full date as a `title` attribute on hover.
 
 - [ ] Add user library book count to profile page header. The profile page at `webapp/src/app/[username]/page.tsx` shows `books_read` (finished books) and `currently_reading_count`, but doesn't show the total number of books in the user's library (across all statuses). Add a "Library" stat to the stats row that shows the total count. This can be derived from the shelves response: sum of `item_count` across all read-status shelves (want-to-read + currently-reading + read), or add a `total_books` field to the `GET /users/:username` profile response in `api/handlers/users.go`.
