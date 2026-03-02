@@ -18,8 +18,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX polish
 
-- [ ] Add user library book count to profile page header. The profile page at `webapp/src/app/[username]/page.tsx` shows `books_read` (finished books) and `currently_reading_count`, but doesn't show the total number of books in the user's library (across all statuses). Add a "Library" stat to the stats row that shows the total count. This can be derived from the shelves response: sum of `item_count` across all read-status shelves (want-to-read + currently-reading + read), or add a `total_books` field to the `GET /users/:username` profile response in `api/handlers/users.go`.
-
 ## data integrity
 
 - [ ] Add `self_link` check to `CreateBookLink`. In `api/handlers/links.go`, the `CreateBookLink` handler does not verify that `from_book_id != to_book_id`. A user can create a link from a book to itself, which is meaningless. Add a check after resolving both book IDs: if they're the same, return 400 with `"cannot link a book to itself"`.
