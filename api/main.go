@@ -42,6 +42,7 @@ func main() {
 		se.Router.GET("/books/{workId}/reviews", handlers.GetBookReviews(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/books/{workId}/links", handlers.GetBookLinks(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/books/{workId}/threads", handlers.GetBookThreads(app))
+		se.Router.GET("/books/{workId}/similar-threads", handlers.SimilarThreads(app))
 
 		// ── Genres (public) ──────────────────────────────────────
 		se.Router.GET("/genres", handlers.ListGenres(app))
@@ -71,6 +72,7 @@ func main() {
 
 		// ── Threads (public GET) ─────────────────────────────────
 		se.Router.GET("/threads/{threadId}", handlers.GetThread(app))
+		se.Router.GET("/threads/{threadId}/similar", handlers.GetSimilarThreads(app))
 
 		// ── Authenticated routes ─────────────────────────────────
 		authed := se.Router.Group("").Bind(apis.RequireAuth())

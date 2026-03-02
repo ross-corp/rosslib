@@ -1569,7 +1569,7 @@ Soft-delete a comment (author only). Returns 204.
 
 ### `GET /books/:workId/similar-threads?title=<title>`
 
-Find existing threads on a book whose titles are similar to the given title. Uses PostgreSQL `pg_trgm` trigram similarity with a threshold of 0.3. Returns up to 5 results sorted by similarity score. Used by the thread creation form to suggest existing discussions before posting a duplicate.
+Find existing threads on a book whose titles are similar to the given title. Uses trigram similarity (computed in Go) with a threshold of 0.3. Returns up to 5 results sorted by similarity score. Used by the thread creation form to suggest existing discussions before posting a duplicate.
 
 ```json
 [
