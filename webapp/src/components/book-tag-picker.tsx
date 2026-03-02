@@ -54,7 +54,7 @@ export default function BookTagPicker({
       });
   }, [open, loaded, openLibraryId]);
 
-  // Close on outside click.
+  // Close on outside click or Escape key.
   useEffect(() => {
     if (!open) return;
     function handle(e: MouseEvent) {
@@ -62,8 +62,17 @@ export default function BookTagPicker({
         setOpen(false);
       }
     }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    }
     document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handle);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [open]);
 
   function isAssigned(keyId: string, valueId: string) {
