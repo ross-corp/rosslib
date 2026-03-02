@@ -259,6 +259,12 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			totalPagesRead = *totalPages.Total
 		}
 
+		// Total books in library
+		var totalBooks countResult
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) as count FROM user_books WHERE "user" = {:id}
+		`).Bind(map[string]any{"id": user.Id}).One(&totalBooks)
+
 		// Avatar URL
 		var avatarURL *string
 		if av := user.GetString("avatar"); av != "" {
@@ -281,6 +287,7 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			"friends_count":   friendsCount.Count,
 			"books_read":              booksRead.Count,
 			"currently_reading_count": currentlyReading.Count,
+			"total_books":             totalBooks.Count,
 			"reviews_count":           reviewsCount.Count,
 			"books_this_year": booksThisYear.Count,
 			"average_rating":    avgRating.Avg,

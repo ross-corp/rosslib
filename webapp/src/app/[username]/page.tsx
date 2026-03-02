@@ -53,6 +53,7 @@ type UserProfile = {
   friends_count: number;
   books_read: number;
   currently_reading_count: number;
+  total_books: number;
   reviews_count: number;
   books_this_year: number;
   average_rating: number | null;
@@ -381,6 +382,13 @@ export default async function UserPage({
         <div className="flex items-center gap-4 flex-wrap">
           {!isRestricted && (
             <>
+              <Link
+                href={`/${profile.username}/library`}
+                className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+              >
+                <span className="font-semibold text-text-primary">{profile.total_books}</span>{" "}
+                <span className="text-text-tertiary">books</span>
+              </Link>
               <span className="text-sm text-text-secondary">
                 <span className="font-semibold text-text-primary">{profile.books_read}</span>{" "}
                 <span className="text-text-tertiary">read</span>
