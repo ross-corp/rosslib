@@ -20,8 +20,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## data integrity
 
-- [ ] Add length validation to thread title and comment body. In `api/handlers/threads.go`, the `CreateThread` handler accepts `title` and `body` from the request but the API docs say title is max 500 chars and body is max 10,000 chars. Verify these limits are enforced in the handler code. If not, add validation: `if len(title) > 500 { return 400 "title must be 500 characters or fewer" }` and `if len(body) > 10000 { return 400 "body must be 10,000 characters or fewer" }`. Same for `AddComment`: body max 5,000 chars.
-
 - [ ] Add rate limit to recommendation sending. In `api/handlers/recommendations.go`, `SendRecommendation` has no rate limiting — a user could spam another user with recommendations. Add a check that a user cannot send more than 10 recommendations in a 24-hour window. Query `SELECT COUNT(*) FROM recommendations WHERE sender = :userId AND created >= datetime('now', '-1 day')`. Return 429 with `"too many recommendations, try again later"` if the limit is exceeded.
 
 ## blocked
