@@ -73,6 +73,7 @@ webapp/src/app/
 ├── search/page.tsx                 book + user + author search (shows popular books when no query)
 ├── users/page.tsx                  browse all users (sort by newest/books/followers)
 ├── books/[workId]/page.tsx         single book page (series badges, series navigation row)
+├── books/[workId]/not-found.tsx   "Book not found" with search link
 ├── series/[seriesId]/page.tsx     series detail — ordered book list with covers & reading progress
 ├── settings/
 │   ├── page.tsx                    profile settings
@@ -93,6 +94,7 @@ webapp/src/app/
 ├── feedback/page.tsx              bug report & feature request form
 ├── admin/page.tsx                 admin panel (moderator only)
 ├── [username]/
+│   ├── not-found.tsx               "User not found" with link to /users
 │   ├── page.tsx                    public profile (incl. computed lists, followed authors sidebar)
 │   ├── stats/page.tsx              detailed reading statistics
 │   ├── shelves/[slug]/page.tsx     label page (owner gets library manager)
