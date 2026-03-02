@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { formatTime } from "@/components/activity";
+import { formatTime, formatFullDate } from "@/components/activity";
 
 type Notification = {
   id: string;
@@ -112,7 +112,10 @@ export default function NotificationCard({
           <p className="text-sm text-text-primary mt-0.5">{notif.body}</p>
         )}
         <div className="flex items-center gap-3 mt-1">
-          <span className="text-xs text-text-primary">
+          <span
+            className="text-xs text-text-primary"
+            title={formatFullDate(notif.created_at)}
+          >
             {formatTime(notif.created_at)}
           </span>
           {authorKey && (
