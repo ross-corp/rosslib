@@ -186,7 +186,11 @@ webapp/src/app/
 
 ### `Nav` (`components/nav.tsx`)
 
-Top navigation bar. Server component that fetches the current user. Links are organized into two dropdown menus: **Browse** (Search books, Genres, Scan ISBN) and **Community** (Browse users, My feed). Notification bell, admin link, user avatar, and sign out remain as standalone items.
+Top navigation bar. Server component that fetches the current user. Links are organized into two dropdown menus: **Browse** (Search books, Genres, Scan ISBN) and **Community** (Browse users, My feed). Notification bell, admin link, user avatar, and sign out remain as standalone items. On desktop (`md:` and above), the search bar and nav links are shown inline. Below `md:`, the search bar and desktop nav are hidden and replaced by the `MobileNav` hamburger menu.
+
+### `MobileNav` (`components/mobile-nav.tsx`)
+
+Client component rendered inside `Nav`, visible only below the `md:` breakpoint. Shows a hamburger button (`☰`) that toggles a full-width dropdown panel with all nav links stacked vertically, grouped under "Browse" and "Community" section headings. Includes notification, admin, profile, and sign out links for authenticated users, or sign in/sign up for guests. Closes when a link is clicked or when clicking outside.
 
 ### `NavDropdown` (`components/nav-dropdown.tsx`)
 
