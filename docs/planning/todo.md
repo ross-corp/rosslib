@@ -16,8 +16,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## settings & account
 
-- [ ] Add user feedback history page. The `GET /me/feedback` endpoint exists and is registered in `api/main.go` (returns the user's submitted bug reports and feature requests), and there's a proxy route at `webapp/src/app/api/me/feedback/route.ts`. But there's no page to view your own feedback submissions. Create `webapp/src/app/settings/feedback/page.tsx` that fetches `GET /api/me/feedback`, renders each item with type badge (bug/feature), title, status (open/closed), and a delete button calling `DELETE /api/me/feedback/:feedbackId`. Add a "My feedback" link to the settings nav in `webapp/src/components/settings-nav.tsx`.
-
 - [ ] Add email change functionality to settings page. Currently users can change their password and display name in settings, but there's no way to change their email address. Add `PUT /me/email` endpoint in `api/handlers/auth.go` that accepts `{ new_email, current_password }`, verifies the password, checks the new email isn't already in use, updates `users.email`, sets `email_verified = false`, and sends a new verification email. Add corresponding proxy route and form component on the settings page below the password form.
 
 ## UX polish
