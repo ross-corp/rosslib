@@ -16,8 +16,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## settings & account
 
-- [ ] Add email change functionality to settings page. Currently users can change their password and display name in settings, but there's no way to change their email address. Add `PUT /me/email` endpoint in `api/handlers/auth.go` that accepts `{ new_email, current_password }`, verifies the password, checks the new email isn't already in use, updates `users.email`, sets `email_verified = false`, and sends a new verification email. Add corresponding proxy route and form component on the settings page below the password form.
-
 ## UX polish
 
 - [ ] Add `not-found.tsx` for book and user pages. Create `webapp/src/app/books/[workId]/not-found.tsx` — display "Book not found" with a search link. Create `webapp/src/app/[username]/not-found.tsx` — display "User not found" with a link to `/users`. In the corresponding `page.tsx` files, call `notFound()` (from `next/navigation`) when the API returns 404 instead of showing a generic error.
