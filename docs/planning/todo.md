@@ -18,8 +18,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX polish
 
-- [ ] Add `aria-label` attributes to nav bar interactive elements. In `webapp/src/components/nav.tsx`, none of the nav links, buttons, or icons have `aria-label` attributes. Add `aria-label` to: the search input ("Search books"), the notification bell icon ("Notifications"), the user avatar dropdown ("User menu"), the "Browse" dropdown ("Browse menu"), the "Community" dropdown ("Community menu"), and the sign-out button ("Sign out"). This improves screen reader accessibility.
-
 - [ ] Add `role="alert"` to form validation error messages. Across login (`webapp/src/app/login/page.tsx`), register (`webapp/src/app/register/page.tsx`), forgot-password (`webapp/src/app/forgot-password/page.tsx`), and reset-password (`webapp/src/app/reset-password/page.tsx`), error messages are displayed as styled `<p>` elements but are not announced to screen readers. Add `role="alert"` and `aria-live="assertive"` to the error message containers so screen readers announce validation failures immediately.
 
 - [ ] Add Escape key handler to close dropdowns. In `webapp/src/components/shelf-picker.tsx`, `webapp/src/components/book-tag-picker.tsx`, and `webapp/src/components/nav-dropdown.tsx`, dropdowns close when clicking outside but don't respond to the Escape key. Add a `useEffect` that listens for `keydown` events and closes the dropdown when `event.key === "Escape"`. This is a standard accessibility pattern for dropdown menus.
