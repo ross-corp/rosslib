@@ -20,8 +20,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## data integrity
 
-- [ ] Add rate limit to recommendation sending. In `api/handlers/recommendations.go`, `SendRecommendation` has no rate limiting — a user could spam another user with recommendations. Add a check that a user cannot send more than 10 recommendations in a 24-hour window. Query `SELECT COUNT(*) FROM recommendations WHERE sender = :userId AND created >= datetime('now', '-1 day')`. Return 429 with `"too many recommendations, try again later"` if the limit is exceeded.
-
 ## blocked
 
 ## API gaps
