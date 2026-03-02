@@ -18,8 +18,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX polish
 
-- [ ] Truncate long author bios on author pages. In `webapp/src/app/authors/[authorKey]/page.tsx` (or the component rendering the bio), if the bio text exceeds 500 characters, truncate it and show a "Read more" toggle button. Use a client component with `useState` to toggle between truncated (first 500 chars + "...") and full text. Apply `prose` class from Tailwind typography plugin for better bio formatting.
-
 - [ ] Add responsive hamburger menu for mobile navigation. In `webapp/src/components/nav.tsx`, wrap the desktop nav links in a container that hides below `md:` breakpoint. Add a hamburger button (`☰`) visible only below `md:` that toggles a full-width dropdown panel with all nav links stacked vertically. Use a client component with `useState` for the open/close toggle. Close the menu when a link is clicked or when clicking outside.
 
 - [ ] Add `aria-label` attributes to nav bar interactive elements. In `webapp/src/components/nav.tsx`, none of the nav links, buttons, or icons have `aria-label` attributes. Add `aria-label` to: the search input ("Search books"), the notification bell icon ("Notifications"), the user avatar dropdown ("User menu"), the "Browse" dropdown ("Browse menu"), the "Community" dropdown ("Community menu"), and the sign-out button ("Sign out"). This improves screen reader accessibility.
