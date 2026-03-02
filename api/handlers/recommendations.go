@@ -33,6 +33,19 @@ func SendRecommendation(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Cannot recommend to yourself"})
 		}
 
+		// Rate limit: max 10 recommendations per 24 hours
+		type countResult struct {
+			Count int `db:"count"`
+		}
+		var cnt countResult
+		err := app.DB().NewQuery(`
+			SELECT COUNT(*) as count FROM recommendations
+			WHERE sender = {:sender} AND created >= datetime('now', '-1 day')
+		`).Bind(map[string]any{"sender": user.Id}).One(&cnt)
+		if err == nil && cnt.Count >= 10 {
+			return e.JSON(http.StatusTooManyRequests, map[string]any{"error": "too many recommendations, try again later"})
+		}
+
 		// Find recipient user
 		recipients, err := app.FindRecordsByFilter("users",
 			"username = {:username}", "", 1, 0,

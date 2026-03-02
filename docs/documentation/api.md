@@ -1986,7 +1986,7 @@ Send a book recommendation to another user.
 { "username": "bob", "book_ol_id": "OL82592W", "note": "You'll love this!" }
 ```
 
-Creates a recommendation record and sends a `book_recommendation` notification to the recipient. Also records a `sent_recommendation` activity. Returns `201` with the recommendation ID. Returns `409` if the same sender/recipient/book triple already exists.
+Creates a recommendation record and sends a `book_recommendation` notification to the recipient. Also records a `sent_recommendation` activity. Returns `201` with the recommendation ID. Returns `409` if the same sender/recipient/book triple already exists. Rate-limited to 10 recommendations per 24-hour window — returns `429` with `"too many recommendations, try again later"` if exceeded.
 
 ### `GET /me/recommendations`  *(auth required)*
 
