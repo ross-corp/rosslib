@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import NotificationBell from "@/components/notification-bell";
 import NavDropdown from "@/components/nav-dropdown";
+import KeyboardShortcutHint from "@/components/keyboard-shortcut-hint";
 
 export default async function Nav() {
   const user = await getUser();
@@ -34,9 +35,10 @@ export default async function Nav() {
             placeholder="Search books..."
             className="w-full px-3 py-1 pr-12 text-sm bg-surface-2 border border-border rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent focus:border-transparent"
           />
-          <kbd className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[10px] font-mono text-text-tertiary bg-surface-1 border border-border rounded px-1 py-0.5 leading-none">
-            ⌘K
-          </kbd>
+          <KeyboardShortcutHint
+            keys={{ mac: "⌘K", other: "Ctrl+K" }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[10px] font-mono text-text-tertiary bg-surface-1 border border-border rounded px-1 py-0.5 leading-none"
+          />
         </form>
         <nav className="flex items-center gap-1 ml-auto shrink-0">
           <NavDropdown label="browse" items={browseItems} />
