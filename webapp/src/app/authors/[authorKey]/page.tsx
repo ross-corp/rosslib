@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import AuthorBio from "@/components/author-bio";
 import AuthorFollowButton from "@/components/author-follow-button";
 import AuthorWorksGrid from "@/components/author-works-grid";
 import { getToken } from "@/lib/auth";
@@ -118,11 +119,7 @@ export default async function AuthorPage({
               {author.work_count} work{author.work_count === 1 ? "" : "s"}
             </p>
 
-            {author.bio && (
-              <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">
-                {author.bio}
-              </p>
-            )}
+            {author.bio && <AuthorBio bio={author.bio} />}
 
             {author.links && author.links.length > 0 && (
               <div className="flex flex-wrap gap-3 mt-4">
