@@ -102,6 +102,7 @@ func main() {
 		authed.DELETE("/me/books/{olId}", handlers.DeleteBook(app))
 		authed.GET("/me/books/{olId}/status", handlers.GetBookStatus(app))
 		authed.PUT("/me/books/{olId}/status", handlers.SetBookStatus(app))
+		authed.GET("/me/books/{olId}/editions", handlers.GetMyBookEditions(app))
 		authed.GET("/me/books/status-map", handlers.GetStatusMap(app))
 
 		// Tags

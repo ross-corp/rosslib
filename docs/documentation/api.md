@@ -373,6 +373,27 @@ Returns the user's status, rating, review, progress, and edition selection for a
 }
 ```
 
+### `GET /me/books/:olId/editions`  *(auth required)*
+
+Returns the user's currently selected edition alongside the full editions list from Open Library. Combines the `selected_edition_key` and `selected_edition_cover_url` from the user's `user_books` record with the OL editions response.
+
+**Query parameters:**
+- `limit` *(optional, default 20, max 100)* — number of editions to return
+- `offset` *(optional, default 0)* — offset into the editions list
+
+```json
+{
+  "selected_edition_key": "OL123M",
+  "selected_edition_cover_url": "https://covers.openlibrary.org/b/id/12345-M.jpg",
+  "editions": {
+    "entries": [...],
+    "size": 251
+  }
+}
+```
+
+`selected_edition_key` and `selected_edition_cover_url` are null when no edition is selected. The `editions` object is the raw Open Library editions response.
+
 ### `PUT /me/books/:olId/status`  *(auth required)*
 
 Set the reading status for a book.

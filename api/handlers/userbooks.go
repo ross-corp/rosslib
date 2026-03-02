@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -740,5 +741,70 @@ func setStatusTag(app core.App, userID, bookID, statusSlug string) {
 			ubs[0].Set("date_started", time.Now().UTC().Format(time.RFC3339))
 			_ = app.Save(ubs[0])
 		}
+	}
+}
+
+// GetMyBookEditions handles GET /me/books/{olId}/editions
+// Returns the user's selected edition alongside the full editions list from Open Library.
+func GetMyBookEditions(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+		olID := e.Request.PathValue("olId")
+
+		// Look up the book in our catalog
+		books, _ := app.FindRecordsByFilter("books",
+			"open_library_id = {:id}", "", 1, 0,
+			map[string]any{"id": olID},
+		)
+
+		var selectedEditionKey *string
+		var selectedEditionCoverURL *string
+
+		if len(books) > 0 {
+			// Look up the user's user_books record for edition selection
+			ubs, _ := app.FindRecordsByFilter("user_books",
+				"user = {:user} && book = {:book}",
+				"", 1, 0,
+				map[string]any{"user": user.Id, "book": books[0].Id},
+			)
+			if len(ubs) > 0 {
+				if sek := ubs[0].GetString("selected_edition_key"); sek != "" {
+					selectedEditionKey = &sek
+				}
+				if secu := ubs[0].GetString("selected_edition_cover_url"); secu != "" {
+					selectedEditionCoverURL = &secu
+				}
+			}
+		}
+
+		// Parse pagination params
+		limit := 20
+		offset := 0
+		if v := e.Request.URL.Query().Get("limit"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 100 {
+				limit = n
+			}
+		}
+		if v := e.Request.URL.Query().Get("offset"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+				offset = n
+			}
+		}
+
+		// Fetch editions from Open Library
+		ol := newOLClient()
+		data, err := ol.get(fmt.Sprintf("/works/%s/editions.json?limit=%d&offset=%d", olID, limit, offset))
+		if err != nil {
+			data = map[string]any{"entries": []any{}}
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{
+			"selected_edition_key":       selectedEditionKey,
+			"selected_edition_cover_url": selectedEditionCoverURL,
+			"editions":                   data,
+		})
 	}
 }
