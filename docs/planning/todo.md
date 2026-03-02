@@ -24,8 +24,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## API gaps
 
-- [ ] Add `GET /me/books/{olId}/editions` convenience endpoint. Currently to select an edition, the frontend must call `GET /books/{workId}/editions` (which proxies to Open Library) and then `PATCH /me/books/{olId}` to save the selection. Add a new endpoint that returns the user's currently selected edition alongside the full editions list. Register `authed.GET("/me/books/{olId}/editions", handlers.GetMyBookEditions(app))` in main.go. The handler should return `{ "selected_edition_key": "...", "selected_edition_cover_url": "...", "editions": [...] }` by combining the user_books selection with the OL editions response.
-
 - [ ] Add `GET /books/:workId/followers/count` public endpoint for book follow counts. Currently the only way to see how many users follow a book is to be authenticated and check your own follow status. Add a public endpoint in `api/handlers/books.go` that returns `{ "follower_count": N }` by counting rows in `book_follows WHERE book_id = :bookId`. Register as `se.Router.GET("/books/{workId}/followers/count", handlers.GetBookFollowerCount(app))` in main.go. Display this count on the book detail page next to the follow button as "N followers".
 
 - [ ] Add `blocked_at` timestamp to block list response. In `api/handlers/blocks.go`, the `GetBlockedUsers` handler returns blocked user info but doesn't include when the block was created. Include the `created` timestamp from the `blocks` record in the response as `blocked_at`. In `webapp/src/app/settings/blocked/page.tsx`, display the block date next to each blocked user (e.g. "Blocked on Jan 15, 2026").
