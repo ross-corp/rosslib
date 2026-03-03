@@ -137,6 +137,7 @@ func GetBlockedUsers(app core.App) func(e *core.RequestEvent) error {
 			Username    string  `json:"username"`
 			DisplayName *string `json:"display_name"`
 			AvatarURL   *string `json:"avatar_url"`
+			BlockedAt   string  `json:"blocked_at"`
 		}
 
 		result := make([]blockedUser, 0, len(blocks))
@@ -147,8 +148,9 @@ func GetBlockedUsers(app core.App) func(e *core.RequestEvent) error {
 				continue
 			}
 			bu := blockedUser{
-				ID:       u.Id,
-				Username: u.GetString("username"),
+				ID:        u.Id,
+				Username:  u.GetString("username"),
+				BlockedAt: b.GetString("created"),
 			}
 			if dn := u.GetString("display_name"); dn != "" {
 				bu.DisplayName = &dn

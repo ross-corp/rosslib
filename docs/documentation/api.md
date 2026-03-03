@@ -912,7 +912,8 @@ List all users the current user has blocked, ordered by most recently blocked fi
     "id": "user_id",
     "username": "blockeduser",
     "display_name": "Blocked User",
-    "avatar_url": "/api/files/..."
+    "avatar_url": "/api/files/...",
+    "blocked_at": "2026-01-15T14:00:00.000Z"
   }
 ]
 ```

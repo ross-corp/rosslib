@@ -8,6 +8,7 @@ type BlockedUser = {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  blocked_at: string;
 };
 
 export default function BlockedUsersList({
@@ -68,6 +69,14 @@ export default function BlockedUsersList({
               {user.display_name && (
                 <p className="text-xs text-text-primary">@{user.username}</p>
               )}
+              <p className="text-xs text-text-primary opacity-60">
+                Blocked on{" "}
+                {new Date(user.blocked_at).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
             </div>
           </div>
           <button

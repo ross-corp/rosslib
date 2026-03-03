@@ -9,6 +9,7 @@ type BlockedUser = {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  blocked_at: string;
 };
 
 async function fetchBlockedUsers(token: string): Promise<BlockedUser[]> {
