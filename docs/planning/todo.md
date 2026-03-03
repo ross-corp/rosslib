@@ -26,8 +26,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## series improvements
 
-- [ ] Add series edit endpoint. Add `PATCH /series/{seriesId}` (auth required) to `api/main.go`. The handler in `api/handlers/series.go` should accept `{ "name": "...", "description": "..." }` and update the series record. Only the `name` and `description` fields should be updatable. Return 200 with the updated series. On the series page (`webapp/src/app/series/[seriesId]/page.tsx`), add an edit button for logged-in users that opens an inline form to rename the series or edit its description.
-
 ## import improvements
 
 - [ ] LLM-powered fuzzy matching for failed import lookups. When standard book lookups fail to find a match during import, fall back to a "power mode" that uses an LLM to generate title/author permutations (alternate spellings, subtitle variations, series name removal, etc.) and retry searches with each permutation until possible matches are found. Present the candidate matches to the user for confirmation.
