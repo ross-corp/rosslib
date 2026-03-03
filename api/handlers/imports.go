@@ -59,19 +59,20 @@ func PreviewGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 			Year     *int     `json:"year"`
 		}
 		type previewRow struct {
-			RowID              int            `json:"row_id"`
-			Title              string         `json:"title"`
-			Author             string         `json:"author"`
-			ISBN13             string         `json:"isbn13"`
-			Rating             *float64       `json:"rating"`
-			ReviewText         *string        `json:"review_text"`
-			Spoiler            bool           `json:"spoiler"`
-			DateRead           *string        `json:"date_read"`
-			DateAdded          *string        `json:"date_added"`
-			ExclusiveShelfSlug string         `json:"exclusive_shelf_slug"`
-			CustomShelves      []string       `json:"custom_shelves"`
-			Status             string         `json:"status"`
-			Match              *bookCandidate `json:"match,omitempty"`
+			RowID              int              `json:"row_id"`
+			Title              string           `json:"title"`
+			Author             string           `json:"author"`
+			ISBN13             string           `json:"isbn13"`
+			Rating             *float64         `json:"rating"`
+			ReviewText         *string          `json:"review_text"`
+			Spoiler            bool             `json:"spoiler"`
+			DateRead           *string          `json:"date_read"`
+			DateAdded          *string          `json:"date_added"`
+			ExclusiveShelfSlug string           `json:"exclusive_shelf_slug"`
+			CustomShelves      []string         `json:"custom_shelves"`
+			Status             string           `json:"status"`
+			Match              *bookCandidate   `json:"match,omitempty"`
+			Candidates         []bookCandidate  `json:"candidates,omitempty"`
 		}
 
 		var csvRows [][]string
@@ -278,6 +279,26 @@ func PreviewGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 					olID, matchTitle, coverURL, authors, found = googleBooksLookup(gb, ol, isbn, cleanGoodreadsTitle(pr.Title), cleanGoodreadsAuthor(pr.Author))
 				}
 
+				// 8. LLM-powered fuzzy matching — generate title/author permutations
+				// and search OL with each. Returns candidates for user confirmation.
+				if !found && pr.Title != "" {
+					if result := llmFuzzyMatch(ol, pr.Title, pr.Author); result != nil {
+						pr.Status = "ambiguous"
+						for _, c := range result.Candidates {
+							bc := bookCandidate{
+								OLID:    c.OLID,
+								Title:   c.Title,
+								Authors: c.Authors,
+								Year:    c.Year,
+							}
+							if c.CoverURL != "" {
+								bc.CoverURL = &c.CoverURL
+							}
+							pr.Candidates = append(pr.Candidates, bc)
+						}
+					}
+				}
+
 				if found {
 					pr.Status = "matched"
 					match := bookCandidate{
@@ -295,7 +316,7 @@ func PreviewGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 						match.CoverURL = &coverURL
 					}
 					pr.Match = &match
-				} else {
+				} else if pr.Status != "ambiguous" {
 					pr.Status = "unmatched"
 				}
 
@@ -323,9 +344,12 @@ func PreviewGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		matched := 0
+		ambiguous := 0
 		for _, r := range results {
 			if r.Status == "matched" {
 				matched++
+			} else if r.Status == "ambiguous" {
+				ambiguous++
 			}
 		}
 
@@ -353,8 +377,8 @@ func PreviewGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 			"type":      "result",
 			"total":     len(results),
 			"matched":   matched,
-			"ambiguous":  0,
-			"unmatched": len(results) - matched,
+			"ambiguous":  ambiguous,
+			"unmatched": len(results) - matched - ambiguous,
 			"rows":      results,
 			"shelves":   shelves,
 		})
@@ -936,19 +960,20 @@ func PreviewStoryGraphImport(app core.App) func(e *core.RequestEvent) error {
 			Year     *int     `json:"year"`
 		}
 		type previewRow struct {
-			RowID              int            `json:"row_id"`
-			Title              string         `json:"title"`
-			Author             string         `json:"author"`
-			ISBN13             string         `json:"isbn13"`
-			Rating             *float64       `json:"rating"`
-			ReviewText         *string        `json:"review_text"`
-			Spoiler            bool           `json:"spoiler"`
-			DateRead           *string        `json:"date_read"`
-			DateAdded          *string        `json:"date_added"`
-			ExclusiveShelfSlug string         `json:"exclusive_shelf_slug"`
-			CustomShelves      []string       `json:"custom_shelves"`
-			Status             string         `json:"status"`
-			Match              *bookCandidate `json:"match,omitempty"`
+			RowID              int              `json:"row_id"`
+			Title              string           `json:"title"`
+			Author             string           `json:"author"`
+			ISBN13             string           `json:"isbn13"`
+			Rating             *float64         `json:"rating"`
+			ReviewText         *string          `json:"review_text"`
+			Spoiler            bool             `json:"spoiler"`
+			DateRead           *string          `json:"date_read"`
+			DateAdded          *string          `json:"date_added"`
+			ExclusiveShelfSlug string           `json:"exclusive_shelf_slug"`
+			CustomShelves      []string         `json:"custom_shelves"`
+			Status             string           `json:"status"`
+			Match              *bookCandidate   `json:"match,omitempty"`
+			Candidates         []bookCandidate  `json:"candidates,omitempty"`
 		}
 
 		var csvRows [][]string
@@ -1131,6 +1156,26 @@ func PreviewStoryGraphImport(app core.App) func(e *core.RequestEvent) error {
 					olID, matchTitle, coverURL, authors, found = googleBooksLookup(gb, ol, isbn, cleanStoryGraphTitle(pr.Title), cleanStoryGraphAuthor(pr.Author))
 				}
 
+				// 7. LLM-powered fuzzy matching — generate title/author permutations
+				// and search OL with each. Returns candidates for user confirmation.
+				if !found && pr.Title != "" {
+					if result := llmFuzzyMatch(ol, pr.Title, pr.Author); result != nil {
+						pr.Status = "ambiguous"
+						for _, c := range result.Candidates {
+							bc := bookCandidate{
+								OLID:    c.OLID,
+								Title:   c.Title,
+								Authors: c.Authors,
+								Year:    c.Year,
+							}
+							if c.CoverURL != "" {
+								bc.CoverURL = &c.CoverURL
+							}
+							pr.Candidates = append(pr.Candidates, bc)
+						}
+					}
+				}
+
 				if found {
 					pr.Status = "matched"
 					match := bookCandidate{
@@ -1148,7 +1193,7 @@ func PreviewStoryGraphImport(app core.App) func(e *core.RequestEvent) error {
 						match.CoverURL = &coverURL
 					}
 					pr.Match = &match
-				} else {
+				} else if pr.Status != "ambiguous" {
 					pr.Status = "unmatched"
 				}
 
@@ -1175,9 +1220,12 @@ func PreviewStoryGraphImport(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		matched := 0
+		ambiguous := 0
 		for _, r := range results {
 			if r.Status == "matched" {
 				matched++
+			} else if r.Status == "ambiguous" {
+				ambiguous++
 			}
 		}
 
@@ -1204,8 +1252,8 @@ func PreviewStoryGraphImport(app core.App) func(e *core.RequestEvent) error {
 			"type":      "result",
 			"total":     len(results),
 			"matched":   matched,
-			"ambiguous":  0,
-			"unmatched": len(results) - matched,
+			"ambiguous":  ambiguous,
+			"unmatched": len(results) - matched - ambiguous,
 			"rows":      results,
 			"shelves":   shelves,
 		})

@@ -1342,7 +1342,9 @@ Exports the authenticated user's library as a CSV download. Returns `Content-Typ
 
 Accepts a multipart form with a `file` field containing a Goodreads CSV export. Returns a preview without writing to the database.
 
-Response groups rows into `matched`, `ambiguous`, and `unmatched`. The lookup chain tries: local DB by ISBN, OL direct ISBN endpoint, OL search by ISBN, OL search by cleaned title+author, OL search by title only, OL comma-subtitle retry, and finally Google Books as a fallback. The Google Books fallback searches by ISBN then by title+author, and maps results back to Open Library by re-searching OL with the title/author from Google. Set the optional `GOOGLE_BOOKS_API_KEY` env var for higher rate limits (free tier: 1,000 req/day); the fallback works without a key.
+Response groups rows into `matched`, `ambiguous`, and `unmatched`. The lookup chain tries: local DB by ISBN, OL direct ISBN endpoint, OL search by ISBN, OL search by cleaned title+author, OL search by title only, OL comma-subtitle retry, Google Books as a fallback, and finally LLM-powered fuzzy matching. The Google Books fallback searches by ISBN then by title+author, and maps results back to Open Library by re-searching OL with the title/author from Google. Set the optional `GOOGLE_BOOKS_API_KEY` env var for higher rate limits (free tier: 1,000 req/day); the fallback works without a key.
+
+**LLM fuzzy matching:** When all standard lookups fail, the API calls the Anthropic API (Claude Haiku) to generate alternate title/author search permutations (correcting misspellings, removing series info, trying alternate titles, reversing author names, etc.) and retries Open Library searches with each permutation. If candidates are found, the row is marked `ambiguous` with up to 5 candidates for the user to choose from. Set the optional `ANTHROPIC_API_KEY` env var to enable this feature; without it, unmatched rows go directly to the `unmatched` state.
 
 ### `POST /me/import/goodreads/commit`  *(auth required)*
 
@@ -1360,7 +1362,7 @@ The request body includes an optional `unmatched_rows` array alongside `rows` an
 
 Accepts a multipart form with a `file` field containing a StoryGraph CSV export. Returns a preview without writing to the database.
 
-StoryGraph CSV columns: `Title`, `Authors`, `ISBN/UID`, `Format`, `Read Status`, `Star Rating`, `Review`, `Tags`, `Read Dates`. The lookup chain is the same as Goodreads import. Status mapping: `to-read` → `want-to-read`, `currently-reading` → `currently-reading`, `read` → `finished`, `did-not-finish` → `dnf`. Tags are imported as custom labels. Read Dates may be a range (`2024/01/15-2024/02/20`); the end date is used as `date_read`.
+StoryGraph CSV columns: `Title`, `Authors`, `ISBN/UID`, `Format`, `Read Status`, `Star Rating`, `Review`, `Tags`, `Read Dates`. The lookup chain is the same as Goodreads import (including LLM fuzzy matching as a final fallback). Status mapping: `to-read` → `want-to-read`, `currently-reading` → `currently-reading`, `read` → `finished`, `did-not-finish` → `dnf`. Tags are imported as custom labels. Read Dates may be a range (`2024/01/15-2024/02/20`); the end date is used as `date_read`.
 
 ### `POST /me/import/storygraph/commit`  *(auth required)*
 
