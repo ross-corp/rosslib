@@ -24,8 +24,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## API gaps
 
-- [ ] Add `blocked_at` timestamp to block list response. In `api/handlers/blocks.go`, the `GetBlockedUsers` handler returns blocked user info but doesn't include when the block was created. Include the `created` timestamp from the `blocks` record in the response as `blocked_at`. In `webapp/src/app/settings/blocked/page.tsx`, display the block date next to each blocked user (e.g. "Blocked on Jan 15, 2026").
-
 ## series improvements
 
 - [ ] Add series deletion endpoint for empty series. Add `DELETE /series/{seriesId}` (auth required) to `api/main.go`. The handler in `api/handlers/series.go` should check that the series has zero `book_series` links (no books), then delete it. Return 400 if the series still has books, 200 on success. This prevents orphaned series records from accumulating.
