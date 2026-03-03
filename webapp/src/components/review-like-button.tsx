@@ -49,6 +49,13 @@ export default function ReviewLikeButton({
             : "text-text-tertiary hover:text-red-400"
       }`}
       title={disabled ? "You can't like your own review" : liked ? "Unlike" : "Like"}
+      aria-label={
+        disabled
+          ? `You can't like your own review${count > 0 ? ` (${count} like${count === 1 ? "" : "s"})` : ""}`
+          : liked
+            ? `Unlike review (${count} like${count === 1 ? "" : "s"})`
+            : `Like review${count > 0 ? ` (${count} like${count === 1 ? "" : "s"})` : ""}`
+      }
     >
       <svg
         width="14"
@@ -59,10 +66,11 @@ export default function ReviewLikeButton({
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+        aria-hidden="true"
       >
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
       </svg>
-      {count > 0 && <span>{count}</span>}
+      {count > 0 && <span aria-hidden="true">{count}</span>}
     </button>
   );
 }
