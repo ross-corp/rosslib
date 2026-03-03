@@ -551,6 +551,16 @@ Set or update genre ratings for a book. Accepts an array of `{genre, rating}` ob
 
 **Valid genres:** Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children.
 
+### `GET /books/:workId/followers/count`
+
+Returns the number of users following a book. Public endpoint — no authentication required.
+
+```json
+{ "follower_count": 12 }
+```
+
+Returns `{ "follower_count": 0 }` if the book is not in the local catalog or has no followers.
+
 ### `POST /books/:workId/follow`  *(auth required)*
 
 Follow a book. You'll be notified when new threads are created on it.

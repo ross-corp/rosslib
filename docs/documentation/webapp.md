@@ -153,6 +153,7 @@ webapp/src/app/
     ├── admin/link-edits/[editId]/route.ts         ← PUT approve/reject link edit
     ├── books/scan/route.ts                            ← POST barcode scan
     ├── books/lookup/route.ts                          ← GET ISBN lookup
+    ├── books/[workId]/followers/count/route.ts        ← GET book follower count (public)
     ├── books/[workId]/genre-ratings/route.ts         ← GET aggregate genre ratings
     ├── me/books/[olId]/genre-ratings/route.ts       ← GET, PUT user genre ratings
     ├── me/account/route.ts                         ← GET account info (has_password, has_google)

@@ -259,6 +259,16 @@ async function fetchMyGenreRatings(
   return res.json();
 }
 
+async function fetchBookFollowerCount(workId: string): Promise<number> {
+  const res = await fetch(
+    `${process.env.API_URL}/books/${workId}/followers/count`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return 0;
+  const data = await res.json();
+  return data.follower_count ?? 0;
+}
+
 async function fetchSeriesDetail(seriesId: string): Promise<SeriesDetail | null> {
   const res = await fetch(`${process.env.API_URL}/series/${seriesId}`, {
     cache: "no-store",
@@ -293,7 +303,7 @@ export default async function BookPage({
   const { workId } = await params;
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings] = await Promise.all([
+  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings, followerCount] = await Promise.all([
     fetchBook(workId),
     fetchBookReviews(workId, token ?? undefined),
     fetchThreads(workId),
@@ -309,6 +319,7 @@ export default async function BookPage({
     currentUser && token
       ? fetchMyGenreRatings(token, workId)
       : Promise.resolve([]),
+    fetchBookFollowerCount(workId),
   ]);
 
   if (!book) notFound();
@@ -415,7 +426,7 @@ export default async function BookPage({
               </div>
             )}
 
-            {(book.local_reads_count > 0 || book.local_want_to_read_count > 0) && (
+            {(book.local_reads_count > 0 || book.local_want_to_read_count > 0 || followerCount > 0) && (
               <div className="flex items-center gap-3 mb-3 text-xs text-text-primary">
                 {book.local_reads_count > 0 && (
                   <span>
@@ -427,6 +438,12 @@ export default async function BookPage({
                   <span>
                     <span className="font-medium text-text-primary">{book.local_want_to_read_count}</span>{" "}
                     want to read
+                  </span>
+                )}
+                {followerCount > 0 && (
+                  <span>
+                    <span className="font-medium text-text-primary">{followerCount}</span>{" "}
+                    {followerCount === 1 ? "follower" : "followers"}
                   </span>
                 )}
               </div>
@@ -448,6 +465,7 @@ export default async function BookPage({
                 <BookFollowButton
                   workId={workId}
                   initialFollowing={isFollowingBook}
+                  initialFollowerCount={followerCount}
                 />
                 <RecommendButton
                   bookOlId={workId}

@@ -1292,6 +1292,33 @@ func UnfollowBook(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// GetBookFollowerCount handles GET /books/{workId}/followers/count
+func GetBookFollowerCount(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		workID := e.Request.PathValue("workId")
+
+		books, _ := app.FindRecordsByFilter("books",
+			"open_library_id = {:id}", "", 1, 0,
+			map[string]any{"id": workID},
+		)
+		if len(books) == 0 {
+			return e.JSON(http.StatusOK, map[string]any{"follower_count": 0})
+		}
+
+		type countResult struct {
+			Count int `db:"count"`
+		}
+		var result countResult
+		err := app.DB().NewQuery(`SELECT COUNT(*) as count FROM book_follows WHERE book = {:book}`).
+			Bind(map[string]any{"book": books[0].Id}).One(&result)
+		if err != nil {
+			return e.JSON(http.StatusOK, map[string]any{"follower_count": 0})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"follower_count": result.Count})
+	}
+}
+
 // GetFollowedBooks handles GET /me/followed-books
 func GetFollowedBooks(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {

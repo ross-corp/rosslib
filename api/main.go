@@ -42,6 +42,7 @@ func main() {
 		se.Router.GET("/books/{workId}/reviews", handlers.GetBookReviews(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/books/{workId}/links", handlers.GetBookLinks(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/books/{workId}/threads", handlers.GetBookThreads(app))
+		se.Router.GET("/books/{workId}/followers/count", handlers.GetBookFollowerCount(app))
 		se.Router.GET("/books/{workId}/similar-threads", handlers.SimilarThreads(app))
 
 		// ── Genres (public) ──────────────────────────────────────
