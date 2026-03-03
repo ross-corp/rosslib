@@ -651,6 +651,16 @@ Update a series description.
 
 Returns `200` with the updated series `{ id, name, description }`.
 
+### `DELETE /series/:seriesId`  *(auth required)*
+
+Delete an empty series. The series must have zero `book_series` links (no books). Returns 400 if the series still has books.
+
+```
+200 { "ok": true }
+400 { "error": "Cannot delete series that still has books" }
+404 { "error": "Series not found" }
+```
+
 ### `POST /books/:workId/series`  *(auth required)*
 
 Add a book to a series. Finds or creates the series by name.

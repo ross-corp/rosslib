@@ -172,6 +172,43 @@ func UpdateSeriesDescription(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// DeleteSeries handles DELETE /series/{seriesId}
+func DeleteSeries(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
+		}
+
+		seriesID := e.Request.PathValue("seriesId")
+
+		series, err := app.FindRecordById("series", seriesID)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Series not found"})
+		}
+
+		// Check that the series has zero book_series links
+		var count struct {
+			N int `db:"n"`
+		}
+		err = app.DB().NewQuery(`
+			SELECT COUNT(*) as n FROM book_series WHERE series = {:series}
+		`).Bind(map[string]any{"series": seriesID}).One(&count)
+		if err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to check series books"})
+		}
+		if count.N > 0 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Cannot delete series that still has books"})
+		}
+
+		if err := app.Delete(series); err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to delete series"})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"ok": true})
+	}
+}
+
 // AddBookToSeries handles POST /books/{workId}/series
 func AddBookToSeries(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
