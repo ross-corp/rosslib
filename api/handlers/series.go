@@ -137,8 +137,8 @@ func GetSeriesDetail(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
-// UpdateSeriesDescription handles PUT /series/{seriesId}
-func UpdateSeriesDescription(app core.App) func(e *core.RequestEvent) error {
+// UpdateSeries handles PATCH /series/{seriesId}
+func UpdateSeries(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		user := e.Auth
 		if user == nil {
@@ -153,13 +153,24 @@ func UpdateSeriesDescription(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		data := struct {
-			Description string `json:"description"`
+			Name        *string `json:"name"`
+			Description *string `json:"description"`
 		}{}
 		if err := e.BindBody(&data); err != nil {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
 		}
 
-		series.Set("description", strings.TrimSpace(data.Description))
+		if data.Name != nil {
+			trimmed := strings.TrimSpace(*data.Name)
+			if trimmed == "" {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "name cannot be empty"})
+			}
+			series.Set("name", trimmed)
+		}
+		if data.Description != nil {
+			series.Set("description", strings.TrimSpace(*data.Description))
+		}
+
 		if err := app.Save(series); err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to update series"})
 		}

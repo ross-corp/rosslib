@@ -96,12 +96,9 @@ export default async function SeriesPage({
           <span className="text-text-secondary">{series.name}</span>
         </nav>
 
-        <h1 className="text-2xl font-bold text-text-primary mb-2">
-          {series.name}
-        </h1>
-
         <SeriesDescription
           seriesId={series.id}
+          initialName={series.name}
           initialDescription={series.description ?? ""}
           isLoggedIn={!!currentUser}
         />

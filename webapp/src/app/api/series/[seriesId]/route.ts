@@ -20,7 +20,7 @@ export async function GET(
   return NextResponse.json(data, { status: res.status });
 }
 
-export async function PUT(
+export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ seriesId: string }> }
 ) {
@@ -34,7 +34,7 @@ export async function PUT(
   const res = await fetch(
     `${process.env.API_URL}/series/${seriesId}`,
     {
-      method: "PUT",
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,

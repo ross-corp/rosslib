@@ -149,7 +149,7 @@ func main() {
 		authed.DELETE("/threads/{threadId}/comments/{commentId}", handlers.DeleteComment(app))
 
 		// Series
-		authed.PUT("/series/{seriesId}", handlers.UpdateSeriesDescription(app))
+		authed.PATCH("/series/{seriesId}", handlers.UpdateSeries(app))
 		authed.DELETE("/series/{seriesId}", handlers.DeleteSeries(app))
 		authed.POST("/books/{workId}/series", handlers.AddBookToSeries(app))
 

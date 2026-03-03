@@ -641,15 +641,15 @@ Returns series details with an ordered list of books. If authenticated, each boo
 }
 ```
 
-### `PUT /series/:seriesId`  *(auth required)*
+### `PATCH /series/:seriesId`  *(auth required)*
 
-Update a series description.
+Update a series name and/or description. Only provided fields are updated.
 
 ```json
-{ "description": "A fantasy trilogy by J.R.R. Tolkien." }
+{ "name": "The Lord of the Rings", "description": "A fantasy trilogy by J.R.R. Tolkien." }
 ```
 
-Returns `200` with the updated series `{ id, name, description }`.
+Validation: `name` cannot be empty if provided. Returns `200` with the updated series `{ id, name, description }`.
 
 ### `DELETE /series/:seriesId`  *(auth required)*
 

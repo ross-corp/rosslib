@@ -389,7 +389,7 @@ Client component that renders a list of activity items with cursor-based "Load m
 
 ### `SeriesDescription` (`components/series-description.tsx`)
 
-Client component for displaying and inline-editing a series description. Receives `seriesId`, `initialDescription`, and `isLoggedIn` as props. Logged-in users see an "Edit description" / "Add description" button that reveals a textarea. Saves via `PUT /api/series/:seriesId`.
+Client component for displaying and inline-editing a series name and description. Receives `seriesId`, `initialName`, `initialDescription`, and `isLoggedIn` as props. Renders the series `<h1>` title and description text. Logged-in users see an "Edit series" button that reveals an inline form with a name input and description textarea. Saves via `PATCH /api/series/:seriesId`.
 
 ---
 
