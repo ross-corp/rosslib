@@ -4,7 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## profile & social
 
-- [ ] Add alt text to avatar images on search/people tab: on `webapp/src/app/search/page.tsx` (~line 600), avatar images in people results render `<img src={user.avatar_url} alt="" />` with empty alt text. Change to `alt={user.display_name || user.username}` so screen readers announce the user's name. Apply the same fix to avatar images in `webapp/src/app/[username]/followers/page.tsx` and `webapp/src/app/[username]/following/page.tsx`.
 - [ ] Add `date_started` display on book detail page and profile: the `date_started` field exists on `user_books` and is auto-set when a book's status changes to "currently-reading" (see `api/handlers/userbooks.go` ~line 743). However, no frontend component displays it. On `webapp/src/app/books/[workId]/page.tsx`, show "Started reading: Jan 15, 2026" next to the reading progress bar when the book is currently reading. On the user's profile currently-reading spotlight, show the start date beneath each book cover.
 
 ## search & browse
