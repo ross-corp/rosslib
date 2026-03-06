@@ -74,7 +74,7 @@ webapp/src/app/
 ├── users/page.tsx                  browse all users (sort by newest/books/followers)
 ├── books/[workId]/page.tsx         single book page (series badges, series navigation row)
 ├── books/[workId]/not-found.tsx   "Book not found" with search link
-├── series/[seriesId]/page.tsx     series detail — ordered book list with covers & reading progress
+├── series/[seriesId]/page.tsx     series detail — ordered book list with covers, reading progress & status picker
 ├── settings/
 │   ├── page.tsx                    profile settings
 │   ├── import/page.tsx             CSV import (Goodreads & StoryGraph tabs)
@@ -387,6 +387,10 @@ Client component on user profile pages. Shows "Block" button that opens an inlin
 ### `UserActivityList` (`components/user-activity-list.tsx`)
 
 Client component that renders a list of activity items with cursor-based "Load more" pagination. Used on the user profile page sidebar. Receives initial activities and cursor from the server component, then fetches additional pages via `GET /api/users/:username/activity?cursor=`.
+
+### `SeriesBookList` (`components/series-book-list.tsx`)
+
+Client component that renders the book list on the series detail page. Each book shows position number, cover (with `BookCoverPlaceholder` fallback), title, author, and an interactive `StatusPicker` for logged-in users. Receives `books`, `statusValues`, `statusKeyId`, and `bookStatusMap` as props from the server component.
 
 ### `SeriesDescription` (`components/series-description.tsx`)
 

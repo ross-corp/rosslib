@@ -4,8 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## search & browse
 
-- [ ] Add genre filter chips to genre detail page: the genre detail page `webapp/src/app/genres/[slug]/page.tsx` shows books for a single genre but has no way to further filter. Add a sort dropdown (title A-Z, rating, year) that passes the `sort` query param to `GET /genres/:slug/books`. The API already supports `sort=title|rating|year` per the docs.
-- [ ] Add book count to author search results: on the search page `webapp/src/app/search/page.tsx`, author results show name, dates, photo, and top work, but the `work_count` field from the API response is not displayed. Show "N works" below each author name in the author results list. The data is already returned by `GET /authors/search` in the `work_count` field.
 - [ ] Add StatusPicker to series detail page books: the series detail page at `webapp/src/app/series/[seriesId]/page.tsx` shows books with cover, title, and a colored status chip, but there's no way to change status directly from the series view. Add a `StatusPicker` (or `QuickAddButton` for non-library books) to each book card in the series list, matching the pattern used on genre detail pages and search results. The API response already includes `viewer_status` for each book when the user is authenticated.
 
 ## book detail & discovery
