@@ -86,26 +86,28 @@ func GetSeriesDetail(app core.App) func(e *core.RequestEvent) error {
 
 		progressMap := map[string]string{}
 		if viewerID != "" && len(books) > 0 {
+			var bookIDs []any
 			for _, b := range books {
-				type statusResult struct {
-					Slug string `db:"slug"`
-				}
-				var result statusResult
-				err = app.DB().NewQuery(`
-					SELECT tv.slug
-					FROM book_tag_values btv
-					JOIN tag_values tv ON btv.tag_value = tv.id
-					JOIN tag_keys tk ON tv.tag_key = tk.id
-					WHERE btv.user = {:user} AND btv.book = {:book}
-					  AND tk.slug = 'status'
-					LIMIT 1
-				`).Bind(map[string]any{
-					"user": viewerID,
-					"book": b.BookID,
-				}).One(&result)
-				if err == nil && result.Slug != "" {
-					progressMap[b.BookID] = result.Slug
-				}
+				bookIDs = append(bookIDs, b.BookID)
+			}
+			type statusRow struct {
+				BookID string `db:"book_id"`
+				Slug   string `db:"slug"`
+			}
+			var statuses []statusRow
+			_ = app.DB().NewQuery(`
+				SELECT btv.book AS book_id, tv.slug
+				FROM book_tag_values btv
+				JOIN tag_values tv ON btv.tag_value = tv.id
+				JOIN tag_keys tk ON tv.tag_key = tk.id
+				WHERE btv.user = {:user} AND btv.book IN {:bookIds}
+				  AND tk.slug = 'status'
+			`).Bind(map[string]any{
+				"user":    viewerID,
+				"bookIds": bookIDs,
+			}).All(&statuses)
+			for _, s := range statuses {
+				progressMap[s.BookID] = s.Slug
 			}
 		}
 
