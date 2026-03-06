@@ -2,10 +2,6 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination. Items are ordered by priority — nephewbot picks the top unchecked item.
 
-## BUGS
-
-- [ ] Fix `book_link_edits` migration missing `reviewer_comment` and `reviewed_at` fields: the migration in `api/migrations/1700000001_extended_schema.go` (lines 326-361) creates the `book_link_edits` collection but omits `reviewer_comment` (TextField) and `reviewed_at` (DateField). The handler in `api/handlers/links.go` (`ReviewLinkEdit`) sets these fields, so they must exist. Add a new migration file `api/migrations/1700000017_add_link_edit_review_fields.go` that adds both fields to the `book_link_edits` collection using `app.FindCollectionByNameOrId("book_link_edits")` then `Fields.Add`.
-
 ## stats & data
 
 - [ ] Add `device_total_pages` field to `user_books` collection: the datamodel documents this field (for overriding catalog page count when calculating reading progress percentages) but no migration creates it. Add a new migration file `api/migrations/1700000018_add_device_total_pages.go` that finds the `user_books` collection and adds a `NumberField` named `device_total_pages`. Update the `UpdateBook` handler in `api/handlers/userbooks.go` to accept and persist `device_total_pages` from the PATCH body, and update the progress percentage calculation to use `COALESCE(ub.device_total_pages, b.page_count)` when computing percent from pages.
