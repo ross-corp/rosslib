@@ -27,23 +27,26 @@ func GetBookThreads(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		type threadRow struct {
-			ID          string  `db:"id" json:"id"`
-			BookID      string  `db:"book_id" json:"book_id"`
-			UserID      string  `db:"user_id" json:"user_id"`
-			Username    string  `db:"username" json:"username"`
-			DisplayName *string `db:"display_name" json:"display_name"`
-			Avatar      *string `db:"avatar" json:"avatar"`
-			Title       string  `db:"title" json:"title"`
-			Body        string  `db:"body" json:"body"`
-			Spoiler     bool    `db:"spoiler" json:"spoiler"`
-			CreatedAt   string  `db:"created_at" json:"created_at"`
+			ID           string  `db:"id" json:"id"`
+			BookID       string  `db:"book_id" json:"book_id"`
+			UserID       string  `db:"user_id" json:"user_id"`
+			Username     string  `db:"username" json:"username"`
+			DisplayName  *string `db:"display_name" json:"display_name"`
+			Avatar       *string `db:"avatar" json:"avatar"`
+			Title        string  `db:"title" json:"title"`
+			Body         string  `db:"body" json:"body"`
+			Spoiler      bool    `db:"spoiler" json:"spoiler"`
+			CreatedAt    string  `db:"created_at" json:"created_at"`
+			CommentCount int     `db:"comment_count" json:"comment_count"`
 		}
 
 		var threads []threadRow
 		err := app.DB().NewQuery(`
 			SELECT t.id, t.book as book_id, t.user as user_id, u.username,
 				   u.display_name, u.avatar,
-				   t.title, t.body, t.spoiler, t.created as created_at
+				   t.title, t.body, t.spoiler, t.created as created_at,
+				   (SELECT COUNT(*) FROM thread_comments tc
+				    WHERE tc.thread = t.id AND (tc.deleted_at IS NULL OR tc.deleted_at = '')) as comment_count
 			FROM threads t
 			JOIN users u ON t.user = u.id
 			WHERE t.book = {:book} AND (t.deleted_at IS NULL OR t.deleted_at = '')
@@ -61,15 +64,6 @@ func GetBookThreads(app core.App) func(e *core.RequestEvent) error {
 				avatarURL = &url
 			}
 
-			type countResult struct {
-				Count int `db:"count"`
-			}
-			var cnt countResult
-			_ = app.DB().NewQuery(`
-				SELECT COUNT(*) as count FROM thread_comments
-				WHERE thread = {:thread} AND (deleted_at IS NULL OR deleted_at = '')
-			`).Bind(map[string]any{"thread": t.ID}).One(&cnt)
-
 			result = append(result, map[string]any{
 				"id":            t.ID,
 				"book_id":       t.BookID,
@@ -81,7 +75,7 @@ func GetBookThreads(app core.App) func(e *core.RequestEvent) error {
 				"body":          t.Body,
 				"spoiler":       t.Spoiler,
 				"created_at":    t.CreatedAt,
-				"comment_count": cnt.Count,
+				"comment_count": t.CommentCount,
 			})
 		}
 		if result == nil {
@@ -412,18 +406,21 @@ func SimilarThreads(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		type threadRow struct {
-			ID          string  `db:"id" json:"id"`
-			UserID      string  `db:"user_id" json:"user_id"`
-			Username    string  `db:"username" json:"username"`
-			DisplayName *string `db:"display_name" json:"display_name"`
-			Avatar      *string `db:"avatar" json:"avatar"`
-			Title       string  `db:"title" json:"title"`
-			CreatedAt   string  `db:"created_at" json:"created_at"`
+			ID           string  `db:"id" json:"id"`
+			UserID       string  `db:"user_id" json:"user_id"`
+			Username     string  `db:"username" json:"username"`
+			DisplayName  *string `db:"display_name" json:"display_name"`
+			Avatar       *string `db:"avatar" json:"avatar"`
+			Title        string  `db:"title" json:"title"`
+			CreatedAt    string  `db:"created_at" json:"created_at"`
+			CommentCount int     `db:"comment_count" json:"comment_count"`
 		}
 		var threads []threadRow
 		err := app.DB().NewQuery(`
 			SELECT t.id, t.user as user_id, u.username, u.display_name, u.avatar,
-				   t.title, t.created as created_at
+				   t.title, t.created as created_at,
+				   (SELECT COUNT(*) FROM thread_comments tc
+				    WHERE tc.thread = t.id AND (tc.deleted_at IS NULL OR tc.deleted_at = '')) as comment_count
 			FROM threads t
 			JOIN users u ON t.user = u.id
 			WHERE t.book = {:book} AND (t.deleted_at IS NULL OR t.deleted_at = '')
@@ -465,15 +462,6 @@ func SimilarThreads(app core.App) func(e *core.RequestEvent) error {
 				avatarURL = &url
 			}
 
-			type countResult struct {
-				Count int `db:"count"`
-			}
-			var cnt countResult
-			_ = app.DB().NewQuery(`
-				SELECT COUNT(*) as count FROM thread_comments
-				WHERE thread = {:thread} AND (deleted_at IS NULL OR deleted_at = '')
-			`).Bind(map[string]any{"thread": m.row.ID}).One(&cnt)
-
 			result = append(result, map[string]any{
 				"id":            m.row.ID,
 				"title":         m.row.Title,
@@ -481,7 +469,7 @@ func SimilarThreads(app core.App) func(e *core.RequestEvent) error {
 				"username":      m.row.Username,
 				"display_name":  m.row.DisplayName,
 				"avatar_url":    avatarURL,
-				"comment_count": cnt.Count,
+				"comment_count": m.row.CommentCount,
 				"similarity":    math.Round(m.similarity*100) / 100,
 				"created_at":    m.row.CreatedAt,
 			})
@@ -509,18 +497,21 @@ func GetSimilarThreads(app core.App) func(e *core.RequestEvent) error {
 		bookID := thread.GetString("book")
 
 		type threadRow struct {
-			ID          string  `db:"id" json:"id"`
-			UserID      string  `db:"user_id" json:"user_id"`
-			Username    string  `db:"username" json:"username"`
-			DisplayName *string `db:"display_name" json:"display_name"`
-			Avatar      *string `db:"avatar" json:"avatar"`
-			Title       string  `db:"title" json:"title"`
-			CreatedAt   string  `db:"created_at" json:"created_at"`
+			ID           string  `db:"id" json:"id"`
+			UserID       string  `db:"user_id" json:"user_id"`
+			Username     string  `db:"username" json:"username"`
+			DisplayName  *string `db:"display_name" json:"display_name"`
+			Avatar       *string `db:"avatar" json:"avatar"`
+			Title        string  `db:"title" json:"title"`
+			CreatedAt    string  `db:"created_at" json:"created_at"`
+			CommentCount int     `db:"comment_count" json:"comment_count"`
 		}
 		var threads []threadRow
 		err = app.DB().NewQuery(`
 			SELECT t.id, t.user as user_id, u.username, u.display_name, u.avatar,
-				   t.title, t.created as created_at
+				   t.title, t.created as created_at,
+				   (SELECT COUNT(*) FROM thread_comments tc
+				    WHERE tc.thread = t.id AND (tc.deleted_at IS NULL OR tc.deleted_at = '')) as comment_count
 			FROM threads t
 			JOIN users u ON t.user = u.id
 			WHERE t.book = {:book} AND t.id != {:threadId}
@@ -562,15 +553,6 @@ func GetSimilarThreads(app core.App) func(e *core.RequestEvent) error {
 				avatarURL = &url
 			}
 
-			type countResult struct {
-				Count int `db:"count"`
-			}
-			var cnt countResult
-			_ = app.DB().NewQuery(`
-				SELECT COUNT(*) as count FROM thread_comments
-				WHERE thread = {:thread} AND (deleted_at IS NULL OR deleted_at = '')
-			`).Bind(map[string]any{"thread": m.row.ID}).One(&cnt)
-
 			result = append(result, map[string]any{
 				"id":            m.row.ID,
 				"title":         m.row.Title,
@@ -578,7 +560,7 @@ func GetSimilarThreads(app core.App) func(e *core.RequestEvent) error {
 				"username":      m.row.Username,
 				"display_name":  m.row.DisplayName,
 				"avatar_url":    avatarURL,
-				"comment_count": cnt.Count,
+				"comment_count": m.row.CommentCount,
 				"similarity":    math.Round(m.similarity*100) / 100,
 				"created_at":    m.row.CreatedAt,
 			})
