@@ -340,11 +340,14 @@ Update metadata on a book in the user's library. Only provided fields are update
   "date_dnf": null,
   "progress_pages": 150,
   "progress_percent": 45,
+  "device_total_pages": 320,
   "status_slug": "currently-reading",
   "selected_edition_key": "OL123M",
   "selected_edition_cover_url": "https://covers.openlibrary.org/b/id/12345-M.jpg"
 }
 ```
+
+`device_total_pages` overrides the catalog `page_count` for progress percentage calculations. When set, page-based progress uses `device_total_pages` as the denominator instead of `books.page_count`. Send `0` or `null` to clear.
 
 `selected_edition_key` and `selected_edition_cover_url` allow the user to select a specific edition of a book. When set, the edition's cover is displayed instead of the default work cover on profile pages, label views, and the book detail page.
 
@@ -368,6 +371,7 @@ Returns the user's status, rating, review, progress, and edition selection for a
   "date_dnf": null,
   "progress_pages": 150,
   "progress_percent": 45,
+  "device_total_pages": 320,
   "selected_edition_key": "OL123M",
   "selected_edition_cover_url": "https://covers.openlibrary.org/b/id/12345-M.jpg"
 }

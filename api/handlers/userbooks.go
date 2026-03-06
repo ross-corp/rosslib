@@ -129,6 +129,7 @@ func UpdateBook(app core.App) func(e *core.RequestEvent) error {
 			DateStarted             *string  `json:"date_started"`
 			ProgressPages           *int     `json:"progress_pages"`
 			ProgressPercent         *int     `json:"progress_percent"`
+			DeviceTotalPages        *int     `json:"device_total_pages"`
 			StatusSlug              *string  `json:"status_slug"`
 			SelectedEditionKey      *string  `json:"selected_edition_key"`
 			SelectedEditionCoverURL *string  `json:"selected_edition_cover_url"`
@@ -163,6 +164,9 @@ func UpdateBook(app core.App) func(e *core.RequestEvent) error {
 		}
 		if data.ProgressPercent != nil {
 			ub.Set("progress_percent", *data.ProgressPercent)
+		}
+		if data.DeviceTotalPages != nil {
+			ub.Set("device_total_pages", *data.DeviceTotalPages)
 		}
 		if data.SelectedEditionKey != nil {
 			ub.Set("selected_edition_key", *data.SelectedEditionKey)
@@ -262,6 +266,7 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 				"rating": nil, "review_text": nil, "spoiler": false,
 				"date_read": nil, "date_dnf": nil, "date_started": nil,
 				"progress_pages": nil, "progress_percent": nil,
+				"device_total_pages": nil,
 				"selected_edition_key": nil, "selected_edition_cover_url": nil,
 			})
 		}
@@ -286,6 +291,7 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 			"date_started":              nil,
 			"progress_pages":            nil,
 			"progress_percent":          nil,
+			"device_total_pages":        nil,
 			"selected_edition_key":      nil,
 			"selected_edition_cover_url": nil,
 		}
@@ -313,6 +319,9 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 			}
 			if pct := ub.GetInt("progress_percent"); pct > 0 {
 				result["progress_percent"] = pct
+			}
+			if dtp := ub.GetInt("device_total_pages"); dtp > 0 {
+				result["device_total_pages"] = dtp
 			}
 			if sek := ub.GetString("selected_edition_key"); sek != "" {
 				result["selected_edition_key"] = sek
@@ -531,7 +540,8 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 				SELECT b.id as book_id, b.open_library_id, b.title,
 					   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
 					   ub.rating, ub.date_added as added_at,
-					   ub.progress_pages, ub.progress_percent, b.page_count,
+					   ub.progress_pages, ub.progress_percent,
+					   COALESCE(ub.device_total_pages, b.page_count) as page_count,
 					   (SELECT bs.position FROM book_series bs WHERE bs.book = b.id LIMIT 1) as series_position
 				FROM book_tag_values btv
 				JOIN books b ON btv.book = b.id
