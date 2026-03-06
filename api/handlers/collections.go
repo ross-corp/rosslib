@@ -289,7 +289,18 @@ func GetUserShelves(app core.App) func(e *core.RequestEvent) error {
 			result = []map[string]any{}
 		}
 
-		return e.JSON(http.StatusOK, result)
+		// Compute total distinct books across all user_books
+		type countResult2 struct {
+			Count int `db:"count"`
+		}
+		var totalBooks countResult2
+		_ = app.DB().NewQuery("SELECT COUNT(DISTINCT book) as count FROM user_books WHERE user = {:user}").
+			Bind(map[string]any{"user": targetUser.Id}).One(&totalBooks)
+
+		return e.JSON(http.StatusOK, map[string]any{
+			"total_books": totalBooks.Count,
+			"shelves":     result,
+		})
 	}
 }
 

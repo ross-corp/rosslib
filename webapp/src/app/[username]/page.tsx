@@ -120,12 +120,17 @@ async function fetchUserBooks(username: string): Promise<UserBooksResponse> {
   return res.json();
 }
 
-async function fetchUserShelves(username: string): Promise<UserShelf[]> {
+type ShelvesResponse = {
+  total_books: number;
+  shelves: UserShelf[];
+};
+
+async function fetchUserShelves(username: string): Promise<ShelvesResponse> {
   const res = await fetch(
     `${process.env.API_URL}/users/${username}/shelves?include_books=8`,
     { cache: "no-store" }
   );
-  if (!res.ok) return [];
+  if (!res.ok) return { total_books: 0, shelves: [] };
   return res.json();
 }
 
@@ -225,8 +230,8 @@ export default async function UserPage({
 
   const currentYear = new Date().getFullYear();
 
-  const [userBooks, shelves, tagKeys, activityData, recentReviews, viewerTagKeys, readingGoal, followedAuthors] = isRestricted
-    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, [] as UserShelf[], [] as TagKey[], { activities: [] } as ActivityResponse, [] as ReviewItem[], [] as ViewerTagKey[], null as ReadingGoal | null, [] as FollowedAuthor[]]
+  const [userBooks, shelvesResponse, tagKeys, activityData, recentReviews, viewerTagKeys, readingGoal, followedAuthors] = isRestricted
+    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, { total_books: 0, shelves: [] } as ShelvesResponse, [] as TagKey[], { activities: [] } as ActivityResponse, [] as ReviewItem[], [] as ViewerTagKey[], null as ReadingGoal | null, [] as FollowedAuthor[]]
     : await Promise.all([
         fetchUserBooks(username),
         fetchUserShelves(username),
@@ -237,6 +242,9 @@ export default async function UserPage({
         fetchGoal(username, currentYear, token ?? undefined),
         isOwnProfile && token ? fetchFollowedAuthors(token) : Promise.resolve([] as FollowedAuthor[]),
       ]);
+
+  const shelves = shelvesResponse.shelves;
+  const shelvesTotalBooks = shelvesResponse.total_books;
 
   // Extract status values for QuickAddButton (viewer adding books to their own library)
   const viewerStatusKey = viewerTagKeys.find((k) => k.slug === "status") ?? null;
@@ -468,11 +476,10 @@ export default async function UserPage({
           <div className="lg:col-span-2 space-y-10">
             {/* Library summary link */}
             {(() => {
-              const totalBooks = userBooks.statuses.reduce((sum, s) => sum + s.count, 0) + userBooks.unstatused_count;
               const totalTags = tagCollections.length;
               const totalLabels = labelKeys.reduce((sum, k) => sum + k.values.length, 0);
               const parts: string[] = [];
-              if (totalBooks > 0) parts.push(`${totalBooks} book${totalBooks !== 1 ? "s" : ""}`);
+              if (shelvesTotalBooks > 0) parts.push(`${shelvesTotalBooks} book${shelvesTotalBooks !== 1 ? "s" : ""}`);
               if (totalTags > 0) parts.push(`${totalTags} tag${totalTags !== 1 ? "s" : ""}`);
               if (totalLabels > 0) parts.push(`${totalLabels} label${totalLabels !== 1 ? "s" : ""}`);
               return parts.length > 0 ? (

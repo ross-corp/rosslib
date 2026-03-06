@@ -1009,19 +1009,22 @@ A "label" is a `collection` row. Default labels (`read_status` exclusive group) 
 
 ### `GET /users/:username/shelves`
 
-Returns all labels for a user (default + custom + tag collections).
+Returns all labels for a user (default + custom + tag collections), plus an aggregate `total_books` count (distinct books across all of the user's `user_books`).
 
 ```json
-[
-  {
-    "id": "...",
-    "name": "Read",
-    "slug": "read",
-    "exclusive_group": "read_status",
-    "collection_type": "shelf",
-    "item_count": 42
-  }
-]
+{
+  "total_books": 137,
+  "shelves": [
+    {
+      "id": "...",
+      "name": "Read",
+      "slug": "read",
+      "exclusive_group": "read_status",
+      "collection_type": "shelf",
+      "item_count": 42
+    }
+  ]
+}
 ```
 
 `collection_type` is one of `"shelf"`, `"tag"`, or `"computed"`. See `docs/organization.md` for the distinction.
