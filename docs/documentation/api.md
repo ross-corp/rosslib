@@ -1798,15 +1798,17 @@ Approve or reject a pending community link edit. Approved edits are applied to t
 
 ```json
 {
-  "action": "approve",
-  "comment": "Looks good"
+  "status": "approved",
+  "reviewer_comment": "Looks good"
 }
 ```
 
+`status` must be `"approved"` or `"rejected"`. `reviewer_comment` is optional.
+
 ```
-200 { "ok": true, "status": "approved" }
-400 { "error": "action must be approve or reject" }
-404 { "error": "pending edit not found" }
+200 { "message": "Edit approved" }
+400 { "error": "status must be approved or rejected" }
+404 { "error": "Edit not found" }
 ```
 
 ---

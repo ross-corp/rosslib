@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -321,7 +322,8 @@ func ReviewLinkEdit(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		data := struct {
-			Status string `json:"status"` // "approved" or "rejected"
+			Status          string `json:"status"`           // "approved" or "rejected"
+			ReviewerComment string `json:"reviewer_comment"` // optional reviewer note
 		}{}
 		if err := e.BindBody(&data); err != nil {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
@@ -332,6 +334,8 @@ func ReviewLinkEdit(app core.App) func(e *core.RequestEvent) error {
 
 		edit.Set("status", data.Status)
 		edit.Set("reviewer", user.Id)
+		edit.Set("reviewer_comment", data.ReviewerComment)
+		edit.Set("reviewed_at", time.Now().UTC().Format("2006-01-02 15:04:05.000Z"))
 		if err := app.Save(edit); err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to update"})
 		}
