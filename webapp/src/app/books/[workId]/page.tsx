@@ -484,6 +484,11 @@ export default async function BookPage({
                   pageCount={book.page_count}
                   initialDeviceTotalPages={myStatus.device_total_pages}
                 />
+                {myStatus.date_started && (
+                  <p className="text-xs text-text-tertiary mt-1">
+                    Started reading {formatDate(myStatus.date_started)}
+                  </p>
+                )}
               </div>
             )}
 

@@ -534,6 +534,7 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 				ProgressPercent *int     `db:"progress_percent" json:"progress_percent"`
 				PageCount       *int     `db:"page_count" json:"page_count"`
 				SeriesPosition  *int     `db:"series_position" json:"series_position"`
+				DateStarted     *string  `db:"date_started" json:"date_started"`
 			}
 			var books []bookRow
 			_ = app.DB().NewQuery(`
@@ -542,7 +543,8 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 					   ub.rating, ub.date_added as added_at,
 					   ub.progress_pages, ub.progress_percent,
 					   COALESCE(ub.device_total_pages, b.page_count) as page_count,
-					   (SELECT bs.position FROM book_series bs WHERE bs.book = b.id LIMIT 1) as series_position
+					   (SELECT bs.position FROM book_series bs WHERE bs.book = b.id LIMIT 1) as series_position,
+					   ub.date_started
 				FROM book_tag_values btv
 				JOIN books b ON btv.book = b.id
 				LEFT JOIN user_books ub ON ub.user = btv.user AND ub.book = btv.book

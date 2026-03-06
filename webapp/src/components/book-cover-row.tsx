@@ -14,6 +14,7 @@ type Book = {
   page_count?: number | null;
   device_total_pages?: number | null;
   series_position?: number | null;
+  date_started?: string | null;
 };
 
 const sizeClasses = {
@@ -91,6 +92,11 @@ export default function BookCoverRow({
                     {pct}%
                   </p>
                 </div>
+              )}
+              {showProgress && book.date_started && (
+                <p className="text-[10px] text-text-tertiary mt-0.5 text-center truncate max-w-[80px]">
+                  Since {new Date(book.date_started).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </p>
               )}
               {showTitle && (
                 <p className="mt-1 text-xs text-text-secondary truncate max-w-[80px] group-hover:text-text-primary">
