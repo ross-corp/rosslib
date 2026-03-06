@@ -2,10 +2,6 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination. Items are ordered by priority — nephewbot picks the top unchecked item.
 
-## stats & data
-
-- [ ] Add `subjects` field to `books` collection: the datamodel documents `subjects` (comma-separated from OL, up to 10) but no migration creates this field. Add a new migration file `api/migrations/1700000019_add_book_subjects.go` that adds a `TextField` named `subjects` to the `books` collection. Update the book upsert helper in `api/handlers/helpers.go` (`upsertBook` or equivalent) to store subjects from Open Library when upserting books. This unblocks the genre browsing feature which queries `books.subjects`.
-
 ## notifications & feed
 
 - [ ] Add `followed_book` activity type to feed rendering: the `followed_book` activity type is recorded in `activities` when a user follows a book (per completed.md), but verify that `GET /me/feed` in `api/handlers/activity.go` includes it in the feed query and that the feed page in `webapp/src/app/feed/page.tsx` renders it with a link to the book page. If missing, add the activity type to the feed query's `IN (...)` clause and add a rendering case in the feed component.
