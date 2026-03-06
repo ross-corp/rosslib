@@ -2,10 +2,6 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination. Items are ordered by priority — nephewbot picks the top unchecked item.
 
-## notifications & feed
-
-- [ ] Add `followed_book` activity type to feed rendering: the `followed_book` activity type is recorded in `activities` when a user follows a book (per completed.md), but verify that `GET /me/feed` in `api/handlers/activity.go` includes it in the feed query and that the feed page in `webapp/src/app/feed/page.tsx` renders it with a link to the book page. If missing, add the activity type to the feed query's `IN (...)` clause and add a rendering case in the feed component.
-
 ## profile & social
 
 - [ ] Add pagination to `GET /users/:username/reviews` endpoint: currently `api/handlers/users.go` returns all reviews for a user without pagination. Add `page` and `limit` query params (default limit 20, max 100) with `OFFSET` and `LIMIT` in the SQL query, and return a `total` count. Update the reviews page `webapp/src/app/[username]/reviews/page.tsx` to pass pagination params and add a "Load more" button or page navigation.
