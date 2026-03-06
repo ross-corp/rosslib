@@ -395,7 +395,7 @@ func googleBooksLookup(gb *gbClient, ol *cachedOLClient, isbn, title, author str
 }
 
 // upsertBook finds or creates a book record by open_library_id.
-func upsertBook(app core.App, olID, title, coverURL, isbn13, authors string, pubYear int) (*core.Record, error) {
+func upsertBook(app core.App, olID, title, coverURL, isbn13, authors string, pubYear int, subjects string) (*core.Record, error) {
 	existing, err := app.FindRecordsByFilter("books",
 		"open_library_id = {:id}",
 		"", 1, 0,
@@ -425,6 +425,10 @@ func upsertBook(app core.App, olID, title, coverURL, isbn13, authors string, pub
 			rec.Set("publication_year", pubYear)
 			changed = true
 		}
+		if rec.GetString("subjects") == "" && subjects != "" {
+			rec.Set("subjects", subjects)
+			changed = true
+		}
 		if changed {
 			if err := app.Save(rec); err != nil {
 				return nil, err
@@ -444,6 +448,7 @@ func upsertBook(app core.App, olID, title, coverURL, isbn13, authors string, pub
 	rec.Set("isbn13", isbn13)
 	rec.Set("authors", authors)
 	rec.Set("publication_year", pubYear)
+	rec.Set("subjects", subjects)
 	if err := app.Save(rec); err != nil {
 		return nil, err
 	}

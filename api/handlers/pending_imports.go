@@ -98,7 +98,7 @@ func ResolvePendingImport(app core.App) func(e *core.RequestEvent) error {
 			}
 
 			// Look up the book from OL and upsert
-			book, err := upsertBook(app, data.OLID, record.GetString("title"), "", record.GetString("isbn13"), record.GetString("author"), 0)
+			book, err := upsertBook(app, data.OLID, record.GetString("title"), "", record.GetString("isbn13"), record.GetString("author"), 0, "")
 			if err != nil {
 				return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to save book"})
 			}

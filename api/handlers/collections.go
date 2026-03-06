@@ -426,7 +426,7 @@ func AddBookToShelf(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		authors := strings.Join(data.Authors, ", ")
-		book, err := upsertBook(app, data.OpenLibraryID, data.Title, data.CoverURL, data.ISBN13, authors, data.PublicationYear)
+		book, err := upsertBook(app, data.OpenLibraryID, data.Title, data.CoverURL, data.ISBN13, authors, data.PublicationYear, "")
 		if err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to save book"})
 		}

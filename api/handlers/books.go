@@ -286,8 +286,22 @@ func LookupBook(app core.App) func(e *core.RequestEvent) error {
 
 		authors := strings.Join(authorNames, ", ")
 
+		// Extract subjects from OL work data (up to 10)
+		var olSubjects []string
+		if subjectList, ok := workData["subjects"].([]any); ok {
+			for _, s := range subjectList {
+				if str, ok := s.(string); ok && str != "" {
+					olSubjects = append(olSubjects, str)
+					if len(olSubjects) >= 10 {
+						break
+					}
+				}
+			}
+		}
+		subjects := strings.Join(olSubjects, ", ")
+
 		// Upsert local book
-		book, err := upsertBook(app, olID, title, coverURL, isbn, authors, 0)
+		book, err := upsertBook(app, olID, title, coverURL, isbn, authors, 0, subjects)
 		if err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to save book"})
 		}
@@ -616,6 +630,12 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 
 		if subjects == nil {
 			subjects = []string{}
+		}
+
+		// Back-fill subjects on the local book record if empty
+		if len(localBooks) > 0 && len(subjects) > 0 && localBooks[0].GetString("subjects") == "" {
+			localBooks[0].Set("subjects", strings.Join(subjects, ", "))
+			_ = app.Save(localBooks[0])
 		}
 
 		// Auto-populate series data from Open Library if not already present
