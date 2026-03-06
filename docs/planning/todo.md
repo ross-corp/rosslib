@@ -6,7 +6,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## search & browse
 
-- [ ] Add `aria-selected` and `role="tab"` attributes to search page tab buttons: in `webapp/src/app/search/page.tsx` (~lines 354-366), the Books/Authors/People tab buttons lack proper ARIA tab semantics. Add `role="tablist"` to the parent container, `role="tab"` and `aria-selected={isActive}` to each tab button, and `role="tabpanel"` to the results section. Also add `id` attributes linking tabs to panels via `aria-controls`.
 - [ ] Add genre filter chips to genre detail page: the genre detail page `webapp/src/app/genres/[slug]/page.tsx` shows books for a single genre but has no way to further filter. Add a sort dropdown (title A-Z, rating, year) that passes the `sort` query param to `GET /genres/:slug/books`. The API already supports `sort=title|rating|year` per the docs.
 
 ## book detail & discovery
