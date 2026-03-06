@@ -261,9 +261,13 @@ export default async function SearchPage({
         </form>
 
         {/* Tab selector */}
-        <div className="flex gap-1 mb-6 border-b border-border">
+        <div role="tablist" className="flex gap-1 mb-6 border-b border-border">
           <Link
             href={buildSearchParams(base, { type: "books", sort: "", year_min: "", year_max: "", subject: "", language: "", page: "1" })}
+            role="tab"
+            id="tab-books"
+            aria-selected={activeTab === "books"}
+            aria-controls="tabpanel-results"
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "books"
                 ? "border-accent text-text-primary"
@@ -274,6 +278,10 @@ export default async function SearchPage({
           </Link>
           <Link
             href={buildSearchParams(base, { type: "authors", sort: "", year_min: "", year_max: "", subject: "", language: "", page: "1" })}
+            role="tab"
+            id="tab-authors"
+            aria-selected={activeTab === "authors"}
+            aria-controls="tabpanel-results"
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "authors"
                 ? "border-accent text-text-primary"
@@ -284,6 +292,10 @@ export default async function SearchPage({
           </Link>
           <Link
             href={buildSearchParams(base, { type: "people", sort: "", year_min: "", year_max: "", subject: "", language: "", page: "1" })}
+            role="tab"
+            id="tab-people"
+            aria-selected={activeTab === "people"}
+            aria-controls="tabpanel-results"
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "people"
                 ? "border-accent text-text-primary"
@@ -293,6 +305,9 @@ export default async function SearchPage({
             People
           </Link>
         </div>
+
+        {/* Results panel */}
+        <div role="tabpanel" id="tabpanel-results" aria-labelledby={`tab-${activeTab}`}>
 
         {/* Empty state when no query */}
         {!hasQuery && (
@@ -607,6 +622,8 @@ export default async function SearchPage({
             ))}
           </ul>
         )}
+
+        </div>{/* end tabpanel */}
       </main>
     </div>
   );
