@@ -4,7 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## BUGS
 
-- [ ] Fix N+1 query in `GetSeriesDetail` (`api/handlers/series.go` ~line 94): when returning series books, the handler loops through each book and runs a per-book query to fetch the viewer's reading status. Refactor to batch-fetch all viewer statuses in one query using `WHERE book_id IN (...)` and merge results in Go.
 - [ ] Fix `book_link_edits` migration missing `reviewer_comment` and `reviewed_at` fields: the migration in `api/migrations/1700000001_extended_schema.go` (lines 326-361) creates the `book_link_edits` collection but omits `reviewer_comment` (TextField) and `reviewed_at` (DateField). The handler in `api/handlers/links.go` (`ReviewLinkEdit`) sets these fields, so they must exist. Add a new migration file `api/migrations/1700000017_add_link_edit_review_fields.go` that adds both fields to the `book_link_edits` collection using `app.FindCollectionByNameOrId("book_link_edits")` then `Fields.Add`.
 
 ## stats & data
