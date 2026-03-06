@@ -597,7 +597,7 @@ export default async function SearchPage({
                   {user.avatar_url ? (
                     <img
                       src={user.avatar_url}
-                      alt=""
+                      alt={user.display_name || user.username}
                       className="w-9 h-9 rounded-full object-cover bg-surface-2 shrink-0"
                     />
                   ) : (
