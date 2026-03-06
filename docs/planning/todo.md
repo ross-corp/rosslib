@@ -4,8 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## profile & social
 
-- [ ] Add total book count to public profile shelf listing: `GET /users/:username/shelves` returns individual label counts but no aggregate total. Add a `total_books` field to the response computed as `SELECT COUNT(DISTINCT book_id) FROM user_books WHERE user_id = :userId`. Display this total on the profile page's label browser section in `webapp/src/app/[username]/page.tsx`.
-
 ## search & browse
 
 - [ ] Add `aria-selected` and `role="tab"` attributes to search page tab buttons: in `webapp/src/app/search/page.tsx` (~lines 354-366), the Books/Authors/People tab buttons lack proper ARIA tab semantics. Add `role="tablist"` to the parent container, `role="tab"` and `aria-selected={isActive}` to each tab button, and `role="tabpanel"` to the results section. Also add `id` attributes linking tabs to panels via `aria-controls`.
