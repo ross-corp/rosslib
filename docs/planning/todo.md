@@ -4,7 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## profile & social
 
-- [ ] Add pagination to `GET /users/:username/reviews` endpoint: currently `api/handlers/users.go` returns all reviews for a user without pagination. Add `page` and `limit` query params (default limit 20, max 100) with `OFFSET` and `LIMIT` in the SQL query, and return a `total` count. Update the reviews page `webapp/src/app/[username]/reviews/page.tsx` to pass pagination params and add a "Load more" button or page navigation.
 - [ ] Add total book count to public profile shelf listing: `GET /users/:username/shelves` returns individual label counts but no aggregate total. Add a `total_books` field to the response computed as `SELECT COUNT(DISTINCT book_id) FROM user_books WHERE user_id = :userId`. Display this total on the profile page's label browser section in `webapp/src/app/[username]/page.tsx`.
 
 ## search & browse
