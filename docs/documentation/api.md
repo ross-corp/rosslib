@@ -857,29 +857,35 @@ Returns a paginated list of users this user follows. Respects privacy — return
 ]
 ```
 
-### `GET /users/:username/reviews`
+### `GET /users/:username/reviews?page=1&limit=20`
 
-Returns all reviews (collection items with non-empty `review_text`) for a user, ordered by date added descending.
+Returns paginated reviews (user_books with non-empty `review_text`) for a user, ordered by date added descending.
+
+**Query parameters:**
+- `page` *(optional, default 1)* — page number
+- `limit` *(optional, default 20, max 100)* — results per page
 
 ```json
-[
-  {
-    "book_id": "...",
-    "open_library_id": "OL82592W",
-    "title": "The Great Gatsby",
-    "cover_url": "https://...",
-    "authors": "F. Scott Fitzgerald",
-    "rating": 4,
-    "review_text": "A timeless classic.",
-    "spoiler": false,
-    "date_read": "2024-06-01T00:00:00Z",
-    "date_dnf": null,
-    "date_added": "2024-06-02T00:00:00Z"
-  }
-]
+{
+  "reviews": [
+    {
+      "open_library_id": "OL82592W",
+      "title": "The Great Gatsby",
+      "cover_url": "https://...",
+      "rating": 4,
+      "review_text": "A timeless classic.",
+      "spoiler": false,
+      "date_read": "2024-06-01T00:00:00Z",
+      "date_added": "2024-06-02T00:00:00Z",
+      "like_count": 3
+    }
+  ],
+  "total": 42,
+  "page": 1
+}
 ```
 
-`authors`, `cover_url`, `rating`, `date_read`, and `date_dnf` may be null.
+`cover_url`, `rating`, and `date_read` may be null.
 
 ### `GET /users/:username/timeline?year=<YYYY>`  *(optional auth)*
 

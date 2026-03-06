@@ -19,15 +19,24 @@ type ReviewItem = {
   like_count?: number;
 };
 
+type ReviewsResponse = {
+  reviews: ReviewItem[];
+  total: number;
+  page: number;
+};
+
 // ── Data fetchers ───────────────────────────────────────────────────────────────
 
-async function fetchReviews(username: string): Promise<ReviewItem[] | null> {
+async function fetchReviews(
+  username: string,
+  page: number
+): Promise<ReviewsResponse | null> {
   const res = await fetch(
-    `${process.env.API_URL}/users/${username}/reviews`,
+    `${process.env.API_URL}/users/${username}/reviews?page=${page}&limit=20`,
     { cache: "no-store" }
   );
   if (res.status === 404) return null;
-  if (!res.ok) return [];
+  if (!res.ok) return { reviews: [], total: 0, page: 1 };
   return res.json();
 }
 
@@ -49,13 +58,20 @@ function formatDate(iso: string): string {
 
 export default async function ReviewsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { username } = await params;
-  const reviews = await fetchReviews(username);
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(sp.page || "1", 10) || 1);
+  const data = await fetchReviews(username, page);
 
-  if (reviews === null) notFound();
+  if (data === null) notFound();
+
+  const { reviews, total } = data;
+  const totalPages = Math.ceil(total / 20);
 
   return (
     <div className="min-h-screen">
@@ -67,7 +83,9 @@ export default async function ReviewsPage({
           >
             &larr; {username}
           </Link>
-          <h1 className="text-2xl font-bold text-text-primary mt-2">Reviews</h1>
+          <h1 className="text-2xl font-bold text-text-primary mt-2">
+            Reviews{total > 0 && <span className="text-text-tertiary font-normal text-lg ml-2">({total})</span>}
+          </h1>
         </div>
 
         {reviews.length === 0 ? (
@@ -75,7 +93,7 @@ export default async function ReviewsPage({
         ) : (
           <div className="space-y-8">
             {reviews.map((review, i) => (
-              <article key={`${review.book_id}-${i}`} className="flex gap-4">
+              <article key={`${review.open_library_id}-${i}`} className="flex gap-4">
                 {/* Cover */}
                 <Link href={`/books/${review.open_library_id}`} className="shrink-0">
                   {review.cover_url ? (
@@ -155,6 +173,31 @@ export default async function ReviewsPage({
               </article>
             ))}
           </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <nav className="flex items-center justify-center gap-2 mt-10">
+            {page > 1 && (
+              <Link
+                href={`/${username}/reviews?page=${page - 1}`}
+                className="px-3 py-1.5 text-sm rounded border border-border text-text-primary hover:bg-surface-2 transition-colors"
+              >
+                Previous
+              </Link>
+            )}
+            <span className="text-sm text-text-tertiary px-2">
+              Page {page} of {totalPages}
+            </span>
+            {page < totalPages && (
+              <Link
+                href={`/${username}/reviews?page=${page + 1}`}
+                className="px-3 py-1.5 text-sm rounded border border-border text-text-primary hover:bg-surface-2 transition-colors"
+              >
+                Next
+              </Link>
+            )}
+          </nav>
         )}
       </main>
     </div>

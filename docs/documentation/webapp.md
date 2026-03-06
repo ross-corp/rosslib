@@ -102,6 +102,7 @@ webapp/src/app/
 │   ├── following/page.tsx          following list
 │   ├── tags/[...path]/page.tsx     tag browsing page
 │   ├── labels/[keySlug]/[...valuePath]/page.tsx   label browsing page (nested)
+│   ├── reviews/page.tsx           paginated reviews list (?page=N)
 │   └── timeline/page.tsx          reading timeline (books by month/year)
 └── api/                            Next.js proxy route handlers
     ├── auth/login/route.ts

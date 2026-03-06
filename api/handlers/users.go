@@ -457,7 +457,7 @@ func GetUserStats(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
-// GetUserReviews handles GET /users/{username}/reviews
+// GetUserReviews handles GET /users/{username}/reviews?page=1&limit=20
 func GetUserReviews(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		username := e.Request.PathValue("username")
@@ -479,10 +479,25 @@ func GetUserReviews(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusForbidden, map[string]any{"error": "Profile is private"})
 		}
 
+		page, _ := strconv.Atoi(e.Request.URL.Query().Get("page"))
+		if page < 1 {
+			page = 1
+		}
 		limit, _ := strconv.Atoi(e.Request.URL.Query().Get("limit"))
-		if limit <= 0 || limit > 50 {
+		if limit <= 0 || limit > 100 {
 			limit = 20
 		}
+		offset := (page - 1) * limit
+
+		// Get total count
+		type countResult struct {
+			Count int `db:"count"`
+		}
+		var total countResult
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) as count FROM user_books
+			WHERE "user" = {:user} AND review_text != '' AND review_text IS NOT NULL
+		`).Bind(map[string]any{"user": user.Id}).One(&total)
 
 		type reviewRow struct {
 			Rating     *float64 `db:"rating" json:"rating"`
@@ -506,13 +521,17 @@ func GetUserReviews(app core.App) func(e *core.RequestEvent) error {
 			JOIN books b ON ub.book = b.id
 			WHERE ub.user = {:user} AND ub.review_text != '' AND ub.review_text IS NOT NULL
 			ORDER BY ub.date_added DESC
-			LIMIT {:limit}
-		`).Bind(map[string]any{"user": user.Id, "limit": limit}).All(&reviews)
+			LIMIT {:limit} OFFSET {:offset}
+		`).Bind(map[string]any{"user": user.Id, "limit": limit, "offset": offset}).All(&reviews)
 		if err != nil {
-			return e.JSON(http.StatusOK, []any{})
+			reviews = []reviewRow{}
 		}
 
-		return e.JSON(http.StatusOK, reviews)
+		return e.JSON(http.StatusOK, map[string]any{
+			"reviews": reviews,
+			"total":   total.Count,
+			"page":    page,
+		})
 	}
 }
 
