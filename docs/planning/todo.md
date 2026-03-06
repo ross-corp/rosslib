@@ -2,10 +2,6 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination. Items are ordered by priority — nephewbot picks the top unchecked item.
 
-## profile & social
-
-- [ ] Add `date_started` display on book detail page and profile: the `date_started` field exists on `user_books` and is auto-set when a book's status changes to "currently-reading" (see `api/handlers/userbooks.go` ~line 743). However, no frontend component displays it. On `webapp/src/app/books/[workId]/page.tsx`, show "Started reading: Jan 15, 2026" next to the reading progress bar when the book is currently reading. On the user's profile currently-reading spotlight, show the start date beneath each book cover.
-
 ## search & browse
 
 - [ ] Add genre filter chips to genre detail page: the genre detail page `webapp/src/app/genres/[slug]/page.tsx` shows books for a single genre but has no way to further filter. Add a sort dropdown (title A-Z, rating, year) that passes the `sort` query param to `GET /genres/:slug/books`. The API already supports `sort=title|rating|year` per the docs.
