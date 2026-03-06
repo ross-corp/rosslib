@@ -4,7 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## stats & data
 
-- [ ] Add `device_total_pages` field to `user_books` collection: the datamodel documents this field (for overriding catalog page count when calculating reading progress percentages) but no migration creates it. Add a new migration file `api/migrations/1700000018_add_device_total_pages.go` that finds the `user_books` collection and adds a `NumberField` named `device_total_pages`. Update the `UpdateBook` handler in `api/handlers/userbooks.go` to accept and persist `device_total_pages` from the PATCH body, and update the progress percentage calculation to use `COALESCE(ub.device_total_pages, b.page_count)` when computing percent from pages.
 - [ ] Add `subjects` field to `books` collection: the datamodel documents `subjects` (comma-separated from OL, up to 10) but no migration creates this field. Add a new migration file `api/migrations/1700000019_add_book_subjects.go` that adds a `TextField` named `subjects` to the `books` collection. Update the book upsert helper in `api/handlers/helpers.go` (`upsertBook` or equivalent) to store subjects from Open Library when upserting books. This unblocks the genre browsing feature which queries `books.subjects`.
 
 ## notifications & feed
