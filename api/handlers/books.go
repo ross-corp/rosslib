@@ -1281,6 +1281,8 @@ func FollowBook(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": err.Error()})
 		}
 
+		recordActivity(app, user.Id, "followed_book", map[string]any{"book": books[0].Id})
+
 		return e.JSON(http.StatusOK, map[string]any{"message": "Following book"})
 	}
 }
