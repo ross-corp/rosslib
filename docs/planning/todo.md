@@ -2,10 +2,6 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination. Items are ordered by priority — nephewbot picks the top unchecked item.
 
-## search & browse
-
-- [ ] Add StatusPicker to series detail page books: the series detail page at `webapp/src/app/series/[seriesId]/page.tsx` shows books with cover, title, and a colored status chip, but there's no way to change status directly from the series view. Add a `StatusPicker` (or `QuickAddButton` for non-library books) to each book card in the series list, matching the pattern used on genre detail pages and search results. The API response already includes `viewer_status` for each book when the user is authenticated.
-
 ## book detail & discovery
 
 - [ ] Add series navigation links on book detail page: on `webapp/src/app/books/[workId]/page.tsx`, when a book belongs to a series, show "Previous in series" and "Next in series" navigation links. The `GET /series/:seriesId` response already includes all books with positions. Fetch the series data (already available from `GET /books/:workId` response's `series` array), find adjacent positions, and render small cover thumbnails with links for prev/next books.
