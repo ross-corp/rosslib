@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Pagination from "@/components/pagination";
 
 type UserRow = {
   user_id: string;
@@ -122,28 +123,10 @@ export default async function UsersPage({
           </ul>
         )}
 
-        {(page > 1 || has_next) && (
-          <div className="flex items-center gap-4 mt-8">
-            {page > 1 ? (
-              <Link
-                href={buildHref({ page: page - 1 })}
-                className="text-sm text-text-primary hover:text-text-primary transition-colors"
-              >
-                &larr; Previous
-              </Link>
-            ) : (
-              <span />
-            )}
-            {has_next && (
-              <Link
-                href={buildHref({ page: page + 1 })}
-                className="text-sm text-text-primary hover:text-text-primary transition-colors ml-auto"
-              >
-                Next &rarr;
-              </Link>
-            )}
-          </div>
-        )}
+        <Pagination
+          prevHref={page > 1 ? buildHref({ page: page - 1 }) : null}
+          nextHref={has_next ? buildHref({ page: page + 1 }) : null}
+        />
       </main>
     </div>
   );

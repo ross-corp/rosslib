@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import FollowButton from "@/components/follow-button";
 import BlockButton from "@/components/block-button";
-import { ActivityCard } from "@/components/activity";
 import type { ActivityItem } from "@/components/activity";
+import UserActivityList from "@/components/user-activity-list";
 import { getUser, getToken } from "@/lib/auth";
 import BookCoverRow from "@/components/book-cover-row";
 import ReadingStats from "@/components/reading-stats";
@@ -12,6 +12,37 @@ import type { ReadingGoal } from "@/components/reading-goal-card";
 import RecentReviews from "@/components/recent-reviews";
 import type { ReviewItem } from "@/components/recent-reviews";
 import type { StatusValue } from "@/components/shelf-picker";
+
+const genreColors: Record<string, { bg: string; border: string; text: string }> = {
+  fiction:           { bg: "bg-blue-950/50",    border: "border-blue-800/40",    text: "text-blue-300" },
+  nonfiction:        { bg: "bg-amber-950/50",   border: "border-amber-800/40",   text: "text-amber-300" },
+  "non-fiction":     { bg: "bg-amber-950/50",   border: "border-amber-800/40",   text: "text-amber-300" },
+  mystery:           { bg: "bg-violet-950/50",  border: "border-violet-800/40",  text: "text-violet-300" },
+  "science fiction": { bg: "bg-cyan-950/50",    border: "border-cyan-800/40",    text: "text-cyan-300" },
+  fantasy:           { bg: "bg-purple-950/50",  border: "border-purple-800/40",  text: "text-purple-300" },
+  romance:           { bg: "bg-rose-950/50",    border: "border-rose-800/40",    text: "text-rose-300" },
+  horror:            { bg: "bg-red-950/50",     border: "border-red-800/40",     text: "text-red-300" },
+  thriller:          { bg: "bg-orange-950/50",  border: "border-orange-800/40",  text: "text-orange-300" },
+  biography:         { bg: "bg-teal-950/50",    border: "border-teal-800/40",    text: "text-teal-300" },
+  history:           { bg: "bg-yellow-950/50",  border: "border-yellow-800/40",  text: "text-yellow-300" },
+  poetry:            { bg: "bg-pink-950/50",    border: "border-pink-800/40",    text: "text-pink-300" },
+  science:           { bg: "bg-emerald-950/50", border: "border-emerald-800/40", text: "text-emerald-300" },
+  philosophy:        { bg: "bg-indigo-950/50",  border: "border-indigo-800/40",  text: "text-indigo-300" },
+  children:          { bg: "bg-lime-950/50",    border: "border-lime-800/40",    text: "text-lime-300" },
+  "young adult":     { bg: "bg-fuchsia-950/50", border: "border-fuchsia-800/40", text: "text-fuchsia-300" },
+};
+
+const fallbackGenreColors = [
+  { bg: "bg-sky-950/50",     border: "border-sky-800/40",     text: "text-sky-300" },
+  { bg: "bg-emerald-950/50", border: "border-emerald-800/40", text: "text-emerald-300" },
+  { bg: "bg-violet-950/50",  border: "border-violet-800/40",  text: "text-violet-300" },
+  { bg: "bg-amber-950/50",   border: "border-amber-800/40",   text: "text-amber-300" },
+  { bg: "bg-rose-950/50",    border: "border-rose-800/40",    text: "text-rose-300" },
+];
+
+function getGenreColor(name: string, index: number) {
+  return genreColors[name] ?? fallbackGenreColors[index % fallbackGenreColors.length];
+}
 
 type StatusBook = {
   book_id: string;
@@ -23,6 +54,8 @@ type StatusBook = {
   progress_pages?: number | null;
   progress_percent?: number | null;
   page_count?: number | null;
+  series_position?: number | null;
+  date_started?: string | null;
 };
 
 type StatusGroup = {
@@ -37,12 +70,18 @@ type UserBooksResponse = {
   unstatused_count: number;
 };
 
+type GenreEntry = {
+  name: string;
+  count: number;
+};
+
 type UserProfile = {
   user_id: string;
   username: string;
   display_name: string | null;
   bio: string | null;
   avatar_url: string | null;
+  banner_url: string | null;
   is_private: boolean;
   member_since: string;
   is_following: boolean;
@@ -51,12 +90,16 @@ type UserProfile = {
   following_count: number;
   friends_count: number;
   books_read: number;
+  currently_reading_count: number;
+  total_books: number;
   reviews_count: number;
   books_this_year: number;
   average_rating: number | null;
+  total_pages_read: number;
   is_restricted: boolean;
   is_blocked: boolean;
   author_key: string | null;
+  top_genres: GenreEntry[] | null;
 };
 
 type ComputedInfo = {
@@ -103,7 +146,8 @@ async function fetchProfile(
     cache: "no-store",
     headers,
   });
-  if (!res.ok) return null;
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Failed to load profile");
   return res.json();
 }
 
@@ -116,12 +160,17 @@ async function fetchUserBooks(username: string): Promise<UserBooksResponse> {
   return res.json();
 }
 
-async function fetchUserShelves(username: string): Promise<UserShelf[]> {
+type ShelvesResponse = {
+  total_books: number;
+  shelves: UserShelf[];
+};
+
+async function fetchUserShelves(username: string): Promise<ShelvesResponse> {
   const res = await fetch(
     `${process.env.API_URL}/users/${username}/shelves?include_books=8`,
     { cache: "no-store" }
   );
-  if (!res.ok) return [];
+  if (!res.ok) return { total_books: 0, shelves: [] };
   return res.json();
 }
 
@@ -134,14 +183,19 @@ async function fetchTagKeys(username: string): Promise<TagKey[]> {
   return res.json();
 }
 
-async function fetchRecentActivity(username: string): Promise<ActivityItem[]> {
+type ActivityResponse = {
+  activities: ActivityItem[];
+  next_cursor?: string | null;
+};
+
+async function fetchRecentActivity(username: string): Promise<ActivityResponse> {
   const res = await fetch(
-    `${process.env.API_URL}/users/${username}/activity?limit=10`,
+    `${process.env.API_URL}/users/${username}/activity`,
     { cache: "no-store" }
   );
-  if (!res.ok) return [];
+  if (!res.ok) return { activities: [] };
   const data = await res.json();
-  return data.activities || [];
+  return { activities: data.activities || [], next_cursor: data.next_cursor };
 }
 
 async function fetchRecentReviews(username: string): Promise<ReviewItem[]> {
@@ -152,6 +206,11 @@ async function fetchRecentReviews(username: string): Promise<ReviewItem[]> {
   if (!res.ok) return [];
   return res.json();
 }
+
+type FollowedAuthor = {
+  author_key: string;
+  author_name: string;
+};
 
 type ViewerTagKey = {
   id: string;
@@ -174,6 +233,15 @@ async function fetchGoal(
     { cache: "no-store", headers }
   );
   if (!res.ok) return null;
+  return res.json();
+}
+
+async function fetchFollowedAuthors(token: string): Promise<FollowedAuthor[]> {
+  const res = await fetch(`${process.env.API_URL}/me/followed-authors`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
   return res.json();
 }
 
@@ -202,8 +270,8 @@ export default async function UserPage({
 
   const currentYear = new Date().getFullYear();
 
-  const [userBooks, shelves, tagKeys, recentActivity, recentReviews, viewerTagKeys, readingGoal] = isRestricted
-    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, [] as UserShelf[], [] as TagKey[], [] as ActivityItem[], [] as ReviewItem[], [] as ViewerTagKey[], null as ReadingGoal | null]
+  const [userBooks, shelvesResponse, tagKeys, activityData, recentReviews, viewerTagKeys, readingGoal, followedAuthors] = isRestricted
+    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, { total_books: 0, shelves: [] } as ShelvesResponse, [] as TagKey[], { activities: [] } as ActivityResponse, [] as ReviewItem[], [] as ViewerTagKey[], null as ReadingGoal | null, [] as FollowedAuthor[]]
     : await Promise.all([
         fetchUserBooks(username),
         fetchUserShelves(username),
@@ -212,7 +280,11 @@ export default async function UserPage({
         fetchRecentReviews(username),
         !isOwnProfile && token ? fetchViewerTagKeys(token) : Promise.resolve([] as ViewerTagKey[]),
         fetchGoal(username, currentYear, token ?? undefined),
+        isOwnProfile && token ? fetchFollowedAuthors(token) : Promise.resolve([] as FollowedAuthor[]),
       ]);
+
+  const shelves = shelvesResponse.shelves;
+  const shelvesTotalBooks = shelvesResponse.total_books;
 
   // Extract status values for QuickAddButton (viewer adding books to their own library)
   const viewerStatusKey = viewerTagKeys.find((k) => k.slug === "status") ?? null;
@@ -249,6 +321,15 @@ export default async function UserPage({
     <>
       {/* Header */}
       <div className="mb-10 relative">
+        {profile.banner_url && (
+          <div className="mb-4 -mx-4 sm:-mx-6">
+            <img
+              src={profile.banner_url}
+              alt=""
+              className="w-full h-40 sm:h-48 object-cover rounded-lg bg-surface-2"
+            />
+          </div>
+        )}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
             {profile.avatar_url ? (
@@ -355,13 +436,42 @@ export default async function UserPage({
           </p>
         )}
 
+        {profile.top_genres && profile.top_genres.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap mb-4">
+            {profile.top_genres.map((genre, i) => {
+              const color = getGenreColor(genre.name, i);
+              return (
+                <span
+                  key={genre.name}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${color.bg} ${color.border} ${color.text}`}
+                >
+                  {genre.name}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
         <div className="flex items-center gap-4 flex-wrap">
           {!isRestricted && (
             <>
+              <Link
+                href={`/${profile.username}/library`}
+                className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+              >
+                <span className="font-semibold text-text-primary">{profile.total_books}</span>{" "}
+                <span className="text-text-tertiary">books</span>
+              </Link>
               <span className="text-sm text-text-secondary">
                 <span className="font-semibold text-text-primary">{profile.books_read}</span>{" "}
                 <span className="text-text-tertiary">read</span>
               </span>
+              {profile.currently_reading_count > 0 && (
+                <span className="text-sm text-text-secondary">
+                  <span className="font-semibold text-text-primary">{profile.currently_reading_count}</span>{" "}
+                  <span className="text-text-tertiary">reading</span>
+                </span>
+              )}
               <Link
                 href={`/${profile.username}/reviews`}
                 className="text-sm text-text-secondary hover:text-text-primary transition-colors"
@@ -371,6 +481,14 @@ export default async function UserPage({
                 </span>{" "}
                 <span className="text-text-tertiary">reviews</span>
               </Link>
+              {profile.total_pages_read > 0 && (
+                <span className="text-sm text-text-secondary">
+                  <span className="font-semibold text-text-primary">
+                    {profile.total_pages_read.toLocaleString()}
+                  </span>{" "}
+                  <span className="text-text-tertiary">pages read</span>
+                </span>
+              )}
             </>
           )}
           <Link
@@ -423,11 +541,10 @@ export default async function UserPage({
           <div className="lg:col-span-2 space-y-10">
             {/* Library summary link */}
             {(() => {
-              const totalBooks = userBooks.statuses.reduce((sum, s) => sum + s.count, 0) + userBooks.unstatused_count;
               const totalTags = tagCollections.length;
               const totalLabels = labelKeys.reduce((sum, k) => sum + k.values.length, 0);
               const parts: string[] = [];
-              if (totalBooks > 0) parts.push(`${totalBooks} book${totalBooks !== 1 ? "s" : ""}`);
+              if (shelvesTotalBooks > 0) parts.push(`${shelvesTotalBooks} book${shelvesTotalBooks !== 1 ? "s" : ""}`);
               if (totalTags > 0) parts.push(`${totalTags} tag${totalTags !== 1 ? "s" : ""}`);
               if (totalLabels > 0) parts.push(`${totalLabels} label${totalLabels !== 1 ? "s" : ""}`);
               return parts.length > 0 ? (
@@ -535,7 +652,7 @@ export default async function UserPage({
                           {list.computed!.operation}
                         </span>
                         {list.computed!.is_continuous && (
-                          <span className="shrink-0 text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">
+                          <span className="shrink-0 text-xs px-1.5 py-0.5 rounded bg-semantic-success-bg text-semantic-success border border-semantic-success-border">
                             Live
                           </span>
                         )}
@@ -558,12 +675,20 @@ export default async function UserPage({
 
             {/* Reading Stats */}
             <section>
-              <Link
-                href={`/${username}/stats`}
-                className="section-heading mb-3 block hover:text-accent transition-colors"
-              >
-                Reading Stats →
-              </Link>
+              <div className="flex items-center gap-4 mb-3">
+                <Link
+                  href={`/${username}/stats`}
+                  className="section-heading block hover:text-accent transition-colors"
+                >
+                  Reading Stats →
+                </Link>
+                <Link
+                  href={`/${username}/year-in-review`}
+                  className="text-xs text-text-tertiary hover:text-accent transition-colors"
+                >
+                  Year in Review →
+                </Link>
+              </div>
               <ReadingStats
                 booksRead={profile.books_read}
                 reviewsCount={profile.reviews_count}
@@ -599,20 +724,16 @@ export default async function UserPage({
           {/* Sidebar — 1/3 */}
           <div className="mt-10 lg:mt-0">
             <div className="lg:sticky lg:top-20">
-              {recentActivity.length > 0 ? (
+              {activityData.activities.length > 0 ? (
                 <div>
                   <h2 className="section-heading mb-2">
                     Recent Activity
                   </h2>
-                  <div>
-                    {recentActivity.map((item) => (
-                      <ActivityCard
-                        key={item.id}
-                        item={item}
-                        showUser={false}
-                      />
-                    ))}
-                  </div>
+                  <UserActivityList
+                    initialActivities={activityData.activities}
+                    initialCursor={activityData.next_cursor}
+                    username={username}
+                  />
                 </div>
               ) : isOwnProfile ? (
                 <div>
@@ -624,6 +745,32 @@ export default async function UserPage({
                   </p>
                 </div>
               ) : null}
+
+              {isOwnProfile && followedAuthors.length > 0 && (
+                <div className="mt-6">
+                  <h2 className="section-heading mb-2">Followed Authors</h2>
+                  <ul className="space-y-1.5">
+                    {followedAuthors.slice(0, 5).map((author) => (
+                      <li key={author.author_key}>
+                        <Link
+                          href={`/authors/${author.author_key}`}
+                          className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                        >
+                          {author.author_name || author.author_key}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  {followedAuthors.length > 5 && (
+                    <Link
+                      href="/settings/followed-authors"
+                      className="block mt-2 text-xs text-text-tertiary hover:text-text-primary transition-colors"
+                    >
+                      View all {followedAuthors.length} →
+                    </Link>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

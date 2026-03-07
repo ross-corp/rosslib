@@ -4,6 +4,7 @@ import ShelfBookGrid from "@/components/shelf-book-grid";
 import { getUser } from "@/lib/auth";
 import { TagKey } from "@/components/book-tag-picker";
 import Link from "next/link";
+import EmptyState from "@/components/empty-state";
 
 type StatusBook = {
   book_id: string;
@@ -41,7 +42,8 @@ async function fetchUserShelves(username: string): Promise<ShelfSummary[]> {
     cache: "no-store",
   });
   if (!res.ok) return [];
-  return res.json();
+  const data = await res.json();
+  return data.shelves ?? data;
 }
 
 async function fetchTagKeys(username: string): Promise<TagKey[]> {
@@ -145,7 +147,11 @@ export default async function LibraryIndexPage({
             tagKeys={[]}
           />
         ) : (
-          <p className="text-sm text-text-tertiary">No books yet.</p>
+          <EmptyState
+            message="No books yet. Search for a book to get started."
+            actionLabel="Search books"
+            actionHref="/search"
+          />
         )}
       </main>
     </div>

@@ -10,12 +10,17 @@ type FollowedBook = {
   cover_url: string | null;
 };
 
-async function fetchFollowedBooks(token: string): Promise<FollowedBook[]> {
-  const res = await fetch(`${process.env.API_URL}/me/followed-books`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
-  if (!res.ok) return [];
+async function fetchFollowedBooks(
+  token: string
+): Promise<{ books: FollowedBook[]; total: number }> {
+  const res = await fetch(
+    `${process.env.API_URL}/me/followed-books?limit=50&offset=0`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }
+  );
+  if (!res.ok) return { books: [], total: 0 };
   return res.json();
 }
 
@@ -23,7 +28,7 @@ export default async function FollowedBooksPage() {
   const [user, token] = await Promise.all([getUser(), getToken()]);
   if (!user || !token) redirect("/login");
 
-  const books = await fetchFollowedBooks(token);
+  const { books, total } = await fetchFollowedBooks(token);
 
   return (
     <div className="min-h-screen">
@@ -45,7 +50,7 @@ export default async function FollowedBooksPage() {
           Books you follow will notify you of new threads and activity.
         </p>
 
-        <FollowedBooksList initialBooks={books} />
+        <FollowedBooksList initialBooks={books} initialTotal={total} />
       </main>
     </div>
   );

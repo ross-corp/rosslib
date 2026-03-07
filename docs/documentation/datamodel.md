@@ -18,6 +18,7 @@ Schema is applied idempotently at API startup via `db.Migrate` in `api/internal/
 | display_name | varchar(100) | nullable |
 | bio | text | nullable |
 | avatar_url | text | nullable; S3 key |
+| banner | file | nullable; profile banner image (JPEG/PNG/GIF/WebP, max 10 MB) |
 | is_private | boolean | default false |
 | is_moderator | boolean | default false; grants moderation privileges (e.g. deleting community links); managed via admin UI (`/admin`) |
 | author_key | varchar(50) | nullable; Open Library author ID (e.g. `OL23919A`); links user account to their author page; shows "Author" badge on profile; managed via admin UI |
@@ -82,6 +83,7 @@ A named list owned by a user. Covers default labels, custom labels, and tag coll
 | exclusive_group | varchar(100) | nullable; labels in the same group enforce mutual exclusivity |
 | is_public | boolean | default true |
 | collection_type | varchar(20) | `'shelf'` (default) or `'tag'` |
+| description | text | nullable; max 1000 chars; user-provided description for the label |
 | created_at | timestamptz | |
 
 Unique constraint: `(user_id, slug)`
@@ -419,6 +421,7 @@ books ──< book_stats               (precomputed aggregate stats)
 users ──< pending_imports          (unmatched import rows)
 users ──< reports                  (content reports, reviewer)
 users ──< review_likes >── books, users  (review likes)
+users ──< review_comments >── books, users  (review comments)
 
 ```
 
@@ -436,6 +439,23 @@ Likes on user reviews. Each row represents a user liking another user's review o
 
 Unique constraint: `(user, book, review_user)` — one like per user per review.
 Index: `(book, review_user)` for efficient like count queries.
+
+### `review_comments`
+
+Comments on user reviews. Any authenticated user can comment on a review. Supports soft delete.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user | uuid FK → users (cascade) | the commenter |
+| book | uuid FK → books (cascade) | the book being reviewed |
+| review_user | uuid FK → users (cascade) | the review author |
+| body | text | required; max 2000 chars |
+| deleted_at | timestamptz | nullable; soft delete |
+| created | timestamptz | PocketBase auto-generated |
+
+Index: `(book, review_user)` for listing comments on a review.
+Index: `user` for user-scoped queries.
 
 ### `genre_ratings`
 

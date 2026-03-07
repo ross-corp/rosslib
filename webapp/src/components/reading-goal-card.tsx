@@ -21,7 +21,7 @@ export default function ReadingGoalCard({ goal }: { goal: ReadingGoal }) {
       </div>
       <div className="w-full h-2 rounded-full bg-surface-2 overflow-hidden mb-2">
         <div
-          className={`h-full rounded-full transition-all ${complete ? "bg-green-500" : "bg-accent"}`}
+          className={`h-full rounded-full transition-all ${complete ? "bg-progress" : "bg-accent"}`}
           style={{ width: `${pct}%` }}
         />
       </div>

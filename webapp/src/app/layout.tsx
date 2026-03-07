@@ -3,7 +3,9 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import Nav from "@/components/nav";
 import SearchFocusHandler from "@/components/search-focus-handler";
+import KeyboardShortcuts from "@/components/keyboard-shortcuts";
 import { ToastProvider } from "@/components/toast";
+import { getUser } from "@/lib/auth";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -17,17 +19,24 @@ export const metadata: Metadata = {
   description: "Track your reading. Build your library.",
 };
 
-export default function RootLayout({
+// Inline script to set data-theme before first paint (avoids FOUC)
+const themeScript = `(function(){try{var t=localStorage.getItem('rosslib-theme')||'system';document.documentElement.setAttribute('data-theme',t)}catch(e){}})()`;
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getUser();
   return (
     <html
       lang="en"
       className={`${inter.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
         className="font-sans antialiased bg-surface-0 text-text-primary"
         suppressHydrationWarning
@@ -35,6 +44,7 @@ export default function RootLayout({
         <ToastProvider>
         <Nav />
         <SearchFocusHandler />
+        <KeyboardShortcuts showHint={!!user} />
         <main className="max-w-shell mx-auto px-6 py-8">{children}</main>
         <footer className="border-t border-border">
           <div className="max-w-shell mx-auto px-6 py-4 flex items-center justify-between font-mono text-xs text-text-tertiary">
