@@ -5,6 +5,7 @@ import (
 	"math"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,8 +24,32 @@ func GetBookThreads(app core.App) func(e *core.RequestEvent) error {
 			map[string]any{"id": workID},
 		)
 		if len(books) == 0 {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{"threads": []any{}, "total": 0})
 		}
+
+		// Parse pagination params
+		page := 1
+		limit := 20
+		if p, err := strconv.Atoi(e.Request.URL.Query().Get("page")); err == nil && p > 0 {
+			page = p
+		}
+		if l, err := strconv.Atoi(e.Request.URL.Query().Get("limit")); err == nil && l > 0 {
+			if l > 100 {
+				l = 100
+			}
+			limit = l
+		}
+		offset := (page - 1) * limit
+
+		// Get total count
+		type countResult struct {
+			Count int `db:"count"`
+		}
+		var cnt countResult
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) as count FROM threads t
+			WHERE t.book = {:book} AND (t.deleted_at IS NULL OR t.deleted_at = '')
+		`).Bind(map[string]any{"book": books[0].Id}).One(&cnt)
 
 		type threadRow struct {
 			ID           string  `db:"id" json:"id"`
@@ -51,9 +76,10 @@ func GetBookThreads(app core.App) func(e *core.RequestEvent) error {
 			JOIN users u ON t.user = u.id
 			WHERE t.book = {:book} AND (t.deleted_at IS NULL OR t.deleted_at = '')
 			ORDER BY t.created DESC
-		`).Bind(map[string]any{"book": books[0].Id}).All(&threads)
+			LIMIT {:limit} OFFSET {:offset}
+		`).Bind(map[string]any{"book": books[0].Id, "limit": limit, "offset": offset}).All(&threads)
 		if err != nil {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{"threads": []any{}, "total": 0})
 		}
 
 		var result []map[string]any
@@ -82,7 +108,7 @@ func GetBookThreads(app core.App) func(e *core.RequestEvent) error {
 			result = []map[string]any{}
 		}
 
-		return e.JSON(http.StatusOK, result)
+		return e.JSON(http.StatusOK, map[string]any{"threads": result, "total": cnt.Count})
 	}
 }
 
