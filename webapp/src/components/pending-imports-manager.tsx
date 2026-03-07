@@ -49,6 +49,8 @@ export default function PendingImportsManager({
   const [searching, setSearching] = useState(false);
   const [resolving, setResolving] = useState<string | null>(null);
   const [dismissing, setDismissing] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState<string | null>(null);
+  const [retryMessage, setRetryMessage] = useState<{id: string; text: string} | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -148,6 +150,42 @@ export default function PendingImportsManager({
     }
   }
 
+  async function retryImport(id: string) {
+    setRetrying(id);
+    setRetryMessage(null);
+    try {
+      const res = await fetch(`/api/me/imports/pending/${id}/retry`, {
+        method: "POST",
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.status === "matched") {
+        setItems((prev) => prev.filter((i) => i.id !== id));
+      } else if (data.status === "ambiguous" && data.candidates) {
+        // Open search modal with candidates as initial results
+        setSearchModalId(id);
+        setSearchQuery("");
+        setSearchResults(
+          data.candidates.map((c: { ol_id: string; title: string; authors: string[]; cover_url: string | null }) => ({
+            open_library_id: c.ol_id,
+            title: c.title,
+            authors: (c.authors ?? []).join(", "),
+            cover_url: c.cover_url ?? null,
+            publication_year: null,
+            isbn13: null,
+          }))
+        );
+      } else {
+        setRetryMessage({ id, text: "No match found" });
+        setTimeout(() => setRetryMessage(null), 3000);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setRetrying(null);
+    }
+  }
+
   if (items.length === 0) {
     return (
       <div className="text-center py-16">
@@ -201,6 +239,15 @@ export default function PendingImportsManager({
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
+                onClick={() => retryImport(item.id)}
+                disabled={retrying === item.id}
+                className="px-3 py-1.5 text-xs font-medium border border-border text-text-primary rounded-lg hover:bg-surface-2 transition-colors disabled:opacity-40"
+                title="Re-run automatic lookup"
+              >
+                {retrying === item.id ? "Retrying..." : "Retry"}
+              </button>
+              <button
+                type="button"
                 onClick={() => openSearchModal(item.id)}
                 className="px-3 py-1.5 text-xs font-medium border border-accent text-accent rounded-lg hover:bg-accent hover:text-white transition-colors"
               >
@@ -223,6 +270,9 @@ export default function PendingImportsManager({
               >
                 Delete
               </button>
+              {retryMessage?.id === item.id && (
+                <span className="text-xs text-text-tertiary">{retryMessage.text}</span>
+              )}
             </div>
           </div>
         ))}
@@ -236,10 +286,10 @@ export default function PendingImportsManager({
             if (e.target === e.currentTarget) closeSearchModal();
           }}
         >
-          <div className="bg-surface-1 rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
+          <div role="dialog" aria-modal="true" aria-labelledby="import-search-modal-title" className="bg-surface-1 rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
             <div className="p-4 border-b border-border">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-text-primary">
+                <h3 id="import-search-modal-title" className="text-sm font-semibold text-text-primary">
                   Link &ldquo;{activeItem.title}&rdquo;
                 </h3>
                 <button

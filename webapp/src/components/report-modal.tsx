@@ -59,7 +59,7 @@ export default function ReportModal({ contentType, contentId, onClose }: Props) 
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-surface-0 border border-border rounded-lg p-6 w-full max-w-md mx-4 shadow-lg">
+      <div role="dialog" aria-modal="true" aria-labelledby="report-modal-title" className="bg-surface-0 border border-border rounded-lg p-6 w-full max-w-md mx-4 shadow-lg">
         {success ? (
           <div className="text-center py-4">
             <p className="text-sm text-semantic-success font-medium">
@@ -68,7 +68,7 @@ export default function ReportModal({ contentType, contentId, onClose }: Props) 
           </div>
         ) : (
           <>
-            <h3 className="text-sm font-semibold text-text-primary mb-4">
+            <h3 id="report-modal-title" className="text-sm font-semibold text-text-primary mb-4">
               Report {contentType}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">

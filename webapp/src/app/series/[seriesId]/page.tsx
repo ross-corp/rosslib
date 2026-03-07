@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getUser, getToken } from "@/lib/auth";
+import SeriesDescription from "@/components/series-description";
+import SeriesBookList from "@/components/series-book-list";
+import { type StatusValue } from "@/components/shelf-picker";
 
 type SeriesBook = {
   book_id: string;
@@ -19,12 +22,12 @@ type SeriesDetail = {
   books: SeriesBook[];
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  "want-to-read": "Want to Read",
-  "currently-reading": "Reading",
-  finished: "Finished",
-  dnf: "Did Not Finish",
-  "owned-to-read": "Owned",
+type TagKey = {
+  id: string;
+  name: string;
+  slug: string;
+  mode: string;
+  values: StatusValue[];
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -34,6 +37,24 @@ const STATUS_COLORS: Record<string, string> = {
   dnf: "bg-semantic-error-bg text-semantic-error border-semantic-error-border",
   "owned-to-read": "bg-purple-900/40 text-purple-400 border-purple-800",
 };
+
+async function fetchTagKeys(token: string): Promise<TagKey[]> {
+  const res = await fetch(`${process.env.API_URL}/me/tag-keys`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchStatusMap(token: string): Promise<Record<string, string>> {
+  const res = await fetch(`${process.env.API_URL}/me/books/status-map`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return {};
+  return res.json();
+}
 
 export default async function SeriesPage({
   params,
@@ -52,8 +73,21 @@ export default async function SeriesPage({
     `${process.env.API_URL}/series/${seriesId}`,
     { headers, cache: "no-store" }
   );
-  if (!res.ok) notFound();
+  if (res.status === 404) notFound();
+  if (!res.ok) {
+    throw new Error("Failed to load series");
+  }
   const series: SeriesDetail = await res.json();
+
+  const [tagKeys, statusMap] = await Promise.all([
+    currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
+    currentUser && token ? fetchStatusMap(token) : Promise.resolve(null),
+  ]);
+
+  const statusKey = tagKeys?.find((k) => k.slug === "status") ?? null;
+  const statusValues: StatusValue[] | null = statusKey ? statusKey.values : null;
+  const statusKeyId: string | null = statusKey?.id ?? null;
+  const bookStatusMap: Record<string, string> | null = statusMap;
 
   const totalBooks = series.books.length;
   const readCount = series.books.filter(
@@ -71,15 +105,12 @@ export default async function SeriesPage({
           <span className="text-text-secondary">{series.name}</span>
         </nav>
 
-        <h1 className="text-2xl font-bold text-text-primary mb-2">
-          {series.name}
-        </h1>
-
-        {series.description && (
-          <p className="text-sm text-text-secondary mb-6 leading-relaxed">
-            {series.description}
-          </p>
-        )}
+        <SeriesDescription
+          seriesId={series.id}
+          initialName={series.name}
+          initialDescription={series.description ?? ""}
+          isLoggedIn={!!currentUser}
+        />
 
         <div className="flex items-center gap-4 mb-8 text-sm text-text-tertiary">
           <span>
@@ -107,74 +138,12 @@ export default async function SeriesPage({
         )}
 
         {/* Book list */}
-        <div className="space-y-4">
-          {series.books.map((book) => (
-            <Link
-              key={book.book_id}
-              href={`/books/${book.open_library_id}`}
-              className="flex gap-4 items-start p-3 -mx-3 rounded-lg hover:bg-surface-2 transition-colors group"
-            >
-              {/* Position */}
-              <div className="shrink-0 w-8 text-center">
-                {book.position != null ? (
-                  <span className="text-sm font-mono text-text-tertiary">
-                    #{book.position}
-                  </span>
-                ) : (
-                  <span className="text-sm font-mono text-text-tertiary">
-                    —
-                  </span>
-                )}
-              </div>
-
-              {/* Cover */}
-              <div className="shrink-0">
-                {book.cover_url ? (
-                  <img
-                    src={book.cover_url}
-                    alt={book.title}
-                    className="w-12 h-[72px] object-cover rounded shadow-sm bg-surface-2"
-                  />
-                ) : (
-                  <div className="w-12 h-[72px] bg-surface-2 rounded shadow-sm flex items-end p-1">
-                    <span className="text-[9px] text-text-tertiary leading-tight line-clamp-3">
-                      {book.title}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0 py-1">
-                <p className="text-sm font-medium text-text-primary group-hover:text-text-primary line-clamp-1">
-                  {book.title}
-                </p>
-                {book.authors && (
-                  <p className="text-xs text-text-tertiary mt-0.5">
-                    {book.authors}
-                  </p>
-                )}
-              </div>
-
-              {/* Status badge */}
-              {book.viewer_status && (
-                <div className="shrink-0 py-1">
-                  <span
-                    className={`text-[10px] font-medium border rounded px-1.5 py-0.5 leading-none ${STATUS_COLORS[book.viewer_status] ?? "bg-surface-2 text-text-tertiary border-border"}`}
-                  >
-                    {STATUS_LABELS[book.viewer_status] ?? book.viewer_status}
-                  </span>
-                </div>
-              )}
-            </Link>
-          ))}
-        </div>
-
-        {series.books.length === 0 && (
-          <p className="text-sm text-text-tertiary">
-            No books in this series yet.
-          </p>
-        )}
+        <SeriesBookList
+          books={series.books}
+          statusValues={statusValues}
+          statusKeyId={statusKeyId}
+          bookStatusMap={bookStatusMap}
+        />
       </main>
     </div>
   );

@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
         ) : (
           <form className="space-y-4" onSubmit={handleSubmit}>
             {error && (
-              <p className="text-sm text-semantic-error bg-semantic-error-bg border border-semantic-error-border rounded px-3 py-2">
+              <p role="alert" aria-live="assertive" className="text-sm text-semantic-error bg-semantic-error-bg border border-semantic-error-border rounded px-3 py-2">
                 {error}
               </p>
             )}

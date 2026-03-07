@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { formatTime } from "@/components/activity";
+import { formatTime, formatFullDate } from "@/components/activity";
 
 type Notification = {
   id: string;
@@ -50,9 +50,16 @@ function NotificationIcon({ type }: { type: string }) {
   }
 }
 
-export default function NotificationCard({ notif }: { notif: Notification }) {
+export default function NotificationCard({
+  notif,
+  onDelete,
+}: {
+  notif: Notification;
+  onDelete?: (id: string) => void;
+}) {
   const [isRead, setIsRead] = useState(notif.read);
   const [marking, setMarking] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const authorKey = notif.metadata?.author_key;
   const bookOlId = notif.metadata?.book_ol_id;
@@ -75,6 +82,23 @@ export default function NotificationCard({ notif }: { notif: Notification }) {
     }
   }
 
+  async function handleDelete() {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/me/notifications/${notif.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        onDelete?.(notif.id);
+      } else {
+        setDeleting(false);
+      }
+    } catch {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div
       className={`py-4 flex gap-3 ${isRead ? "opacity-60" : ""}`}
@@ -88,7 +112,10 @@ export default function NotificationCard({ notif }: { notif: Notification }) {
           <p className="text-sm text-text-primary mt-0.5">{notif.body}</p>
         )}
         <div className="flex items-center gap-3 mt-1">
-          <span className="text-xs text-text-primary">
+          <span
+            className="text-xs text-text-primary"
+            title={formatFullDate(notif.created_at)}
+          >
             {formatTime(notif.created_at)}
           </span>
           {authorKey && (
@@ -109,16 +136,28 @@ export default function NotificationCard({ notif }: { notif: Notification }) {
           )}
         </div>
       </div>
-      {!isRead && (
+      <div className="shrink-0 flex items-start gap-1 mt-1.5">
+        {!isRead && (
+          <button
+            onClick={markRead}
+            disabled={marking}
+            className="group p-1 rounded hover:bg-surface-2 transition-colors"
+            title="Mark as read"
+          >
+            <div className="w-2 h-2 rounded-full bg-blue-500 group-hover:bg-blue-400 transition-colors" />
+          </button>
+        )}
         <button
-          onClick={markRead}
-          disabled={marking}
-          className="shrink-0 mt-1.5 group p-1 rounded hover:bg-surface-2 transition-colors"
-          title="Mark as read"
+          onClick={handleDelete}
+          disabled={deleting}
+          className="p-1 rounded hover:bg-surface-2 transition-colors text-text-secondary hover:text-text-primary disabled:opacity-50"
+          title="Delete notification"
         >
-          <div className="w-2 h-2 rounded-full bg-badge group-hover:bg-badge transition-colors" />
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+          </svg>
         </button>
-      )}
+      </div>
     </div>
   );
 }

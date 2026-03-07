@@ -23,6 +23,7 @@ type BookLink = {
 type Props = {
   workId: string;
   initialLinks: BookLink[];
+  initialTotal?: number;
   isLoggedIn: boolean;
   currentUsername?: string;
   isModerator?: boolean;
@@ -49,8 +50,10 @@ function linkTypeLabel(type: string): string {
   return LINK_TYPES.find((t) => t.value === type)?.label ?? type;
 }
 
-export default function BookLinkList({ workId, initialLinks, isLoggedIn, currentUsername, isModerator }: Props) {
+export default function BookLinkList({ workId, initialLinks, initialTotal, isLoggedIn, currentUsername, isModerator }: Props) {
   const [links, setLinks] = useState<BookLink[]>(initialLinks);
+  const [total, setTotal] = useState(initialTotal ?? initialLinks.length);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [toWorkId, setToWorkId] = useState("");
   const [linkType, setLinkType] = useState("similar");
@@ -128,7 +131,23 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
 
   async function refetchLinks() {
     const res = await fetch(`/api/books/${workId}/links`);
-    if (res.ok) setLinks(await res.json());
+    if (res.ok) {
+      const data = await res.json();
+      setLinks(data.links ?? []);
+      setTotal(data.total ?? 0);
+    }
+  }
+
+  async function handleLoadMore() {
+    setLoadingMore(true);
+    const res = await fetch(`/api/books/${workId}/links?limit=50&offset=${links.length}`);
+    if (res.ok) {
+      const data = await res.json();
+      const moreLinks: BookLink[] = data.links ?? [];
+      setLinks((prev) => [...prev, ...moreLinks]);
+      setTotal(data.total ?? 0);
+    }
+    setLoadingMore(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -271,7 +290,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
       {showForm && (
         <form onSubmit={handleSubmit} className="mb-8 space-y-3">
           <div ref={dropdownRef} className="relative">
-            <label className="block text-xs text-text-primary mb-1">
+            <label htmlFor="target-book-search" className="block text-xs text-text-primary mb-1">
               Target book
             </label>
             {selectedBook ? (
@@ -300,6 +319,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
               </div>
             ) : (
               <input
+                id="target-book-search"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => {
@@ -345,10 +365,11 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
             )}
           </div>
           <div>
-            <label className="block text-xs text-text-primary mb-1">
+            <label htmlFor="relationship-type" className="block text-xs text-text-primary mb-1">
               Relationship type
             </label>
             <select
+              id="relationship-type"
               value={linkType}
               onChange={(e) => setLinkType(e.target.value)}
               disabled={submitting}
@@ -362,15 +383,17 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
             </select>
           </div>
           <div>
-            <label className="block text-xs text-text-primary mb-1">
+            <label htmlFor="link-note" className="block text-xs text-text-primary mb-1">
               Note (optional)
             </label>
             <input
+              id="link-note"
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Explain the connection..."
               disabled={submitting}
+              maxLength={1000}
               className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
             />
           </div>
@@ -472,6 +495,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                                 : "text-text-primary hover:text-text-primary hover:bg-surface-2"
                             } disabled:opacity-50`}
                             title={link.user_voted ? "Remove upvote" : "Upvote"}
+                            aria-label={link.user_voted ? "Remove upvote" : "Upvote link"}
                           >
                             <svg
                               viewBox="0 0 12 12"
@@ -500,6 +524,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                             }
                             className="px-1.5 py-1 rounded text-text-primary hover:text-text-primary hover:bg-surface-2 transition-colors"
                             title="Suggest an edit"
+                            aria-label="Edit link"
                           >
                             <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
                               <path d="M8.5 1.5l2 2L4 10H2v-2L8.5 1.5Z" />
@@ -516,6 +541,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                             disabled={deletingIds.has(link.id)}
                             className="px-1.5 py-1 rounded text-text-primary hover:text-semantic-error hover:bg-semantic-error-bg transition-colors disabled:opacity-50"
                             title={currentUsername === link.username ? "Delete your link" : "Remove link (moderator)"}
+                            aria-label="Delete link"
                           >
                             <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5}>
                               <path d="M2 3h8M4.5 3V2h3v1M3 3v7h6V3M5 5v3M7 5v3" />
@@ -533,10 +559,11 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                       >
                         <p className="text-xs font-medium text-text-primary">Suggest an edit</p>
                         <div>
-                          <label className="block text-xs text-text-primary mb-1">
+                          <label htmlFor={`edit-type-${link.id}`} className="block text-xs text-text-primary mb-1">
                             Relationship type
                           </label>
                           <select
+                            id={`edit-type-${link.id}`}
                             value={editType}
                             onChange={(e) => setEditType(e.target.value)}
                             disabled={editSubmitting}
@@ -550,13 +577,15 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs text-text-primary mb-1">Note</label>
+                          <label htmlFor={`edit-note-${link.id}`} className="block text-xs text-text-primary mb-1">Note</label>
                           <input
+                            id={`edit-note-${link.id}`}
                             type="text"
                             value={editNote}
                             onChange={(e) => setEditNote(e.target.value)}
                             placeholder="Explain the connection..."
                             disabled={editSubmitting}
+                            maxLength={1000}
                             className="w-full border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50 bg-surface-0"
                           />
                         </div>
@@ -586,6 +615,16 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
               </div>
             </div>
           ))}
+          {links.length < total && (
+            <button
+              type="button"
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="mt-4 text-xs px-4 py-2 rounded border border-border text-text-primary hover:bg-surface-2 transition-colors disabled:opacity-50"
+            >
+              {loadingMore ? "Loading..." : `Show more (${total - links.length} remaining)`}
+            </button>
+          )}
         </div>
       )}
     </div>
