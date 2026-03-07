@@ -13,7 +13,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## data integrity
 
-- [ ] Add length validation to community link note: `POST /books/:workId/links` in `api/handlers/links.go` accepts a `note` field with no maximum length check. Add a 1000-character limit, returning 400 with "note must be 1000 characters or fewer" if exceeded. Also add the same limit to `POST /links/:linkId/edits` for the `proposed_note` field. On the frontend in `webapp/src/components/book-link-list.tsx`, add `maxLength={1000}` to the note textarea in both the add-link and edit-link forms.
 - [ ] Add length validation to series name and description: `PATCH /series/:seriesId` in `api/handlers/series.go` accepts `name` and `description` with no length limits. Add max 255 chars for name and 5000 chars for description, returning 400 with descriptive error messages. Also validate `series_name` length in `POST /books/:workId/series`. On the frontend, add `maxLength` to inputs in `webapp/src/components/series-description.tsx`.
 
 ## API gaps
