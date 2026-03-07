@@ -106,15 +106,18 @@ export default function RecommendButton({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay"
           onClick={handleClose}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="recommend-modal-title"
             className="bg-surface-0 border border-border rounded-lg shadow-lg w-full max-w-md flex flex-col mx-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b border-border">
-              <h3 className="text-sm font-semibold text-text-primary">
+              <h3 id="recommend-modal-title" className="text-sm font-semibold text-text-primary">
                 Recommend &ldquo;{bookTitle}&rdquo;
               </h3>
               <button
@@ -147,10 +150,11 @@ export default function RecommendButton({
                   {/* User search */}
                   {!selectedUser ? (
                     <div>
-                      <label className="block text-xs font-medium text-text-primary mb-1.5">
+                      <label htmlFor="user-search" className="block text-xs font-medium text-text-primary mb-1.5">
                         Search for a user
                       </label>
                       <input
+                        id="user-search"
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
@@ -240,19 +244,26 @@ export default function RecommendButton({
                       </div>
 
                       {/* Note */}
-                      <label className="block text-xs font-medium text-text-primary mb-1.5">
+                      <label htmlFor="recommend-note" className="block text-xs font-medium text-text-primary mb-1.5">
                         Add a note (optional)
                       </label>
                       <textarea
+                        id="recommend-note"
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
                         placeholder="Why are you recommending this book?"
                         rows={3}
+                        maxLength={2000}
                         className="w-full px-3 py-2 text-sm border border-border rounded bg-surface-0 text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-text-primary resize-none"
                       />
+                      {note.length > 0 && (
+                        <p className="text-xs text-text-secondary text-right mt-1">
+                          {note.length}/2000
+                        </p>
+                      )}
 
                       {error && (
-                        <p className="text-xs text-red-500 mt-2">{error}</p>
+                        <p className="text-xs text-semantic-error mt-2">{error}</p>
                       )}
 
                       <button

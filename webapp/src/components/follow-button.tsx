@@ -45,6 +45,7 @@ export default function FollowButton({
     <button
       onClick={toggle}
       disabled={loading}
+      aria-pressed={status !== "none"}
       className={`text-sm px-3 py-1.5 rounded border transition-colors disabled:opacity-50 ${
         status === "active"
           ? "border-border text-text-secondary hover:border-border-strong hover:text-text-primary"

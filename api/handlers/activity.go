@@ -5,10 +5,24 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 )
+
+// validActivityTypes is the set of allowed activity_type values for filtering.
+var validActivityTypes = map[string]bool{
+	"shelved":         true,
+	"started_book":    true,
+	"finished_book":   true,
+	"rated":           true,
+	"reviewed":        true,
+	"created_thread":  true,
+	"followed_user":   true,
+	"followed_author": true,
+	"created_link":    true,
+}
 
 // enrichActivity takes a raw activity row and enriches it with book, user, and
 // metadata details to match the webapp's ActivityItem type.
@@ -271,6 +285,7 @@ func GetFeed(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		cursor := e.Request.URL.Query().Get("cursor")
+		typeFilter := e.Request.URL.Query().Get("type")
 		limit := 30
 
 		// Check if user follows anyone
@@ -296,6 +311,26 @@ func GetFeed(app core.App) func(e *core.RequestEvent) error {
 			AND a.user NOT IN (SELECT blocker FROM blocks WHERE blocked = {:user})
 		`
 		params := map[string]any{"user": user.Id}
+
+		if typeFilter != "" {
+			types := strings.Split(typeFilter, ",")
+			var filtered []string
+			for _, t := range types {
+				t = strings.TrimSpace(t)
+				if validActivityTypes[t] {
+					filtered = append(filtered, t)
+				}
+			}
+			if len(filtered) > 0 {
+				placeholders := make([]string, len(filtered))
+				for i, t := range filtered {
+					key := fmt.Sprintf("type%d", i)
+					placeholders[i] = "{:" + key + "}"
+					params[key] = t
+				}
+				query += " AND a.activity_type IN (" + strings.Join(placeholders, ", ") + ")"
+			}
+		}
 
 		if cursor != "" {
 			query += " AND a.created < {:cursor}"
@@ -353,16 +388,28 @@ func GetUserActivity(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusForbidden, map[string]any{"error": "Profile is private"})
 		}
 
+		cursor := e.Request.URL.Query().Get("cursor")
+		limit := 30
+
 		query := activitySelectClause + `
 			WHERE a.user = {:user}
-			ORDER BY a.created DESC
-			LIMIT 30
 		`
+		params := map[string]any{"user": targetUser.Id}
+
+		if cursor != "" {
+			query += " AND a.created < {:cursor}"
+			params["cursor"] = cursor
+		}
+		query += " ORDER BY a.created DESC LIMIT {:limit}"
+		params["limit"] = limit
 
 		var rows []activityRow
-		err = app.DB().NewQuery(query).Bind(map[string]any{"user": targetUser.Id}).All(&rows)
+		err = app.DB().NewQuery(query).Bind(params).All(&rows)
 		if err != nil {
-			return e.JSON(http.StatusOK, map[string]any{"activities": []any{}})
+			return e.JSON(http.StatusOK, map[string]any{
+				"activities":  []any{},
+				"next_cursor": nil,
+			})
 		}
 
 		enriched := make([]map[string]any, 0, len(rows))
@@ -371,6 +418,14 @@ func GetUserActivity(app core.App) func(e *core.RequestEvent) error {
 		}
 		result := flattenActivities(enriched)
 
-		return e.JSON(http.StatusOK, map[string]any{"activities": result})
+		var nextCursor any
+		if len(rows) == limit {
+			nextCursor = rows[len(rows)-1].Created
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{
+			"activities":  result,
+			"next_cursor": nextCursor,
+		})
 	}
 }
