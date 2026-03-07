@@ -10,7 +10,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX polish
 
-- [ ] Add `aria-label` and `aria-valuenow` to genre rating sliders: in `webapp/src/components/genre-rating-editor.tsx` (~lines 183-191), the range input sliders for genre ratings lack `aria-label` (should be the genre name, e.g. "Fiction rating") and `aria-valuenow` (current slider value). Add both attributes so screen readers announce the genre being rated and its current value.
 - [ ] Add ARIA tab semantics to recommendations page tabs: in `webapp/src/app/recommendations/page.tsx` (~lines 99-139), the "Received" and "Sent" tabs use basic Link-based buttons without proper ARIA attributes. Add `role="tablist"` to the tab container, `role="tab"` and `aria-selected` to each tab button, and `role="tabpanel"` to the content area. Follow the same pattern used on the search page tabs.
 - [ ] Standardize pagination UI across all paginated pages: pagination buttons are styled inconsistently. Search page uses "Previous page" / "Next page" in a `max-w-md` container; reviews page uses "Previous" / "Next" centered; users page uses "← Previous" / "Next →" with arrows. Create a shared `Pagination` component in `webapp/src/components/pagination.tsx` that takes `page`, `hasNext`, and `onPageChange` props, renders consistent prev/next buttons with the same styling, and replace the inline pagination markup in `webapp/src/app/search/page.tsx`, `webapp/src/app/[username]/reviews/page.tsx`, and `webapp/src/app/users/page.tsx`.
 
