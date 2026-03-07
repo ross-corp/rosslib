@@ -290,7 +290,7 @@ export default function BookLinkList({ workId, initialLinks, initialTotal, isLog
       {showForm && (
         <form onSubmit={handleSubmit} className="mb-8 space-y-3">
           <div ref={dropdownRef} className="relative">
-            <label className="block text-xs text-text-primary mb-1">
+            <label htmlFor="target-book-search" className="block text-xs text-text-primary mb-1">
               Target book
             </label>
             {selectedBook ? (
@@ -319,6 +319,7 @@ export default function BookLinkList({ workId, initialLinks, initialTotal, isLog
               </div>
             ) : (
               <input
+                id="target-book-search"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => {
@@ -364,10 +365,11 @@ export default function BookLinkList({ workId, initialLinks, initialTotal, isLog
             )}
           </div>
           <div>
-            <label className="block text-xs text-text-primary mb-1">
+            <label htmlFor="relationship-type" className="block text-xs text-text-primary mb-1">
               Relationship type
             </label>
             <select
+              id="relationship-type"
               value={linkType}
               onChange={(e) => setLinkType(e.target.value)}
               disabled={submitting}
@@ -381,10 +383,11 @@ export default function BookLinkList({ workId, initialLinks, initialTotal, isLog
             </select>
           </div>
           <div>
-            <label className="block text-xs text-text-primary mb-1">
+            <label htmlFor="link-note" className="block text-xs text-text-primary mb-1">
               Note (optional)
             </label>
             <input
+              id="link-note"
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -556,10 +559,11 @@ export default function BookLinkList({ workId, initialLinks, initialTotal, isLog
                       >
                         <p className="text-xs font-medium text-text-primary">Suggest an edit</p>
                         <div>
-                          <label className="block text-xs text-text-primary mb-1">
+                          <label htmlFor={`edit-type-${link.id}`} className="block text-xs text-text-primary mb-1">
                             Relationship type
                           </label>
                           <select
+                            id={`edit-type-${link.id}`}
                             value={editType}
                             onChange={(e) => setEditType(e.target.value)}
                             disabled={editSubmitting}
@@ -573,8 +577,9 @@ export default function BookLinkList({ workId, initialLinks, initialTotal, isLog
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs text-text-primary mb-1">Note</label>
+                          <label htmlFor={`edit-note-${link.id}`} className="block text-xs text-text-primary mb-1">Note</label>
                           <input
+                            id={`edit-note-${link.id}`}
                             type="text"
                             value={editNote}
                             onChange={(e) => setEditNote(e.target.value)}

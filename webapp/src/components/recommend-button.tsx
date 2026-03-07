@@ -150,10 +150,11 @@ export default function RecommendButton({
                   {/* User search */}
                   {!selectedUser ? (
                     <div>
-                      <label className="block text-xs font-medium text-text-primary mb-1.5">
+                      <label htmlFor="user-search" className="block text-xs font-medium text-text-primary mb-1.5">
                         Search for a user
                       </label>
                       <input
+                        id="user-search"
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
@@ -243,10 +244,11 @@ export default function RecommendButton({
                       </div>
 
                       {/* Note */}
-                      <label className="block text-xs font-medium text-text-primary mb-1.5">
+                      <label htmlFor="recommend-note" className="block text-xs font-medium text-text-primary mb-1.5">
                         Add a note (optional)
                       </label>
                       <textarea
+                        id="recommend-note"
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
                         placeholder="Why are you recommending this book?"
