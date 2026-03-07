@@ -96,9 +96,13 @@ export default async function RecommendationsPage({
         </h1>
 
         {/* Received / Sent tabs */}
-        <div className="flex gap-1 mb-6 border-b border-border">
+        <div role="tablist" className="flex gap-1 mb-6 border-b border-border">
           <Link
             href="/recommendations"
+            role="tab"
+            id="tab-received"
+            aria-selected={activeTab === "received"}
+            aria-controls="tabpanel-received"
             className={`px-3 py-2 text-sm font-medium transition-colors ${
               activeTab === "received"
                 ? "text-text-primary border-b-2 border-text-primary"
@@ -109,6 +113,10 @@ export default async function RecommendationsPage({
           </Link>
           <Link
             href="/recommendations?tab=sent"
+            role="tab"
+            id="tab-sent"
+            aria-selected={activeTab === "sent"}
+            aria-controls="tabpanel-sent"
             className={`px-3 py-2 text-sm font-medium transition-colors ${
               activeTab === "sent"
                 ? "text-text-primary border-b-2 border-text-primary"
@@ -120,7 +128,7 @@ export default async function RecommendationsPage({
         </div>
 
         {activeTab === "received" && (
-          <>
+          <div role="tabpanel" id="tabpanel-received" aria-labelledby="tab-received">
             {/* Status filter tabs */}
             <div className="flex gap-1 mb-6 border-b border-border">
               {["pending", "seen", "dismissed", "all"].map((s) => (
@@ -149,11 +157,11 @@ export default async function RecommendationsPage({
             ) : (
               <RecommendationList recommendations={recommendations} />
             )}
-          </>
+          </div>
         )}
 
         {activeTab === "sent" && (
-          <>
+          <div role="tabpanel" id="tabpanel-sent" aria-labelledby="tab-sent">
             {sentRecommendations.length === 0 ? (
               <div className="text-center py-16">
                 <p className="text-text-secondary text-sm">
@@ -163,7 +171,7 @@ export default async function RecommendationsPage({
             ) : (
               <SentRecommendationList recommendations={sentRecommendations} />
             )}
-          </>
+          </div>
         )}
       </main>
     </div>
