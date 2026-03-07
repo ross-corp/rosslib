@@ -167,10 +167,17 @@ func UpdateSeries(app core.App) func(e *core.RequestEvent) error {
 			if trimmed == "" {
 				return e.JSON(http.StatusBadRequest, map[string]any{"error": "name cannot be empty"})
 			}
+			if len(trimmed) > 255 {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "name must be 255 characters or fewer"})
+			}
 			series.Set("name", trimmed)
 		}
 		if data.Description != nil {
-			series.Set("description", strings.TrimSpace(*data.Description))
+			desc := strings.TrimSpace(*data.Description)
+			if len(desc) > 5000 {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "description must be 5000 characters or fewer"})
+			}
+			series.Set("description", desc)
 		}
 
 		if err := app.Save(series); err != nil {
@@ -238,6 +245,9 @@ func AddBookToSeries(app core.App) func(e *core.RequestEvent) error {
 		}{}
 		if err := e.BindBody(&data); err != nil || data.SeriesName == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "series_name required"})
+		}
+		if len(data.SeriesName) > 255 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "series_name must be 255 characters or fewer"})
 		}
 
 		// Find the book

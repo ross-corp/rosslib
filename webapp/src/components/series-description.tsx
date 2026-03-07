@@ -55,6 +55,7 @@ export default function SeriesDescription({
           type="text"
           value={draftName}
           onChange={(e) => setDraftName(e.target.value)}
+          maxLength={255}
           className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-xl font-bold text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-1 focus:ring-text-tertiary mb-3"
           placeholder="Series name"
           autoFocus
@@ -63,6 +64,7 @@ export default function SeriesDescription({
           value={draftDescription}
           onChange={(e) => setDraftDescription(e.target.value)}
           rows={3}
+          maxLength={5000}
           className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-1 focus:ring-text-tertiary resize-vertical"
           placeholder="Add a series description..."
         />
