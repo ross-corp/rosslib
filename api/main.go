@@ -84,7 +84,7 @@ func main() {
 		se.Router.GET("/threads/{threadId}/similar", handlers.GetSimilarThreads(app))
 
 		// ── Authenticated routes ─────────────────────────────────
-		authed := se.Router.Group("").Bind(apis.RequireAuth())
+		authed := se.Router.Group("").BindFunc(handlers.APITokenAuth(app)).Bind(apis.RequireAuth())
 
 		// Account
 		authed.GET("/me/account", handlers.GetAccount(app))
@@ -92,6 +92,11 @@ func main() {
 		authed.PUT("/me/email", handlers.ChangeEmail(app))
 		authed.DELETE("/me/account/data", handlers.DeleteAllData(app))
 		authed.DELETE("/me/account", handlers.DeleteAccount(app))
+
+		// API tokens
+		authed.GET("/me/api-tokens", handlers.GetAPITokens(app))
+		authed.POST("/me/api-tokens", handlers.CreateAPIToken(app))
+		authed.DELETE("/me/api-tokens/{tokenId}", handlers.DeleteAPIToken(app))
 
 		// Profile
 		authed.PATCH("/users/me", handlers.UpdateProfile(app))
