@@ -14,6 +14,7 @@ import GenreRatingEditor from "@/components/genre-rating-editor";
 import ReportButton from "@/components/report-button";
 import ReviewLikeButton from "@/components/review-like-button";
 import RecommendButton from "@/components/recommend-button";
+import ReadingHistory from "@/components/reading-history";
 import ReviewComments from "@/components/review-comments";
 import RecordRecentlyViewed from "@/components/record-recently-viewed";
 import { getUser, getToken } from "@/lib/auth";
@@ -148,6 +149,15 @@ type TagKey = {
   values: StatusValue[];
 };
 
+type ReadingSessionData = {
+  id: string;
+  date_started: string | null;
+  date_finished: string | null;
+  rating: number | null;
+  notes: string | null;
+  created: string;
+};
+
 type AggregateGenreRating = {
   genre: string;
   average: number;
@@ -277,6 +287,21 @@ async function fetchAggregateGenreRatings(
   return res.json();
 }
 
+async function fetchSessions(
+  token: string,
+  workId: string
+): Promise<ReadingSessionData[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/me/books/${workId}/sessions`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
 async function fetchMyGenreRatings(
   token: string,
   workId: string
@@ -350,7 +375,7 @@ export default async function BookPage({
   const reviewSort = REVIEW_SORT_OPTIONS.some((o) => o.value === sortParam) ? sortParam! : "newest";
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings, friendReaders, followerCount] = await Promise.all([
+  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings, sessions, friendReaders, followerCount] = await Promise.all([
     fetchBook(workId),
     fetchBookReviews(workId, token ?? undefined, reviewSort),
     fetchThreads(workId),
@@ -365,6 +390,9 @@ export default async function BookPage({
     fetchAggregateGenreRatings(workId),
     currentUser && token
       ? fetchMyGenreRatings(token, workId)
+      : Promise.resolve([]),
+    currentUser && token
+      ? fetchSessions(token, workId)
       : Promise.resolve([]),
     currentUser && token
       ? fetchFriendReaders(workId, token)
@@ -734,6 +762,16 @@ export default async function BookPage({
               initialDateDnf={myStatus.date_dnf}
               initialDateStarted={myStatus.date_started}
               statusSlug={myStatus.status_slug}
+            />
+          </section>
+        )}
+
+        {/* ── Reading history ── */}
+        {myStatus && (
+          <section className="mb-10 border-t border-border pt-8">
+            <ReadingHistory
+              openLibraryId={workId}
+              initialSessions={sessions}
             />
           </section>
         )}

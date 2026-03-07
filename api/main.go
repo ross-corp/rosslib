@@ -200,6 +200,12 @@ func main() {
 		authed.POST("/me/imports/pending/{id}/retry", handlers.RetryPendingImport(app))
 		authed.DELETE("/me/imports/pending/{id}", handlers.DeletePendingImport(app))
 
+		// Reading sessions
+		authed.GET("/me/books/{olId}/sessions", handlers.GetSessions(app))
+		authed.POST("/me/books/{olId}/sessions", handlers.CreateSession(app))
+		authed.PATCH("/me/sessions/{sessionId}", handlers.UpdateSession(app))
+		authed.DELETE("/me/sessions/{sessionId}", handlers.DeleteSession(app))
+
 		// Genre ratings
 		authed.GET("/me/books/{olId}/genre-ratings", handlers.GetMyGenreRatings(app))
 		authed.PUT("/me/books/{olId}/genre-ratings", handlers.SetGenreRatings(app))
