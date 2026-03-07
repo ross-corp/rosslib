@@ -7,6 +7,42 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
+// SearchSeries handles GET /series/search?q=<name>
+func SearchSeries(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		q := strings.TrimSpace(e.Request.URL.Query().Get("q"))
+		if q == "" {
+			return e.JSON(http.StatusOK, map[string]any{"results": []any{}})
+		}
+
+		type seriesRow struct {
+			ID          string  `db:"id" json:"id"`
+			Name        string  `db:"name" json:"name"`
+			Description *string `db:"description" json:"description"`
+			BookCount   int     `db:"book_count" json:"book_count"`
+		}
+
+		var rows []seriesRow
+		err := app.DB().NewQuery(`
+			SELECT s.id, s.name, s.description,
+				   (SELECT COUNT(*) FROM book_series bs WHERE bs.series = s.id) as book_count
+			FROM series s
+			WHERE s.name LIKE {:pattern}
+			ORDER BY book_count DESC, s.name
+			LIMIT 20
+		`).Bind(map[string]any{"pattern": "%" + q + "%"}).All(&rows)
+		if err != nil {
+			return e.JSON(http.StatusOK, map[string]any{"results": []any{}})
+		}
+
+		if len(rows) == 0 {
+			return e.JSON(http.StatusOK, map[string]any{"results": []any{}})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"results": rows})
+	}
+}
+
 // GetBookSeries handles GET /books/{workId}/series
 func GetBookSeries(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {

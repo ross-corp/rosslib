@@ -35,6 +35,7 @@ func main() {
 		se.Router.GET("/books/{workId}/genre-ratings", handlers.GetBookGenreRatings(app))
 
 		// ── Series (public / optional auth) ─────────────────────
+		se.Router.GET("/series/search", handlers.SearchSeries(app))
 		se.Router.GET("/books/{workId}/series", handlers.GetBookSeries(app))
 		se.Router.GET("/series/{seriesId}", handlers.GetSeriesDetail(app)).BindFunc(handlers.OptionalAuthFunc(app))
 

@@ -612,6 +612,28 @@ List books you follow, newest first. Supports pagination via `limit` (default 50
 
 ## Series
 
+### `GET /series/search?q=<name>`
+
+Search series by name. Returns up to 20 results sorted by book count descending.
+
+**Query parameters:**
+- `q` *(required)* — search query, matched via case-insensitive LIKE against series name
+
+```json
+{
+  "results": [
+    {
+      "id": "abc123",
+      "name": "The Lord of the Rings",
+      "description": "A fantasy trilogy by J.R.R. Tolkien.",
+      "book_count": 3
+    }
+  ]
+}
+```
+
+Returns `{ "results": [] }` if `q` is empty or no matches are found.
+
 ### `GET /books/:workId/series`
 
 Returns series memberships for a book.
