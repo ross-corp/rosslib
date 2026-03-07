@@ -71,9 +71,11 @@ webapp/src/app/
 ├── forgot-password/page.tsx          forgot password (request reset link)
 ├── reset-password/page.tsx           set new password (from email link)
 ├── search/page.tsx                 book + user + author search (shows trending + popular books when no query)
+├── search/loading.tsx              search loading skeleton
 ├── feed/page.tsx                   activity feed with filter chips (All, Reviews, Ratings, Status Updates, Threads, Social)
 ├── users/page.tsx                  browse all users (sort by newest/books/followers)
 ├── books/[workId]/page.tsx         single book page (series badges, series navigation row, review sort dropdown, "More by Author" section)
+├── books/[workId]/loading.tsx     book detail loading skeleton
 ├── books/[workId]/not-found.tsx   "Book not found" with search link
 ├── series/[seriesId]/page.tsx     series detail — ordered book list with covers, reading progress & status picker
 ├── settings/
@@ -82,6 +84,7 @@ webapp/src/app/
 │   ├── imports/pending/page.tsx   review unmatched imports
 │   ├── export/page.tsx             CSV export
 │   ├── tags/page.tsx               label category management
+│   ├── api-tokens/page.tsx         API token management (create/revoke)
 │   ├── ghost-activity/page.tsx     ghost user controls
 │   ├── feedback/page.tsx           view and delete submitted feedback
 │   ├── follow-requests/page.tsx    pending follow requests
@@ -92,11 +95,14 @@ webapp/src/app/
 ├── library/compare/page.tsx        compare lists (set operations)
 ├── notifications/page.tsx          notification center
 ├── recommendations/page.tsx       book recommendations (Received / Sent tabs)
+├── feed/page.tsx                  activity feed (with follow suggestions)
 ├── feedback/page.tsx              bug report & feature request form
 ├── admin/page.tsx                 admin panel (moderator only)
+├── feed/loading.tsx                feed loading skeleton
 ├── [username]/
 │   ├── not-found.tsx               "User not found" with link to /users
 │   ├── page.tsx                    public profile (incl. computed lists, followed authors sidebar, favorite genre chips)
+│   ├── loading.tsx                 profile loading skeleton
 │   ├── stats/page.tsx              detailed reading statistics
 │   ├── shelves/[slug]/page.tsx     label page (owner gets library manager)
 │   ├── followers/page.tsx          followers list
@@ -178,6 +184,7 @@ webapp/src/app/
     ├── me/recommendations/route.ts               ← GET, POST recommendations
     ├── me/recommendations/sent/route.ts          ← GET sent recommendations
     ├── me/recommendations/[recId]/route.ts       ← PATCH update recommendation status
+    ├── me/suggested-follows/route.ts             ← GET follow suggestions
     ├── me/saved-searches/route.ts                ← GET, POST saved searches
     ├── me/saved-searches/[id]/route.ts           ← DELETE saved search
     ├── users/route.ts                             ← GET search users
@@ -296,6 +303,10 @@ Client component that renders a small flag icon button. When clicked, opens a `R
 
 Client component that renders a modal overlay for submitting content reports. Shows a reason radio group (spam, harassment, inappropriate, other) and an optional details textarea. Calls `POST /api/reports`. Displays success message and auto-closes on completion.
 
+### `FollowSuggestions` (`components/follow-suggestions.tsx`)
+
+Client component showing follow suggestions based on books in common. Fetches `GET /api/me/suggested-follows` on mount and renders a list of user cards with avatar, display name, books-in-common count, and a follow button. Shown on the feed page when the feed is empty and at the bottom of the feed. Hides itself if no suggestions are available.
+
 ### `FeedbackForm` (`components/feedback-form.tsx`)
 
 Client component for the `/feedback` page. Two-tab form for submitting bug reports or feature requests. Bug report tab includes title, description, steps to reproduce, and severity dropdown. Feature request tab includes title and description. Calls `POST /api/feedback`.
@@ -334,7 +345,11 @@ Used on book detail pages (community reviews), user reviews pages, recent review
 
 ### `SettingsNav` (`components/settings-nav.tsx`)
 
-Client component providing pill-style navigation across settings sub-pages. Uses `usePathname()` to highlight the active section. Rendered on all settings pages (Profile, Import, Export, Ghost Activity). The active pill uses `bg-accent text-white`; inactive pills use `bg-surface-2`. Fetches pending follow request count on mount and displays a red numeric badge on the "Follow requests" pill when count > 0.
+Client component providing pill-style navigation across settings sub-pages. Uses `usePathname()` to highlight the active section. Rendered on all settings pages (Profile, Import, Export, API Tokens, Ghost Activity). The active pill uses `bg-accent text-white`; inactive pills use `bg-surface-2`. Fetches pending follow request count on mount and displays a red numeric badge on the "Follow requests" pill when count > 0.
+
+### `APITokensForm` (`components/api-tokens-form.tsx`)
+
+Client component rendered on `/settings/api-tokens`. Manages personal API tokens for external integrations. Fetches tokens on mount via `GET /api/me/api-tokens`. Shows a create form (name input + button, disabled at 5 tokens), and a table of existing tokens with name, created date, last used date, and a "Revoke" button. Creating a token via `POST /api/me/api-tokens` shows the raw token once in a green banner with `select-all` styling. Revoking calls `DELETE /api/me/api-tokens/:id`.
 
 ### `PasswordForm` (`components/password-form.tsx`)
 
@@ -387,6 +402,18 @@ Client component for the `/scan` page. Three input modes: Camera (uses browser `
 
 Reusable component for zero-data states across the app. Renders a centered message with an optional call-to-action link. Used on the feed page, notifications page, library pages (owner and visitor), and shelf/label views. Keeps empty state styling consistent: centered `py-16` container, `text-sm` message text, bordered button link.
 
+### `Skeleton` (`components/skeleton.tsx`)
+
+Pulsing placeholder component for loading states. Accepts `width`, `height`, and `variant` ("text", "circular", "rectangular") props. Uses a custom `animate-skeleton-pulse` animation defined in `tailwind.config.ts`. Also exports composed skeletons:
+- `BookGridSkeleton` — grid of cover-sized rectangles matching the `ShelfBookGrid` layout
+- `ProfileSkeleton` — avatar circle, heading lines, stats, and sidebar placeholders matching the profile page
+- `ReviewSkeleton` — avatar + text lines matching the reviews section
+- `BookDetailSkeleton` — full book detail page placeholder (cover, metadata, reviews)
+- `FeedSkeleton` — activity feed placeholder (heading + activity rows)
+- `SearchSkeleton` — search page placeholder (input, tabs, result rows)
+
+Used via Next.js `loading.tsx` files in `app/feed/`, `app/[username]/`, `app/books/[workId]/`, and `app/search/` to show loading states while server components fetch data.
+
 ### `KeyboardShortcuts` (`components/keyboard-shortcuts.tsx`)
 
 Client component rendered in the root layout. Registers global keyboard shortcuts via the `useKeyboardShortcuts` hook: `/` focuses the search input, `Escape` closes any open modal or blurs the focused element, and `?` toggles a shortcuts help overlay. All shortcuts except `Escape` are suppressed when an input or textarea is focused. Shows a "Press ? for shortcuts" hint in the bottom-right corner for logged-in users.
@@ -430,6 +457,10 @@ Client component on the book detail page (shown when status is "currently-readin
 ### `BlockButton` (`components/block-button.tsx`)
 
 Client component on user profile pages. Shows "Block" button that opens an inline confirmation prompt. After blocking, the page reloads to show the restricted view. When already blocked, shows "Unblock" button instead. Calls `POST /api/users/:username/block` and `DELETE /api/users/:username/block`.
+
+### `ThreadLockToggle` (`components/thread-lock-toggle.tsx`)
+
+Client component shown on the thread detail page for moderators only. Renders a Lock/Unlock toggle button. Calls `POST /api/threads/:threadId/lock` or `POST /api/threads/:threadId/unlock` and updates the button state optimistically.
 
 ### `SavedSearches` (`components/saved-searches.tsx`)
 

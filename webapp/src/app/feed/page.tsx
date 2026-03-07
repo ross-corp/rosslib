@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ActivityCard } from "@/components/activity";
 import type { FeedResponse } from "@/components/activity";
+import { FollowSuggestions } from "@/components/follow-suggestions";
 import { getUser, getToken } from "@/lib/auth";
 import EmptyState from "@/components/empty-state";
 
@@ -71,19 +72,22 @@ export default async function FeedPage({
         </div>
 
         {feed.activities.length === 0 ? (
-          type ? (
-            <div className="text-center py-16">
-              <p className="text-text-primary text-sm">
-                No activity matches this filter.
-              </p>
-            </div>
-          ) : (
-            <EmptyState
-              message="Your feed is empty. Follow some readers to see their activity."
-              actionLabel="Browse people"
-              actionHref="/users"
-            />
-          )
+          <div className="space-y-8">
+            {type ? (
+              <div className="text-center py-16">
+                <p className="text-text-primary text-sm">
+                  No activity matches this filter.
+                </p>
+              </div>
+            ) : (
+              <EmptyState
+                message="Your feed is empty. Follow some readers to see their activity."
+                actionLabel="Browse people"
+                actionHref="/users"
+              />
+            )}
+            {!type && <FollowSuggestions />}
+          </div>
         ) : (
           <>
             <div>
@@ -102,6 +106,10 @@ export default async function FeedPage({
                 </Link>
               </div>
             )}
+
+            <div className="mt-10">
+              <FollowSuggestions />
+            </div>
           </>
         )}
       </main>

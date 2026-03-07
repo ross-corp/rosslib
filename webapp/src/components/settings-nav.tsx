@@ -10,6 +10,7 @@ const navItems = [
   { label: "Import", href: "/settings/import" },
   { label: "Pending imports", href: "/settings/imports/pending" },
   { label: "Export", href: "/settings/export" },
+  { label: "API Tokens", href: "/settings/api-tokens" },
   { label: "Blocked users", href: "/settings/blocked" },
   { label: "Follow requests", href: "/settings/follow-requests" },
   { label: "Followed books", href: "/settings/followed-books" },
