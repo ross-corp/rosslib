@@ -45,6 +45,10 @@ func GetMyShelves(app core.App) func(e *core.RequestEvent) error {
 				"item_count":      cnt.Count,
 			}
 
+			if desc := s.GetString("description"); desc != "" {
+				entry["description"] = desc
+			}
+
 			// Include computed list metadata if present
 			if opType := s.GetString("operation_type"); opType != "" {
 				computed := map[string]any{
@@ -86,17 +90,25 @@ func CreateShelf(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		data := struct {
-			Name     string `json:"name"`
-			IsPublic *bool  `json:"is_public"`
+			Name        string  `json:"name"`
+			IsPublic    *bool   `json:"is_public"`
+			Description *string `json:"description"`
 		}{}
 		if err := e.BindBody(&data); err != nil || data.Name == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name is required"})
+		}
+		if len(data.Name) > 255 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name must be 255 characters or fewer"})
 		}
 
 		slug := slugify(data.Name)
 		isPublic := true
 		if data.IsPublic != nil {
 			isPublic = *data.IsPublic
+		}
+
+		if data.Description != nil && len(*data.Description) > 1000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "description must be 1000 characters or fewer"})
 		}
 
 		coll, err := app.FindCollectionByNameOrId("collections")
@@ -109,6 +121,9 @@ func CreateShelf(app core.App) func(e *core.RequestEvent) error {
 		rec.Set("slug", slug)
 		rec.Set("is_public", isPublic)
 		rec.Set("collection_type", "shelf")
+		if data.Description != nil {
+			rec.Set("description", *data.Description)
+		}
 		if err := app.Save(rec); err != nil {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": err.Error()})
 		}
@@ -139,8 +154,9 @@ func UpdateShelf(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		data := struct {
-			Name     *string `json:"name"`
-			IsPublic *bool   `json:"is_public"`
+			Name        *string `json:"name"`
+			IsPublic    *bool   `json:"is_public"`
+			Description *string `json:"description"`
 		}{}
 		if err := e.BindBody(&data); err != nil {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
@@ -152,6 +168,12 @@ func UpdateShelf(app core.App) func(e *core.RequestEvent) error {
 		}
 		if data.IsPublic != nil {
 			shelf.Set("is_public", *data.IsPublic)
+		}
+		if data.Description != nil {
+			if len(*data.Description) > 1000 {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "description must be 1000 characters or fewer"})
+			}
+			shelf.Set("description", *data.Description)
 		}
 
 		if err := app.Save(shelf); err != nil {
@@ -235,6 +257,10 @@ func GetUserShelves(app core.App) func(e *core.RequestEvent) error {
 				"item_count":      cnt.Count,
 			}
 
+			if desc := s.GetString("description"); desc != "" {
+				entry["description"] = desc
+			}
+
 			// Include computed list metadata if present
 			if opType := s.GetString("operation_type"); opType != "" {
 				computed := map[string]any{
@@ -289,7 +315,18 @@ func GetUserShelves(app core.App) func(e *core.RequestEvent) error {
 			result = []map[string]any{}
 		}
 
-		return e.JSON(http.StatusOK, result)
+		// Compute total distinct books across all user_books
+		type countResult2 struct {
+			Count int `db:"count"`
+		}
+		var totalBooks countResult2
+		_ = app.DB().NewQuery("SELECT COUNT(DISTINCT book) as count FROM user_books WHERE user = {:user}").
+			Bind(map[string]any{"user": targetUser.Id}).One(&totalBooks)
+
+		return e.JSON(http.StatusOK, map[string]any{
+			"total_books": totalBooks.Count,
+			"shelves":     result,
+		})
 	}
 }
 
@@ -370,6 +407,10 @@ func GetShelfDetail(app core.App) func(e *core.RequestEvent) error {
 			"books":           books,
 		}
 
+		if desc := shelf.GetString("description"); desc != "" {
+			detail["description"] = desc
+		}
+
 		// Include computed list metadata if present
 		if opType := shelf.GetString("operation_type"); opType != "" {
 			computed := map[string]any{
@@ -426,7 +467,7 @@ func AddBookToShelf(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		authors := strings.Join(data.Authors, ", ")
-		book, err := upsertBook(app, data.OpenLibraryID, data.Title, data.CoverURL, data.ISBN13, authors, data.PublicationYear)
+		book, err := upsertBook(app, data.OpenLibraryID, data.Title, data.CoverURL, data.ISBN13, authors, data.PublicationYear, "")
 		if err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to save book"})
 		}

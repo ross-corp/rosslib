@@ -95,7 +95,8 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
     // Refetch threads to get the full thread data.
     const listRes = await fetch(`/api/books/${workId}/threads`);
     if (listRes.ok) {
-      setThreads(await listRes.json());
+      const data = await listRes.json();
+      setThreads(data.threads ?? []);
     }
 
     setTitle("");
@@ -202,7 +203,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
             >
               Cancel
             </button>
-            {error && <span className="text-xs text-red-500">{error}</span>}
+            {error && <span className="text-xs text-semantic-error">{error}</span>}
           </div>
         </form>
       )}

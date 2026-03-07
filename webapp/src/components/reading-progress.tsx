@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/toast";
 
 type Props = {
   openLibraryId: string;
@@ -8,6 +9,8 @@ type Props = {
   initialPercent: number | null;
   pageCount: number | null;
   initialDeviceTotalPages: number | null;
+  dateStarted: string | null;
+  dateAdded: string | null;
 };
 
 export default function ReadingProgress({
@@ -16,6 +19,8 @@ export default function ReadingProgress({
   initialPercent,
   pageCount,
   initialDeviceTotalPages,
+  dateStarted,
+  dateAdded,
 }: Props) {
   const [mode, setMode] = useState<"page" | "percent">(
     initialPages != null ? "page" : "percent"
@@ -24,6 +29,7 @@ export default function ReadingProgress({
   const [percent, setPercent] = useState(initialPercent?.toString() ?? "");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const toast = useToast();
 
   const [deviceTotalPages, setDeviceTotalPages] = useState(
     initialDeviceTotalPages?.toString() ?? ""
@@ -39,6 +45,34 @@ export default function ReadingProgress({
     (initialPages != null && effectiveTotal
       ? Math.min(100, Math.round((initialPages / effectiveTotal) * 100))
       : null);
+
+  // Reading pace calculation
+  const paceInfo = (() => {
+    if (!initialPages || initialPages <= 0 || !effectiveTotal) return null;
+
+    const startDate = dateStarted || dateAdded;
+    if (!startDate) return null;
+
+    const start = new Date(startDate);
+    const now = new Date();
+    const daysElapsed = Math.max(1, Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+
+    if (daysElapsed < 1) return null;
+
+    const pagesPerDay = initialPages / daysElapsed;
+    const remaining = effectiveTotal - initialPages;
+
+    if (remaining <= 0 || pagesPerDay <= 0) return null;
+
+    const daysToFinish = Math.ceil(remaining / pagesPerDay);
+    const estFinish = new Date();
+    estFinish.setDate(estFinish.getDate() + daysToFinish);
+
+    return {
+      pagesPerDay: Math.round(pagesPerDay * 10) / 10,
+      estimatedFinish: estFinish,
+    };
+  })();
 
   async function saveProgress() {
     setSaving(true);
@@ -77,9 +111,11 @@ export default function ReadingProgress({
     setSaving(false);
     if (res.ok) {
       setMessage("Saved");
+      toast.success("Progress updated");
       setTimeout(() => setMessage(null), 2000);
     } else {
       setMessage("Failed to save");
+      toast.error("Failed to update progress");
     }
   }
 
@@ -127,6 +163,19 @@ export default function ReadingProgress({
               style={{ width: `${currentPercent}%` }}
             />
           </div>
+          {paceInfo && (
+            <p className="text-xs text-text-secondary mt-1">
+              ~{paceInfo.pagesPerDay} pages/day · Est. finish:{" "}
+              {paceInfo.estimatedFinish.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year:
+                  paceInfo.estimatedFinish.getFullYear() !== new Date().getFullYear()
+                    ? "numeric"
+                    : undefined,
+              })}
+            </p>
+          )}
         </div>
       )}
 
