@@ -187,6 +187,24 @@ async function fetchSavedSearches(token: string): Promise<SavedSearch[]> {
   return res.json();
 }
 
+type TrendingBook = {
+  key: string;
+  title: string;
+  authors: string[] | null;
+  cover_url: string | null;
+  publish_year: number | null;
+  activity_count: number;
+};
+
+async function fetchTrendingBooks(): Promise<TrendingBook[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/books/trending?period=week&limit=10`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function buildSearchParams(base: {
@@ -245,7 +263,7 @@ export default async function SearchPage({
 
   const hasQuery = q.trim().length > 0;
 
-  const [bookData, users, authorData, tagKeys, statusMap, popularBooks, savedSearches] = await Promise.all([
+  const [bookData, users, authorData, tagKeys, statusMap, popularBooks, savedSearches, trendingBooks] = await Promise.all([
     hasQuery && activeTab === "books" ? searchBooks(q, sort, year_min, year_max, subject, language, page) : Promise.resolve({ total: 0, page: 1, results: [] }),
     hasQuery && activeTab === "people" ? searchUsers(q) : Promise.resolve([]),
     hasQuery && activeTab === "authors" ? searchAuthors(q) : Promise.resolve({ total: 0, results: [] }),
@@ -253,6 +271,7 @@ export default async function SearchPage({
     currentUser && token ? fetchStatusMap(token) : Promise.resolve(null),
     !hasQuery ? fetchPopularBooks() : Promise.resolve([]),
     currentUser && token ? fetchSavedSearches(token) : Promise.resolve([]),
+    !hasQuery ? fetchTrendingBooks() : Promise.resolve([]),
   ]);
 
   const statusKey = tagKeys?.find((k) => k.slug === "status") ?? null;
@@ -347,6 +366,50 @@ export default async function SearchPage({
             </p>
 
             <RecentlyViewedBooks />
+
+            {trendingBooks.length > 0 && (
+              <div className="mb-10">
+                <h2 className="text-lg font-semibold text-text-primary mb-4">
+                  Trending This Week
+                </h2>
+                <div className="flex gap-4 overflow-x-auto pb-2">
+                  {trendingBooks.map((book) => {
+                    const workId = book.key.replace("/works/", "");
+                    return (
+                      <Link
+                        key={book.key}
+                        href={`/books/${workId}`}
+                        className="group flex flex-col items-center text-center flex-shrink-0"
+                      >
+                        {book.cover_url ? (
+                          <img
+                            src={book.cover_url}
+                            alt={book.title}
+                            width={96}
+                            height={144}
+                            className="w-24 h-36 object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
+                          />
+                        ) : (
+                          <div className="w-24 h-36 bg-surface-2 rounded shadow-sm flex items-center justify-center">
+                            <span className="text-xs text-text-tertiary px-2 text-center leading-tight">
+                              {book.title}
+                            </span>
+                          </div>
+                        )}
+                        <span className="text-xs font-medium text-text-primary mt-2 line-clamp-2 max-w-[6rem]">
+                          {book.title}
+                        </span>
+                        {book.authors && book.authors.length > 0 && (
+                          <span className="text-xs text-text-secondary truncate max-w-[6rem]">
+                            {book.authors[0]}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {popularBooks.length > 0 && (
               <div>
