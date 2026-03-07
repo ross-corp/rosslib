@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState, ReactNode } from "react";
+import { useState, useRef, useCallback, ReactNode } from "react";
 import { TagKey, TagValue } from "@/components/book-tag-picker";
+import { useToast } from "@/components/toast";
+import ConfirmDialog from "@/components/confirm-dialog";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -23,6 +25,7 @@ export type ShelfSummary = {
   exclusive_group: string;
   item_count: number;
   collection_type: string;
+  description?: string;
 };
 
 type StatusFilter = { kind: "status"; slug: string; name: string };
@@ -93,6 +96,17 @@ function buildValueTree(values: TagValue[]): ValueTreeNode[] {
   return root;
 }
 
+// ── Sort options ──────────────────────────────────────────────────────────────
+
+const SORT_OPTIONS = [
+  { value: "date_added", label: "Date added" },
+  { value: "title", label: "Title" },
+  { value: "author", label: "Author" },
+  { value: "rating", label: "Rating" },
+] as const;
+
+type SortValue = (typeof SORT_OPTIONS)[number]["value"];
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export type StatusInfo = { slug: string; name: string; count: number };
@@ -121,13 +135,69 @@ export default function LibraryManager({
       : { kind: "status", slug: initialShelf.slug, name: initialShelf.name }
   );
   const [loading, setLoading] = useState(false);
+  const [sort, setSort] = useState<SortValue>("date_added");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
+  const toast = useToast();
+  const [confirmMassRemove, setConfirmMassRemove] = useState(false);
   const [showRateMenu, setShowRateMenu] = useState(false);
   const [showLabelsMenu, setShowLabelsMenu] = useState(false);
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const [showTagsMenu, setShowTagsMenu] = useState(false);
   const [localShelves, setLocalShelves] = useState(allShelves);
+  const [showCreateLabel, setShowCreateLabel] = useState(false);
+  const [newLabelName, setNewLabelName] = useState("");
+  const [newLabelDescription, setNewLabelDescription] = useState("");
+  const [creatingLabel, setCreatingLabel] = useState(false);
+  const [editingShelfId, setEditingShelfId] = useState<string | null>(null);
+  const [editDescription, setEditDescription] = useState("");
+  const [savingDescription, setSavingDescription] = useState(false);
+  const [localStatusCounts, setLocalStatusCounts] = useState(statusCounts);
+  const [localStatusList, setLocalStatusList] = useState(statusList);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Book[] | null>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  async function refreshStatusCounts() {
+    const res = await fetch(`/api/users/${username}/books?limit=0`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const statuses: { slug: string; name: string; count: number }[] = data.statuses ?? [];
+    const unstatusedCount: number = data.unstatused_count ?? 0;
+    let total = unstatusedCount;
+    const counts: Record<string, number> = {};
+    for (const s of statuses) {
+      counts[s.slug] = s.count;
+      total += s.count;
+    }
+    counts["_all"] = total;
+    counts["_unstatused"] = unstatusedCount;
+    setLocalStatusCounts(counts);
+    setLocalStatusList(statuses.map((s) => ({ slug: s.slug, name: s.name, count: s.count })));
+  }
+
+  const doSearch = useCallback(
+    (q: string) => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+      if (!q.trim()) {
+        setSearchResults(null);
+        return;
+      }
+      searchTimerRef.current = setTimeout(async () => {
+        const res = await fetch(
+          `/api/users/${username}/books/search?q=${encodeURIComponent(q.trim())}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data.books ?? []);
+        }
+      }, 400);
+    },
+    [username]
+  );
+
 
   // ── Navigation ───────────────────────────────────────────────────────────────
 
@@ -140,12 +210,25 @@ export default function LibraryManager({
     setShowTagsMenu(false);
   }
 
-  async function navigateToStatus(slug: string, name: string) {
-    if (filter.kind === "status" && filter.slug === slug) return;
+  function clearSearch() {
+    setSearchQuery("");
+    setSearchResults(null);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+  }
+
+  function sortQs(sortValue: SortValue) {
+    return sortValue === "date_added" ? "" : `sort=${sortValue}`;
+  }
+
+  async function navigateToStatus(slug: string, name: string, sortOverride?: SortValue) {
+    const s = sortOverride ?? sort;
+    if (!sortOverride && filter.kind === "status" && filter.slug === slug) return;
     setLoading(true);
     setSelectedIds(new Set());
+    clearSearch();
     closeMenus();
-    const res = await fetch(`/api/users/${username}/books?status=${slug}`);
+    const sq = sortQs(s);
+    const res = await fetch(`/api/users/${username}/books?status=${slug}${sq ? `&${sq}` : ""}`);
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
@@ -154,12 +237,15 @@ export default function LibraryManager({
     }
   }
 
-  async function navigateToAllBooks() {
-    if (filter.kind === "all") return;
+  async function navigateToAllBooks(sortOverride?: SortValue) {
+    const s = sortOverride ?? sort;
+    if (!sortOverride && filter.kind === "all") return;
     setLoading(true);
     setSelectedIds(new Set());
+    clearSearch();
     closeMenus();
-    const res = await fetch(`/api/users/${username}/books?limit=500`);
+    const sq = sortQs(s);
+    const res = await fetch(`/api/users/${username}/books?limit=500${sq ? `&${sq}` : ""}`);
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
@@ -174,12 +260,15 @@ export default function LibraryManager({
     }
   }
 
-  async function navigateToTag(slug: string, name: string) {
-    if (filter.kind === "tag" && filter.slug === slug) return;
+  async function navigateToTag(slug: string, name: string, sortOverride?: SortValue) {
+    const s = sortOverride ?? sort;
+    if (!sortOverride && filter.kind === "tag" && filter.slug === slug) return;
     setLoading(true);
     setSelectedIds(new Set());
+    clearSearch();
     closeMenus();
-    const res = await fetch(`/api/users/${username}/tags/${slug}`);
+    const sq = sortQs(s);
+    const res = await fetch(`/api/users/${username}/tags/${slug}${sq ? `?${sq}` : ""}`);
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
@@ -188,17 +277,40 @@ export default function LibraryManager({
     }
   }
 
-  async function navigateToLabel(keySlug: string, keyName: string, valueSlug: string, valueName: string) {
-    if (filter.kind === "label" && filter.keySlug === keySlug && filter.valueSlug === valueSlug) return;
+  async function navigateToLabel(keySlug: string, keyName: string, valueSlug: string, valueName: string, sortOverride?: SortValue) {
+    const s = sortOverride ?? sort;
+    if (!sortOverride && filter.kind === "label" && filter.keySlug === keySlug && filter.valueSlug === valueSlug) return;
     setLoading(true);
     setSelectedIds(new Set());
+    clearSearch();
     closeMenus();
-    const res = await fetch(`/api/users/${username}/labels/${keySlug}/${valueSlug}`);
+    const sq = sortQs(s);
+    const res = await fetch(`/api/users/${username}/labels/${keySlug}/${valueSlug}${sq ? `?${sq}` : ""}`);
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
       setBooks(data.books ?? []);
       setFilter({ kind: "label", keySlug, keyName, valueSlug, valueName });
+    }
+  }
+
+  async function changeSort(newSort: SortValue) {
+    if (newSort === sort) return;
+    setSort(newSort);
+    // Re-fetch current view with new sort
+    switch (filter.kind) {
+      case "status":
+        await navigateToStatus(filter.slug, filter.name, newSort);
+        break;
+      case "all":
+        await navigateToAllBooks(newSort);
+        break;
+      case "tag":
+        await navigateToTag(filter.slug, filter.name, newSort);
+        break;
+      case "label":
+        await navigateToLabel(filter.keySlug, filter.keyName, filter.valueSlug, filter.valueName, newSort);
+        break;
     }
   }
 
@@ -225,7 +337,24 @@ export default function LibraryManager({
         })
       )
     );
+    const removedCount = targets.length;
     setBooks((prev) => prev.filter((b) => !selectedIds.has(b.book_id)));
+    // Update sidebar counts after removal
+    if (filter.kind === "status") {
+      setLocalStatusList((prev) =>
+        prev.map((s) =>
+          s.slug === filter.slug ? { ...s, count: Math.max(0, s.count - removedCount) } : s
+        )
+      );
+      setLocalStatusCounts((prev) => ({
+        ...prev,
+        [filter.slug]: Math.max(0, (prev[filter.slug] ?? 0) - removedCount),
+        _all: Math.max(0, (prev["_all"] ?? 0) - removedCount),
+      }));
+    } else {
+      await refreshStatusCounts();
+    }
+    toast.success(`Removed ${targets.length} book${targets.length !== 1 ? "s" : ""}`);
     setSelectedIds(new Set());
     setBulkWorking(false);
   }
@@ -244,10 +373,28 @@ export default function LibraryManager({
         })
       )
     );
-    // If viewing a specific status, remove moved books from view
+    const movedCount = targets.length;
+    // Update sidebar counts: subtract from current filter, add to target
     if (filter.kind === "status" && filter.slug !== slug) {
       setBooks((prev) => prev.filter((b) => !selectedIds.has(b.book_id)));
+      setLocalStatusList((prev) =>
+        prev.map((s) => {
+          if (s.slug === filter.slug) return { ...s, count: Math.max(0, s.count - movedCount) };
+          if (s.slug === slug) return { ...s, count: s.count + movedCount };
+          return s;
+        })
+      );
+      setLocalStatusCounts((prev) => ({
+        ...prev,
+        [filter.slug]: Math.max(0, (prev[filter.slug] ?? 0) - movedCount),
+        [slug]: (prev[slug] ?? 0) + movedCount,
+      }));
+    } else {
+      // From "All Books" or other views we can't determine source status, so re-fetch counts
+      await refreshStatusCounts();
     }
+    const statusName = statusList.find((s) => s.slug === slug)?.name ?? slug;
+    toast.success(`Moved ${targets.length} book${targets.length !== 1 ? "s" : ""} to ${statusName}`);
     setSelectedIds(new Set());
     setBulkWorking(false);
   }
@@ -268,6 +415,7 @@ export default function LibraryManager({
     setBooks((prev) =>
       prev.map((b) => (selectedIds.has(b.book_id) ? { ...b, rating } : b))
     );
+    toast.success(`Rated ${targets.length} book${targets.length !== 1 ? "s" : ""} ${rating} star${rating !== 1 ? "s" : ""}`);
     setBulkWorking(false);
   }
 
@@ -332,6 +480,57 @@ export default function LibraryManager({
     }
   }
 
+  async function createLabel(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newLabelName.trim()) return;
+    setCreatingLabel(true);
+    const res = await fetch("/api/me/shelves", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: newLabelName.trim(),
+        description: newLabelDescription.trim() || undefined,
+      }),
+    });
+    setCreatingLabel(false);
+    if (res.ok) {
+      const data = await res.json();
+      const newShelf: ShelfSummary = {
+        id: data.id,
+        name: newLabelName.trim(),
+        slug: data.slug,
+        exclusive_group: "",
+        item_count: 0,
+        collection_type: "shelf",
+        description: newLabelDescription.trim() || undefined,
+      };
+      setLocalShelves((prev) => [...prev, newShelf]);
+      setNewLabelName("");
+      setNewLabelDescription("");
+      setShowCreateLabel(false);
+    }
+  }
+
+  async function saveDescription(shelfId: string) {
+    setSavingDescription(true);
+    const res = await fetch(`/api/me/shelves/${shelfId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: editDescription }),
+    });
+    setSavingDescription(false);
+    if (res.ok) {
+      setLocalShelves((prev) =>
+        prev.map((s) =>
+          s.id === shelfId
+            ? { ...s, description: editDescription || undefined }
+            : s
+        )
+      );
+      setEditingShelfId(null);
+    }
+  }
+
   async function massRemoveTag(tagCollection: ShelfSummary) {
     setBulkWorking(true);
     setShowTagsMenu(false);
@@ -352,6 +551,7 @@ export default function LibraryManager({
 
   const tagCollections = localShelves.filter((s) => s.collection_type === "tag");
   const tagTree = buildTagTree(tagCollections);
+  const displayedBooks = searchResults !== null ? searchResults : books;
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -363,16 +563,16 @@ export default function LibraryManager({
         <div>
           <SidebarItem
             label="All Books"
-            count={statusCounts["_all"] ?? 0}
+            count={localStatusCounts["_all"] ?? 0}
             active={filter.kind === "all"}
             onClick={() => navigateToAllBooks()}
           />
         </div>
 
         {/* Status values */}
-        {statusList.length > 0 && (
-          <SidebarSection label="Status" count={statusList.length} defaultOpen>
-            {statusList.map((s) => (
+        {localStatusList.length > 0 && (
+          <SidebarSection label="Status" count={localStatusList.length} defaultOpen>
+            {localStatusList.map((s) => (
               <SidebarItem
                 key={s.slug}
                 label={s.name}
@@ -381,10 +581,10 @@ export default function LibraryManager({
                 onClick={() => navigateToStatus(s.slug, s.name)}
               />
             ))}
-            {(statusCounts["_unstatused"] ?? 0) > 0 && (
+            {(localStatusCounts["_unstatused"] ?? 0) > 0 && (
               <SidebarItem
                 label="Unstatused"
-                count={statusCounts["_unstatused"]}
+                count={localStatusCounts["_unstatused"]}
                 active={filter.kind === "status" && filter.slug === "_unstatused"}
                 onClick={() => navigateToStatus("_unstatused", "Unstatused")}
               />
@@ -421,6 +621,57 @@ export default function LibraryManager({
             ))}
           </SidebarSection>
         )}
+
+        {/* Create label */}
+        <div className="px-3 mt-auto pt-2">
+          {showCreateLabel ? (
+            <form onSubmit={createLabel} className="space-y-2">
+              <input
+                type="text"
+                placeholder="Label name"
+                value={newLabelName}
+                onChange={(e) => setNewLabelName(e.target.value)}
+                className="w-full text-xs border border-border rounded px-2 py-1.5 focus:outline-none focus:border-border-strong"
+                autoFocus
+              />
+              <textarea
+                placeholder="Description (optional)"
+                value={newLabelDescription}
+                onChange={(e) => setNewLabelDescription(e.target.value)}
+                maxLength={1000}
+                rows={2}
+                className="w-full text-xs border border-border rounded px-2 py-1.5 focus:outline-none focus:border-border-strong resize-none"
+              />
+              <div className="flex gap-1.5">
+                <button
+                  type="submit"
+                  disabled={creatingLabel || !newLabelName.trim()}
+                  className="text-xs px-2.5 py-1 rounded bg-accent text-text-inverted hover:bg-accent-hover transition-colors disabled:opacity-50"
+                >
+                  {creatingLabel ? "..." : "Create"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateLabel(false);
+                    setNewLabelName("");
+                    setNewLabelDescription("");
+                  }}
+                  className="text-xs px-2.5 py-1 rounded text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <button
+              onClick={() => setShowCreateLabel(true)}
+              className="w-full text-xs text-text-secondary hover:text-text-primary transition-colors text-left px-1 py-1"
+            >
+              + New label
+            </button>
+          )}
+        </div>
       </aside>
 
       {/* ── Main ────────────────────────────────────────────────────────────── */}
@@ -461,7 +712,7 @@ export default function LibraryManager({
             </div>
 
             {/* Unified Labels dropdown (Status + tag keys) */}
-            {(statusList.length > 0 || nonStatusTagKeys.length > 0) && (
+            {(localStatusList.length > 0 || nonStatusTagKeys.length > 0) && (
               <div className="relative">
                 <button
                   onClick={() => {
@@ -478,7 +729,7 @@ export default function LibraryManager({
                 {showLabelsMenu && (
                   <div className="absolute top-full left-0 mt-1 z-20 bg-surface-0 border border-border rounded shadow-md min-w-[160px]">
                     {/* Status key */}
-                    {statusList.length > 0 && (
+                    {localStatusList.length > 0 && (
                       <div
                         className="relative border-b border-border last:border-0"
                         onMouseEnter={() => setHoveredKey("_status")}
@@ -489,7 +740,7 @@ export default function LibraryManager({
                         </div>
                         {hoveredKey === "_status" && (
                           <div className="absolute left-full top-0 ml-0 z-30 bg-surface-0 border border-border rounded shadow-md min-w-[140px]">
-                            {statusList.map((s) => (
+                            {localStatusList.map((s) => (
                               <button
                                 key={s.slug}
                                 onClick={() => massChangeStatus(s.slug)}
@@ -537,7 +788,7 @@ export default function LibraryManager({
                                 setShowLabelsMenu(false);
                                 setHoveredKey(null);
                               }}
-                              className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-surface-2 transition-colors border-t border-border"
+                              className="w-full text-left px-3 py-2 text-xs text-semantic-error hover:bg-surface-2 transition-colors border-t border-border"
                             >
                               Clear
                             </button>
@@ -552,9 +803,9 @@ export default function LibraryManager({
 
             {/* Remove */}
             <button
-              onClick={massRemove}
+              onClick={() => setConfirmMassRemove(true)}
               disabled={bulkWorking}
-              className="text-xs px-3 py-1.5 rounded border border-red-200 text-red-500 hover:border-red-400 hover:text-red-700 disabled:opacity-50 transition-colors"
+              className="text-xs px-3 py-1.5 rounded border border-semantic-error-border text-semantic-error hover:border-semantic-error-border hover:text-semantic-error disabled:opacity-50 transition-colors"
             >
               {bulkWorking ? "Working..." : "Remove"}
             </button>
@@ -588,7 +839,7 @@ export default function LibraryManager({
                           <button
                             onClick={() => massRemoveTag(t)}
                             title="Remove from tag"
-                            className="px-2.5 py-2 text-sm text-text-primary hover:text-red-400 transition-colors shrink-0 leading-none"
+                            className="px-2.5 py-2 text-sm text-text-primary hover:text-semantic-error transition-colors shrink-0 leading-none"
                           >
                             ×
                           </button>
@@ -618,17 +869,102 @@ export default function LibraryManager({
             </div>
           </div>
         ) : (
-          <div className="border-b border-border px-5 py-2.5 flex items-center gap-3 shrink-0">
-            <span className="text-sm font-semibold text-text-primary">
-              {filter.kind === "label"
-                ? `${filter.keyName}: ${filter.valueName}`
-                : filter.kind === "all"
-                  ? "All Books"
-                  : filter.name}
-            </span>
-            <span className="text-xs text-text-primary">
-              {books.length} {books.length === 1 ? "book" : "books"}
-            </span>
+          <div className="border-b border-border px-5 py-2.5 shrink-0">
+            {(() => {
+              const currentSlug = filter.kind === "status" ? filter.slug : filter.kind === "tag" ? filter.slug : null;
+              const currentShelf = currentSlug ? localShelves.find((s) => s.slug === currentSlug && !s.exclusive_group) : null;
+              const isEditableShelf = currentShelf && currentShelf.exclusive_group !== "read_status";
+              return (
+                <>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-text-primary">
+                      {filter.kind === "label"
+                        ? `${filter.keyName}: ${filter.valueName}`
+                        : filter.kind === "all"
+                          ? "All Books"
+                          : filter.name}
+                    </span>
+                    <span className="text-xs text-text-primary">
+                      {searchResults !== null
+                        ? `${searchResults.length} result${searchResults.length === 1 ? "" : "s"}`
+                        : `${books.length} ${books.length === 1 ? "book" : "books"}`}
+                    </span>
+                    {isEditableShelf && editingShelfId !== currentShelf.id && (
+                      <button
+                        onClick={() => {
+                          setEditingShelfId(currentShelf.id);
+                          setEditDescription(currentShelf.description ?? "");
+                        }}
+                        className="text-xs text-text-secondary hover:text-text-primary transition-colors"
+                      >
+                        {currentShelf.description ? "Edit description" : "Add description"}
+                      </button>
+                    )}
+                    {books.length > 1 && (
+                      <div className="ml-auto flex items-center gap-1.5">
+                        <span className="text-xs text-text-secondary">Sort:</span>
+                        {SORT_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => changeSort(option.value)}
+                            className={`text-xs px-2 py-1 rounded transition-colors ${
+                              sort === option.value
+                                ? "bg-surface-2 text-text-primary font-medium"
+                                : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className={books.length <= 1 ? "ml-auto" : ""}>
+                      <input
+                        type="text"
+                        placeholder="Search library..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          doSearch(e.target.value);
+                        }}
+                        className="text-sm px-3 py-1 rounded border border-border bg-surface-0 text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-accent w-48"
+                      />
+                    </div>
+                  </div>
+                  {isEditableShelf && editingShelfId === currentShelf.id && (
+                    <div className="mt-2 space-y-2">
+                      <textarea
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        maxLength={1000}
+                        rows={2}
+                        placeholder="Add a description..."
+                        className="w-full text-xs border border-border rounded px-2 py-1.5 focus:outline-none focus:border-border-strong resize-none max-w-lg"
+                        autoFocus
+                      />
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => saveDescription(currentShelf.id)}
+                          disabled={savingDescription}
+                          className="text-xs px-2.5 py-1 rounded bg-accent text-text-inverted hover:bg-accent-hover transition-colors disabled:opacity-50"
+                        >
+                          {savingDescription ? "Saving..." : "Save"}
+                        </button>
+                        <button
+                          onClick={() => setEditingShelfId(null)}
+                          className="text-xs px-2.5 py-1 rounded text-text-secondary hover:text-text-primary transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {isEditableShelf && editingShelfId !== currentShelf.id && currentShelf.description && (
+                    <p className="text-xs text-text-secondary mt-1">{currentShelf.description}</p>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 
@@ -636,11 +972,13 @@ export default function LibraryManager({
         <div className="flex-1 overflow-y-auto p-5">
           {loading ? (
             <p className="text-sm text-text-primary">Loading...</p>
-          ) : books.length === 0 ? (
-            <p className="text-sm text-text-primary">No books here yet.</p>
+          ) : displayedBooks.length === 0 ? (
+            <p className="text-sm text-text-primary">
+              {searchResults !== null ? "No books match your search." : "No books here yet."}
+            </p>
           ) : (
             <ul className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3">
-              {books.map((book) => {
+              {displayedBooks.map((book) => {
                 const selected = selectedIds.has(book.book_id);
                 const anySelected = selectedIds.size > 0;
                 return (
@@ -650,7 +988,7 @@ export default function LibraryManager({
                       onClick={() => toggleSelect(book.book_id)}
                       className={`absolute top-1 left-1 z-10 w-4 h-4 rounded border flex items-center justify-center transition-all ${
                         selected
-                          ? "bg-accent border-accent text-white opacity-100"
+                          ? "bg-accent border-accent text-badge-text opacity-100"
                           : `bg-surface-0 border-border ${anySelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`
                       }`}
                       aria-label={selected ? "Deselect" : "Select"}
@@ -729,6 +1067,17 @@ export default function LibraryManager({
           )}
         </div>
       </div>
+      {confirmMassRemove && (
+        <ConfirmDialog
+          title="Remove from library"
+          message={`Remove ${selectedIds.size} book${selectedIds.size === 1 ? "" : "s"} from your library? Ratings, reviews, and reading progress will be deleted.`}
+          onConfirm={() => {
+            setConfirmMassRemove(false);
+            massRemove();
+          }}
+          onCancel={() => setConfirmMassRemove(false)}
+        />
+      )}
     </div>
   );
 }
@@ -765,7 +1114,7 @@ function SidebarItem({
         <button
           onClick={onDelete}
           title="Delete"
-          className="opacity-0 group-hover:opacity-100 pr-3 text-text-primary hover:text-red-400 transition-all leading-none shrink-0"
+          className="opacity-0 group-hover:opacity-100 pr-3 text-text-primary hover:text-semantic-error transition-all leading-none shrink-0"
         >
           ×
         </button>
@@ -854,7 +1203,7 @@ function TagTreeItem({
           <button
             onClick={() => onDelete(node.collection)}
             title="Delete"
-            className="opacity-0 group-hover:opacity-100 pr-3 text-text-primary hover:text-red-400 transition-all leading-none shrink-0 text-sm"
+            className="opacity-0 group-hover:opacity-100 pr-3 text-text-primary hover:text-semantic-error transition-all leading-none shrink-0 text-sm"
           >
             ×
           </button>

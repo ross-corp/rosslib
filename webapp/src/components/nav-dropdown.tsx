@@ -24,8 +24,17 @@ export default function NavDropdown({
         setOpen(false);
       }
     }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    }
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   return (
@@ -33,6 +42,9 @@ export default function NavDropdown({
       <button
         onClick={() => setOpen((o) => !o)}
         className="nav-link flex items-center gap-1"
+        aria-label={`${label.charAt(0).toUpperCase() + label.slice(1)} menu`}
+        aria-expanded={open}
+        aria-haspopup="true"
       >
         {label}
         <svg
