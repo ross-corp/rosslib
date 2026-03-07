@@ -489,6 +489,18 @@ func GetUserReviews(app core.App) func(e *core.RequestEvent) error {
 		}
 		offset := (page - 1) * limit
 
+		// Parse sort param
+		sortParam := e.Request.URL.Query().Get("sort")
+		orderClause := "ub.date_added DESC"
+		switch sortParam {
+		case "oldest":
+			orderClause = "ub.date_added ASC"
+		case "highest_rating":
+			orderClause = "ub.rating DESC NULLS LAST, ub.date_added DESC"
+		case "lowest_rating":
+			orderClause = "ub.rating ASC NULLS LAST, ub.date_added DESC"
+		}
+
 		// Get total count
 		type countResult struct {
 			Count int `db:"count"`
@@ -520,7 +532,7 @@ func GetUserReviews(app core.App) func(e *core.RequestEvent) error {
 			FROM user_books ub
 			JOIN books b ON ub.book = b.id
 			WHERE ub.user = {:user} AND ub.review_text != '' AND ub.review_text IS NOT NULL
-			ORDER BY ub.date_added DESC
+			ORDER BY ` + orderClause + `
 			LIMIT {:limit} OFFSET {:offset}
 		`).Bind(map[string]any{"user": user.Id, "limit": limit, "offset": offset}).All(&reviews)
 		if err != nil {

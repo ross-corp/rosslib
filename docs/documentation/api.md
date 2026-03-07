@@ -857,13 +857,14 @@ Returns a paginated list of users this user follows. Respects privacy — return
 ]
 ```
 
-### `GET /users/:username/reviews?page=1&limit=20`
+### `GET /users/:username/reviews?page=1&limit=20&sort=newest`
 
-Returns paginated reviews (user_books with non-empty `review_text`) for a user, ordered by date added descending.
+Returns paginated reviews (user_books with non-empty `review_text`) for a user.
 
 **Query parameters:**
 - `page` *(optional, default 1)* — page number
 - `limit` *(optional, default 20, max 100)* — results per page
+- `sort` *(optional, default `newest`)* — sort order: `newest` (date added descending), `oldest` (date added ascending), `highest_rating` (highest rated first), `lowest_rating` (lowest rated first)
 
 ```json
 {

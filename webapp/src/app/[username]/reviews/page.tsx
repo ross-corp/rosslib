@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Pagination from "@/components/pagination";
 import ReviewText from "@/components/review-text";
+import ReviewSortDropdown from "@/components/review-sort-dropdown";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -30,10 +31,12 @@ type ReviewsResponse = {
 
 async function fetchReviews(
   username: string,
-  page: number
+  page: number,
+  sort: string
 ): Promise<ReviewsResponse | null> {
+  const sortParam = sort && sort !== "newest" ? `&sort=${sort}` : "";
   const res = await fetch(
-    `${process.env.API_URL}/users/${username}/reviews?page=${page}&limit=20`,
+    `${process.env.API_URL}/users/${username}/reviews?page=${page}&limit=20${sortParam}`,
     { cache: "no-store" }
   );
   if (res.status === 404) return null;
@@ -62,12 +65,13 @@ export default async function ReviewsPage({
   searchParams,
 }: {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; sort?: string }>;
 }) {
   const { username } = await params;
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.page || "1", 10) || 1);
-  const data = await fetchReviews(username, page);
+  const sort = sp.sort || "newest";
+  const data = await fetchReviews(username, page, sort);
 
   if (data === null) notFound();
 
@@ -84,9 +88,14 @@ export default async function ReviewsPage({
           >
             &larr; {username}
           </Link>
-          <h1 className="text-2xl font-bold text-text-primary mt-2">
-            Reviews{total > 0 && <span className="text-text-tertiary font-normal text-lg ml-2">({total})</span>}
-          </h1>
+          <div className="flex items-center justify-between mt-2">
+            <h1 className="text-2xl font-bold text-text-primary">
+              Reviews{total > 0 && <span className="text-text-tertiary font-normal text-lg ml-2">({total})</span>}
+            </h1>
+            {total > 1 && (
+              <ReviewSortDropdown username={username} currentSort={sort} />
+            )}
+          </div>
         </div>
 
         {reviews.length === 0 ? (
@@ -178,8 +187,8 @@ export default async function ReviewsPage({
 
         {/* Pagination */}
         <Pagination
-          prevHref={page > 1 ? `/${username}/reviews?page=${page - 1}` : null}
-          nextHref={page < totalPages ? `/${username}/reviews?page=${page + 1}` : null}
+          prevHref={page > 1 ? `/${username}/reviews?page=${page - 1}${sort !== "newest" ? `&sort=${sort}` : ""}` : null}
+          nextHref={page < totalPages ? `/${username}/reviews?page=${page + 1}${sort !== "newest" ? `&sort=${sort}` : ""}` : null}
           label={totalPages > 1 ? `Page ${page} of ${totalPages}` : undefined}
         />
       </main>

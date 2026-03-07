@@ -2,9 +2,6 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination. Items are ordered by priority — nephewbot picks the top unchecked item.
 
-## API gaps
-
-- [ ] Add `sort` query param to `GET /users/:username/reviews` endpoint: the reviews endpoint in `api/handlers/users.go` sorts by `date_added DESC` only. Add a `sort` query param accepting `newest` (default, current behavior), `oldest`, `highest_rating`, `lowest_rating`. Update the SQL ORDER BY clause based on the param. On the frontend at `webapp/src/app/[username]/reviews/page.tsx`, add a sort dropdown that sets the `sort` query param and re-fetches.
 
 ## BUGS
 
