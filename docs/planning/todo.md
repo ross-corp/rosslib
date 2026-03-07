@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## Error Handling & Reliability
 
-- [ ] Add `error.tsx` boundary for the settings page tree: create `webapp/src/app/settings/error.tsx` that catches server errors from any settings sub-page (import, export, tags, etc.) and shows an error message with a "Try again" button. Follow the pattern in `webapp/src/app/[username]/error.tsx`.
 - [ ] Add `error.tsx` boundary for the authors page: create `webapp/src/app/authors/[authorKey]/error.tsx` that catches server errors and shows "Could not load author" with a link back to search. Follow the existing error boundary pattern.
 - [ ] Add `not-found.tsx` for the authors page: create `webapp/src/app/authors/[authorKey]/not-found.tsx` that shows "Author not found" with a link to `/search`. Currently the author page calls `notFound()` but there's no custom not-found page, so it falls back to the default Next.js 404 which has no navigation or helpful links.
 - [ ] Add `error.tsx` boundary for the genres pages: create `webapp/src/app/genres/error.tsx` that catches server errors and shows "Could not load genres" with a "Try again" button. The genre page currently silently returns an empty array on API failure.
