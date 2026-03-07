@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import AuthorBio from "@/components/author-bio";
 import AuthorFollowButton from "@/components/author-follow-button";
 import AuthorWorksGrid from "@/components/author-works-grid";
 import { getToken } from "@/lib/auth";
@@ -28,7 +30,23 @@ type AuthorDetail = {
   works: AuthorWork[] | null;
 };
 
+type AuthorSeriesItem = {
+  id: string;
+  name: string;
+  description: string | null;
+  book_count: number;
+};
+
 // ── Data fetchers ─────────────────────────────────────────────────────────────
+
+async function fetchAuthorSeries(authorKey: string, authorName: string): Promise<AuthorSeriesItem[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/authors/${authorKey}/series?name=${encodeURIComponent(authorName)}`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
 
 async function fetchAuthor(authorKey: string): Promise<AuthorDetail | null> {
   const res = await fetch(`${process.env.API_URL}/authors/${authorKey}`, {
@@ -72,6 +90,7 @@ export default async function AuthorPage({
   if (!author) notFound();
 
   const works = author.works ?? [];
+  const authorSeries = await fetchAuthorSeries(authorKey, author.name);
 
   return (
     <div className="min-h-screen">
@@ -118,11 +137,7 @@ export default async function AuthorPage({
               {author.work_count} work{author.work_count === 1 ? "" : "s"}
             </p>
 
-            {author.bio && (
-              <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">
-                {author.bio}
-              </p>
-            )}
+            {author.bio && <AuthorBio bio={author.bio} />}
 
             {author.links && author.links.length > 0 && (
               <div className="flex flex-wrap gap-3 mt-4">
@@ -141,6 +156,38 @@ export default async function AuthorPage({
             )}
           </div>
         </div>
+
+        {/* ── Series ── */}
+        {authorSeries.length > 0 && (
+          <section className="border-t border-border pt-8 mb-10">
+            <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-4">
+              Series ({authorSeries.length})
+            </h2>
+            <div className="space-y-2">
+              {authorSeries.map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/series/${s.id}`}
+                  className="flex items-center justify-between border border-border rounded-lg px-4 py-3 hover:border-border-strong transition-colors"
+                >
+                  <div>
+                    <span className="text-sm font-medium text-text-primary">
+                      {s.name}
+                    </span>
+                    {s.description && (
+                      <p className="text-xs text-text-tertiary mt-0.5 line-clamp-1">
+                        {s.description}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-xs text-text-tertiary shrink-0 ml-4">
+                    {s.book_count} {s.book_count === 1 ? "book" : "books"}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── Works ── */}
         <section className="border-t border-border pt-8">

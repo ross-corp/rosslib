@@ -15,6 +15,7 @@ type StatsData = {
   rating_distribution: RatingBucket[];
   total_books: number;
   total_reviews: number;
+  total_pages_read: number;
 };
 
 // ── Data fetcher ───────────────────────────────────────────────────────────────
@@ -79,10 +80,16 @@ export default async function StatsPage({
           <h1 className="text-2xl font-bold text-text-primary mt-2">
             Reading Stats
           </h1>
+          <Link
+            href={`/${username}/year-in-review`}
+            className="text-sm text-accent hover:underline mt-1 inline-block"
+          >
+            Year in Review &rarr;
+          </Link>
         </div>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-10">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5 mb-10">
           <div>
             <p className="text-2xl font-bold text-text-primary">
               {stats.total_books}
@@ -108,6 +115,12 @@ export default async function StatsPage({
               {totalRated}
             </p>
             <p className="text-xs text-text-tertiary">books rated</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-text-primary">
+              {stats.total_pages_read.toLocaleString()}
+            </p>
+            <p className="text-xs text-text-tertiary">pages read</p>
           </div>
         </div>
 

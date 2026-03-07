@@ -23,7 +23,8 @@ async function fetchShelves(
     cache: "no-store",
   });
   if (!res.ok) return [];
-  return res.json();
+  const data = await res.json();
+  return data.shelves ?? data;
 }
 
 export default async function ComparePage() {

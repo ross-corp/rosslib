@@ -41,12 +41,13 @@ export default function ReviewLikeButton({
     <button
       onClick={toggle}
       disabled={loading || disabled}
+      aria-pressed={liked}
       className={`inline-flex items-center gap-1 text-xs transition-colors ${
         disabled
           ? "text-text-tertiary cursor-default"
           : liked
-            ? "text-red-500 hover:text-red-400"
-            : "text-text-tertiary hover:text-red-400"
+            ? "text-like hover:text-like-hover"
+            : "text-text-tertiary hover:text-like-hover"
       }`}
       title={disabled ? "You can't like your own review" : liked ? "Unlike" : "Like"}
     >

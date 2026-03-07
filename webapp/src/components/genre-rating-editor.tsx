@@ -189,6 +189,8 @@ export default function GenreRatingEditor({
                     handleSliderChange(genre, parseInt(e.target.value))
                   }
                   disabled={saving}
+                  aria-label={`${genre} rating`}
+                  aria-valuenow={myRatings[genre] ?? 0}
                   className="flex-1 h-1.5 accent-neutral-400"
                 />
                 <span className="text-xs text-text-primary w-6 text-right tabular-nums">
