@@ -788,16 +788,9 @@ func UploadBanner(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
 		}
 
-		file, header, err := e.Request.FormFile("banner")
-		if err != nil {
-			return e.JSON(http.StatusBadRequest, map[string]any{"error": "No banner file provided"})
-		}
-		defer file.Close()
-
 		f, err := e.FindUploadedFiles("banner")
 		if err != nil || len(f) == 0 {
-			_ = header
-			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Failed to process uploaded file"})
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "No banner file provided"})
 		}
 
 		user.Set("banner", f[0])
