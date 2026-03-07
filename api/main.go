@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
@@ -237,8 +238,12 @@ func main() {
 		admin.GET("/link-edits", handlers.GetPendingLinkEdits(app))
 		admin.PUT("/link-edits/{editId}", handlers.ReviewLinkEdit(app))
 
-		// Start background pollers
-		bookstats.StartPoller(app)
+		// Start background pollers after the server is ready.
+		go func() {
+			// Small delay to ensure se.Next() has returned and the server is serving.
+			time.Sleep(2 * time.Second)
+			bookstats.StartPoller(app)
+		}()
 
 		return se.Next()
 	})

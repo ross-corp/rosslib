@@ -2030,7 +2030,7 @@ func CommitLibraryThingImport(app core.App) func(e *core.RequestEvent) error {
 				continue
 			}
 
-			book, err := upsertBook(app, b.OLID, b.Title, b.CoverURL, b.ISBN13, b.Authors, b.PublicationYear)
+			book, err := upsertBook(app, b.OLID, b.Title, b.CoverURL, b.ISBN13, b.Authors, b.PublicationYear, "")
 			if err != nil {
 				failed++
 				errors = append(errors, fmt.Sprintf("Failed to save book: %s — %v", b.Title, err))
