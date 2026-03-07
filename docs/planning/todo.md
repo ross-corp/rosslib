@@ -10,8 +10,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## performance
 
-- [ ] Add compound index on `user_books (user, date_added DESC)` for timeline queries: the reading timeline endpoint (`GET /users/:username/timeline` in `api/handlers/timeline.go`) queries `user_books` filtering by `user` and ordering by `date_read`. While the unique index on `(user, book)` exists, a compound index on `(user, date_added DESC)` or `(user, date_read)` would speed up timeline and activity queries. Add the index in the next migration file in `api/migrations/`.
-- [ ] Add compound index on `activities (user, activity_type, created DESC)` for feed filtering: the feed endpoint (`GET /me/feed` in `api/handlers/activity.go`) filters activities by followed users and orders by `created DESC`. The existing index on `(user, created DESC)` helps but adding `activity_type` to the compound index would optimize feed filtering when a type filter is added (see pending PR #98). Add in the next migration file.
 - [ ] Add `cache: "no-store"` to all dynamic server-side fetches: some server components in the webapp may not set `cache: "no-store"` on their `fetch()` calls, which means Next.js could cache stale data. Audit all `fetch(${process.env.API_URL}...)` calls in server components and ensure they include `{ cache: "no-store" }` for user-specific or frequently-changing data. Specifically check: `webapp/src/app/[username]/page.tsx`, `webapp/src/app/[username]/stats/page.tsx`, `webapp/src/app/[username]/timeline/page.tsx`, and `webapp/src/app/notifications/page.tsx`.
 
 ## error handling
