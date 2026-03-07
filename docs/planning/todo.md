@@ -10,7 +10,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX polish
 
-- [ ] Standardize pagination UI across all paginated pages: pagination buttons are styled inconsistently. Search page uses "Previous page" / "Next page" in a `max-w-md` container; reviews page uses "Previous" / "Next" centered; users page uses "← Previous" / "Next →" with arrows. Create a shared `Pagination` component in `webapp/src/components/pagination.tsx` that takes `page`, `hasNext`, and `onPageChange` props, renders consistent prev/next buttons with the same styling, and replace the inline pagination markup in `webapp/src/app/search/page.tsx`, `webapp/src/app/[username]/reviews/page.tsx`, and `webapp/src/app/users/page.tsx`.
 
 ## data integrity
 

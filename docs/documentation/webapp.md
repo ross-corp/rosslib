@@ -198,6 +198,10 @@ Client component rendered inside `Nav`, visible only below the `md:` breakpoint.
 
 Client component used by `Nav` for dropdown menus. Opens on hover (desktop) or click (mobile). Closes when clicking outside. Takes a `label` string and an array of `{ href, label }` items.
 
+### `Pagination` (`components/pagination.tsx`)
+
+Shared server component for consistent pagination across pages. Takes `prevHref` (string or null), `nextHref` (string or null), and an optional `label` string (e.g., "Page 2 of 5"). Renders Previous/Next links with matching border+rounded styling. Used on search, users, and reviews pages.
+
 ### `LibraryManager` (`components/library-manager.tsx`)
 
 Full-page library manager rendered for label owners. Replaces the simple label grid on `[username]/shelves/[slug]` when `isOwner` is true.
