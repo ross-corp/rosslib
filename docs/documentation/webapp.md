@@ -73,7 +73,7 @@ webapp/src/app/
 ├── search/page.tsx                 book + user + author search (shows popular books when no query)
 ├── feed/page.tsx                   activity feed with filter chips (All, Reviews, Ratings, Status Updates, Threads, Social)
 ├── users/page.tsx                  browse all users (sort by newest/books/followers)
-├── books/[workId]/page.tsx         single book page (series badges, series navigation row)
+├── books/[workId]/page.tsx         single book page (series badges, series navigation row, review sort dropdown)
 ├── books/[workId]/not-found.tsx   "Book not found" with search link
 ├── series/[seriesId]/page.tsx     series detail — ordered book list with covers, reading progress & status picker
 ├── settings/
