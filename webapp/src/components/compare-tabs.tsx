@@ -13,8 +13,12 @@ export default function CompareTabs({
 
   return (
     <div>
-      <div className="flex gap-1 border-b border-border mb-8">
+      <div role="tablist" className="flex gap-1 border-b border-border mb-8">
         <button
+          role="tab"
+          id="tab-my-lists"
+          aria-selected={tab === "my-lists"}
+          aria-controls="tabpanel-my-lists"
           onClick={() => setTab("my-lists")}
           className={`px-4 py-2 text-sm font-medium transition-colors ${
             tab === "my-lists"
@@ -25,6 +29,10 @@ export default function CompareTabs({
           My Lists
         </button>
         <button
+          role="tab"
+          id="tab-friend"
+          aria-selected={tab === "friend"}
+          aria-controls="tabpanel-friend"
           onClick={() => setTab("friend")}
           className={`px-4 py-2 text-sm font-medium transition-colors ${
             tab === "friend"
@@ -36,7 +44,13 @@ export default function CompareTabs({
         </button>
       </div>
 
-      {tab === "my-lists" ? myListsContent : friendContent}
+      <div
+        role="tabpanel"
+        id={tab === "my-lists" ? "tabpanel-my-lists" : "tabpanel-friend"}
+        aria-labelledby={tab === "my-lists" ? "tab-my-lists" : "tab-friend"}
+      >
+        {tab === "my-lists" ? myListsContent : friendContent}
+      </div>
     </div>
   );
 }

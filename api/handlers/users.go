@@ -197,14 +197,20 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			WHERE f1.follower = {:id} AND f1.status = 'active' AND f2.status = 'active'
 		`).Bind(map[string]any{"id": user.Id}).One(&friendsCount)
 
-		// Count books read & reviews
-		var booksRead, reviewsCount countResult
+		// Count books read, currently reading & reviews
+		var booksRead, currentlyReading, reviewsCount countResult
 		_ = app.DB().NewQuery(`
 			SELECT COUNT(DISTINCT btv.book) as count
 			FROM book_tag_values btv
 			JOIN tag_values tv ON btv.tag_value = tv.id
 			WHERE btv.user = {:id} AND tv.slug = 'finished'
 		`).Bind(map[string]any{"id": user.Id}).One(&booksRead)
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(DISTINCT btv.book) as count
+			FROM book_tag_values btv
+			JOIN tag_values tv ON btv.tag_value = tv.id
+			WHERE btv.user = {:id} AND tv.slug = 'currently-reading'
+		`).Bind(map[string]any{"id": user.Id}).One(&currentlyReading)
 		_ = app.DB().NewQuery(`
 			SELECT COUNT(*) as count FROM user_books
 			WHERE user = {:id} AND review_text != '' AND review_text IS NOT NULL
@@ -232,6 +238,33 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			WHERE user = {:id} AND rating > 0
 		`).Bind(map[string]any{"id": user.Id}).One(&avgRating)
 
+		// Total pages read (sum page_count for finished books)
+		type sumResult struct {
+			Total *int `db:"total"`
+		}
+		var totalPages sumResult
+		_ = app.DB().NewQuery(`
+			SELECT COALESCE(SUM(b.page_count), 0) as total
+			FROM user_books ub
+			JOIN books b ON ub.book = b.id
+			JOIN book_tag_values btv ON btv.user = ub.user AND btv.book = ub.book
+			JOIN tag_values tv ON btv.tag_value = tv.id
+			WHERE ub.user = {:id}
+			  AND tv.slug = 'finished'
+			  AND b.page_count IS NOT NULL AND b.page_count > 0
+		`).Bind(map[string]any{"id": user.Id}).One(&totalPages)
+
+		totalPagesRead := 0
+		if totalPages.Total != nil {
+			totalPagesRead = *totalPages.Total
+		}
+
+		// Total books in library
+		var totalBooks countResult
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) as count FROM user_books WHERE "user" = {:id}
+		`).Bind(map[string]any{"id": user.Id}).One(&totalBooks)
+
 		// Avatar URL
 		var avatarURL *string
 		if av := user.GetString("avatar"); av != "" {
@@ -252,12 +285,15 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			"followers_count": followersCount.Count,
 			"following_count": followingCount.Count,
 			"friends_count":   friendsCount.Count,
-			"books_read":      booksRead.Count,
-			"reviews_count":   reviewsCount.Count,
+			"books_read":              booksRead.Count,
+			"currently_reading_count": currentlyReading.Count,
+			"total_books":             totalBooks.Count,
+			"reviews_count":           reviewsCount.Count,
 			"books_this_year": booksThisYear.Count,
-			"average_rating":  avgRating.Avg,
-			"is_restricted":   isRestricted,
-			"is_blocked":      blockedByViewer,
+			"average_rating":    avgRating.Avg,
+			"total_pages_read": totalPagesRead,
+			"is_restricted":    isRestricted,
+			"is_blocked":       blockedByViewer,
 		}
 
 		return e.JSON(http.StatusOK, result)
@@ -388,6 +424,27 @@ func GetUserStats(app core.App) func(e *core.RequestEvent) error {
 			WHERE user = {:uid} AND review_text IS NOT NULL AND review_text != ''
 		`).Bind(map[string]any{"uid": uid}).One(&totalReviews)
 
+		// Total pages read (sum page_count for finished books)
+		type sumResult struct {
+			Total *int `db:"total"`
+		}
+		var totalPages sumResult
+		_ = app.DB().NewQuery(`
+			SELECT COALESCE(SUM(b.page_count), 0) as total
+			FROM user_books ub
+			JOIN books b ON ub.book = b.id
+			JOIN book_tag_values btv ON btv.user = ub.user AND btv.book = ub.book
+			JOIN tag_values tv ON btv.tag_value = tv.id
+			WHERE ub.user = {:uid}
+			  AND tv.slug = 'finished'
+			  AND b.page_count IS NOT NULL AND b.page_count > 0
+		`).Bind(map[string]any{"uid": uid}).One(&totalPages)
+
+		totalPagesRead := 0
+		if totalPages.Total != nil {
+			totalPagesRead = *totalPages.Total
+		}
+
 		return e.JSON(http.StatusOK, map[string]any{
 			"books_by_year":       booksByYear,
 			"books_by_month":      booksByMonth,
@@ -395,11 +452,12 @@ func GetUserStats(app core.App) func(e *core.RequestEvent) error {
 			"rating_distribution": ratingDistribution,
 			"total_books":         totalBooks.Count,
 			"total_reviews":       totalReviews.Count,
+			"total_pages_read":    totalPagesRead,
 		})
 	}
 }
 
-// GetUserReviews handles GET /users/{username}/reviews
+// GetUserReviews handles GET /users/{username}/reviews?page=1&limit=20
 func GetUserReviews(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		username := e.Request.PathValue("username")
@@ -421,10 +479,37 @@ func GetUserReviews(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusForbidden, map[string]any{"error": "Profile is private"})
 		}
 
+		page, _ := strconv.Atoi(e.Request.URL.Query().Get("page"))
+		if page < 1 {
+			page = 1
+		}
 		limit, _ := strconv.Atoi(e.Request.URL.Query().Get("limit"))
-		if limit <= 0 || limit > 50 {
+		if limit <= 0 || limit > 100 {
 			limit = 20
 		}
+		offset := (page - 1) * limit
+
+		// Parse sort param
+		sortParam := e.Request.URL.Query().Get("sort")
+		orderClause := "ub.date_added DESC"
+		switch sortParam {
+		case "oldest":
+			orderClause = "ub.date_added ASC"
+		case "highest_rating":
+			orderClause = "ub.rating DESC NULLS LAST, ub.date_added DESC"
+		case "lowest_rating":
+			orderClause = "ub.rating ASC NULLS LAST, ub.date_added DESC"
+		}
+
+		// Get total count
+		type countResult struct {
+			Count int `db:"count"`
+		}
+		var total countResult
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) as count FROM user_books
+			WHERE "user" = {:user} AND review_text != '' AND review_text IS NOT NULL
+		`).Bind(map[string]any{"user": user.Id}).One(&total)
 
 		type reviewRow struct {
 			Rating     *float64 `db:"rating" json:"rating"`
@@ -447,14 +532,18 @@ func GetUserReviews(app core.App) func(e *core.RequestEvent) error {
 			FROM user_books ub
 			JOIN books b ON ub.book = b.id
 			WHERE ub.user = {:user} AND ub.review_text != '' AND ub.review_text IS NOT NULL
-			ORDER BY ub.date_added DESC
-			LIMIT {:limit}
-		`).Bind(map[string]any{"user": user.Id, "limit": limit}).All(&reviews)
+			ORDER BY ` + orderClause + `
+			LIMIT {:limit} OFFSET {:offset}
+		`).Bind(map[string]any{"user": user.Id, "limit": limit, "offset": offset}).All(&reviews)
 		if err != nil {
-			return e.JSON(http.StatusOK, []any{})
+			reviews = []reviewRow{}
 		}
 
-		return e.JSON(http.StatusOK, reviews)
+		return e.JSON(http.StatusOK, map[string]any{
+			"reviews": reviews,
+			"total":   total.Count,
+			"page":    page,
+		})
 	}
 }
 

@@ -154,7 +154,7 @@ func fetchBooksFromOpenLibrary(app core.App, rng *rand.Rand, count int) ([]*core
 			}
 
 			// Upsert into local database
-			book, err := upsertBook(app, key, title, coverURL, "", strings.Join(authorNames, ", "), 0)
+			book, err := upsertBook(app, key, title, coverURL, "", strings.Join(authorNames, ", "), 0, "")
 			if err != nil {
 				logs = append(logs, fmt.Sprintf("Failed to save \"%s\": %v", title, err))
 				continue

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -36,7 +37,7 @@ func AddBook(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		authors := strings.Join(data.Authors, ", ")
-		book, err := upsertBook(app, data.OpenLibraryID, data.Title, data.CoverURL, data.ISBN13, authors, data.PublicationYear)
+		book, err := upsertBook(app, data.OpenLibraryID, data.Title, data.CoverURL, data.ISBN13, authors, data.PublicationYear, "")
 		if err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to save book"})
 		}
@@ -128,6 +129,7 @@ func UpdateBook(app core.App) func(e *core.RequestEvent) error {
 			DateStarted             *string  `json:"date_started"`
 			ProgressPages           *int     `json:"progress_pages"`
 			ProgressPercent         *int     `json:"progress_percent"`
+			DeviceTotalPages        *int     `json:"device_total_pages"`
 			StatusSlug              *string  `json:"status_slug"`
 			SelectedEditionKey      *string  `json:"selected_edition_key"`
 			SelectedEditionCoverURL *string  `json:"selected_edition_cover_url"`
@@ -162,6 +164,9 @@ func UpdateBook(app core.App) func(e *core.RequestEvent) error {
 		}
 		if data.ProgressPercent != nil {
 			ub.Set("progress_percent", *data.ProgressPercent)
+		}
+		if data.DeviceTotalPages != nil {
+			ub.Set("device_total_pages", *data.DeviceTotalPages)
 		}
 		if data.SelectedEditionKey != nil {
 			ub.Set("selected_edition_key", *data.SelectedEditionKey)
@@ -260,7 +265,9 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 				"status_value_id": nil, "status_name": nil, "status_slug": nil,
 				"rating": nil, "review_text": nil, "spoiler": false,
 				"date_read": nil, "date_dnf": nil, "date_started": nil,
+				"date_added": nil,
 				"progress_pages": nil, "progress_percent": nil,
+				"device_total_pages": nil,
 				"selected_edition_key": nil, "selected_edition_cover_url": nil,
 			})
 		}
@@ -283,8 +290,10 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 			"date_read":                 nil,
 			"date_dnf":                  nil,
 			"date_started":              nil,
+			"date_added":                nil,
 			"progress_pages":            nil,
 			"progress_percent":          nil,
+			"device_total_pages":        nil,
 			"selected_edition_key":      nil,
 			"selected_edition_cover_url": nil,
 		}
@@ -307,11 +316,17 @@ func GetBookStatus(app core.App) func(e *core.RequestEvent) error {
 			if ds := ub.GetString("date_started"); ds != "" {
 				result["date_started"] = ds
 			}
+			if da := ub.GetString("date_added"); da != "" {
+				result["date_added"] = da
+			}
 			if pp := ub.GetInt("progress_pages"); pp > 0 {
 				result["progress_pages"] = pp
 			}
 			if pct := ub.GetInt("progress_percent"); pct > 0 {
 				result["progress_percent"] = pct
+			}
+			if dtp := ub.GetInt("device_total_pages"); dtp > 0 {
+				result["device_total_pages"] = dtp
 			}
 			if sek := ub.GetString("selected_edition_key"); sek != "" {
 				result["selected_edition_key"] = sek
@@ -524,14 +539,17 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 				ProgressPercent *int     `db:"progress_percent" json:"progress_percent"`
 				PageCount       *int     `db:"page_count" json:"page_count"`
 				SeriesPosition  *int     `db:"series_position" json:"series_position"`
+				DateStarted     *string  `db:"date_started" json:"date_started"`
 			}
 			var books []bookRow
 			_ = app.DB().NewQuery(`
 				SELECT b.id as book_id, b.open_library_id, b.title,
 					   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
 					   ub.rating, ub.date_added as added_at,
-					   ub.progress_pages, ub.progress_percent, b.page_count,
-					   (SELECT bs.position FROM book_series bs WHERE bs.book = b.id LIMIT 1) as series_position
+					   ub.progress_pages, ub.progress_percent,
+					   COALESCE(ub.device_total_pages, b.page_count) as page_count,
+					   (SELECT bs.position FROM book_series bs WHERE bs.book = b.id LIMIT 1) as series_position,
+					   ub.date_started
 				FROM book_tag_values btv
 				JOIN books b ON btv.book = b.id
 				LEFT JOIN user_books ub ON ub.user = btv.user AND ub.book = btv.book
@@ -618,6 +636,72 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// SearchUserBooks handles GET /users/{username}/books/search?q=
+func SearchUserBooks(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		username := e.Request.PathValue("username")
+		q := strings.TrimSpace(e.Request.URL.Query().Get("q"))
+		if q == "" {
+			return e.JSON(http.StatusOK, map[string]any{"books": []any{}})
+		}
+
+		users, err := app.FindRecordsByFilter("users",
+			"username = {:username}", "", 1, 0,
+			map[string]any{"username": username},
+		)
+		if err != nil || len(users) == 0 {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "User not found"})
+		}
+		targetUser := users[0]
+
+		viewerID := ""
+		if e.Auth != nil {
+			viewerID = e.Auth.Id
+		}
+		if !canViewProfile(app, viewerID, targetUser) {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Profile is private"})
+		}
+
+		limit, _ := strconv.Atoi(e.Request.URL.Query().Get("limit"))
+		if limit <= 0 || limit > 100 {
+			limit = 50
+		}
+
+		likePattern := "%" + q + "%"
+
+		type bookRow struct {
+			BookID   string   `db:"book_id" json:"book_id"`
+			OLID     string   `db:"open_library_id" json:"open_library_id"`
+			Title    string   `db:"title" json:"title"`
+			CoverURL *string  `db:"cover_url" json:"cover_url"`
+			Authors  *string  `db:"authors" json:"authors"`
+			Rating   *float64 `db:"rating" json:"rating"`
+			AddedAt  string   `db:"added_at" json:"added_at"`
+		}
+		var books []bookRow
+		err = app.DB().NewQuery(`
+			SELECT b.id as book_id, b.open_library_id, b.title,
+				   COALESCE(NULLIF(ub.selected_edition_cover_url, ''), b.cover_url) as cover_url,
+				   b.authors, ub.rating, ub.date_added as added_at
+			FROM user_books ub
+			JOIN books b ON ub.book = b.id
+			WHERE ub.user = {:user}
+			AND (b.title LIKE {:q} OR b.authors LIKE {:q})
+			ORDER BY ub.date_added DESC
+			LIMIT {:limit}
+		`).Bind(map[string]any{
+			"user":  targetUser.Id,
+			"q":     likePattern,
+			"limit": limit,
+		}).All(&books)
+		if err != nil || books == nil {
+			books = []bookRow{}
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"books": books})
+	}
+}
+
 // setStatusTag sets the status tag for a user's book.
 func setStatusTag(app core.App, userID, bookID, statusSlug string) {
 	if statusSlug == "" {
@@ -674,5 +758,70 @@ func setStatusTag(app core.App, userID, bookID, statusSlug string) {
 			ubs[0].Set("date_started", time.Now().UTC().Format(time.RFC3339))
 			_ = app.Save(ubs[0])
 		}
+	}
+}
+
+// GetMyBookEditions handles GET /me/books/{olId}/editions
+// Returns the user's selected edition alongside the full editions list from Open Library.
+func GetMyBookEditions(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+		olID := e.Request.PathValue("olId")
+
+		// Look up the book in our catalog
+		books, _ := app.FindRecordsByFilter("books",
+			"open_library_id = {:id}", "", 1, 0,
+			map[string]any{"id": olID},
+		)
+
+		var selectedEditionKey *string
+		var selectedEditionCoverURL *string
+
+		if len(books) > 0 {
+			// Look up the user's user_books record for edition selection
+			ubs, _ := app.FindRecordsByFilter("user_books",
+				"user = {:user} && book = {:book}",
+				"", 1, 0,
+				map[string]any{"user": user.Id, "book": books[0].Id},
+			)
+			if len(ubs) > 0 {
+				if sek := ubs[0].GetString("selected_edition_key"); sek != "" {
+					selectedEditionKey = &sek
+				}
+				if secu := ubs[0].GetString("selected_edition_cover_url"); secu != "" {
+					selectedEditionCoverURL = &secu
+				}
+			}
+		}
+
+		// Parse pagination params
+		limit := 20
+		offset := 0
+		if v := e.Request.URL.Query().Get("limit"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 100 {
+				limit = n
+			}
+		}
+		if v := e.Request.URL.Query().Get("offset"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+				offset = n
+			}
+		}
+
+		// Fetch editions from Open Library
+		ol := newOLClient()
+		data, err := ol.get(fmt.Sprintf("/works/%s/editions.json?limit=%d&offset=%d", olID, limit, offset))
+		if err != nil {
+			data = map[string]any{"entries": []any{}}
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{
+			"selected_edition_key":       selectedEditionKey,
+			"selected_edition_cover_url": selectedEditionCoverURL,
+			"editions":                   data,
+		})
 	}
 }

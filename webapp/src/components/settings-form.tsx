@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/toast";
 
 export default function SettingsForm({
   username,
@@ -17,6 +18,7 @@ export default function SettingsForm({
   initialIsPrivate: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [bio, setBio] = useState(initialBio);
   const [isPrivate, setIsPrivate] = useState(initialIsPrivate);
@@ -54,6 +56,7 @@ export default function SettingsForm({
 
     const data = await res.json();
     setAvatarUrl(data.avatar_url);
+    toast.success("Photo updated");
     router.refresh();
 
     // Reset the input so the same file can be re-selected if needed.
@@ -81,6 +84,7 @@ export default function SettingsForm({
     }
 
     setSaved(true);
+    toast.success("Profile updated");
     router.refresh();
   }
 

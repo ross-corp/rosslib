@@ -85,7 +85,8 @@ export default function CrossUserCompareForm({
         }
         return;
       }
-      const data: Shelf[] = await res.json();
+      const raw = await res.json();
+      const data: Shelf[] = raw.shelves ?? raw;
       if (data.length === 0) {
         setError("This user has no public shelves, or their profile is private");
         return;
