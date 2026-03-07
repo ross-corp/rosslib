@@ -680,7 +680,7 @@ export default async function BookPage({
           ) : (
             <div className="space-y-8">
               {reviews.map((review) => (
-                <article key={review.username} className="flex gap-4">
+                <article key={review.user_id} className="flex gap-4">
                   {/* Avatar */}
                   <Link
                     href={`/${review.username}`}
