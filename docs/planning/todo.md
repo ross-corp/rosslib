@@ -4,7 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## book detail & discovery
 
-- [ ] Add `aria-label` to recommend button modal: the `RecommendButton` component at `webapp/src/components/recommend-button.tsx` renders a modal overlay but lacks `role="dialog"`, `aria-modal="true"`, and `aria-labelledby` attributes on its modal container div. Add these ARIA attributes with `aria-labelledby` pointing to the modal title ("Recommend this book").
 
 ## settings & account
 
