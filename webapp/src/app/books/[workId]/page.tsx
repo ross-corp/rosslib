@@ -14,6 +14,7 @@ import GenreRatingEditor from "@/components/genre-rating-editor";
 import ReportButton from "@/components/report-button";
 import ReviewLikeButton from "@/components/review-like-button";
 import RecommendButton from "@/components/recommend-button";
+import ReviewComments from "@/components/review-comments";
 import RecordRecentlyViewed from "@/components/record-recently-viewed";
 import { getUser, getToken } from "@/lib/auth";
 
@@ -71,6 +72,7 @@ type BookReview = {
   is_followed: boolean;
   like_count: number;
   liked_by_me: boolean;
+  comment_count: number;
 };
 
 type MyBookStatus = {
@@ -880,6 +882,14 @@ export default async function BookPage({
                         <ReportButton contentType="review" contentId={review.user_book_id} />
                       )}
                     </div>
+
+                    <ReviewComments
+                      workId={workId}
+                      reviewUserId={review.user_id}
+                      initialCount={review.comment_count}
+                      isLoggedIn={!!currentUser}
+                      currentUserId={currentUser?.user_id}
+                    />
                   </div>
                 </article>
               ))}
