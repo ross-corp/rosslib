@@ -85,7 +85,8 @@ export default function CrossUserCompareForm({
         }
         return;
       }
-      const data: Shelf[] = await res.json();
+      const raw = await res.json();
+      const data: Shelf[] = raw.shelves ?? raw;
       if (data.length === 0) {
         setError("This user has no public shelves, or their profile is private");
         return;
@@ -283,7 +284,7 @@ export default function CrossUserCompareForm({
         {loading ? "Computing..." : "Compare"}
       </button>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-semantic-error">{error}</p>}
 
       {/* Results */}
       {hasResult && (
@@ -361,11 +362,11 @@ export default function CrossUserCompareForm({
                   Save as new list
                 </h3>
                 {savedSlug ? (
-                  <p className="text-sm text-green-700">
+                  <p className="text-sm text-semantic-success">
                     Saved!{" "}
                     <Link
                       href={`/${username}/library/${savedSlug}`}
-                      className="underline hover:text-green-900"
+                      className="underline hover:text-semantic-success"
                     >
                       View list
                     </Link>

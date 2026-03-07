@@ -86,7 +86,7 @@ export default function ReadingGoalForm({
 
       {message && (
         <p
-          className={`text-sm mt-3 ${message.includes("saved") ? "text-green-500" : "text-red-500"}`}
+          className={`text-sm mt-3 ${message.includes("saved") ? "text-semantic-success" : "text-semantic-error"}`}
         >
           {message}
         </p>

@@ -7,6 +7,76 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
+// SearchSeries handles GET /series/search?q=<name>
+func SearchSeries(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		q := strings.TrimSpace(e.Request.URL.Query().Get("q"))
+		if q == "" {
+			return e.JSON(http.StatusOK, map[string]any{"results": []any{}})
+		}
+
+		type seriesRow struct {
+			ID          string  `db:"id" json:"id"`
+			Name        string  `db:"name" json:"name"`
+			Description *string `db:"description" json:"description"`
+			BookCount   int     `db:"book_count" json:"book_count"`
+		}
+
+		var rows []seriesRow
+		err := app.DB().NewQuery(`
+			SELECT s.id, s.name, s.description,
+				   (SELECT COUNT(*) FROM book_series bs WHERE bs.series = s.id) as book_count
+			FROM series s
+			WHERE s.name LIKE {:pattern}
+			ORDER BY book_count DESC, s.name
+			LIMIT 20
+		`).Bind(map[string]any{"pattern": "%" + q + "%"}).All(&rows)
+		if err != nil {
+			return e.JSON(http.StatusOK, map[string]any{"results": []any{}})
+		}
+
+		if len(rows) == 0 {
+			return e.JSON(http.StatusOK, map[string]any{"results": []any{}})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"results": rows})
+	}
+}
+
+// GetAuthorSeries handles GET /authors/{authorKey}/series?name=...
+// Finds series containing books whose authors field matches the given name.
+func GetAuthorSeries(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		authorName := strings.TrimSpace(e.Request.URL.Query().Get("name"))
+		if authorName == "" {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		type seriesRow struct {
+			ID          string  `db:"id" json:"id"`
+			Name        string  `db:"name" json:"name"`
+			Description *string `db:"description" json:"description"`
+			BookCount   int     `db:"book_count" json:"book_count"`
+		}
+
+		var rows []seriesRow
+		err := app.DB().NewQuery(`
+			SELECT DISTINCT s.id, s.name, s.description,
+				   (SELECT COUNT(*) FROM book_series bs2 WHERE bs2.series = s.id) as book_count
+			FROM series s
+			JOIN book_series bs ON bs.series = s.id
+			JOIN books b ON bs.book = b.id
+			WHERE b.authors LIKE {:pattern}
+			ORDER BY s.name
+		`).Bind(map[string]any{"pattern": "%" + authorName + "%"}).All(&rows)
+		if err != nil || len(rows) == 0 {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		return e.JSON(http.StatusOK, rows)
+	}
+}
+
 // GetBookSeries handles GET /books/{workId}/series
 func GetBookSeries(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
@@ -86,26 +156,28 @@ func GetSeriesDetail(app core.App) func(e *core.RequestEvent) error {
 
 		progressMap := map[string]string{}
 		if viewerID != "" && len(books) > 0 {
+			var bookIDs []any
 			for _, b := range books {
-				type statusResult struct {
-					Slug string `db:"slug"`
-				}
-				var result statusResult
-				err = app.DB().NewQuery(`
-					SELECT tv.slug
-					FROM book_tag_values btv
-					JOIN tag_values tv ON btv.tag_value = tv.id
-					JOIN tag_keys tk ON tv.tag_key = tk.id
-					WHERE btv.user = {:user} AND btv.book = {:book}
-					  AND tk.slug = 'status'
-					LIMIT 1
-				`).Bind(map[string]any{
-					"user": viewerID,
-					"book": b.BookID,
-				}).One(&result)
-				if err == nil && result.Slug != "" {
-					progressMap[b.BookID] = result.Slug
-				}
+				bookIDs = append(bookIDs, b.BookID)
+			}
+			type statusRow struct {
+				BookID string `db:"book_id"`
+				Slug   string `db:"slug"`
+			}
+			var statuses []statusRow
+			_ = app.DB().NewQuery(`
+				SELECT btv.book AS book_id, tv.slug
+				FROM book_tag_values btv
+				JOIN tag_values tv ON btv.tag_value = tv.id
+				JOIN tag_keys tk ON tv.tag_key = tk.id
+				WHERE btv.user = {:user} AND btv.book IN {:bookIds}
+				  AND tk.slug = 'status'
+			`).Bind(map[string]any{
+				"user":    viewerID,
+				"bookIds": bookIDs,
+			}).All(&statuses)
+			for _, s := range statuses {
+				progressMap[s.BookID] = s.Slug
 			}
 		}
 
@@ -137,6 +209,96 @@ func GetSeriesDetail(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// UpdateSeries handles PATCH /series/{seriesId}
+func UpdateSeries(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
+		}
+
+		seriesID := e.Request.PathValue("seriesId")
+
+		series, err := app.FindRecordById("series", seriesID)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Series not found"})
+		}
+
+		data := struct {
+			Name        *string `json:"name"`
+			Description *string `json:"description"`
+		}{}
+		if err := e.BindBody(&data); err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
+		}
+
+		if data.Name != nil {
+			trimmed := strings.TrimSpace(*data.Name)
+			if trimmed == "" {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "name cannot be empty"})
+			}
+			if len(trimmed) > 255 {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "name must be 255 characters or fewer"})
+			}
+			series.Set("name", trimmed)
+		}
+		if data.Description != nil {
+			desc := strings.TrimSpace(*data.Description)
+			if len(desc) > 5000 {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "description must be 5000 characters or fewer"})
+			}
+			series.Set("description", desc)
+		}
+
+		if err := app.Save(series); err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to update series"})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{
+			"id":          series.Id,
+			"name":        series.GetString("name"),
+			"description": series.GetString("description"),
+		})
+	}
+}
+
+// DeleteSeries handles DELETE /series/{seriesId}
+func DeleteSeries(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
+		}
+
+		seriesID := e.Request.PathValue("seriesId")
+
+		series, err := app.FindRecordById("series", seriesID)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Series not found"})
+		}
+
+		// Check that the series has zero book_series links
+		var count struct {
+			N int `db:"n"`
+		}
+		err = app.DB().NewQuery(`
+			SELECT COUNT(*) as n FROM book_series WHERE series = {:series}
+		`).Bind(map[string]any{"series": seriesID}).One(&count)
+		if err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to check series books"})
+		}
+		if count.N > 0 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Cannot delete series that still has books"})
+		}
+
+		if err := app.Delete(series); err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to delete series"})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"ok": true})
+	}
+}
+
 // AddBookToSeries handles POST /books/{workId}/series
 func AddBookToSeries(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
@@ -153,6 +315,9 @@ func AddBookToSeries(app core.App) func(e *core.RequestEvent) error {
 		}{}
 		if err := e.BindBody(&data); err != nil || data.SeriesName == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "series_name required"})
+		}
+		if len(data.SeriesName) > 255 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "series_name must be 255 characters or fewer"})
 		}
 
 		// Find the book

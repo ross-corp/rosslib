@@ -40,6 +40,9 @@ func CreateReport(app core.App) func(e *core.RequestEvent) error {
 		if data.ContentID == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "content_id is required"})
 		}
+		if len(data.Details) > 2000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "details must be 2000 characters or fewer"})
+		}
 
 		// Check for duplicate report from same user on same content
 		existing, err := app.FindRecordsByFilter("reports",
