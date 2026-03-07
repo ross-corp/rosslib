@@ -2,18 +2,6 @@
 
 Backlog of small tasks for nephewbot to pick off. Each item should be self-contained and implementable without external coordination. Items are ordered by priority — nephewbot picks the top unchecked item.
 
-## book detail & discovery
-
-
-## settings & account
-
-
-## UX polish
-
-
-## data integrity
-
-
 ## API gaps
 
 - [ ] Add pagination to `GET /books/:workId/threads` endpoint: the thread listing in `api/handlers/threads.go` returns all threads for a book with no pagination. Add `page` and `limit` query params (default limit 20, max 100) with SQL `LIMIT` and `OFFSET`. Return `total` count in the response. Update the thread list on the book detail page `webapp/src/app/books/[workId]/page.tsx` (or the ThreadList component) to support "Load more" or page-based navigation.
