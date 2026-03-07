@@ -11,6 +11,7 @@ const navItems = [
   { label: "Export", href: "/settings/export" },
   { label: "Blocked users", href: "/settings/blocked" },
   { label: "Follow requests", href: "/settings/follow-requests" },
+  { label: "Followed books", href: "/settings/followed-books" },
   { label: "Followed authors", href: "/settings/followed-authors" },
   { label: "Ghost Activity", href: "/settings/ghost-activity" },
   { label: "My Feedback", href: "/settings/feedback" },
