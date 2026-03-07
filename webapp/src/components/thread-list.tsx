@@ -96,7 +96,8 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
     // Refetch threads to get the full thread data.
     const listRes = await fetch(`/api/books/${workId}/threads`);
     if (listRes.ok) {
-      setThreads(await listRes.json());
+      const data = await listRes.json();
+      setThreads(data.threads ?? []);
     }
 
     setTitle("");

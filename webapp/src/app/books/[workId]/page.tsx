@@ -14,6 +14,7 @@ import GenreRatingEditor from "@/components/genre-rating-editor";
 import ReportButton from "@/components/report-button";
 import ReviewLikeButton from "@/components/review-like-button";
 import RecommendButton from "@/components/recommend-button";
+import RecordRecentlyViewed from "@/components/record-recently-viewed";
 import { getUser, getToken } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -82,6 +83,7 @@ type MyBookStatus = {
   date_read: string | null;
   date_dnf: string | null;
   date_started: string | null;
+  date_added: string | null;
   progress_pages: number | null;
   progress_percent: number | null;
   device_total_pages: number | null;
@@ -120,6 +122,22 @@ type BookLinkItem = {
   created_at: string;
 };
 
+type SeriesBook = {
+  book_id: string;
+  open_library_id: string;
+  title: string;
+  cover_url: string | null;
+  authors: string | null;
+  position: number | null;
+};
+
+type SeriesDetail = {
+  id: string;
+  name: string;
+  description: string;
+  books: SeriesBook[];
+};
+
 type TagKey = {
   id: string;
   name: string;
@@ -139,6 +157,14 @@ type MyGenreRating = {
   rating: number;
 };
 
+type FriendReader = {
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  status_name: string | null;
+};
+
 // ── Data fetchers ───────────────────────────────────────────────────────────────
 
 async function fetchBook(workId: string): Promise<BookDetail | null> {
@@ -149,12 +175,14 @@ async function fetchBook(workId: string): Promise<BookDetail | null> {
   return res.json();
 }
 
-async function fetchBookReviews(workId: string, token?: string): Promise<BookReview[]> {
+async function fetchBookReviews(workId: string, token?: string, sort?: string): Promise<BookReview[]> {
   const headers: Record<string, string> = {};
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-  const res = await fetch(`${process.env.API_URL}/books/${workId}/reviews`, {
+  const url = new URL(`${process.env.API_URL}/books/${workId}/reviews`);
+  if (sort) url.searchParams.set("sort", sort);
+  const res = await fetch(url.toString(), {
     headers,
     cache: "no-store",
   });
@@ -167,7 +195,8 @@ async function fetchThreads(workId: string): Promise<BookThread[]> {
     cache: "no-store",
   });
   if (!res.ok) return [];
-  return res.json();
+  const data = await res.json();
+  return data.threads ?? [];
 }
 
 async function fetchTagKeys(token: string): Promise<TagKey[]> {
@@ -179,7 +208,7 @@ async function fetchTagKeys(token: string): Promise<TagKey[]> {
   return res.json();
 }
 
-async function fetchBookLinks(workId: string, token?: string): Promise<BookLinkItem[]> {
+async function fetchBookLinks(workId: string, token?: string): Promise<{ links: BookLinkItem[]; total: number }> {
   const headers: Record<string, string> = {};
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
@@ -188,8 +217,9 @@ async function fetchBookLinks(workId: string, token?: string): Promise<BookLinkI
     headers,
     cache: "no-store",
   });
-  if (!res.ok) return [];
-  return res.json();
+  if (!res.ok) return { links: [], total: 0 };
+  const data = await res.json();
+  return { links: data.links ?? [], total: data.total ?? 0 };
 }
 
 async function fetchMyBookStatus(
@@ -218,6 +248,22 @@ async function fetchBookFollowStatus(
   return data.following === true;
 }
 
+async function fetchFriendReaders(
+  workId: string,
+  token?: string
+): Promise<FriendReader[]> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const res = await fetch(`${process.env.API_URL}/books/${workId}/readers`, {
+    headers,
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 async function fetchAggregateGenreRatings(
   workId: string
 ): Promise<AggregateGenreRating[]> {
@@ -244,6 +290,24 @@ async function fetchMyGenreRatings(
   return res.json();
 }
 
+async function fetchBookFollowerCount(workId: string): Promise<number> {
+  const res = await fetch(
+    `${process.env.API_URL}/books/${workId}/followers/count`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return 0;
+  const data = await res.json();
+  return data.follower_count ?? 0;
+}
+
+async function fetchSeriesDetail(seriesId: string): Promise<SeriesDetail | null> {
+  const res = await fetch(`${process.env.API_URL}/series/${seriesId}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function renderStars(rating: number): string {
@@ -260,19 +324,33 @@ function formatDate(iso: string): string {
   });
 }
 
+// ── Sort options ────────────────────────────────────────────────────────────────
+
+const REVIEW_SORT_OPTIONS = [
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "highest", label: "Highest rated" },
+  { value: "lowest", label: "Lowest rated" },
+  { value: "most_liked", label: "Most liked" },
+] as const;
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default async function BookPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ workId: string }>;
+  searchParams: Promise<{ sort?: string }>;
 }) {
   const { workId } = await params;
+  const { sort: sortParam } = await searchParams;
+  const reviewSort = REVIEW_SORT_OPTIONS.some((o) => o.value === sortParam) ? sortParam! : "newest";
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings] = await Promise.all([
+  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings, friendReaders, followerCount] = await Promise.all([
     fetchBook(workId),
-    fetchBookReviews(workId, token ?? undefined),
+    fetchBookReviews(workId, token ?? undefined, reviewSort),
     fetchThreads(workId),
     fetchBookLinks(workId, token ?? undefined),
     currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
@@ -286,9 +364,31 @@ export default async function BookPage({
     currentUser && token
       ? fetchMyGenreRatings(token, workId)
       : Promise.resolve([]),
+    currentUser && token
+      ? fetchFriendReaders(workId, token)
+      : Promise.resolve([]),
+    fetchBookFollowerCount(workId),
   ]);
 
   if (!book) notFound();
+
+  // Fetch series detail for the first series (if any)
+  const firstSeries = book.series && book.series.length > 0 ? book.series[0] : null;
+  const seriesDetail = firstSeries
+    ? await fetchSeriesDetail(firstSeries.series_id)
+    : null;
+
+  // Compute prev/next books in the series
+  let prevBook: SeriesBook | null = null;
+  let nextBook: SeriesBook | null = null;
+  if (seriesDetail && firstSeries?.position != null) {
+    const sorted = [...seriesDetail.books]
+      .filter((b) => b.position != null)
+      .sort((a, b) => a.position! - b.position!);
+    const idx = sorted.findIndex((b) => b.open_library_id === workId);
+    if (idx > 0) prevBook = sorted[idx - 1];
+    if (idx >= 0 && idx < sorted.length - 1) nextBook = sorted[idx + 1];
+  }
 
   // Extract the Status key and its values for the StatusPicker
   const statusKey = tagKeys?.find((k) => k.slug === "status") ?? null;
@@ -298,6 +398,11 @@ export default async function BookPage({
   return (
     <div className="min-h-screen">
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+        <RecordRecentlyViewed
+          workId={workId}
+          title={book.title}
+          coverUrl={book.cover_url}
+        />
         {/* ── Book header ── */}
         <div className="flex gap-8 items-start mb-10">
           {/* Cover */}
@@ -386,7 +491,7 @@ export default async function BookPage({
               </div>
             )}
 
-            {(book.local_reads_count > 0 || book.local_want_to_read_count > 0) && (
+            {(book.local_reads_count > 0 || book.local_want_to_read_count > 0 || followerCount > 0) && (
               <div className="flex items-center gap-3 mb-3 text-xs text-text-primary">
                 {book.local_reads_count > 0 && (
                   <span>
@@ -400,6 +505,41 @@ export default async function BookPage({
                     want to read
                   </span>
                 )}
+                {followerCount > 0 && (
+                  <span>
+                    <span className="font-medium text-text-primary">{followerCount}</span>{" "}
+                    {followerCount === 1 ? "follower" : "followers"}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Friends reading this */}
+            {friendReaders.length > 0 && (
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs text-text-tertiary mr-1">Friends:</span>
+                <div className="flex -space-x-1.5">
+                  {friendReaders.map((reader) => (
+                    <Link
+                      key={reader.user_id}
+                      href={`/${reader.username}`}
+                      title={`${reader.display_name ?? reader.username}${reader.status_name ? ` · ${reader.status_name}` : ""}`}
+                      className="relative"
+                    >
+                      {reader.avatar_url ? (
+                        <img
+                          src={reader.avatar_url}
+                          alt={reader.display_name ?? reader.username}
+                          className="w-7 h-7 rounded-full object-cover border-2 border-surface-1 hover:ring-2 hover:ring-accent transition-shadow"
+                        />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-surface-2 border-2 border-surface-1 flex items-center justify-center text-[10px] font-medium text-text-tertiary hover:ring-2 hover:ring-accent transition-shadow">
+                          {(reader.display_name ?? reader.username).charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </Link>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -419,6 +559,7 @@ export default async function BookPage({
                 <BookFollowButton
                   workId={workId}
                   initialFollowing={isFollowingBook}
+                  initialFollowerCount={followerCount}
                 />
                 <RecommendButton
                   bookOlId={workId}
@@ -436,7 +577,14 @@ export default async function BookPage({
                   initialPercent={myStatus.progress_percent}
                   pageCount={book.page_count}
                   initialDeviceTotalPages={myStatus.device_total_pages}
+                  dateStarted={myStatus.date_started}
+                  dateAdded={myStatus.date_added}
                 />
+                {myStatus.date_started && (
+                  <p className="text-xs text-text-tertiary mt-1">
+                    Started reading {formatDate(myStatus.date_started)}
+                  </p>
+                )}
               </div>
             )}
 
@@ -461,6 +609,113 @@ export default async function BookPage({
             )}
           </div>
         </div>
+
+        {/* ── Series navigation ── */}
+        {seriesDetail && seriesDetail.books.length > 1 && (
+          <section className="mb-10 border-t border-border pt-8">
+            <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-4">
+              <Link
+                href={`/series/${seriesDetail.id}`}
+                className="hover:underline"
+              >
+                {seriesDetail.name}
+              </Link>
+            </h2>
+
+            {/* Prev / Next navigation */}
+            {(prevBook || nextBook) && (
+              <div className="flex items-center justify-between gap-4 mb-4">
+                {prevBook ? (
+                  <Link
+                    href={`/books/${prevBook.open_library_id}`}
+                    className="flex items-center gap-2 group"
+                  >
+                    <span className="text-xs text-text-tertiary group-hover:text-text-primary transition-colors">&larr;</span>
+                    {prevBook.cover_url ? (
+                      <img
+                        src={prevBook.cover_url}
+                        alt={prevBook.title}
+                        className="w-8 h-12 object-cover rounded shadow-sm bg-surface-2"
+                      />
+                    ) : (
+                      <div className="w-8 h-12 bg-surface-2 rounded shadow-sm" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-text-tertiary">Previous in series</p>
+                      <p className="text-xs text-text-secondary group-hover:text-text-primary transition-colors line-clamp-1">
+                        {prevBook.title}
+                      </p>
+                    </div>
+                  </Link>
+                ) : (
+                  <div />
+                )}
+                {nextBook ? (
+                  <Link
+                    href={`/books/${nextBook.open_library_id}`}
+                    className="flex items-center gap-2 group text-right"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-text-tertiary">Next in series</p>
+                      <p className="text-xs text-text-secondary group-hover:text-text-primary transition-colors line-clamp-1">
+                        {nextBook.title}
+                      </p>
+                    </div>
+                    {nextBook.cover_url ? (
+                      <img
+                        src={nextBook.cover_url}
+                        alt={nextBook.title}
+                        className="w-8 h-12 object-cover rounded shadow-sm bg-surface-2"
+                      />
+                    ) : (
+                      <div className="w-8 h-12 bg-surface-2 rounded shadow-sm" />
+                    )}
+                    <span className="text-xs text-text-tertiary group-hover:text-text-primary transition-colors">&rarr;</span>
+                  </Link>
+                ) : (
+                  <div />
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {seriesDetail.books.slice(0, 6).map((sb) => {
+                const isCurrent = sb.open_library_id === workId;
+                return (
+                  <Link
+                    key={sb.book_id}
+                    href={`/books/${sb.open_library_id}`}
+                    className={`shrink-0 w-20 group ${isCurrent ? "opacity-100" : "opacity-70 hover:opacity-100"} transition-opacity`}
+                  >
+                    <div className={`relative ${isCurrent ? "ring-2 ring-text-tertiary rounded" : ""}`}>
+                      {sb.cover_url ? (
+                        <img
+                          src={sb.cover_url}
+                          alt={sb.title}
+                          className="w-20 h-[120px] object-cover rounded shadow-sm bg-surface-2"
+                        />
+                      ) : (
+                        <div className="w-20 h-[120px] bg-surface-2 rounded shadow-sm flex items-end p-1.5">
+                          <span className="text-[9px] text-text-tertiary leading-tight line-clamp-4">
+                            {sb.title}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {sb.position != null && (
+                      <p className="text-[10px] text-text-tertiary mt-1 text-center">
+                        #{sb.position}
+                      </p>
+                    )}
+                    <p className={`text-xs mt-0.5 text-center line-clamp-2 leading-tight ${isCurrent ? "font-medium text-text-primary" : "text-text-secondary group-hover:text-text-primary"}`}>
+                      {sb.title}
+                    </p>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* ── User's review (rate / write / edit / delete) ── */}
         {myStatus && (
@@ -498,18 +753,40 @@ export default async function BookPage({
 
         {/* ── Community reviews ── */}
         <section className="border-t border-border pt-8">
-          <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-6">
-            {reviews.length > 0
-              ? `Reviews (${reviews.length})`
-              : "Reviews"}
-          </h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider">
+              {reviews.length > 0
+                ? `Reviews (${reviews.length})`
+                : "Reviews"}
+            </h2>
+            {reviews.length > 1 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-text-secondary">Sort by:</span>
+                <div className="flex gap-1">
+                  {REVIEW_SORT_OPTIONS.map((option) => (
+                    <Link
+                      key={option.value}
+                      href={`/books/${workId}${option.value === "newest" ? "" : `?sort=${option.value}`}`}
+                      className={`text-sm px-3 py-1 rounded-md transition-colors ${
+                        reviewSort === option.value
+                          ? "bg-surface-2 text-text-primary font-medium"
+                          : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+                      }`}
+                    >
+                      {option.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {reviews.length === 0 ? (
             <p className="text-text-primary text-sm">No reviews yet.</p>
           ) : (
             <div className="space-y-8">
               {reviews.map((review) => (
-                <article key={review.username} className="flex gap-4">
+                <article key={review.user_id} className="flex gap-4">
                   {/* Avatar */}
                   <Link
                     href={`/${review.username}`}
@@ -629,7 +906,8 @@ export default async function BookPage({
         <section className="border-t border-border pt-8 mt-10">
           <BookLinkList
             workId={workId}
-            initialLinks={bookLinks}
+            initialLinks={bookLinks.links}
+            initialTotal={bookLinks.total}
             isLoggedIn={!!currentUser}
             currentUsername={currentUser?.username}
             isModerator={currentUser?.is_moderator}
