@@ -2,12 +2,14 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 
+	"github.com/tristansaldanha/rosslib/api/bookstats"
 	"github.com/tristansaldanha/rosslib/api/handlers"
 	_ "github.com/tristansaldanha/rosslib/api/migrations"
 )
@@ -243,6 +245,13 @@ func main() {
 		admin.PUT("/users/{userId}/author", handlers.SetAuthorKey(app))
 		admin.GET("/link-edits", handlers.GetPendingLinkEdits(app))
 		admin.PUT("/link-edits/{editId}", handlers.ReviewLinkEdit(app))
+
+		// Start background pollers after the server is ready.
+		go func() {
+			// Small delay to ensure se.Next() has returned and the server is serving.
+			time.Sleep(2 * time.Second)
+			bookstats.StartPoller(app)
+		}()
 
 		return se.Next()
 	})
