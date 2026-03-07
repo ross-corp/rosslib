@@ -105,7 +105,7 @@ function stars(rating: number | null): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function ImportForm({ username, source = "goodreads" }: { username: string; source?: "goodreads" | "storygraph" }) {
+export default function ImportForm({ username, source = "goodreads" }: { username: string; source?: "goodreads" | "storygraph" | "librarything" }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
 
@@ -669,7 +669,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
               Custom labels ({sortedShelves.length})
             </h2>
             <p className="text-xs text-text-primary mb-3">
-              Choose how to import each {source === "storygraph" ? "StoryGraph tag" : "custom Goodreads shelf"} as a label.
+              Choose how to import each {source === "librarything" ? "LibraryThing collection/tag" : source === "storygraph" ? "StoryGraph tag" : "custom Goodreads shelf"} as a label.
             </p>
             <ul className="divide-y divide-border border border-border rounded-lg overflow-hidden">
               {(() => {
@@ -895,7 +895,14 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
       )}
 
       <div className="text-sm text-text-primary space-y-1">
-        {source === "storygraph" ? (
+        {source === "librarything" ? (
+          <>
+            <p>Export your library from LibraryThing:</p>
+            <p className="text-text-primary">
+              More &rarr; Import/Export &rarr; Export as tab-delimited
+            </p>
+          </>
+        ) : source === "storygraph" ? (
           <>
             <p>Export your library from StoryGraph:</p>
             <p className="text-text-primary">
@@ -919,7 +926,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv"
+              accept=".csv,.tsv,.txt"
               className="sr-only"
               onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
             />
