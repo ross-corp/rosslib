@@ -1,9 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import StarRating from "@/components/star-rating";
 import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import StatusPicker, { type StatusValue } from "@/components/shelf-picker";
+
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
 
 type BookResult = {
   key: string;
@@ -14,6 +19,8 @@ type BookResult = {
   average_rating: number | null;
   rating_count: number;
   already_read_count: number;
+  subjects: string[] | null;
+  link_count?: number;
 };
 
 export default function BookList({
@@ -27,6 +34,8 @@ export default function BookList({
   statusKeyId: string | null;
   bookStatusMap: Record<string, string> | null;
 }) {
+  const router = useRouter();
+
   if (books.length === 0) return null;
 
   return (
@@ -80,7 +89,31 @@ export default function BookList({
                       {book.already_read_count.toLocaleString()} reads
                     </span>
                   )}
+                  {book.link_count != null && book.link_count > 0 && (
+                    <span className="text-xs text-text-secondary" title={`${book.link_count} community link${book.link_count === 1 ? "" : "s"}`}>
+                      <svg className="inline-block w-3 h-3 mr-0.5 -mt-px" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M6.354 5.5H4a3 3 0 0 0 0 6h3a3 3 0 0 0 2.83-4H9.4a2 2 0 0 1-1.4 3H5a2 2 0 1 1 0-4h1.354zm3.292 5H12a3 3 0 1 0 0-6H9a3 3 0 0 0-2.83 4h.429A2 2 0 0 1 8 5.5h3a2 2 0 1 1 0 4H9.646z"/></svg>
+                      {book.link_count}
+                    </span>
+                  )}
                 </div>
+                {book.subjects && book.subjects.length > 0 && (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {book.subjects.slice(0, 3).map((subject) => (
+                      <span
+                        key={subject}
+                        role="link"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/genres/${slugify(subject)}`);
+                        }}
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-surface-2 text-text-secondary hover:bg-surface-3 cursor-pointer transition-colors"
+                      >
+                        {subject}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </Link>
             {statusValues && statusKeyId && (

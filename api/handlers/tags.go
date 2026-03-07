@@ -74,6 +74,9 @@ func CreateTagKey(app core.App) func(e *core.RequestEvent) error {
 		if err := e.BindBody(&data); err != nil || data.Name == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name is required"})
 		}
+		if len(data.Name) > 100 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name must be 100 characters or fewer"})
+		}
 		if data.Mode == "" {
 			data.Mode = "select_one"
 		}
@@ -154,6 +157,9 @@ func CreateTagValue(app core.App) func(e *core.RequestEvent) error {
 		}{}
 		if err := e.BindBody(&data); err != nil || data.Name == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name is required"})
+		}
+		if len(data.Name) > 100 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name must be 100 characters or fewer"})
 		}
 
 		slug := tagSlugify(data.Name)
@@ -506,6 +512,19 @@ func GetUserTagBooks(app core.App) func(e *core.RequestEvent) error {
 			params["value"] = values[0].Id
 		}
 
+		sortParam := e.Request.URL.Query().Get("sort")
+		var orderClause string
+		switch sortParam {
+		case "title":
+			orderClause = "b.title ASC"
+		case "author":
+			orderClause = "b.authors ASC, b.title ASC"
+		case "rating":
+			orderClause = "ub.rating DESC NULLS LAST, btv.created DESC"
+		default:
+			orderClause = "btv.created DESC"
+		}
+
 		type bookRow struct {
 			BookID   string   `db:"book_id" json:"book_id"`
 			OLID     string   `db:"open_library_id" json:"open_library_id"`
@@ -522,7 +541,7 @@ func GetUserTagBooks(app core.App) func(e *core.RequestEvent) error {
 			JOIN books b ON btv.book = b.id
 			LEFT JOIN user_books ub ON ub.user = btv.user AND ub.book = btv.book
 			WHERE ` + filter + `
-			ORDER BY btv.created DESC
+			ORDER BY ` + orderClause + `
 		`).Bind(params).All(&books)
 		if err != nil || books == nil {
 			books = []bookRow{}
@@ -577,6 +596,19 @@ func GetUserLabelBooks(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusNotFound, map[string]any{"error": "Tag value not found"})
 		}
 
+		sortParam := e.Request.URL.Query().Get("sort")
+		var orderClause string
+		switch sortParam {
+		case "title":
+			orderClause = "b.title ASC"
+		case "author":
+			orderClause = "b.authors ASC, b.title ASC"
+		case "rating":
+			orderClause = "ub.rating DESC NULLS LAST, btv.created DESC"
+		default:
+			orderClause = "btv.created DESC"
+		}
+
 		type bookRow struct {
 			BookID   string   `db:"book_id" json:"book_id"`
 			OLID     string   `db:"open_library_id" json:"open_library_id"`
@@ -593,7 +625,7 @@ func GetUserLabelBooks(app core.App) func(e *core.RequestEvent) error {
 			JOIN books b ON btv.book = b.id
 			LEFT JOIN user_books ub ON ub.user = btv.user AND ub.book = btv.book
 			WHERE btv.user = {:user} AND btv.tag_value = {:value}
-			ORDER BY btv.created DESC
+			ORDER BY ` + orderClause + `
 		`).Bind(map[string]any{"user": targetUser.Id, "value": values[0].Id}).All(&books)
 		if err != nil || books == nil {
 			books = []bookRow{}
