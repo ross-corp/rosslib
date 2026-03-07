@@ -41,6 +41,7 @@ export default function ReviewLikeButton({
     <button
       onClick={toggle}
       disabled={loading || disabled}
+      aria-pressed={liked}
       className={`inline-flex items-center gap-1 text-xs transition-colors ${
         disabled
           ? "text-text-tertiary cursor-default"
