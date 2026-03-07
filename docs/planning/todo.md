@@ -7,7 +7,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## settings & account
 
-- [ ] Add "Followed books" link to settings nav: the page `webapp/src/app/settings/followed-books/page.tsx` exists but `webapp/src/components/settings-nav.tsx` may not include a link to it. Verify that SettingsNav includes "Followed books" and "Followed authors" in its pill list. If missing, add them with hrefs `/settings/followed-books` and `/settings/followed-authors`.
 - [ ] Add email change form to settings page: the `PUT /me/email` API endpoint exists (documented in api.md) with proper validation (requires current password, checks duplicates, resets email_verified). The `EmailForm` component exists at `webapp/src/components/email-form.tsx`. Verify it is rendered on the settings page `webapp/src/app/settings/page.tsx` — if not, import and render it below the PasswordForm in the account section.
 - [ ] Add reading goal progress bar to settings page: the reading goal endpoints (`GET /me/goals/:year`, `PUT /me/goals/:year`) and components (`ReadingGoalForm`, `ReadingGoalCard`) exist, but the settings page at `webapp/src/app/settings/page.tsx` may not render them. Verify that `ReadingGoalForm` is imported and displayed on the settings page. If missing, add it in a "Reading Goal" section after the profile form, with the current year's goal and progress displayed via `ReadingGoalCard`.
 
