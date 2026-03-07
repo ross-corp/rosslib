@@ -61,36 +61,15 @@ export default async function SeriesPage({
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  let series: SeriesDetail;
-  try {
-    const res = await fetch(
-      `${process.env.API_URL}/series/${seriesId}`,
-      { headers, cache: "no-store" }
-    );
-    if (res.status === 404) notFound();
-    if (!res.ok) {
-      return (
-        <div className="min-h-screen">
-          <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
-            <p className="text-sm text-text-tertiary">
-              Failed to load series. Please try again later.
-            </p>
-          </main>
-        </div>
-      );
-    }
-    series = await res.json();
-  } catch {
-    return (
-      <div className="min-h-screen">
-        <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
-          <p className="text-sm text-text-tertiary">
-            Failed to load series. Please try again later.
-          </p>
-        </main>
-      </div>
-    );
+  const res = await fetch(
+    `${process.env.API_URL}/series/${seriesId}`,
+    { headers, cache: "no-store" }
+  );
+  if (res.status === 404) notFound();
+  if (!res.ok) {
+    throw new Error("Failed to load series");
   }
+  const series: SeriesDetail = await res.json();
 
   const [tagKeys, statusMap] = await Promise.all([
     currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
