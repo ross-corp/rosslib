@@ -393,6 +393,10 @@ Client component displaying a reading goal progress bar on user profile pages. S
 
 Client component on the settings page for setting an annual reading goal. Calls `PUT /api/me/goals/:year` to create or update the goal.
 
+### `Toast` (`components/toast.tsx`)
+
+Global toast notification system. `ToastProvider` wraps the app in `layout.tsx` and renders fixed-position banners in the bottom-right corner. The `useToast()` hook exposes `toast.success(message)` and `toast.error(message)`. Toasts auto-dismiss after 4 seconds with a slide-in animation. Used across the app for feedback on user actions: book added/moved/removed, follow/unfollow, review saved, import complete, profile updated, export download, block/unblock, reading progress updated, and bulk library operations.
+
 ### `ReadingProgress` (`components/reading-progress.tsx`)
 
 Client component on the book detail page (shown when status is "currently-reading"). Lets the user update progress by page number or percentage. Displays a progress bar and, when enough data is available (at least 1 day of reading, a known page count, and `progress_pages > 0`), shows an estimated reading pace ("~X pages/day") and estimated finish date below the progress bar. Uses `date_started` (or `date_added` as fallback) for the elapsed time calculation.

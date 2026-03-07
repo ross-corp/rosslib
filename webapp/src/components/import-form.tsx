@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useToast } from "@/components/toast";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -163,6 +164,7 @@ function stars(rating: number | null): string {
 export default function ImportForm({ username, source = "goodreads" }: { username: string; source?: "goodreads" | "storygraph" | "librarything" }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const toast = useToast();
 
   type Phase = "idle" | "previewing" | "review" | "configure" | "importing" | "done";
   const [phase, setPhase] = useState<Phase>("idle");
@@ -410,8 +412,10 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
       await loadPendingImports();
       setDoneResult(data);
       setPhase("done");
+      toast.success(`Import complete — ${data.imported} book${data.imported !== 1 ? "s" : ""} imported`);
     } catch {
       setError("Network error. Please try again.");
+      toast.error("Import failed — network error");
       setPhase("review");
     }
   }

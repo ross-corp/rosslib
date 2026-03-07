@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/toast";
 
 export default function ExportForm() {
   const [downloading, setDownloading] = useState(false);
+  const toast = useToast();
 
   async function handleExport() {
     setDownloading(true);
@@ -17,8 +19,9 @@ export default function ExportForm() {
       a.download = "rosslib-export.csv";
       a.click();
       URL.revokeObjectURL(a.href);
+      toast.success("Export downloaded");
     } catch {
-      alert("Export failed. Please try again.");
+      toast.error("Export failed. Please try again.");
     } finally {
       setDownloading(false);
     }

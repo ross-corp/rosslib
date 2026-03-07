@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useRef, useCallback, ReactNode } from "react";
 import { TagKey, TagValue } from "@/components/book-tag-picker";
+import { useToast } from "@/components/toast";
 import ConfirmDialog from "@/components/confirm-dialog";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -136,6 +137,7 @@ export default function LibraryManager({
   const [sort, setSort] = useState<SortValue>("date_added");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
+  const toast = useToast();
   const [confirmMassRemove, setConfirmMassRemove] = useState(false);
   const [showRateMenu, setShowRateMenu] = useState(false);
   const [showLabelsMenu, setShowLabelsMenu] = useState(false);
@@ -305,6 +307,7 @@ export default function LibraryManager({
       )
     );
     setBooks((prev) => prev.filter((b) => !selectedIds.has(b.book_id)));
+    toast.success(`Removed ${targets.length} book${targets.length !== 1 ? "s" : ""}`);
     setSelectedIds(new Set());
     setBulkWorking(false);
   }
@@ -327,6 +330,8 @@ export default function LibraryManager({
     if (filter.kind === "status" && filter.slug !== slug) {
       setBooks((prev) => prev.filter((b) => !selectedIds.has(b.book_id)));
     }
+    const statusName = statusList.find((s) => s.slug === slug)?.name ?? slug;
+    toast.success(`Moved ${targets.length} book${targets.length !== 1 ? "s" : ""} to ${statusName}`);
     setSelectedIds(new Set());
     setBulkWorking(false);
   }
@@ -347,6 +352,7 @@ export default function LibraryManager({
     setBooks((prev) =>
       prev.map((b) => (selectedIds.has(b.book_id) ? { ...b, rating } : b))
     );
+    toast.success(`Rated ${targets.length} book${targets.length !== 1 ? "s" : ""} ${rating} star${rating !== 1 ? "s" : ""}`);
     setBulkWorking(false);
   }
 
