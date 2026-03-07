@@ -372,6 +372,10 @@ Client component for genre dimension ratings on book detail pages. Shows aggrega
 
 Client component for the `/scan` page. Three input modes: Camera (uses browser `BarcodeDetector` API for real-time EAN-13 scanning on supported devices), Upload (sends image to `POST /api/books/scan` for server-side barcode detection via gozxing), and Enter ISBN (manual input via `GET /api/books/lookup`). Detected books are displayed with cover, metadata, and a StatusPicker for quick library addition. Supports scanning multiple books in a session with a history list.
 
+### `EmptyState` (`components/empty-state.tsx`)
+
+Reusable component for zero-data states across the app. Renders a centered message with an optional call-to-action link. Used on the feed page, notifications page, library pages (owner and visitor), and shelf/label views. Keeps empty state styling consistent: centered `py-16` container, `text-sm` message text, bordered button link.
+
 ### `KeyboardShortcuts` (`components/keyboard-shortcuts.tsx`)
 
 Client component rendered in the root layout. Registers global keyboard shortcuts via the `useKeyboardShortcuts` hook: `/` focuses the search input, `Escape` closes any open modal or blurs the focused element, and `?` toggles a shortcuts help overlay. All shortcuts except `Escape` are suppressed when an input or textarea is focused. Shows a "Press ? for shortcuts" hint in the bottom-right corner for logged-in users.
