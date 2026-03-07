@@ -1093,6 +1093,8 @@ Computed lists include an additional `computed` object with metadata about the s
 
 Returns a label with its full book list. Computed lists also include the `computed` object.
 
+**Query params:** `sort` — one of `date_added` (default), `title`, `author`, `rating`.
+
 ```json
 {
   "id": "...",
@@ -1239,6 +1241,8 @@ Tags are `collection` rows with `collection_type = 'tag'`. Slugs can contain `/`
 
 Returns books tagged with the given path or any sub-path.
 
+**Query params:** `sort` — one of `date_added` (default), `title`, `author`, `rating`.
+
 ```
 GET /users/alice/tags/scifi           → books tagged "scifi" or "scifi/*"
 GET /users/alice/tags/scifi/dystopian → books tagged "scifi/dystopian" or "scifi/dystopian/*"
@@ -1346,6 +1350,8 @@ Remove a single value assignment (for `select_multiple` keys).
 ### `GET /users/:username/labels/:keySlug/*valuePath`  *(public)*
 
 Returns all books for a user that have the given key+value label. Nested: querying `history` also returns books tagged `history/engineering`, `history/science/ancient`, etc.
+
+**Query params:** `sort` — one of `date_added` (default), `title`, `author`, `rating`.
 
 ```
 GET /users/alice/labels/genre/history             → books tagged genre:history or genre:history/*
