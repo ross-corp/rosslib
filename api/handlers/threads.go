@@ -63,6 +63,7 @@ func GetBookThreads(app core.App) func(e *core.RequestEvent) error {
 			Spoiler      bool    `db:"spoiler" json:"spoiler"`
 			CreatedAt    string  `db:"created_at" json:"created_at"`
 			CommentCount int     `db:"comment_count" json:"comment_count"`
+			LockedAt     *string `db:"locked_at" json:"locked_at"`
 		}
 
 		var threads []threadRow
@@ -71,7 +72,8 @@ func GetBookThreads(app core.App) func(e *core.RequestEvent) error {
 				   u.display_name, u.avatar,
 				   t.title, t.body, t.spoiler, t.created as created_at,
 				   (SELECT COUNT(*) FROM thread_comments tc
-				    WHERE tc.thread = t.id AND (tc.deleted_at IS NULL OR tc.deleted_at = '')) as comment_count
+				    WHERE tc.thread = t.id AND (tc.deleted_at IS NULL OR tc.deleted_at = '')) as comment_count,
+				   t.locked_at
 			FROM threads t
 			JOIN users u ON t.user = u.id
 			WHERE t.book = {:book} AND (t.deleted_at IS NULL OR t.deleted_at = '')
@@ -102,6 +104,7 @@ func GetBookThreads(app core.App) func(e *core.RequestEvent) error {
 				"spoiler":       t.Spoiler,
 				"created_at":    t.CreatedAt,
 				"comment_count": t.CommentCount,
+				"locked_at":     t.LockedAt,
 			})
 		}
 		if result == nil {
@@ -242,6 +245,11 @@ func GetThread(app core.App) func(e *core.RequestEvent) error {
 			commentResults = []map[string]any{}
 		}
 
+		var lockedAt *string
+		if la := thread.GetString("locked_at"); la != "" {
+			lockedAt = &la
+		}
+
 		return e.JSON(http.StatusOK, map[string]any{
 			"id":           thread.Id,
 			"book":         thread.GetString("book"),
@@ -253,6 +261,7 @@ func GetThread(app core.App) func(e *core.RequestEvent) error {
 			"body":         thread.GetString("body"),
 			"spoiler":      thread.GetBool("spoiler"),
 			"created_at":   thread.GetString("created"),
+			"locked_at":    lockedAt,
 			"comments":     commentResults,
 		})
 	}
@@ -298,6 +307,10 @@ func AddComment(app core.App) func(e *core.RequestEvent) error {
 		thread, err := app.FindRecordById("threads", threadID)
 		if err != nil || thread.GetString("deleted_at") != "" {
 			return e.JSON(http.StatusNotFound, map[string]any{"error": "Thread not found"})
+		}
+
+		if thread.GetString("locked_at") != "" {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "This thread is locked."})
 		}
 
 		data := struct {
@@ -375,6 +388,57 @@ func DeleteComment(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// LockThread handles POST /threads/{threadId}/lock
+func LockThread(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+		if !user.GetBool("is_moderator") {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Moderator access required"})
+		}
+		threadID := e.Request.PathValue("threadId")
+
+		thread, err := app.FindRecordById("threads", threadID)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Thread not found"})
+		}
+
+		thread.Set("locked_at", time.Now().UTC().Format(time.RFC3339))
+		if err := app.Save(thread); err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to lock thread"})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"locked_at": thread.GetString("locked_at")})
+	}
+}
+
+// UnlockThread handles POST /threads/{threadId}/unlock
+func UnlockThread(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+		if !user.GetBool("is_moderator") {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Moderator access required"})
+		}
+		threadID := e.Request.PathValue("threadId")
+
+		thread, err := app.FindRecordById("threads", threadID)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Thread not found"})
+		}
+
+		thread.Set("locked_at", "")
+		if err := app.Save(thread); err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to unlock thread"})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"locked_at": nil})
+	}
+}
 // trigramSimilarity computes the pg_trgm-style similarity between two strings.
 // It generates trigrams (3-character substrings) from each lowercased string
 // and returns the Jaccard index: |intersection| / |union|.

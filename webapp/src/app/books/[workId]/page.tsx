@@ -106,6 +106,7 @@ type BookThread = {
   spoiler: boolean;
   created_at: string;
   comment_count: number;
+  locked_at: string | null;
 };
 
 type BookLinkItem = {

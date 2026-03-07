@@ -21,6 +21,7 @@ type Props = {
   initialComments: Comment[];
   isLoggedIn: boolean;
   currentUserId: string | null;
+  isLocked?: boolean;
 };
 
 function formatDate(iso: string): string {
@@ -61,6 +62,7 @@ function CommentItem({
   replies,
   threadId,
   isLoggedIn,
+  isLocked,
   currentUserId,
   onReply,
   onDelete,
@@ -69,6 +71,7 @@ function CommentItem({
   replies: Comment[];
   threadId: string;
   isLoggedIn: boolean;
+  isLocked: boolean;
   currentUserId: string | null;
   onReply: (parentId: string, body: string) => Promise<void>;
   onDelete: (commentId: string) => Promise<void>;
@@ -116,7 +119,7 @@ function CommentItem({
           </div>
           <CommentBody text={comment.body} />
           <div className="flex items-center gap-3 mt-1.5">
-            {isLoggedIn && !comment.parent_id && (
+            {isLoggedIn && !isLocked && !comment.parent_id && (
               <button
                 type="button"
                 onClick={() => setShowReplyForm(!showReplyForm)}
@@ -232,6 +235,7 @@ export default function ThreadComments({
   initialComments,
   isLoggedIn,
   currentUserId,
+  isLocked = false,
 }: Props) {
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [newComment, setNewComment] = useState("");
@@ -314,8 +318,18 @@ export default function ThreadComments({
           : "Comments"}
       </h2>
 
+      {/* Locked banner */}
+      {isLocked && (
+        <div className="flex items-center gap-2 mb-6 px-3 py-2 rounded border border-border bg-surface-2 text-sm text-text-primary">
+          <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+          </svg>
+          This thread is locked. New comments are not allowed.
+        </div>
+      )}
+
       {/* New comment form */}
-      {isLoggedIn && (
+      {isLoggedIn && !isLocked && (
         <form onSubmit={handleSubmitComment} className="mb-8 space-y-3">
           <textarea
             value={newComment}
@@ -350,6 +364,7 @@ export default function ThreadComments({
               replies={repliesByParent.get(comment.id) ?? []}
               threadId={threadId}
               isLoggedIn={isLoggedIn}
+              isLocked={isLocked}
               currentUserId={currentUserId}
               onReply={handleReply}
               onDelete={handleDelete}

@@ -4,7 +4,7 @@ All routes are served by the Go API on `:8080`. The webapp proxies them through 
 
 **Interactive docs:** Visit [`/docs`](http://localhost:8080/docs) for a Swagger UI with the full OpenAPI 3.0 spec. The raw spec is at [`/docs/openapi.yaml`](http://localhost:8080/docs/openapi.yaml).
 
-Auth is via a 30-day JWT in an `httpOnly` cookie named `token`. The Go API reads it via `Authorization: Bearer <token>` header — the Next.js proxy extracts the cookie and forwards it as a header.
+Auth is via a 30-day JWT in an `httpOnly` cookie named `token`. The Go API reads it via `Authorization: Bearer <token>` header — the Next.js proxy extracts the cookie and forwards it as a header. External integrations can also authenticate with personal API tokens (see **API Tokens** section below) using the same `Authorization: Bearer <token>` header.
 
 ---
 
@@ -133,6 +133,43 @@ Permanently deletes all data owned by the authenticated user **and** the user ac
 200 { "message": "Account deleted" }
 401 { "error": "Authentication required" }
 500 { "error": "Failed to delete account" }
+```
+
+---
+
+## API Tokens
+
+Personal access tokens for external integrations (CLI tools, Calibre, etc.). Tokens authenticate via the same `Authorization: Bearer <token>` header as JWTs. Max 5 tokens per user.
+
+### `GET /me/api-tokens`  *(auth required)*
+
+List all API tokens for the authenticated user. Never returns the raw token — only metadata.
+
+```
+200 { "tokens": [{ "id": "abc123", "name": "CLI", "created": "2024-01-15 10:30:00.000Z", "last_used_at": "2024-02-01 08:00:00.000Z" }] }
+```
+
+### `POST /me/api-tokens`  *(auth required)*
+
+Create a new API token. The raw token is returned **once** in the response — it is not stored and cannot be retrieved later.
+
+```json
+{ "name": "CLI" }
+```
+
+```
+200 { "id": "abc123", "name": "CLI", "token": "64-char-hex-string" }
+400 { "error": "Token name is required" }
+400 { "error": "Maximum of 5 API tokens reached. Delete an existing token first." }
+```
+
+### `DELETE /me/api-tokens/:tokenId`  *(auth required)*
+
+Revoke (delete) an API token. Only the token owner can delete it.
+
+```
+200 { "message": "Token deleted" }
+404 { "error": "Token not found" }
 ```
 
 ---
@@ -924,6 +961,27 @@ Search/browse users by username or display name. 20 per page.
 - `q` *(optional)* — search by username or display name
 - `page` *(optional, default 1)* — pagination
 - `sort` *(optional, default `newest`)* — sort order: `newest` (registration date), `books` (most books in library), `followers` (most followers)
+
+### `GET /me/suggested-follows?limit=5`  *(auth required)*
+
+Returns users with the most books in common with the current user, excluding already-followed and blocked users. Useful for follow suggestions on the feed page.
+
+**Query parameters:**
+- `limit` *(optional, default 5, max 20)* — number of suggestions to return
+
+```json
+[
+  {
+    "user_id": "...",
+    "username": "bob",
+    "display_name": "Bob",
+    "avatar_url": "/api/files/...",
+    "books_in_common": 12
+  }
+]
+```
+
+Returns an empty array if no suggestions are available.
 
 ### `GET /users/:username`  *(optional auth)*
 
@@ -1736,9 +1794,9 @@ Returns a chronological feed of activities from users the authenticated user fol
 }
 ```
 
-**Activity types:** `shelved`, `started_book`, `finished_book`, `rated`, `reviewed`, `created_thread`, `followed_user`, `followed_author`, `created_link`.
+**Activity types:** `shelved`, `started_book`, `finished_book`, `rated`, `reviewed`, `finished_and_rated`, `created_thread`, `followed_user`, `followed_author`, `created_link`.
 
-Fields are conditional on type — `book` is null for `followed_user`, `target_user` is null for book-related activities, etc. `created_link` includes `link_type`, `to_book_ol_id`, and `to_book_title` for the target book. `followed_author` includes `author_key` and `author_name` in the response.
+Fields are conditional on type — `book` is null for `followed_user`, `target_user` is null for book-related activities, etc. `created_link` includes `link_type`, `to_book_ol_id`, and `to_book_title` for the target book. `followed_author` includes `author_key` and `author_name` in the response. `finished_and_rated` is a synthetic type created by merging a `finished_book` and `rated` event that occur within 60 seconds for the same user and book; it includes the `rating` field.
 
 ### `GET /users/:username/stats`  *(optional auth)*
 
@@ -1874,7 +1932,8 @@ Returns discussion threads for a book, ordered by most recent first. Paginated.
       "body": "I just finished and...",
       "spoiler": true,
       "created_at": "2026-02-25T14:00:00Z",
-      "comment_count": 3
+      "comment_count": 3,
+      "locked_at": null
     }
   ],
   "total": 42
@@ -1883,7 +1942,7 @@ Returns discussion threads for a book, ordered by most recent first. Paginated.
 
 ### `GET /threads/:threadId`
 
-Returns a single thread with all its comments.
+Returns a single thread with all its comments. Includes `locked_at` (null if unlocked, ISO timestamp if locked).
 
 ```json
 {
@@ -1926,9 +1985,29 @@ Create a new discussion thread on a book. Records a `created_thread` activity an
 
 Soft-delete a thread (author only). Returns 204.
 
+### `POST /threads/:threadId/lock`  *(auth required, moderator only)*
+
+Lock a thread, preventing new comments. Returns the locked timestamp.
+
+```
+200 { "locked_at": "2024-01-15T10:30:00Z" }
+403 { "error": "Moderator access required" }
+404 { "error": "Thread not found" }
+```
+
+### `POST /threads/:threadId/unlock`  *(auth required, moderator only)*
+
+Unlock a previously locked thread, re-enabling comments.
+
+```
+200 { "locked_at": null }
+403 { "error": "Moderator access required" }
+404 { "error": "Thread not found" }
+```
+
 ### `POST /threads/:threadId/comments`  *(auth required)*
 
-Add a comment to a thread. Set `parent_id` to reply to a top-level comment (one level of nesting only).
+Add a comment to a thread. Set `parent_id` to reply to a top-level comment (one level of nesting only). Returns 403 if the thread is locked.
 
 ```json
 { "body": "I think it meant...", "parent_id": null }
@@ -1940,6 +2019,7 @@ Add a comment to a thread. Set `parent_id` to reply to a top-level comment (one 
 201 { "id": "...", "created_at": "..." }
 400 { "error": "comment must be 5,000 characters or fewer" }
 400 { "error": "replies can only be one level deep" }
+403 { "error": "This thread is locked." }
 ```
 
 ### `DELETE /threads/:threadId/comments/:commentId`  *(auth required)*
