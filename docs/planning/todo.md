@@ -4,7 +4,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## book detail & discovery
 
-- [ ] Add follower count display on book detail page: the `GET /books/:workId/followers/count` endpoint exists and returns `{ follower_count: N }` but no frontend component displays it. On `webapp/src/app/books/[workId]/page.tsx`, fetch the follower count server-side and display it near the existing read/want-to-read counts (e.g., "12 people following this book"). The API is public (no auth needed).
 - [ ] Make review list React keys unique on book detail page: on `webapp/src/app/books/[workId]/page.tsx` (~line 609), community reviews are keyed by `review.username`. If a user somehow has multiple review entries, this produces duplicate keys and React warnings. Change the key to `review.user_id` (which is guaranteed unique per the `user_books` table constraint) or `review.user_id + '-' + review.date_added`.
 - [ ] Add `aria-label` to recommend button modal: the `RecommendButton` component at `webapp/src/components/recommend-button.tsx` renders a modal overlay but lacks `role="dialog"`, `aria-modal="true"`, and `aria-labelledby` attributes on its modal container div. Add these ARIA attributes with `aria-labelledby` pointing to the modal title ("Recommend this book").
 
