@@ -897,7 +897,11 @@ Returns a user profile. With a valid token, also returns `is_following` for the 
   "currently_reading_count": 2,
   "total_books": 67,
   "total_pages_read": 14320,
-  "author_key": null
+  "author_key": null,
+  "top_genres": [
+    { "name": "fiction", "count": 15 },
+    { "name": "mystery", "count": 8 }
+  ]
 }
 ```
 

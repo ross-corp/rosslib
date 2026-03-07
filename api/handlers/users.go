@@ -3,7 +3,9 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -238,6 +240,44 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			WHERE user = {:id} AND rating > 0
 		`).Bind(map[string]any{"id": user.Id}).One(&avgRating)
 
+		// Favorite genres — derived from finished books' subjects
+		type subjectRow struct {
+			Subjects string `db:"subjects"`
+		}
+		var subjectRows []subjectRow
+		_ = app.DB().NewQuery(`
+			SELECT b.subjects
+			FROM books b
+			JOIN book_tag_values btv ON btv.book = b.id
+			JOIN tag_values tv ON btv.tag_value = tv.id
+			WHERE btv.user = {:id} AND tv.slug = 'finished'
+			AND b.subjects != '' AND b.subjects IS NOT NULL
+		`).Bind(map[string]any{"id": user.Id}).All(&subjectRows)
+
+		genreCounts := map[string]int{}
+		for _, row := range subjectRows {
+			for _, s := range strings.Split(row.Subjects, ",") {
+				s = strings.TrimSpace(s)
+				if s != "" {
+					genreCounts[strings.ToLower(s)]++
+				}
+			}
+		}
+		type genreEntry struct {
+			Name  string `json:"name"`
+			Count int    `json:"count"`
+		}
+		var topGenres []genreEntry
+		for name, count := range genreCounts {
+			topGenres = append(topGenres, genreEntry{Name: name, Count: count})
+		}
+		sort.Slice(topGenres, func(i, j int) bool {
+			return topGenres[i].Count > topGenres[j].Count
+		})
+		if len(topGenres) > 5 {
+			topGenres = topGenres[:5]
+		}
+
 		// Total pages read (sum page_count for finished books)
 		type sumResult struct {
 			Total *int `db:"total"`
@@ -302,6 +342,7 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			"total_pages_read": totalPagesRead,
 			"is_restricted":    isRestricted,
 			"is_blocked":       blockedByViewer,
+			"top_genres":       topGenres,
 		}
 
 		return e.JSON(http.StatusOK, result)

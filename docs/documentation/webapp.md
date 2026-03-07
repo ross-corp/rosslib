@@ -96,7 +96,7 @@ webapp/src/app/
 ├── admin/page.tsx                 admin panel (moderator only)
 ├── [username]/
 │   ├── not-found.tsx               "User not found" with link to /users
-│   ├── page.tsx                    public profile (incl. computed lists, followed authors sidebar)
+│   ├── page.tsx                    public profile (incl. computed lists, followed authors sidebar, favorite genre chips)
 │   ├── stats/page.tsx              detailed reading statistics
 │   ├── shelves/[slug]/page.tsx     label page (owner gets library manager)
 │   ├── followers/page.tsx          followers list
