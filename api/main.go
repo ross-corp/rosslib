@@ -35,23 +35,33 @@ func main() {
 		se.Router.GET("/books/{workId}/genre-ratings", handlers.GetBookGenreRatings(app))
 
 		// ── Series (public / optional auth) ─────────────────────
+		se.Router.GET("/series/search", handlers.SearchSeries(app))
 		se.Router.GET("/books/{workId}/series", handlers.GetBookSeries(app))
 		se.Router.GET("/series/{seriesId}", handlers.GetSeriesDetail(app)).BindFunc(handlers.OptionalAuthFunc(app))
 
 		// ── Books (optional auth) ────────────────────────────────
+		se.Router.GET("/books/{workId}/readers", handlers.GetBookReaders(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/books/{workId}/reviews", handlers.GetBookReviews(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/books/{workId}/links", handlers.GetBookLinks(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/books/{workId}/threads", handlers.GetBookThreads(app))
+		se.Router.GET("/books/{workId}/followers/count", handlers.GetBookFollowerCount(app))
+		se.Router.GET("/books/{workId}/similar-threads", handlers.SimilarThreads(app))
+
+		// ── Genres (public) ──────────────────────────────────────
+		se.Router.GET("/genres", handlers.ListGenres(app))
+		se.Router.GET("/genres/{slug}/books", handlers.GetGenreBooks(app))
 
 		// ── Authors (public) ─────────────────────────────────────
 		se.Router.GET("/authors/search", handlers.SearchAuthors(app))
 		se.Router.GET("/authors/{authorKey}", handlers.GetAuthorDetail(app))
+		se.Router.GET("/authors/{authorKey}/series", handlers.GetAuthorSeries(app))
 
 		// ── Users (public / optional auth) ───────────────────────
 		se.Router.GET("/users", handlers.SearchUsers(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}", handlers.GetProfile(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/reviews", handlers.GetUserReviews(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/books", handlers.GetUserBooks(app)).BindFunc(handlers.OptionalAuthFunc(app))
+		se.Router.GET("/users/{username}/books/search", handlers.SearchUserBooks(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/shelves", handlers.GetUserShelves(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/shelves/{slug}", handlers.GetShelfDetail(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/tag-keys", handlers.GetUserTagKeys(app)).BindFunc(handlers.OptionalAuthFunc(app))
@@ -66,6 +76,7 @@ func main() {
 
 		// ── Threads (public GET) ─────────────────────────────────
 		se.Router.GET("/threads/{threadId}", handlers.GetThread(app))
+		se.Router.GET("/threads/{threadId}/similar", handlers.GetSimilarThreads(app))
 
 		// ── Authenticated routes ─────────────────────────────────
 		authed := se.Router.Group("").Bind(apis.RequireAuth())
@@ -73,11 +84,14 @@ func main() {
 		// Account
 		authed.GET("/me/account", handlers.GetAccount(app))
 		authed.PUT("/me/password", handlers.ChangePassword(app))
+		authed.PUT("/me/email", handlers.ChangeEmail(app))
 		authed.DELETE("/me/account/data", handlers.DeleteAllData(app))
+		authed.DELETE("/me/account", handlers.DeleteAccount(app))
 
 		// Profile
 		authed.PATCH("/users/me", handlers.UpdateProfile(app))
 		authed.POST("/me/avatar", handlers.UploadAvatar(app))
+		authed.POST("/me/banner", handlers.UploadBanner(app))
 
 		// Reading goals
 		authed.GET("/me/goals", handlers.GetMyGoals(app))
@@ -93,6 +107,7 @@ func main() {
 		authed.DELETE("/me/books/{olId}", handlers.DeleteBook(app))
 		authed.GET("/me/books/{olId}/status", handlers.GetBookStatus(app))
 		authed.PUT("/me/books/{olId}/status", handlers.SetBookStatus(app))
+		authed.GET("/me/books/{olId}/editions", handlers.GetMyBookEditions(app))
 		authed.GET("/me/books/status-map", handlers.GetStatusMap(app))
 
 		// Tags
@@ -123,6 +138,7 @@ func main() {
 		authed.DELETE("/users/{username}/follow", handlers.UnfollowUser(app))
 
 		// Block
+		authed.GET("/me/blocks", handlers.GetBlockedUsers(app))
 		authed.POST("/users/{username}/block", handlers.BlockUser(app))
 		authed.DELETE("/users/{username}/block", handlers.UnblockUser(app))
 		authed.GET("/users/{username}/block", handlers.CheckBlock(app))
@@ -137,6 +153,8 @@ func main() {
 		authed.DELETE("/threads/{threadId}/comments/{commentId}", handlers.DeleteComment(app))
 
 		// Series
+		authed.PATCH("/series/{seriesId}", handlers.UpdateSeries(app))
+		authed.DELETE("/series/{seriesId}", handlers.DeleteSeries(app))
 		authed.POST("/books/{workId}/series", handlers.AddBookToSeries(app))
 
 		// Book scan
@@ -146,6 +164,7 @@ func main() {
 		authed.GET("/me/notifications", handlers.GetNotifications(app))
 		authed.GET("/me/notifications/unread-count", handlers.GetUnreadCount(app))
 		authed.POST("/me/notifications/{notifId}/read", handlers.MarkNotificationRead(app))
+		authed.DELETE("/me/notifications/{notifId}", handlers.DeleteNotification(app))
 		authed.POST("/me/notifications/read-all", handlers.MarkAllRead(app))
 
 		// Notification preferences
@@ -157,8 +176,11 @@ func main() {
 		authed.POST("/me/import/goodreads/commit", handlers.CommitGoodreadsImport(app))
 		authed.POST("/me/import/storygraph/preview", handlers.PreviewStoryGraphImport(app))
 		authed.POST("/me/import/storygraph/commit", handlers.CommitStoryGraphImport(app))
+		authed.POST("/me/import/librarything/preview", handlers.PreviewLibraryThingImport(app))
+		authed.POST("/me/import/librarything/commit", handlers.CommitLibraryThingImport(app))
 		authed.GET("/me/imports/pending", handlers.GetPendingImports(app))
 		authed.PATCH("/me/imports/pending/{id}", handlers.ResolvePendingImport(app))
+		authed.POST("/me/imports/pending/{id}/retry", handlers.RetryPendingImport(app))
 		authed.DELETE("/me/imports/pending/{id}", handlers.DeletePendingImport(app))
 
 		// Genre ratings
@@ -177,15 +199,18 @@ func main() {
 		authed.POST("/links/{linkId}/edits", handlers.ProposeLinkEdit(app))
 
 		// Author/book follows
+		authed.GET("/authors/{authorKey}/follow", handlers.CheckAuthorFollow(app))
 		authed.POST("/authors/{authorKey}/follow", handlers.FollowAuthor(app))
 		authed.DELETE("/authors/{authorKey}/follow", handlers.UnfollowAuthor(app))
 		authed.GET("/me/followed-authors", handlers.GetFollowedAuthors(app))
+		authed.GET("/books/{workId}/follow", handlers.CheckBookFollow(app))
 		authed.POST("/books/{workId}/follow", handlers.FollowBook(app))
 		authed.DELETE("/books/{workId}/follow", handlers.UnfollowBook(app))
 		authed.GET("/me/followed-books", handlers.GetFollowedBooks(app))
 
 		// Recommendations
 		authed.POST("/me/recommendations", handlers.SendRecommendation(app))
+		authed.GET("/me/recommendations/sent", handlers.GetSentRecommendations(app))
 		authed.GET("/me/recommendations", handlers.GetRecommendations(app))
 		authed.PATCH("/me/recommendations/{recId}", handlers.UpdateRecommendation(app))
 
@@ -212,6 +237,9 @@ func main() {
 		admin.POST("/ghosts/seed", handlers.SeedGhosts(app))
 		admin.POST("/ghosts/simulate", handlers.SimulateGhosts(app))
 		admin.GET("/ghosts/status", handlers.GetGhostStatus(app))
+		admin.GET("/users", handlers.GetAdminUsers(app))
+		admin.PUT("/users/{userId}/moderator", handlers.SetModerator(app))
+		admin.PUT("/users/{userId}/author", handlers.SetAuthorKey(app))
 		admin.GET("/link-edits", handlers.GetPendingLinkEdits(app))
 		admin.PUT("/link-edits/{editId}", handlers.ReviewLinkEdit(app))
 

@@ -2,21 +2,25 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/toast";
 
 export default function SettingsForm({
   username,
   initialDisplayName,
   initialBio,
   initialAvatarUrl,
+  initialBannerUrl,
   initialIsPrivate,
 }: {
   username: string;
   initialDisplayName: string;
   initialBio: string;
   initialAvatarUrl: string | null;
+  initialBannerUrl: string | null;
   initialIsPrivate: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [bio, setBio] = useState(initialBio);
   const [isPrivate, setIsPrivate] = useState(initialIsPrivate);
@@ -28,6 +32,11 @@ export default function SettingsForm({
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [bannerUrl, setBannerUrl] = useState(initialBannerUrl);
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const [bannerError, setBannerError] = useState("");
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -54,10 +63,41 @@ export default function SettingsForm({
 
     const data = await res.json();
     setAvatarUrl(data.avatar_url);
+    toast.success("Photo updated");
     router.refresh();
 
     // Reset the input so the same file can be re-selected if needed.
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setBannerUploading(true);
+    setBannerError("");
+
+    const formData = new FormData();
+    formData.append("banner", file);
+
+    const res = await fetch("/api/me/banner", {
+      method: "POST",
+      body: formData,
+    });
+
+    setBannerUploading(false);
+
+    if (!res.ok) {
+      const data = await res.json();
+      setBannerError(data.error || "Upload failed.");
+      return;
+    }
+
+    const data = await res.json();
+    setBannerUrl(data.banner_url);
+    router.refresh();
+
+    if (bannerInputRef.current) bannerInputRef.current.value = "";
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -81,6 +121,7 @@ export default function SettingsForm({
     }
 
     setSaved(true);
+    toast.success("Profile updated");
     router.refresh();
   }
 
@@ -126,6 +167,46 @@ export default function SettingsForm({
               <p className="text-xs text-red-600 mt-1">{avatarError}</p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Banner */}
+      <div>
+        <p className="text-sm font-medium text-text-primary mb-3">Banner</p>
+        <div className="relative">
+          {bannerUrl ? (
+            <img
+              src={bannerUrl}
+              alt=""
+              className="w-full h-32 object-cover rounded-lg bg-surface-2"
+            />
+          ) : (
+            <div className="w-full h-32 rounded-lg bg-surface-2 flex items-center justify-center">
+              <span className="text-text-tertiary text-sm">No banner</span>
+            </div>
+          )}
+          {bannerUploading && (
+            <div className="absolute inset-0 rounded-lg bg-black/40 flex items-center justify-center">
+              <span className="text-white text-xs">...</span>
+            </div>
+          )}
+        </div>
+        <div className="mt-2">
+          <label className="cursor-pointer text-sm text-text-primary hover:text-text-primary underline underline-offset-2 transition-colors">
+            Change banner
+            <input
+              ref={bannerInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              className="hidden"
+              onChange={handleBannerChange}
+              disabled={bannerUploading}
+            />
+          </label>
+          <span className="text-xs text-text-tertiary ml-2">Recommended: 1200x300</span>
+          {bannerError && (
+            <p className="text-xs text-red-600 mt-1">{bannerError}</p>
+          )}
         </div>
       </div>
 
