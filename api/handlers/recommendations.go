@@ -27,10 +27,26 @@ func SendRecommendation(app core.App) func(e *core.RequestEvent) error {
 		if body.Username == "" || body.BookOlID == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "username and book_ol_id are required"})
 		}
+		if len(body.Note) > 2000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "note must be 2000 characters or fewer"})
+		}
 
 		// Cannot recommend to self
 		if body.Username == user.GetString("username") {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Cannot recommend to yourself"})
+		}
+
+		// Rate limit: max 10 recommendations per 24 hours
+		type countResult struct {
+			Count int `db:"count"`
+		}
+		var cnt countResult
+		err := app.DB().NewQuery(`
+			SELECT COUNT(*) as count FROM recommendations
+			WHERE sender = {:sender} AND created >= datetime('now', '-1 day')
+		`).Bind(map[string]any{"sender": user.Id}).One(&cnt)
+		if err == nil && cnt.Count >= 10 {
+			return e.JSON(http.StatusTooManyRequests, map[string]any{"error": "too many recommendations, try again later"})
 		}
 
 		// Find recipient user
@@ -86,6 +102,10 @@ func SendRecommendation(app core.App) func(e *core.RequestEvent) error {
 		bookTitle := book.GetString("title")
 
 		go func() {
+			if !ShouldNotify(app, recipient.Id, "book_recommendation") {
+				return
+			}
+
 			notifsColl, err := app.FindCollectionByNameOrId("notifications")
 			if err != nil {
 				return
@@ -191,6 +211,81 @@ func GetRecommendations(app core.App) func(e *core.RequestEvent) error {
 					"username":     row.SenderUsername,
 					"display_name": row.SenderDisplay,
 					"avatar_url":   senderAvatarURL,
+				},
+				"book": map[string]any{
+					"open_library_id": row.BookOLID,
+					"title":           row.BookTitle,
+					"cover_url":       row.BookCoverURL,
+					"authors":         row.BookAuthors,
+				},
+			}
+			result = append(result, item)
+		}
+
+		return e.JSON(http.StatusOK, result)
+	}
+}
+
+// GetSentRecommendations handles GET /me/recommendations/sent
+func GetSentRecommendations(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+
+		type recRow struct {
+			ID               string  `db:"id"`
+			Note             *string `db:"note"`
+			Status           string  `db:"status"`
+			Created          string  `db:"created"`
+			RecipientID      string  `db:"recipient_id"`
+			RecipientUsername string  `db:"recipient_username"`
+			RecipientDisplay *string `db:"recipient_display"`
+			RecipientAvatar  *string `db:"recipient_avatar"`
+			BookID           string  `db:"book_id"`
+			BookOLID         string  `db:"book_olid"`
+			BookTitle        string  `db:"book_title"`
+			BookCoverURL     *string `db:"book_cover_url"`
+			BookAuthors      *string `db:"book_authors"`
+		}
+
+		query := `
+			SELECT r.id, r.note, r.status, r.created,
+				   u.id as recipient_id, u.username as recipient_username, u.display_name as recipient_display, u.avatar as recipient_avatar,
+				   b.id as book_id, b.open_library_id as book_olid, b.title as book_title, b.cover_url as book_cover_url, b.authors as book_authors
+			FROM recommendations r
+			JOIN users u ON r.recipient = u.id
+			JOIN books b ON r.book = b.id
+			WHERE r.sender = {:user}
+			ORDER BY r.created DESC
+			LIMIT 50
+		`
+
+		var rows []recRow
+		err := app.DB().NewQuery(query).Bind(map[string]any{"user": user.Id}).All(&rows)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		result := make([]map[string]any, 0, len(rows))
+		for _, row := range rows {
+			var recipientAvatarURL *string
+			if row.RecipientAvatar != nil && *row.RecipientAvatar != "" {
+				url := fmt.Sprintf("/api/files/users/%s/%s", row.RecipientID, *row.RecipientAvatar)
+				recipientAvatarURL = &url
+			}
+
+			item := map[string]any{
+				"id":         row.ID,
+				"note":       row.Note,
+				"status":     row.Status,
+				"created_at": row.Created,
+				"recipient": map[string]any{
+					"user_id":      row.RecipientID,
+					"username":     row.RecipientUsername,
+					"display_name": row.RecipientDisplay,
+					"avatar_url":   recipientAvatarURL,
 				},
 				"book": map[string]any{
 					"open_library_id": row.BookOLID,

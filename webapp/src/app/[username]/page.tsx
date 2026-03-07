@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import FollowButton from "@/components/follow-button";
 import BlockButton from "@/components/block-button";
-import { ActivityCard } from "@/components/activity";
 import type { ActivityItem } from "@/components/activity";
+import UserActivityList from "@/components/user-activity-list";
 import { getUser, getToken } from "@/lib/auth";
 import BookCoverRow from "@/components/book-cover-row";
 import ReadingStats from "@/components/reading-stats";
@@ -23,6 +23,8 @@ type StatusBook = {
   progress_pages?: number | null;
   progress_percent?: number | null;
   page_count?: number | null;
+  series_position?: number | null;
+  date_started?: string | null;
 };
 
 type StatusGroup = {
@@ -51,9 +53,12 @@ type UserProfile = {
   following_count: number;
   friends_count: number;
   books_read: number;
+  currently_reading_count: number;
+  total_books: number;
   reviews_count: number;
   books_this_year: number;
   average_rating: number | null;
+  total_pages_read: number;
   is_restricted: boolean;
   is_blocked: boolean;
   author_key: string | null;
@@ -103,7 +108,8 @@ async function fetchProfile(
     cache: "no-store",
     headers,
   });
-  if (!res.ok) return null;
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Failed to load profile");
   return res.json();
 }
 
@@ -116,12 +122,17 @@ async function fetchUserBooks(username: string): Promise<UserBooksResponse> {
   return res.json();
 }
 
-async function fetchUserShelves(username: string): Promise<UserShelf[]> {
+type ShelvesResponse = {
+  total_books: number;
+  shelves: UserShelf[];
+};
+
+async function fetchUserShelves(username: string): Promise<ShelvesResponse> {
   const res = await fetch(
     `${process.env.API_URL}/users/${username}/shelves?include_books=8`,
     { cache: "no-store" }
   );
-  if (!res.ok) return [];
+  if (!res.ok) return { total_books: 0, shelves: [] };
   return res.json();
 }
 
@@ -134,14 +145,19 @@ async function fetchTagKeys(username: string): Promise<TagKey[]> {
   return res.json();
 }
 
-async function fetchRecentActivity(username: string): Promise<ActivityItem[]> {
+type ActivityResponse = {
+  activities: ActivityItem[];
+  next_cursor?: string | null;
+};
+
+async function fetchRecentActivity(username: string): Promise<ActivityResponse> {
   const res = await fetch(
-    `${process.env.API_URL}/users/${username}/activity?limit=10`,
+    `${process.env.API_URL}/users/${username}/activity`,
     { cache: "no-store" }
   );
-  if (!res.ok) return [];
+  if (!res.ok) return { activities: [] };
   const data = await res.json();
-  return data.activities || [];
+  return { activities: data.activities || [], next_cursor: data.next_cursor };
 }
 
 async function fetchRecentReviews(username: string): Promise<ReviewItem[]> {
@@ -152,6 +168,11 @@ async function fetchRecentReviews(username: string): Promise<ReviewItem[]> {
   if (!res.ok) return [];
   return res.json();
 }
+
+type FollowedAuthor = {
+  author_key: string;
+  author_name: string;
+};
 
 type ViewerTagKey = {
   id: string;
@@ -174,6 +195,15 @@ async function fetchGoal(
     { cache: "no-store", headers }
   );
   if (!res.ok) return null;
+  return res.json();
+}
+
+async function fetchFollowedAuthors(token: string): Promise<FollowedAuthor[]> {
+  const res = await fetch(`${process.env.API_URL}/me/followed-authors`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
   return res.json();
 }
 
@@ -202,8 +232,8 @@ export default async function UserPage({
 
   const currentYear = new Date().getFullYear();
 
-  const [userBooks, shelves, tagKeys, recentActivity, recentReviews, viewerTagKeys, readingGoal] = isRestricted
-    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, [] as UserShelf[], [] as TagKey[], [] as ActivityItem[], [] as ReviewItem[], [] as ViewerTagKey[], null as ReadingGoal | null]
+  const [userBooks, shelvesResponse, tagKeys, activityData, recentReviews, viewerTagKeys, readingGoal, followedAuthors] = isRestricted
+    ? [{ statuses: [], unstatused_count: 0 } as UserBooksResponse, { total_books: 0, shelves: [] } as ShelvesResponse, [] as TagKey[], { activities: [] } as ActivityResponse, [] as ReviewItem[], [] as ViewerTagKey[], null as ReadingGoal | null, [] as FollowedAuthor[]]
     : await Promise.all([
         fetchUserBooks(username),
         fetchUserShelves(username),
@@ -212,7 +242,11 @@ export default async function UserPage({
         fetchRecentReviews(username),
         !isOwnProfile && token ? fetchViewerTagKeys(token) : Promise.resolve([] as ViewerTagKey[]),
         fetchGoal(username, currentYear, token ?? undefined),
+        isOwnProfile && token ? fetchFollowedAuthors(token) : Promise.resolve([] as FollowedAuthor[]),
       ]);
+
+  const shelves = shelvesResponse.shelves;
+  const shelvesTotalBooks = shelvesResponse.total_books;
 
   // Extract status values for QuickAddButton (viewer adding books to their own library)
   const viewerStatusKey = viewerTagKeys.find((k) => k.slug === "status") ?? null;
@@ -358,10 +392,23 @@ export default async function UserPage({
         <div className="flex items-center gap-4 flex-wrap">
           {!isRestricted && (
             <>
+              <Link
+                href={`/${profile.username}/library`}
+                className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+              >
+                <span className="font-semibold text-text-primary">{profile.total_books}</span>{" "}
+                <span className="text-text-tertiary">books</span>
+              </Link>
               <span className="text-sm text-text-secondary">
                 <span className="font-semibold text-text-primary">{profile.books_read}</span>{" "}
                 <span className="text-text-tertiary">read</span>
               </span>
+              {profile.currently_reading_count > 0 && (
+                <span className="text-sm text-text-secondary">
+                  <span className="font-semibold text-text-primary">{profile.currently_reading_count}</span>{" "}
+                  <span className="text-text-tertiary">reading</span>
+                </span>
+              )}
               <Link
                 href={`/${profile.username}/reviews`}
                 className="text-sm text-text-secondary hover:text-text-primary transition-colors"
@@ -371,6 +418,14 @@ export default async function UserPage({
                 </span>{" "}
                 <span className="text-text-tertiary">reviews</span>
               </Link>
+              {profile.total_pages_read > 0 && (
+                <span className="text-sm text-text-secondary">
+                  <span className="font-semibold text-text-primary">
+                    {profile.total_pages_read.toLocaleString()}
+                  </span>{" "}
+                  <span className="text-text-tertiary">pages read</span>
+                </span>
+              )}
             </>
           )}
           <Link
@@ -423,11 +478,10 @@ export default async function UserPage({
           <div className="lg:col-span-2 space-y-10">
             {/* Library summary link */}
             {(() => {
-              const totalBooks = userBooks.statuses.reduce((sum, s) => sum + s.count, 0) + userBooks.unstatused_count;
               const totalTags = tagCollections.length;
               const totalLabels = labelKeys.reduce((sum, k) => sum + k.values.length, 0);
               const parts: string[] = [];
-              if (totalBooks > 0) parts.push(`${totalBooks} book${totalBooks !== 1 ? "s" : ""}`);
+              if (shelvesTotalBooks > 0) parts.push(`${shelvesTotalBooks} book${shelvesTotalBooks !== 1 ? "s" : ""}`);
               if (totalTags > 0) parts.push(`${totalTags} tag${totalTags !== 1 ? "s" : ""}`);
               if (totalLabels > 0) parts.push(`${totalLabels} label${totalLabels !== 1 ? "s" : ""}`);
               return parts.length > 0 ? (
@@ -599,20 +653,16 @@ export default async function UserPage({
           {/* Sidebar — 1/3 */}
           <div className="mt-10 lg:mt-0">
             <div className="lg:sticky lg:top-20">
-              {recentActivity.length > 0 ? (
+              {activityData.activities.length > 0 ? (
                 <div>
                   <h2 className="section-heading mb-2">
                     Recent Activity
                   </h2>
-                  <div>
-                    {recentActivity.map((item) => (
-                      <ActivityCard
-                        key={item.id}
-                        item={item}
-                        showUser={false}
-                      />
-                    ))}
-                  </div>
+                  <UserActivityList
+                    initialActivities={activityData.activities}
+                    initialCursor={activityData.next_cursor}
+                    username={username}
+                  />
                 </div>
               ) : isOwnProfile ? (
                 <div>
@@ -624,6 +674,32 @@ export default async function UserPage({
                   </p>
                 </div>
               ) : null}
+
+              {isOwnProfile && followedAuthors.length > 0 && (
+                <div className="mt-6">
+                  <h2 className="section-heading mb-2">Followed Authors</h2>
+                  <ul className="space-y-1.5">
+                    {followedAuthors.slice(0, 5).map((author) => (
+                      <li key={author.author_key}>
+                        <Link
+                          href={`/authors/${author.author_key}`}
+                          className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                        >
+                          {author.author_name || author.author_key}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  {followedAuthors.length > 5 && (
+                    <Link
+                      href="/settings/followed-authors"
+                      className="block mt-2 text-xs text-text-tertiary hover:text-text-primary transition-colors"
+                    >
+                      View all {followedAuthors.length} →
+                    </Link>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
