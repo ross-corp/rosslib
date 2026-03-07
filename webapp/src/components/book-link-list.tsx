@@ -493,6 +493,7 @@ export default function BookLinkList({ workId, initialLinks, initialTotal, isLog
                             } disabled:opacity-50`}
                             title={link.user_voted ? "Remove upvote" : "Upvote"}
                             aria-label={link.user_voted ? "Remove upvote" : "Upvote link"}
+                            aria-pressed={link.user_voted}
                           >
                             <svg
                               viewBox="0 0 12 12"

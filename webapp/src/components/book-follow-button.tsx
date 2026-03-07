@@ -37,6 +37,7 @@ export default function BookFollowButton({
     <button
       onClick={toggle}
       disabled={loading}
+      aria-pressed={following}
       className={`text-sm px-3 py-1.5 rounded border transition-colors disabled:opacity-50 ${
         following
           ? "border-border text-text-primary hover:border-border hover:text-text-primary"
