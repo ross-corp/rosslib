@@ -236,10 +236,10 @@ export default function PendingImportsManager({
             if (e.target === e.currentTarget) closeSearchModal();
           }}
         >
-          <div className="bg-surface-1 rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
+          <div role="dialog" aria-modal="true" aria-labelledby="import-search-modal-title" className="bg-surface-1 rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
             <div className="p-4 border-b border-border">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-text-primary">
+                <h3 id="import-search-modal-title" className="text-sm font-semibold text-text-primary">
                   Link &ldquo;{activeItem.title}&rdquo;
                 </h3>
                 <button
