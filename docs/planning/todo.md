@@ -4,10 +4,7 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## API gaps
 
-- [ ] Add pagination to `GET /books/:workId/threads` endpoint: the thread listing in `api/handlers/threads.go` returns all threads for a book with no pagination. Add `page` and `limit` query params (default limit 20, max 100) with SQL `LIMIT` and `OFFSET`. Return `total` count in the response. Update the thread list on the book detail page `webapp/src/app/books/[workId]/page.tsx` (or the ThreadList component) to support "Load more" or page-based navigation.
-- [ ] Add pagination to `GET /books/:workId/links` endpoint: community links in `api/handlers/links.go` returns all links for a book with no pagination. For books with many community links, add `limit` and `offset` query params (default limit 50). Return `total` count. Update `webapp/src/components/book-link-list.tsx` to show a "Show more" button when more links are available.
 - [ ] Add `sort` query param to `GET /users/:username/reviews` endpoint: the reviews endpoint in `api/handlers/users.go` sorts by `date_added DESC` only. Add a `sort` query param accepting `newest` (default, current behavior), `oldest`, `highest_rating`, `lowest_rating`. Update the SQL ORDER BY clause based on the param. On the frontend at `webapp/src/app/[username]/reviews/page.tsx`, add a sort dropdown that sets the `sort` query param and re-fetches.
-- [ ] Add total count to `GET /books/:workId/links` response: the community links endpoint returns an array but no total count. Wrap the response in `{ links: [...], total: N }` to match pagination conventions used by other endpoints. Update `webapp/src/components/book-link-list.tsx` to read from the `links` key.
 
 ## BUGS
 

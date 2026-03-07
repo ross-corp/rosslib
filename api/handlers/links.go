@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -26,13 +27,37 @@ func GetBookLinks(app core.App) func(e *core.RequestEvent) error {
 			map[string]any{"id": workID},
 		)
 		if len(books) == 0 {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{"links": []any{}, "total": 0})
 		}
 
 		viewerID := ""
 		if e.Auth != nil {
 			viewerID = e.Auth.Id
 		}
+
+		// Parse pagination params
+		limit := 50
+		offset := 0
+		if l, err := strconv.Atoi(e.Request.URL.Query().Get("limit")); err == nil && l > 0 {
+			if l > 100 {
+				l = 100
+			}
+			limit = l
+		}
+		if o, err := strconv.Atoi(e.Request.URL.Query().Get("offset")); err == nil && o > 0 {
+			offset = o
+		}
+
+		// Get total count
+		type countResult struct {
+			Count int `db:"count"`
+		}
+		var totalCnt countResult
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) as count
+			FROM book_links bl
+			WHERE bl.from_book = {:book} AND (bl.deleted_at IS NULL OR bl.deleted_at = '')
+		`).Bind(map[string]any{"book": books[0].Id}).One(&totalCnt)
 
 		type linkRow struct {
 			ID       string  `db:"id" json:"id"`
@@ -53,17 +78,15 @@ func GetBookLinks(app core.App) func(e *core.RequestEvent) error {
 			JOIN books b2 ON bl.to_book = b2.id
 			WHERE bl.from_book = {:book} AND (bl.deleted_at IS NULL OR bl.deleted_at = '')
 			ORDER BY bl.created DESC
-		`).Bind(map[string]any{"book": books[0].Id}).All(&links)
+			LIMIT {:limit} OFFSET {:offset}
+		`).Bind(map[string]any{"book": books[0].Id, "limit": limit, "offset": offset}).All(&links)
 		if err != nil {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{"links": []any{}, "total": 0})
 		}
 
 		var result []map[string]any
 		for _, l := range links {
 			// Count votes
-			type countResult struct {
-				Count int `db:"count"`
-			}
 			var cnt countResult
 			_ = app.DB().NewQuery("SELECT COUNT(*) as count FROM book_link_votes WHERE book_link = {:link}").
 				Bind(map[string]any{"link": l.ID}).One(&cnt)
@@ -95,7 +118,10 @@ func GetBookLinks(app core.App) func(e *core.RequestEvent) error {
 			result = []map[string]any{}
 		}
 
-		return e.JSON(http.StatusOK, result)
+		return e.JSON(http.StatusOK, map[string]any{
+			"links": result,
+			"total": totalCnt.Count,
+		})
 	}
 }
 

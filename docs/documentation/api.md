@@ -1537,26 +1537,33 @@ When the rate limit is saturated, requests wait (up to the 15s client timeout) r
 
 ## Discussion Threads
 
-### `GET /books/:workId/threads`
+### `GET /books/:workId/threads?page=1&limit=20`
 
-Returns all discussion threads for a book, ordered by most recent first.
+Returns discussion threads for a book, ordered by most recent first. Paginated.
+
+**Query parameters:**
+- `page` *(optional, default 1)* — page number
+- `limit` *(optional, default 20, max 100)* — threads per page
 
 ```json
-[
-  {
-    "id": "...",
-    "book_id": "...",
-    "user_id": "...",
-    "username": "alice",
-    "display_name": "Alice",
-    "avatar_url": "https://...",
-    "title": "What did the ending mean?",
-    "body": "I just finished and...",
-    "spoiler": true,
-    "created_at": "2026-02-25T14:00:00Z",
-    "comment_count": 3
-  }
-]
+{
+  "threads": [
+    {
+      "id": "...",
+      "book_id": "...",
+      "user_id": "...",
+      "username": "alice",
+      "display_name": "Alice",
+      "avatar_url": "https://...",
+      "title": "What did the ending mean?",
+      "body": "I just finished and...",
+      "spoiler": true,
+      "created_at": "2026-02-25T14:00:00Z",
+      "comment_count": 3
+    }
+  ],
+  "total": 42
+}
 ```
 
 ### `GET /threads/:threadId`
@@ -1651,28 +1658,35 @@ Returns threads on the same book whose titles are similar to the given thread. S
 
 User-submitted book-to-book connections (sequel, prequel, similar, etc.). Links are upvotable — sorted by vote count on book pages. Both books must exist in the local catalog.
 
-### `GET /books/:workId/links`
+### `GET /books/:workId/links?limit=50&offset=0`
 
-Returns all community links for a book, sorted by votes descending. If authenticated, includes whether the caller has voted on each link.
+Returns community links for a book, sorted by creation date descending. If authenticated, includes whether the caller has voted on each link. Paginated.
+
+**Query parameters:**
+- `limit` *(optional, default 50, max 100)* — links per page
+- `offset` *(optional, default 0)* — number of links to skip
 
 ```json
-[
-  {
-    "id": "...",
-    "from_book_ol_id": "OL82592W",
-    "to_book_ol_id": "OL27448W",
-    "to_book_title": "Tender Is the Night",
-    "to_book_authors": "F. Scott Fitzgerald",
-    "to_book_cover_url": "https://...",
-    "link_type": "companion",
-    "note": "Same author, similar themes",
-    "username": "alice",
-    "display_name": "Alice",
-    "votes": 3,
-    "user_voted": true,
-    "created_at": "2026-02-24T14:00:00Z"
-  }
-]
+{
+  "links": [
+    {
+      "id": "...",
+      "from_book_ol_id": "OL82592W",
+      "to_book_ol_id": "OL27448W",
+      "to_book_title": "Tender Is the Night",
+      "to_book_authors": "F. Scott Fitzgerald",
+      "to_book_cover_url": "https://...",
+      "link_type": "companion",
+      "note": "Same author, similar themes",
+      "username": "alice",
+      "display_name": "Alice",
+      "votes": 3,
+      "user_voted": true,
+      "created_at": "2026-02-24T14:00:00Z"
+    }
+  ],
+  "total": 12
+}
 ```
 
 **Link types:** `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`.

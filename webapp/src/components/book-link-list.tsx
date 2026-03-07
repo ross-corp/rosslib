@@ -23,6 +23,7 @@ type BookLink = {
 type Props = {
   workId: string;
   initialLinks: BookLink[];
+  initialTotal?: number;
   isLoggedIn: boolean;
   currentUsername?: string;
   isModerator?: boolean;
@@ -49,8 +50,10 @@ function linkTypeLabel(type: string): string {
   return LINK_TYPES.find((t) => t.value === type)?.label ?? type;
 }
 
-export default function BookLinkList({ workId, initialLinks, isLoggedIn, currentUsername, isModerator }: Props) {
+export default function BookLinkList({ workId, initialLinks, initialTotal, isLoggedIn, currentUsername, isModerator }: Props) {
   const [links, setLinks] = useState<BookLink[]>(initialLinks);
+  const [total, setTotal] = useState(initialTotal ?? initialLinks.length);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [toWorkId, setToWorkId] = useState("");
   const [linkType, setLinkType] = useState("similar");
@@ -128,7 +131,23 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
 
   async function refetchLinks() {
     const res = await fetch(`/api/books/${workId}/links`);
-    if (res.ok) setLinks(await res.json());
+    if (res.ok) {
+      const data = await res.json();
+      setLinks(data.links ?? []);
+      setTotal(data.total ?? 0);
+    }
+  }
+
+  async function handleLoadMore() {
+    setLoadingMore(true);
+    const res = await fetch(`/api/books/${workId}/links?limit=50&offset=${links.length}`);
+    if (res.ok) {
+      const data = await res.json();
+      const moreLinks: BookLink[] = data.links ?? [];
+      setLinks((prev) => [...prev, ...moreLinks]);
+      setTotal(data.total ?? 0);
+    }
+    setLoadingMore(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -591,6 +610,16 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
               </div>
             </div>
           ))}
+          {links.length < total && (
+            <button
+              type="button"
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="mt-4 text-xs px-4 py-2 rounded border border-border text-text-primary hover:bg-surface-2 transition-colors disabled:opacity-50"
+            >
+              {loadingMore ? "Loading..." : `Show more (${total - links.length} remaining)`}
+            </button>
+          )}
         </div>
       )}
     </div>

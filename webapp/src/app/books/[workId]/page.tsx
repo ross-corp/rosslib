@@ -195,7 +195,7 @@ async function fetchTagKeys(token: string): Promise<TagKey[]> {
   return res.json();
 }
 
-async function fetchBookLinks(workId: string, token?: string): Promise<BookLinkItem[]> {
+async function fetchBookLinks(workId: string, token?: string): Promise<{ links: BookLinkItem[]; total: number }> {
   const headers: Record<string, string> = {};
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
@@ -204,8 +204,9 @@ async function fetchBookLinks(workId: string, token?: string): Promise<BookLinkI
     headers,
     cache: "no-store",
   });
-  if (!res.ok) return [];
-  return res.json();
+  if (!res.ok) return { links: [], total: 0 };
+  const data = await res.json();
+  return { links: data.links ?? [], total: data.total ?? 0 };
 }
 
 async function fetchMyBookStatus(
@@ -801,7 +802,8 @@ export default async function BookPage({
         <section className="border-t border-border pt-8 mt-10">
           <BookLinkList
             workId={workId}
-            initialLinks={bookLinks}
+            initialLinks={bookLinks.links}
+            initialTotal={bookLinks.total}
             isLoggedIn={!!currentUser}
             currentUsername={currentUser?.username}
             isModerator={currentUser?.is_moderator}
