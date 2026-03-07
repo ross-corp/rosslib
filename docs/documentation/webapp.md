@@ -104,7 +104,8 @@ webapp/src/app/
 │   ├── tags/[...path]/page.tsx     tag browsing page
 │   ├── labels/[keySlug]/[...valuePath]/page.tsx   label browsing page (nested)
 │   ├── reviews/page.tsx           paginated reviews list (?page=N)
-│   └── timeline/page.tsx          reading timeline (books by month/year)
+│   ├── timeline/page.tsx          reading timeline (books by month/year)
+│   └── year-in-review/page.tsx   year-in-review summary (stats, top books, genres)
 └── api/                            Next.js proxy route handlers
     ├── auth/login/route.ts
     ├── auth/register/route.ts
@@ -185,7 +186,8 @@ webapp/src/app/
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
         ├── books/search/route.ts                   ← GET search within user's library
         ├── shelves/[slug]/route.ts                ← GET (for client-side label switching)
-        └── timeline/route.ts                      ← GET reading timeline
+        ├── timeline/route.ts                      ← GET reading timeline
+        └── year-in-review/route.ts                ← GET year-in-review summary
 ```
 
 ---
