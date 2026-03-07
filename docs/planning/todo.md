@@ -10,7 +10,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## import improvements
 
-- [ ] Add retry button for unmatched imports on pending imports page: the `PendingImportsManager` component at `webapp/src/components/pending-imports-manager.tsx` shows unmatched imports with Search, Dismiss, and Delete actions. Add a "Retry lookup" button that calls `POST /me/import/goodreads/preview` with just the single row's title/author/ISBN to re-attempt the lookup chain (including LLM fuzzy matching if ANTHROPIC_API_KEY is set). If a match is found, auto-populate the resolve modal with the result.
 - [ ] Show pending import count badge in settings nav: the settings nav at `webapp/src/components/settings-nav.tsx` shows a red badge for pending follow requests but not for pending imports. Fetch `GET /api/me/imports/pending` on mount (or add a count-only endpoint), and display a numeric badge on the "Pending imports" pill when unmatched items exist. This helps users notice they have imports that need manual resolution.
 
 ## performance

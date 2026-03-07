@@ -176,6 +176,7 @@ func main() {
 		authed.POST("/me/import/storygraph/commit", handlers.CommitStoryGraphImport(app))
 		authed.GET("/me/imports/pending", handlers.GetPendingImports(app))
 		authed.PATCH("/me/imports/pending/{id}", handlers.ResolvePendingImport(app))
+		authed.POST("/me/imports/pending/{id}/retry", handlers.RetryPendingImport(app))
 		authed.DELETE("/me/imports/pending/{id}", handlers.DeletePendingImport(app))
 
 		// Genre ratings

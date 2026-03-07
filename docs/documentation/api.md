@@ -1475,6 +1475,21 @@ Permanently deletes a pending import row.
 404 { "error": "Pending import not found" }
 ```
 
+### `POST /me/imports/pending/:id/retry`  *(auth required)*
+
+Re-runs the full lookup chain (local DB, Open Library ISBN, OL search, Google Books, LLM fuzzy) for a single pending import. If a match is found, auto-resolves (creates user_book, maps status tag) and removes the pending import.
+
+```json
+// Match found — auto-resolved
+{ "status": "matched", "book_id": "...", "match": { "ol_id": "...", "title": "...", "authors": [...], "cover_url": "..." } }
+
+// Ambiguous — candidates returned for user selection
+{ "status": "ambiguous", "candidates": [{ "ol_id": "...", "title": "...", "authors": [...], "cover_url": "..." }] }
+
+// No match
+{ "status": "unmatched" }
+```
+
 ---
 
 ## Activity Feed
