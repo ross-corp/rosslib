@@ -27,6 +27,9 @@ func SendRecommendation(app core.App) func(e *core.RequestEvent) error {
 		if body.Username == "" || body.BookOlID == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "username and book_ol_id are required"})
 		}
+		if len(body.Note) > 2000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "note must be 2000 characters or fewer"})
+		}
 
 		// Cannot recommend to self
 		if body.Username == user.GetString("username") {

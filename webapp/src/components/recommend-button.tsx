@@ -251,8 +251,14 @@ export default function RecommendButton({
                         onChange={(e) => setNote(e.target.value)}
                         placeholder="Why are you recommending this book?"
                         rows={3}
+                        maxLength={2000}
                         className="w-full px-3 py-2 text-sm border border-border rounded bg-surface-0 text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-text-primary resize-none"
                       />
+                      {note.length > 0 && (
+                        <p className="text-xs text-text-secondary text-right mt-1">
+                          {note.length}/2000
+                        </p>
+                      )}
 
                       {error && (
                         <p className="text-xs text-red-500 mt-2">{error}</p>
