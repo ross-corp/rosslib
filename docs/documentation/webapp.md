@@ -71,6 +71,7 @@ webapp/src/app/
 ├── forgot-password/page.tsx          forgot password (request reset link)
 ├── reset-password/page.tsx           set new password (from email link)
 ├── search/page.tsx                 book + user + author search (shows popular books when no query)
+├── feed/page.tsx                   activity feed with filter chips (All, Reviews, Ratings, Status Updates, Threads, Social)
 ├── users/page.tsx                  browse all users (sort by newest/books/followers)
 ├── books/[workId]/page.tsx         single book page (series badges, series navigation row)
 ├── books/[workId]/not-found.tsx   "Book not found" with search link
