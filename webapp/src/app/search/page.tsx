@@ -1,5 +1,6 @@
 import Link from "next/link";
 import BookList from "@/components/book-list";
+import Pagination from "@/components/pagination";
 import { type StatusValue } from "@/components/shelf-picker";
 import { getToken, getUser } from "@/lib/auth";
 
@@ -515,31 +516,11 @@ export default async function SearchPage({
             />
             {/* Pagination */}
             {bookData.results.length > 0 && (
-              <div className="flex items-center justify-between mt-6 max-w-md">
-                {parseInt(page) > 1 ? (
-                  <Link
-                    href={buildSearchParams(base, { page: String(parseInt(page) - 1) })}
-                    className="text-sm px-4 py-2 rounded border border-border text-text-primary hover:border-border-strong hover:text-text-primary transition-colors"
-                  >
-                    Previous page
-                  </Link>
-                ) : (
-                  <span />
-                )}
-                <span className="text-xs text-text-secondary">
-                  Page {page}
-                </span>
-                {bookData.results.length >= 20 && parseInt(page) * 20 < bookData.total ? (
-                  <Link
-                    href={buildSearchParams(base, { page: String(parseInt(page) + 1) })}
-                    className="text-sm px-4 py-2 rounded border border-border text-text-primary hover:border-border-strong hover:text-text-primary transition-colors"
-                  >
-                    Next page
-                  </Link>
-                ) : (
-                  <span />
-                )}
-              </div>
+              <Pagination
+                prevHref={parseInt(page) > 1 ? buildSearchParams(base, { page: String(parseInt(page) - 1) }) : null}
+                nextHref={bookData.results.length >= 20 && parseInt(page) * 20 < bookData.total ? buildSearchParams(base, { page: String(parseInt(page) + 1) }) : null}
+                label={`Page ${page}`}
+              />
             )}
           </>
         )}

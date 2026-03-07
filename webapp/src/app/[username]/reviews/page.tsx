@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Pagination from "@/components/pagination";
 import ReviewText from "@/components/review-text";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -176,29 +177,11 @@ export default async function ReviewsPage({
         )}
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <nav className="flex items-center justify-center gap-2 mt-10">
-            {page > 1 && (
-              <Link
-                href={`/${username}/reviews?page=${page - 1}`}
-                className="px-3 py-1.5 text-sm rounded border border-border text-text-primary hover:bg-surface-2 transition-colors"
-              >
-                Previous
-              </Link>
-            )}
-            <span className="text-sm text-text-tertiary px-2">
-              Page {page} of {totalPages}
-            </span>
-            {page < totalPages && (
-              <Link
-                href={`/${username}/reviews?page=${page + 1}`}
-                className="px-3 py-1.5 text-sm rounded border border-border text-text-primary hover:bg-surface-2 transition-colors"
-              >
-                Next
-              </Link>
-            )}
-          </nav>
-        )}
+        <Pagination
+          prevHref={page > 1 ? `/${username}/reviews?page=${page - 1}` : null}
+          nextHref={page < totalPages ? `/${username}/reviews?page=${page + 1}` : null}
+          label={totalPages > 1 ? `Page ${page} of ${totalPages}` : undefined}
+        />
       </main>
     </div>
   );
