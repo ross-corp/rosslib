@@ -18,6 +18,7 @@ Schema is applied idempotently at API startup via `db.Migrate` in `api/internal/
 | display_name | varchar(100) | nullable |
 | bio | text | nullable |
 | avatar_url | text | nullable; S3 key |
+| banner | file | nullable; profile banner image (JPEG/PNG/GIF/WebP, max 10 MB) |
 | is_private | boolean | default false |
 | is_moderator | boolean | default false; grants moderation privileges (e.g. deleting community links); managed via admin UI (`/admin`) |
 | author_key | varchar(50) | nullable; Open Library author ID (e.g. `OL23919A`); links user account to their author page; shows "Author" badge on profile; managed via admin UI |

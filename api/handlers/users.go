@@ -272,12 +272,20 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			avatarURL = &url
 		}
 
+		// Banner URL
+		var bannerURL *string
+		if bn := user.GetString("banner"); bn != "" {
+			url := "/api/files/" + user.Collection().Id + "/" + user.Id + "/" + bn
+			bannerURL = &url
+		}
+
 		result := map[string]any{
 			"user_id":         user.Id,
 			"username":        user.GetString("username"),
 			"display_name":    user.GetString("display_name"),
 			"bio":             user.GetString("bio"),
 			"avatar_url":      avatarURL,
+			"banner_url":      bannerURL,
 			"is_private":      user.GetBool("is_private"),
 			"member_since":    user.GetString("created"),
 			"is_following":    isFollowing,
@@ -768,6 +776,31 @@ func UploadAvatar(app core.App) func(e *core.RequestEvent) error {
 		avatarURL := "/api/files/" + user.Collection().Id + "/" + user.Id + "/" + user.GetString("avatar")
 		return e.JSON(http.StatusOK, map[string]any{
 			"avatar_url": avatarURL,
+		})
+	}
+}
+
+// UploadBanner handles POST /me/banner
+func UploadBanner(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+
+		f, err := e.FindUploadedFiles("banner")
+		if err != nil || len(f) == 0 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "No banner file provided"})
+		}
+
+		user.Set("banner", f[0])
+		if err := app.Save(user); err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to save banner"})
+		}
+
+		bannerURL := "/api/files/" + user.Collection().Id + "/" + user.Id + "/" + user.GetString("banner")
+		return e.JSON(http.StatusOK, map[string]any{
+			"banner_url": bannerURL,
 		})
 	}
 }
