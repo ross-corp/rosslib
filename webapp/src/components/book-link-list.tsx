@@ -371,6 +371,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
               onChange={(e) => setNote(e.target.value)}
               placeholder="Explain the connection..."
               disabled={submitting}
+              maxLength={1000}
               className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
             />
           </div>
@@ -560,6 +561,7 @@ export default function BookLinkList({ workId, initialLinks, isLoggedIn, current
                             onChange={(e) => setEditNote(e.target.value)}
                             placeholder="Explain the connection..."
                             disabled={editSubmitting}
+                            maxLength={1000}
                             className="w-full border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50 bg-surface-0"
                           />
                         </div>

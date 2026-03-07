@@ -127,6 +127,9 @@ func CreateBookLink(app core.App) func(e *core.RequestEvent) error {
 		if !validLinkTypes[data.LinkType] {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "invalid link_type"})
 		}
+		if len(data.Note) > 1000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "note must be 1000 characters or fewer"})
+		}
 
 		toBooks, _ := app.FindRecordsByFilter("books",
 			"open_library_id = {:id}", "", 1, 0,
@@ -260,6 +263,9 @@ func ProposeLinkEdit(app core.App) func(e *core.RequestEvent) error {
 		}
 		if data.ProposedType != "" && !validLinkTypes[data.ProposedType] {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "invalid link_type"})
+		}
+		if len(data.ProposedNote) > 1000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "note must be 1000 characters or fewer"})
 		}
 
 		coll, err := app.FindCollectionByNameOrId("book_link_edits")
