@@ -43,6 +43,40 @@ func SearchSeries(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// GetAuthorSeries handles GET /authors/{authorKey}/series?name=...
+// Finds series containing books whose authors field matches the given name.
+func GetAuthorSeries(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		authorName := strings.TrimSpace(e.Request.URL.Query().Get("name"))
+		if authorName == "" {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		type seriesRow struct {
+			ID          string  `db:"id" json:"id"`
+			Name        string  `db:"name" json:"name"`
+			Description *string `db:"description" json:"description"`
+			BookCount   int     `db:"book_count" json:"book_count"`
+		}
+
+		var rows []seriesRow
+		err := app.DB().NewQuery(`
+			SELECT DISTINCT s.id, s.name, s.description,
+				   (SELECT COUNT(*) FROM book_series bs2 WHERE bs2.series = s.id) as book_count
+			FROM series s
+			JOIN book_series bs ON bs.series = s.id
+			JOIN books b ON bs.book = b.id
+			WHERE b.authors LIKE {:pattern}
+			ORDER BY s.name
+		`).Bind(map[string]any{"pattern": "%" + authorName + "%"}).All(&rows)
+		if err != nil || len(rows) == 0 {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		return e.JSON(http.StatusOK, rows)
+	}
+}
+
 // GetBookSeries handles GET /books/{workId}/series
 func GetBookSeries(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {

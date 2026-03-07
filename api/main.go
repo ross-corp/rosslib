@@ -53,6 +53,7 @@ func main() {
 		// ── Authors (public) ─────────────────────────────────────
 		se.Router.GET("/authors/search", handlers.SearchAuthors(app))
 		se.Router.GET("/authors/{authorKey}", handlers.GetAuthorDetail(app))
+		se.Router.GET("/authors/{authorKey}/series", handlers.GetAuthorSeries(app))
 
 		// ── Users (public / optional auth) ───────────────────────
 		se.Router.GET("/users", handlers.SearchUsers(app)).BindFunc(handlers.OptionalAuthFunc(app))

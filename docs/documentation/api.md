@@ -755,6 +755,21 @@ Fetches author detail from Open Library including a paginated slice of their wor
 
 `bio`, `birth_date`, `death_date`, `photo_url`, `links`, and `cover_url` on works may be null.
 
+### `GET /authors/:authorKey/series?name=<authorName>`
+
+Returns series containing books whose `authors` field matches the given name. The `name` query param is required.
+
+```json
+[
+  {
+    "id": "abc123",
+    "name": "The Lord of the Rings",
+    "description": "Epic fantasy trilogy",
+    "book_count": 3
+  }
+]
+```
+
 ### `POST /authors/:authorKey/follow`  *(auth required)*
 
 Follow an author. Accepts optional `{ "author_name": "..." }` to cache the display name.
