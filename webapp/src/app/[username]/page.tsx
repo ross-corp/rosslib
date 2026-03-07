@@ -599,7 +599,7 @@ export default async function UserPage({
                           {list.computed!.operation}
                         </span>
                         {list.computed!.is_continuous && (
-                          <span className="shrink-0 text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">
+                          <span className="shrink-0 text-xs px-1.5 py-0.5 rounded bg-semantic-success-bg text-semantic-success border border-semantic-success-border">
                             Live
                           </span>
                         )}
@@ -622,12 +622,20 @@ export default async function UserPage({
 
             {/* Reading Stats */}
             <section>
-              <Link
-                href={`/${username}/stats`}
-                className="section-heading mb-3 block hover:text-accent transition-colors"
-              >
-                Reading Stats →
-              </Link>
+              <div className="flex items-center gap-4 mb-3">
+                <Link
+                  href={`/${username}/stats`}
+                  className="section-heading block hover:text-accent transition-colors"
+                >
+                  Reading Stats →
+                </Link>
+                <Link
+                  href={`/${username}/year-in-review`}
+                  className="text-xs text-text-tertiary hover:text-accent transition-colors"
+                >
+                  Year in Review →
+                </Link>
+              </div>
               <ReadingStats
                 booksRead={profile.books_read}
                 reviewsCount={profile.reviews_count}

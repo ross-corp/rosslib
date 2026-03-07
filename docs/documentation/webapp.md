@@ -104,7 +104,8 @@ webapp/src/app/
 │   ├── tags/[...path]/page.tsx     tag browsing page
 │   ├── labels/[keySlug]/[...valuePath]/page.tsx   label browsing page (nested)
 │   ├── reviews/page.tsx           paginated reviews list (?page=N)
-│   └── timeline/page.tsx          reading timeline (books by month/year)
+│   ├── timeline/page.tsx          reading timeline (books by month/year)
+│   └── year-in-review/page.tsx   year-in-review summary (stats, top books, genres)
 └── api/                            Next.js proxy route handlers
     ├── auth/login/route.ts
     ├── auth/register/route.ts
@@ -174,6 +175,8 @@ webapp/src/app/
     ├── me/recommendations/route.ts               ← GET, POST recommendations
     ├── me/recommendations/sent/route.ts          ← GET sent recommendations
     ├── me/recommendations/[recId]/route.ts       ← PATCH update recommendation status
+    ├── me/saved-searches/route.ts                ← GET, POST saved searches
+    ├── me/saved-searches/[id]/route.ts           ← DELETE saved search
     ├── users/route.ts                             ← GET search users
     └── users/[username]/
         ├── followers/route.ts                     ← GET followers list
@@ -183,7 +186,8 @@ webapp/src/app/
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
         ├── books/search/route.ts                   ← GET search within user's library
         ├── shelves/[slug]/route.ts                ← GET (for client-side label switching)
-        └── timeline/route.ts                      ← GET reading timeline
+        ├── timeline/route.ts                      ← GET reading timeline
+        └── year-in-review/route.ts                ← GET year-in-review summary
 ```
 
 ---
@@ -197,6 +201,10 @@ Top navigation bar. Server component that fetches the current user. Links are or
 ### `MobileNav` (`components/mobile-nav.tsx`)
 
 Client component rendered inside `Nav`, visible only below the `md:` breakpoint. Shows a hamburger button (`☰`) that toggles a full-width dropdown panel with all nav links stacked vertically, grouped under "Browse" and "Community" section headings. Includes notification, admin, profile, and sign out links for authenticated users, or sign in/sign up for guests. Closes when a link is clicked or when clicking outside.
+
+### `ThemeToggle` (`components/theme-toggle.tsx`)
+
+Client component in the nav bar that cycles through `system` → `light` → `dark` themes. Stores the preference in `localStorage` (key: `rosslib-theme`) and applies it via `data-theme` attribute on `<html>`. For logged-in users, also persists the choice to the API via `PUT /api/me/theme`. Shows a sun icon in light mode, moon icon in dark mode, with an "auto" badge when set to system.
 
 ### `NavDropdown` (`components/nav-dropdown.tsx`)
 
@@ -227,11 +235,11 @@ Layout: `h-screen flex flex-col overflow-hidden` on the page, then inside Librar
 └──────────┴──────────────────────────────────────────┘
 ```
 
-**Sidebar** — clicking a label fetches its books client-side via `GET /api/users/:username/shelves/:slug`. Clicking a tag collection fetches via `GET /api/users/:username/tags/:path`. Clicking a label value fetches via `GET /api/users/:username/labels/:keySlug/*valuePath` (includes sub-values). Nested label values are indented by depth in the sidebar, showing only the last path segment as the display name.
+**Sidebar** — clicking a label fetches its books client-side via `GET /api/users/:username/shelves/:slug`. Clicking a tag collection fetches via `GET /api/users/:username/tags/:path`. Clicking a label value fetches via `GET /api/users/:username/labels/:keySlug/*valuePath` (includes sub-values). Nested label values are indented by depth in the sidebar, showing only the last path segment as the display name. A "+ New label" button at the bottom opens an inline form to create a custom label with a name and optional description (max 1000 chars).
 
 **Search** — a search input in the top bar lets users search within the current library by title or author. Typing triggers a debounced (400ms) API call to `GET /api/users/:username/books/search?q=`. Results replace the displayed book grid while the search is active. Clearing the search restores the original view. Search state is also cleared when navigating to a different sidebar filter.
 
-**Top bar** — shows the current label name, book count, and sort options when nothing is selected. Sort options: Date added (default), Title, Author, Rating. Changing the sort re-fetches the current view from the API with the `sort` query param. Transforms into the bulk action toolbar when one or more books are checked:
+**Top bar** — shows the current label name, book count, description (if set), and sort options when nothing is selected. Custom labels (non-status, non-default) show an "Edit description" / "Add description" button. Sort options: Date added (default), Title, Author, Rating. Changing the sort re-fetches the current view from the API with the `sort` query param. Transforms into the bulk action toolbar when one or more books are checked:
 - Rate — sets rating on all selected books via `PATCH /api/shelves/:shelfId/books/:olId`
 - Move to label — moves via `POST /api/shelves/:targetId/books`, then refreshes the current label
 - Labels — applies or clears a label value across all selected books via `PUT/DELETE /api/me/books/:olId/tags/:keyId`
@@ -364,6 +372,10 @@ Client component for genre dimension ratings on book detail pages. Shows aggrega
 
 Client component for the `/scan` page. Three input modes: Camera (uses browser `BarcodeDetector` API for real-time EAN-13 scanning on supported devices), Upload (sends image to `POST /api/books/scan` for server-side barcode detection via gozxing), and Enter ISBN (manual input via `GET /api/books/lookup`). Detected books are displayed with cover, metadata, and a StatusPicker for quick library addition. Supports scanning multiple books in a session with a history list.
 
+### `EmptyState` (`components/empty-state.tsx`)
+
+Reusable component for zero-data states across the app. Renders a centered message with an optional call-to-action link. Used on the feed page, notifications page, library pages (owner and visitor), and shelf/label views. Keeps empty state styling consistent: centered `py-16` container, `text-sm` message text, bordered button link.
+
 ### `KeyboardShortcuts` (`components/keyboard-shortcuts.tsx`)
 
 Client component rendered in the root layout. Registers global keyboard shortcuts via the `useKeyboardShortcuts` hook: `/` focuses the search input, `Escape` closes any open modal or blurs the focused element, and `?` toggles a shortcuts help overlay. All shortcuts except `Escape` are suppressed when an input or textarea is focused. Shows a "Press ? for shortcuts" hint in the bottom-right corner for logged-in users.
@@ -411,6 +423,10 @@ Client component on user profile pages. Shows "Block" button that opens an inlin
 ### `ThreadLockToggle` (`components/thread-lock-toggle.tsx`)
 
 Client component shown on the thread detail page for moderators only. Renders a Lock/Unlock toggle button. Calls `POST /api/threads/:threadId/lock` or `POST /api/threads/:threadId/unlock` and updates the button state optimistically.
+
+### `SavedSearches` (`components/saved-searches.tsx`)
+
+Client component rendered on the search page for logged-in users. Shows saved searches as clickable chips above the search bar — clicking a chip populates the query and filters. Each chip has a small "x" button to delete the saved search. When filters or a query are active, shows a "Save this search" link that reveals a name input. Max 20 saved searches per user. Calls `GET /api/me/saved-searches`, `POST /api/me/saved-searches`, and `DELETE /api/me/saved-searches/:id`.
 
 ### `UserActivityList` (`components/user-activity-list.tsx`)
 

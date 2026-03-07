@@ -45,7 +45,7 @@ function CommentBody({ text }: { text: string }) {
             <Link
               key={i}
               href={`/${username}`}
-              className="text-blue-600 hover:underline"
+              className="text-link hover:underline"
             >
               {part}
             </Link>
@@ -132,7 +132,7 @@ function CommentItem({
               <button
                 type="button"
                 onClick={() => onDelete(comment.id)}
-                className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                className="text-xs text-semantic-error hover:text-semantic-error transition-colors"
               >
                 Delete
               </button>
@@ -212,7 +212,7 @@ function CommentItem({
                     <button
                       type="button"
                       onClick={() => onDelete(reply.id)}
-                      className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                      className="text-xs text-semantic-error hover:text-semantic-error transition-colors"
                     >
                       Delete
                     </button>
@@ -347,7 +347,7 @@ export default function ThreadComments({
             >
               {submitting ? "Posting..." : "Comment"}
             </button>
-            {error && <span className="text-xs text-red-500">{error}</span>}
+            {error && <span className="text-xs text-semantic-error">{error}</span>}
           </div>
         </form>
       )}

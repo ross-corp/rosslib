@@ -1095,13 +1095,14 @@ Returns all labels for a user (default + custom + tag collections), plus an aggr
       "slug": "read",
       "exclusive_group": "read_status",
       "collection_type": "shelf",
-      "item_count": 42
+      "item_count": 42,
+      "description": "My finished books"
     }
   ]
 }
 ```
 
-`collection_type` is one of `"shelf"`, `"tag"`, or `"computed"`. See `docs/organization.md` for the distinction.
+`description` is only present when non-empty (max 1000 characters). `collection_type` is one of `"shelf"`, `"tag"`, or `"computed"`. See `docs/organization.md` for the distinction.
 
 Computed lists include an additional `computed` object with metadata about the set operation:
 
@@ -1125,7 +1126,7 @@ Computed lists include an additional `computed` object with metadata about the s
 
 ### `GET /users/:username/shelves/:slug`
 
-Returns a label with its full book list. Computed lists also include the `computed` object.
+Returns a label with its full book list. Computed lists also include the `computed` object. `description` is only present when non-empty.
 
 **Query params:** `sort` — one of `date_added` (default), `title`, `author`, `rating`.
 
@@ -1135,6 +1136,7 @@ Returns a label with its full book list. Computed lists also include the `comput
   "name": "Read",
   "slug": "read",
   "exclusive_group": "read_status",
+  "description": "My finished books",
   "books": [
     {
       "book_id": "...",
@@ -1162,15 +1164,16 @@ Create a custom label or tag collection.
   "is_exclusive": false,
   "exclusive_group": null,
   "is_public": true,
-  "collection_type": "shelf"
+  "collection_type": "shelf",
+  "description": "My all-time favorite books"
 }
 ```
 
-Slug is auto-derived from `name`. Returns 409 on slug conflict.
+`description` is optional (max 1000 characters). Slug is auto-derived from `name`. Returns 409 on slug conflict.
 
 ### `PATCH /me/shelves/:id`  *(auth required)*
 
-Rename or toggle visibility. Accepts `{ name?, is_public? }`.
+Rename, toggle visibility, or update description. Accepts `{ name?, is_public?, description? }`. `description` max 1000 characters; send an empty string to clear.
 
 ### `DELETE /me/shelves/:id`  *(auth required)*
 
@@ -1429,6 +1432,61 @@ Exports the authenticated user's library as a CSV download. Returns `Content-Typ
 
 ---
 
+## Saved Searches
+
+### `GET /me/saved-searches`  *(auth required)*
+
+Returns the user's saved searches, newest first. Max 20 per user.
+
+```json
+[
+  {
+    "id": "...",
+    "name": "Sci-fi favorites",
+    "query": "science fiction",
+    "filters": {
+      "sort": "rating",
+      "subject": "science fiction",
+      "language": "eng"
+    },
+    "created_at": "2026-02-28T14:00:00Z"
+  }
+]
+```
+
+`filters` may be null if no filters were active when the search was saved. Possible filter keys: `sort`, `year_min`, `year_max`, `subject`, `language`, `tab`.
+
+### `POST /me/saved-searches`  *(auth required)*
+
+Save a search query with optional filters. Max 20 per user.
+
+```json
+{
+  "name": "Sci-fi favorites",
+  "query": "science fiction",
+  "filters": { "sort": "rating", "subject": "science fiction" }
+}
+```
+
+```
+201 { "id": "...", "name": "...", "query": "...", "filters": {...}, "created_at": "..." }
+400 { "error": "name and query are required" }
+400 { "error": "name must be 100 characters or fewer" }
+400 { "error": "maximum of 20 saved searches reached" }
+```
+
+### `DELETE /me/saved-searches/:id`  *(auth required)*
+
+Delete a saved search. Only the owner can delete.
+
+```
+200 { "ok": true }
+403 { "error": "Not your saved search" }
+404 { "error": "Saved search not found" }
+```
+
+---
+
 ## Import
 
 ### `POST /me/import/goodreads/preview`  *(auth required)*
@@ -1619,6 +1677,62 @@ Returns detailed reading statistics for a user. Respects privacy settings — re
 - `books_by_month` — finished books in the current year grouped by month
 - `rating_distribution` — count of books per star rating (1-5)
 - `total_pages_read` — sum of `page_count` across all finished books (only books with known page counts)
+
+### `GET /users/:username/year-in-review?year=<YYYY>`  *(optional auth)*
+
+Returns a year-in-review summary for a user. Defaults to the current year. Respects profile privacy settings.
+
+```json
+{
+  "year": 2025,
+  "total_books": 42,
+  "total_pages": 12500,
+  "average_rating": 3.8,
+  "highest_rated": {
+    "open_library_id": "OL82592W",
+    "title": "The Great Gatsby",
+    "cover_url": "https://...",
+    "rating": 5
+  },
+  "longest_book": {
+    "open_library_id": "OL27448W",
+    "title": "The Lord of the Rings",
+    "cover_url": "https://...",
+    "page_count": 1200
+  },
+  "shortest_book": {
+    "open_library_id": "OL12345W",
+    "title": "Animal Farm",
+    "cover_url": "https://...",
+    "page_count": 112
+  },
+  "top_genres": [
+    { "name": "Fiction", "count": 20 },
+    { "name": "Fantasy", "count": 8 }
+  ],
+  "books_by_month": [
+    {
+      "month": 1,
+      "count": 5,
+      "books": [
+        {
+          "open_library_id": "OL82592W",
+          "title": "The Great Gatsby",
+          "cover_url": "https://...",
+          "rating": 4
+        }
+      ]
+    }
+  ],
+  "available_years": [2025, 2024, 2023]
+}
+```
+
+- `highest_rated`, `longest_book`, `shortest_book` are null when no qualifying books exist
+- `average_rating` is null when no books are rated
+- `top_genres` derived from books' `subjects` field; top 5 by count
+- `books_by_month` only includes months with books; each month includes book covers
+- `available_years` lists all years the user has finished books (for year selector)
 
 ### `GET /users/:username/activity`
 
@@ -2174,6 +2288,28 @@ Upsert notification preferences. Only the fields provided in the body are update
 ```
 
 Returns the full updated preferences object (same shape as GET).
+
+---
+
+## Theme
+
+### `GET /me/theme`  *(auth required)*
+
+Returns the user's theme preference. Defaults to `"system"` if not set.
+
+```json
+{ "theme": "system" }
+```
+
+### `PUT /me/theme`  *(auth required)*
+
+Set the user's theme preference. Valid values: `light`, `dark`, `system`.
+
+```json
+{ "theme": "dark" }
+```
+
+Returns the saved theme preference.
 
 ---
 

@@ -2,12 +2,14 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 
+	"github.com/tristansaldanha/rosslib/api/bookstats"
 	"github.com/tristansaldanha/rosslib/api/handlers"
 	_ "github.com/tristansaldanha/rosslib/api/migrations"
 )
@@ -73,6 +75,7 @@ func main() {
 		se.Router.GET("/users/{username}/activity", handlers.GetUserActivity(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/timeline", handlers.GetReadingTimeline(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/goals/{year}", handlers.GetUserGoalYear(app)).BindFunc(handlers.OptionalAuthFunc(app))
+		se.Router.GET("/users/{username}/year-in-review", handlers.GetYearInReview(app)).BindFunc(handlers.OptionalAuthFunc(app))
 
 		// ── Threads (public GET) ─────────────────────────────────
 		se.Router.GET("/threads/{threadId}", handlers.GetThread(app))
@@ -92,6 +95,10 @@ func main() {
 		authed.PATCH("/users/me", handlers.UpdateProfile(app))
 		authed.POST("/me/avatar", handlers.UploadAvatar(app))
 		authed.POST("/me/banner", handlers.UploadBanner(app))
+
+		// Theme
+		authed.GET("/me/theme", handlers.GetTheme(app))
+		authed.PUT("/me/theme", handlers.UpdateTheme(app))
 
 		// Reading goals
 		authed.GET("/me/goals", handlers.GetMyGoals(app))
@@ -216,6 +223,11 @@ func main() {
 		authed.GET("/me/recommendations", handlers.GetRecommendations(app))
 		authed.PATCH("/me/recommendations/{recId}", handlers.UpdateRecommendation(app))
 
+		// Saved searches
+		authed.GET("/me/saved-searches", handlers.GetSavedSearches(app))
+		authed.POST("/me/saved-searches", handlers.CreateSavedSearch(app))
+		authed.DELETE("/me/saved-searches/{id}", handlers.DeleteSavedSearch(app))
+
 		// Feedback
 		authed.POST("/feedback", handlers.CreateFeedback(app))
 		authed.GET("/me/feedback", handlers.GetMyFeedback(app))
@@ -239,6 +251,13 @@ func main() {
 		admin.PUT("/users/{userId}/author", handlers.SetAuthorKey(app))
 		admin.GET("/link-edits", handlers.GetPendingLinkEdits(app))
 		admin.PUT("/link-edits/{editId}", handlers.ReviewLinkEdit(app))
+
+		// Start background pollers after the server is ready.
+		go func() {
+			// Small delay to ensure se.Next() has returned and the server is serving.
+			time.Sleep(2 * time.Second)
+			bookstats.StartPoller(app)
+		}()
 
 		return se.Next()
 	})

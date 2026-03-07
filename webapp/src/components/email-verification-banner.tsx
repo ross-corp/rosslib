@@ -36,7 +36,7 @@ export default function EmailVerificationBanner() {
       </p>
       <div className="mt-2">
         {sent ? (
-          <p className="text-sm text-green-700">
+          <p className="text-sm text-semantic-success">
             Verification email sent. Check your inbox.
           </p>
         ) : (

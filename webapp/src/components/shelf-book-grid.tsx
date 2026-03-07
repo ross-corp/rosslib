@@ -7,6 +7,7 @@ import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import QuickAddButton from "@/components/quick-add-button";
 import ConfirmDialog from "@/components/confirm-dialog";
 import type { StatusValue } from "@/components/shelf-picker";
+import EmptyState from "@/components/empty-state";
 
 type Book = {
   book_id: string;
@@ -51,7 +52,11 @@ export default function ShelfBookGrid({
 
   if (books.length === 0) {
     return (
-      <p className="text-sm text-text-primary">No books on this shelf yet.</p>
+      <EmptyState
+        message="This label is empty. Browse books to add some."
+        actionLabel="Search books"
+        actionHref="/search"
+      />
     );
   }
 

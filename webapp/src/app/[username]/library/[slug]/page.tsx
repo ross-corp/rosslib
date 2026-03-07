@@ -19,6 +19,7 @@ type ShelfDetail = {
   name: string;
   slug: string;
   exclusive_group: string;
+  description?: string;
   computed?: ComputedInfo;
   books: {
     book_id: string;
@@ -207,9 +208,9 @@ export default async function ShelfPage({
     return (
       <div className="h-screen flex flex-col overflow-hidden">
         {shelf?.computed?.is_continuous && (
-          <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 text-sm text-blue-700 flex items-center gap-2">
+          <div className="bg-semantic-info-bg border-b border-semantic-info-border px-4 py-2 text-sm text-semantic-info flex items-center gap-2">
             <span className="font-medium">Live list</span>
-            <span className="text-blue-500">&middot;</span>
+            <span className="text-semantic-info">&middot;</span>
             <span>
               This list auto-updates from a{" "}
               {shelf.computed.operation} operation.
@@ -245,17 +246,23 @@ export default async function ShelfPage({
           <span className="text-text-primary">{displayName}</span>
         </nav>
 
-        <div className="flex items-baseline gap-3 mb-4">
+        <div className="flex items-baseline gap-3 mb-2">
           <h1 className="text-2xl font-bold text-text-primary">{displayName}</h1>
           <span className="text-sm text-text-primary">
             {books.length} {books.length === 1 ? "book" : "books"}
           </span>
           {shelf?.computed?.is_continuous && (
-            <span className="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+            <span className="text-xs px-2 py-0.5 rounded bg-semantic-info-bg text-semantic-info border border-semantic-info-border">
               Live &middot; {shelf.computed.operation}
             </span>
           )}
         </div>
+
+        {shelf?.description && (
+          <p className="text-sm text-text-secondary mb-4">{shelf.description}</p>
+        )}
+
+        {!shelf?.description && <div className="mb-2" />}
 
         {books.length > 1 && (
           <div className="flex items-center gap-2 mb-8">

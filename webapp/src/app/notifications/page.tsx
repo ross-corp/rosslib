@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getUser, getToken } from "@/lib/auth";
 import NotificationList from "./notification-list";
+import EmptyState from "@/components/empty-state";
 
 type Notification = {
   id: string;
@@ -65,10 +66,18 @@ export default async function NotificationsPage({
           </div>
         </div>
 
-        <NotificationList
-          notifications={data.notifications}
-          nextCursor={data.next_cursor}
-        />
+        {data.notifications.length === 0 ? (
+          <EmptyState
+            message="No notifications. You're all caught up!"
+            actionLabel="Go to feed"
+            actionHref="/feed"
+          />
+        ) : (
+          <NotificationList
+            notifications={data.notifications}
+            nextCursor={data.next_cursor}
+          />
+        )}
       </main>
     </div>
   );
