@@ -92,6 +92,9 @@ func CreateShelf(app core.App) func(e *core.RequestEvent) error {
 		if err := e.BindBody(&data); err != nil || data.Name == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name is required"})
 		}
+		if len(data.Name) > 255 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name must be 255 characters or fewer"})
+		}
 
 		slug := slugify(data.Name)
 		isPublic := true

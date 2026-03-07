@@ -74,6 +74,9 @@ func CreateTagKey(app core.App) func(e *core.RequestEvent) error {
 		if err := e.BindBody(&data); err != nil || data.Name == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name is required"})
 		}
+		if len(data.Name) > 100 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name must be 100 characters or fewer"})
+		}
 		if data.Mode == "" {
 			data.Mode = "select_one"
 		}
@@ -154,6 +157,9 @@ func CreateTagValue(app core.App) func(e *core.RequestEvent) error {
 		}{}
 		if err := e.BindBody(&data); err != nil || data.Name == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name is required"})
+		}
+		if len(data.Name) > 100 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name must be 100 characters or fewer"})
 		}
 
 		slug := tagSlugify(data.Name)
