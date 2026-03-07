@@ -3,26 +3,37 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// SearchBooks handles GET /books/search?q=...
+// SearchBooks handles GET /books/search?q=...&page=1
 func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		q := e.Request.URL.Query().Get("q")
 		if q == "" {
-			return e.JSON(http.StatusOK, map[string]any{"total": 0, "results": []any{}})
+			return e.JSON(http.StatusOK, map[string]any{"total": 0, "page": 1, "results": []any{}})
 		}
+
+		const perPage = 20
+		page := 1
+		if p := e.Request.URL.Query().Get("page"); p != "" {
+			if n, err := strconv.Atoi(p); err == nil && n > 0 {
+				page = n
+			}
+		}
+		offset := (page - 1) * perPage
 
 		// Search local books first
 		localBooks, _ := app.FindRecordsByFilter("books",
 			"title LIKE {:q} || authors LIKE {:q}",
-			"-created", 20, 0,
+			"-created", perPage, offset,
 			map[string]any{"q": "%" + q + "%"},
 		)
 
@@ -45,6 +56,29 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 			}
 		}
 
+		// Batch-fetch link counts for all local books
+		linkCountMap := map[string]int{} // bookId -> count
+		if len(localBooks) > 0 {
+			type linkCountRow struct {
+				BookID string `db:"from_book"`
+				Count  int    `db:"count"`
+			}
+			var linkCounts []linkCountRow
+			var bookIDs []any
+			for _, b := range localBooks {
+				bookIDs = append(bookIDs, b.Id)
+			}
+			_ = app.DB().NewQuery(`
+				SELECT from_book, COUNT(*) as count
+				FROM book_links
+				WHERE from_book IN {:ids} AND (deleted_at IS NULL OR deleted_at = '')
+				GROUP BY from_book
+			`).Bind(map[string]any{"ids": bookIDs}).All(&linkCounts)
+			for _, lc := range linkCounts {
+				linkCountMap[lc.BookID] = lc.Count
+			}
+		}
+
 		for _, b := range localBooks {
 			olid := b.GetString("open_library_id")
 			seenOLIDs[olid] = true
@@ -60,6 +94,19 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 				alreadyReadCount = s.GetInt("reads_count")
 			}
 
+			var subjects []string
+			if s := b.GetString("subjects"); s != "" {
+				for _, part := range strings.Split(s, ",") {
+					part = strings.TrimSpace(part)
+					if part != "" {
+						subjects = append(subjects, part)
+						if len(subjects) >= 3 {
+							break
+						}
+					}
+				}
+			}
+
 			results = append(results, map[string]any{
 				"key":                olid,
 				"title":              b.GetString("title"),
@@ -70,12 +117,19 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 				"average_rating":    avgRating,
 				"rating_count":      ratingCount,
 				"already_read_count": alreadyReadCount,
+				"subjects":          subjects,
+				"link_count":        linkCountMap[b.Id],
 			})
 		}
 
 		// Supplement with Open Library
 		ol := newOLClient()
-		olData, err := ol.get(fmt.Sprintf("/search.json?q=%s&limit=20&fields=key,title,author_name,first_publish_year,isbn,cover_i,edition_count", url.QueryEscape(q)))
+		olOffset := offset
+		if len(localBooks) > 0 {
+			// If local results filled this page, push OL offset further to avoid overlap
+			olOffset = offset
+		}
+		olData, err := ol.get(fmt.Sprintf("/search.json?q=%s&limit=%d&offset=%d&fields=key,title,author_name,first_publish_year,isbn,cover_i,edition_count,subject,numFound", url.QueryEscape(q), perPage, olOffset))
 		if err == nil {
 			if docs, ok := olData["docs"].([]any); ok {
 				for _, d := range docs {
@@ -112,6 +166,19 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 						pubYear = &y
 					}
 
+					// Extract subjects from OL search results (take first 3)
+					var olSubjects []string
+					if subjectList, ok := doc["subject"].([]any); ok {
+						for _, s := range subjectList {
+							if str, ok := s.(string); ok && str != "" {
+								olSubjects = append(olSubjects, str)
+								if len(olSubjects) >= 3 {
+									break
+								}
+							}
+						}
+					}
+
 					results = append(results, map[string]any{
 						"key":                key,
 						"title":              doc["title"],
@@ -122,6 +189,8 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 						"average_rating":    nil,
 						"rating_count":      0,
 						"already_read_count": 0,
+						"subjects":          olSubjects,
+						"link_count":        0,
 					})
 				}
 			}
@@ -130,14 +199,22 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 		if results == nil {
 			results = []map[string]any{}
 		}
+		// Cap to perPage results
+		if len(results) > perPage {
+			results = results[:perPage]
+		}
+
+		// Estimate total from OL numFound (which is the most complete source)
 		total := len(results)
-		if total > 20 {
-			results = results[:20]
-			total = 20
+		if olData != nil {
+			if numFound, ok := olData["numFound"].(float64); ok && int(numFound) > total {
+				total = int(numFound)
+			}
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{
 			"total":   total,
+			"page":    page,
 			"results": results,
 		})
 	}
@@ -209,8 +286,22 @@ func LookupBook(app core.App) func(e *core.RequestEvent) error {
 
 		authors := strings.Join(authorNames, ", ")
 
+		// Extract subjects from OL work data (up to 10)
+		var olSubjects []string
+		if subjectList, ok := workData["subjects"].([]any); ok {
+			for _, s := range subjectList {
+				if str, ok := s.(string); ok && str != "" {
+					olSubjects = append(olSubjects, str)
+					if len(olSubjects) >= 10 {
+						break
+					}
+				}
+			}
+		}
+		subjects := strings.Join(olSubjects, ", ")
+
 		// Upsert local book
-		book, err := upsertBook(app, olID, title, coverURL, isbn, authors, 0)
+		book, err := upsertBook(app, olID, title, coverURL, isbn, authors, 0, subjects)
 		if err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to save book"})
 		}
@@ -239,6 +330,159 @@ func ScanBook(app core.App) func(e *core.RequestEvent) error {
 		// Delegate to lookup
 		e.Request.URL.RawQuery = "isbn=" + data.ISBN
 		return LookupBook(app)(e)
+	}
+}
+
+// seriesPositionRegex matches patterns like "Book 3", "#5", "Vol. 2", etc.
+var seriesPositionRegex = regexp.MustCompile(`(?i)(?:book|#|no\.?|vol\.?|volume|part)\s*(\d+)`)
+
+// populateSeriesFromOL checks Open Library edition data for series information
+// and creates series + book_series records if none exist yet. This is best-effort;
+// errors are logged but never surface to the caller.
+func populateSeriesFromOL(app core.App, ol *cachedOLClient, bookRec *core.Record, workID string, subjects []string) {
+	// Skip if book already has series links
+	type countResult struct {
+		Count int `db:"count"`
+	}
+	var existing countResult
+	_ = app.DB().NewQuery(`SELECT COUNT(*) as count FROM book_series WHERE book = {:book}`).
+		Bind(map[string]any{"book": bookRec.Id}).One(&existing)
+	if existing.Count > 0 {
+		return
+	}
+
+	type seriesCandidate struct {
+		Name     string
+		Position *int
+	}
+	var candidates []seriesCandidate
+	seen := map[string]bool{}
+
+	// 1. Check OL editions for series field
+	editionsData, err := ol.get(fmt.Sprintf("/works/%s/editions.json?limit=50", workID))
+	if err == nil {
+		if entries, ok := editionsData["entries"].([]any); ok {
+			for _, entry := range entries {
+				ed, ok := entry.(map[string]any)
+				if !ok {
+					continue
+				}
+				if seriesList, ok := ed["series"].([]any); ok {
+					for _, s := range seriesList {
+						name, ok := s.(string)
+						if !ok || name == "" {
+							continue
+						}
+						name = strings.TrimSpace(name)
+						// Try to extract position number from series string
+						// e.g. "Harry Potter #3" or "Discworld Book 15"
+						var pos *int
+						if matches := seriesPositionRegex.FindStringSubmatch(name); len(matches) > 1 {
+							if n, err := strconv.Atoi(matches[1]); err == nil {
+								pos = &n
+							}
+							// Strip the position part to get the clean series name
+							cleanName := strings.TrimSpace(seriesPositionRegex.ReplaceAllString(name, ""))
+							// Remove trailing punctuation like commas, semicolons
+							cleanName = strings.TrimRight(cleanName, " ,;:-")
+							if cleanName != "" {
+								name = cleanName
+							}
+						}
+						nameKey := strings.ToLower(name)
+						if seen[nameKey] {
+							continue
+						}
+						seen[nameKey] = true
+						candidates = append(candidates, seriesCandidate{Name: name, Position: pos})
+					}
+				}
+			}
+		}
+	}
+
+	// 2. Check subjects for series-like patterns (e.g. "Harry Potter" as a subject
+	// that matches a known series naming pattern). Only use subjects if we found
+	// nothing from editions, since subjects are less reliable.
+	// Skip generic/common subjects that aren't series names.
+	if len(candidates) == 0 && len(subjects) > 0 {
+		seriesKeywords := []string{"series", "trilogy", "saga", "chronicles", "cycle", "quartet", "duology"}
+		for _, subj := range subjects {
+			lower := strings.ToLower(subj)
+			for _, kw := range seriesKeywords {
+				if strings.Contains(lower, kw) {
+					// Clean up: remove the keyword suffix to get the series name
+					name := strings.TrimSpace(subj)
+					nameKey := strings.ToLower(name)
+					if !seen[nameKey] {
+						seen[nameKey] = true
+						candidates = append(candidates, seriesCandidate{Name: name, Position: nil})
+					}
+					break
+				}
+			}
+		}
+	}
+
+	if len(candidates) == 0 {
+		log.Printf("[Series] No series data found for work %s", workID)
+		return
+	}
+
+	log.Printf("[Series] Found %d series candidate(s) for work %s: %v", len(candidates), workID, func() []string {
+		names := make([]string, len(candidates))
+		for i, c := range candidates {
+			if c.Position != nil {
+				names[i] = fmt.Sprintf("%s (#%d)", c.Name, *c.Position)
+			} else {
+				names[i] = c.Name
+			}
+		}
+		return names
+	}())
+
+	// Find-or-create series and book_series links
+	for _, c := range candidates {
+		// Find or create the series record
+		existingSeries, _ := app.FindRecordsByFilter("series",
+			"name = {:name}", "", 1, 0,
+			map[string]any{"name": c.Name},
+		)
+
+		var seriesRec *core.Record
+		if len(existingSeries) > 0 {
+			seriesRec = existingSeries[0]
+		} else {
+			coll, err := app.FindCollectionByNameOrId("series")
+			if err != nil {
+				log.Printf("[Series] Failed to find series collection: %v", err)
+				continue
+			}
+			seriesRec = core.NewRecord(coll)
+			seriesRec.Set("name", c.Name)
+			if err := app.Save(seriesRec); err != nil {
+				log.Printf("[Series] Failed to create series %q: %v", c.Name, err)
+				continue
+			}
+		}
+
+		// Create book_series link
+		bsColl, err := app.FindCollectionByNameOrId("book_series")
+		if err != nil {
+			log.Printf("[Series] Failed to find book_series collection: %v", err)
+			continue
+		}
+		bs := core.NewRecord(bsColl)
+		bs.Set("book", bookRec.Id)
+		bs.Set("series", seriesRec.Id)
+		if c.Position != nil {
+			bs.Set("position", *c.Position)
+		}
+		if err := app.Save(bs); err != nil {
+			log.Printf("[Series] Failed to link book to series %q: %v", c.Name, err)
+			continue
+		}
+		log.Printf("[Series] Linked book %s to series %q (position: %v)", workID, c.Name, c.Position)
 	}
 }
 
@@ -388,6 +632,17 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 			subjects = []string{}
 		}
 
+		// Back-fill subjects on the local book record if empty
+		if len(localBooks) > 0 && len(subjects) > 0 && localBooks[0].GetString("subjects") == "" {
+			localBooks[0].Set("subjects", strings.Join(subjects, ", "))
+			_ = app.Save(localBooks[0])
+		}
+
+		// Auto-populate series data from Open Library if not already present
+		if len(localBooks) > 0 {
+			populateSeriesFromOL(app, ol, localBooks[0], workID, subjects)
+		}
+
 		// Get series memberships
 		type seriesMembership struct {
 			SeriesID string `db:"series_id" json:"series_id"`
@@ -500,18 +755,19 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		type reviewRow struct {
-			UserBookID  string   `db:"user_book_id" json:"user_book_id"`
-			UserID      string   `db:"user_id" json:"user_id"`
-			Username    string   `db:"username" json:"username"`
-			DisplayName *string  `db:"display_name" json:"display_name"`
-			Avatar      *string  `db:"avatar" json:"avatar"`
-			Rating      *float64 `db:"rating" json:"rating"`
-			ReviewText  string   `db:"review_text" json:"review_text"`
-			Spoiler     bool     `db:"spoiler" json:"spoiler"`
-			DateRead    *string  `db:"date_read" json:"date_read"`
-			DateAdded   string   `db:"date_added" json:"date_added"`
-			LikeCount   int      `db:"like_count" json:"like_count"`
-			LikedByMe   int      `db:"liked_by_me" json:"liked_by_me"`
+			UserBookID   string   `db:"user_book_id" json:"user_book_id"`
+			UserID       string   `db:"user_id" json:"user_id"`
+			Username     string   `db:"username" json:"username"`
+			DisplayName  *string  `db:"display_name" json:"display_name"`
+			Avatar       *string  `db:"avatar" json:"avatar"`
+			Rating       *float64 `db:"rating" json:"rating"`
+			ReviewText   string   `db:"review_text" json:"review_text"`
+			Spoiler      bool     `db:"spoiler" json:"spoiler"`
+			DateRead     *string  `db:"date_read" json:"date_read"`
+			DateAdded    string   `db:"date_added" json:"date_added"`
+			LikeCount    int      `db:"like_count" json:"like_count"`
+			LikedByMe    int      `db:"liked_by_me" json:"liked_by_me"`
+			CommentCount int      `db:"comment_count" json:"comment_count"`
 		}
 
 		var reviews []reviewRow
@@ -520,7 +776,8 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 				   ub.rating, ub.review_text, ub.spoiler, ub.date_read,
 				   ub.date_added as date_added,
 				   COALESCE((SELECT COUNT(*) FROM review_likes rl WHERE rl.book = ub.book AND rl.review_user = ub.user), 0) as like_count,
-				   COALESCE((SELECT COUNT(*) FROM review_likes rl WHERE rl.book = ub.book AND rl.review_user = ub.user AND rl.user = {:viewer}), 0) as liked_by_me
+				   COALESCE((SELECT COUNT(*) FROM review_likes rl WHERE rl.book = ub.book AND rl.review_user = ub.user AND rl.user = {:viewer}), 0) as liked_by_me,
+				   COALESCE((SELECT COUNT(*) FROM review_comments rc WHERE rc.book = ub.book AND rc.review_user = ub.user AND (rc.deleted_at IS NULL OR rc.deleted_at = '')), 0) as comment_count
 			FROM user_books ub
 			JOIN users u ON ub.user = u.id
 			WHERE ub.book = {:book} AND ub.review_text != '' AND ub.review_text IS NOT NULL`
@@ -531,12 +788,60 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 			AND ub.user NOT IN (SELECT blocked FROM blocks WHERE blocker = {:viewer})
 			AND ub.user NOT IN (SELECT blocker FROM blocks WHERE blocked = {:viewer})`
 		}
+
+		// Sort: viewer's own review always first, then apply requested sort
+		sortParam := e.Request.URL.Query().Get("sort")
+		var orderSuffix string
+		switch sortParam {
+		case "oldest":
+			orderSuffix = "ub.date_added ASC"
+		case "highest":
+			orderSuffix = "ub.rating DESC NULLS LAST, ub.date_added DESC"
+		case "lowest":
+			orderSuffix = "ub.rating ASC NULLS LAST, ub.date_added DESC"
+		case "most_liked":
+			orderSuffix = "like_count DESC, ub.date_added DESC"
+		default: // "newest" or unrecognized
+			orderSuffix = "ub.date_added DESC"
+		}
 		query += `
-			ORDER BY CASE WHEN ub.user = {:viewer} THEN 0 ELSE 1 END, ub.date_added DESC`
+			ORDER BY CASE WHEN ub.user = {:viewer} THEN 0 ELSE 1 END, ` + orderSuffix
 
 		err := app.DB().NewQuery(query).Bind(params).All(&reviews)
 		if err != nil {
 			return e.JSON(http.StatusOK, []any{})
+		}
+
+		// Batch-check which reviewers the viewer follows
+		followedSet := map[string]bool{}
+		if viewerID != "" {
+			var reviewerIDs []string
+			for _, r := range reviews {
+				if r.UserID != viewerID {
+					reviewerIDs = append(reviewerIDs, r.UserID)
+				}
+			}
+			if len(reviewerIDs) > 0 {
+				type followRow struct {
+					Followee string `db:"followee"`
+				}
+				var followRows []followRow
+				placeholders := ""
+				bindParams := map[string]any{"viewer": viewerID}
+				for i, id := range reviewerIDs {
+					key := fmt.Sprintf("uid%d", i)
+					if i > 0 {
+						placeholders += ", "
+					}
+					placeholders += "{:" + key + "}"
+					bindParams[key] = id
+				}
+				followQuery := fmt.Sprintf(`SELECT followee FROM follows WHERE follower = {:viewer} AND followee IN (%s) AND status = 'active'`, placeholders)
+				_ = app.DB().NewQuery(followQuery).Bind(bindParams).All(&followRows)
+				for _, f := range followRows {
+					followedSet[f.Followee] = true
+				}
+			}
 		}
 
 		// Build response with avatar URLs
@@ -544,36 +849,25 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 		for _, r := range reviews {
 			var avatarURL *string
 			if r.Avatar != nil && *r.Avatar != "" {
-				// We need the user's collection ID for avatar URL
 				url := fmt.Sprintf("/api/files/users/%s/%s", r.UserID, *r.Avatar)
 				avatarURL = &url
 			}
 
-			// Check if viewer follows this reviewer
-			isFollowed := false
-			if viewerID != "" && viewerID != r.UserID {
-				follows, err := app.FindRecordsByFilter("follows",
-					"follower = {:f} && followee = {:t} && status = 'active'",
-					"", 1, 0,
-					map[string]any{"f": viewerID, "t": r.UserID},
-				)
-				isFollowed = err == nil && len(follows) > 0
-			}
-
 			result = append(result, map[string]any{
-				"user_book_id": r.UserBookID,
-				"user_id":      r.UserID,
-				"username":     r.Username,
-				"display_name": r.DisplayName,
-				"avatar_url":   avatarURL,
-				"rating":       r.Rating,
-				"review_text":  r.ReviewText,
-				"spoiler":      r.Spoiler,
-				"date_read":    r.DateRead,
-				"date_added":   r.DateAdded,
-				"is_followed":  isFollowed,
-				"like_count":   r.LikeCount,
-				"liked_by_me":  r.LikedByMe > 0,
+				"user_book_id":  r.UserBookID,
+				"user_id":       r.UserID,
+				"username":      r.Username,
+				"display_name":  r.DisplayName,
+				"avatar_url":    avatarURL,
+				"rating":        r.Rating,
+				"review_text":   r.ReviewText,
+				"spoiler":       r.Spoiler,
+				"date_read":     r.DateRead,
+				"date_added":    r.DateAdded,
+				"is_followed":   followedSet[r.UserID],
+				"like_count":    r.LikeCount,
+				"liked_by_me":   r.LikedByMe > 0,
+				"comment_count": r.CommentCount,
 			})
 		}
 		if result == nil {
@@ -625,6 +919,64 @@ func GetPopularBooks(app core.App) func(e *core.RequestEvent) error {
 				"average_rating":     r.AvgRating,
 				"rating_count":       r.RatCount,
 				"already_read_count": r.Reads,
+			})
+		}
+		if results == nil {
+			results = []map[string]any{}
+		}
+		return e.JSON(http.StatusOK, results)
+	}
+}
+
+// GetTrendingBooks handles GET /books/trending?period=week&limit=10
+func GetTrendingBooks(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		period := e.Request.URL.Query().Get("period")
+		days := 7
+		if period == "month" {
+			days = 30
+		}
+
+		limit := 10
+		if v := e.Request.URL.Query().Get("limit"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 50 {
+				limit = n
+			}
+		}
+
+		type row struct {
+			OLID     string  `db:"open_library_id" json:"key"`
+			Title    string  `db:"title" json:"title"`
+			Authors  string  `db:"authors" json:"-"`
+			CoverURL *string `db:"cover_url" json:"cover_url"`
+			PubYear  *int    `db:"publication_year" json:"publish_year"`
+			Count    int     `db:"activity_count" json:"activity_count"`
+		}
+		var rows []row
+		daysMod := fmt.Sprintf("-%d days", days)
+		err := app.DB().NewQuery(`
+			SELECT b.open_library_id, b.title, b.authors, b.cover_url, b.publication_year,
+				COUNT(ub.id) AS activity_count
+			FROM user_books ub
+			JOIN books b ON ub.book = b.id
+			WHERE ub.created >= datetime('now', {:daysMod})
+			GROUP BY ub.book
+			ORDER BY activity_count DESC
+			LIMIT {:limit}
+		`).Bind(map[string]any{"limit": limit, "daysMod": daysMod}).All(&rows)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		var results []map[string]any
+		for _, r := range rows {
+			results = append(results, map[string]any{
+				"key":            r.OLID,
+				"title":          r.Title,
+				"authors":        splitAuthors(r.Authors),
+				"cover_url":      r.CoverURL,
+				"publish_year":   r.PubYear,
+				"activity_count": r.Count,
 			})
 		}
 		if results == nil {
@@ -841,6 +1193,21 @@ func splitAuthors(s string) []string {
 	return result
 }
 
+// CheckAuthorFollow handles GET /authors/{authorKey}/follow
+func CheckAuthorFollow(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		authorKey := e.Request.PathValue("authorKey")
+
+		existing, _ := app.FindRecordsByFilter("author_follows",
+			"user = {:user} && author_key = {:key}",
+			"", 1, 0,
+			map[string]any{"user": user.Id, "key": authorKey},
+		)
+		return e.JSON(http.StatusOK, map[string]any{"following": len(existing) > 0})
+	}
+}
+
 // FollowAuthor handles POST /authors/{authorKey}/follow
 func FollowAuthor(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
@@ -900,25 +1267,60 @@ func UnfollowAuthor(app core.App) func(e *core.RequestEvent) error {
 func GetFollowedAuthors(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		user := e.Auth
+
+		limit, _ := strconv.Atoi(e.Request.URL.Query().Get("limit"))
+		if limit <= 0 || limit > 50 {
+			limit = 50
+		}
+		offset, _ := strconv.Atoi(e.Request.URL.Query().Get("offset"))
+		if offset < 0 {
+			offset = 0
+		}
+
+		var total int
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) FROM author_follows WHERE "user" = {:user}
+		`).Bind(map[string]any{"user": user.Id}).Row(&total)
+
 		records, err := app.FindRecordsByFilter("author_follows",
-			"user = {:user}", "-created", 100, 0,
+			"user = {:user}", "-created", limit, offset,
 			map[string]any{"user": user.Id},
 		)
 		if err != nil {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{"authors": []any{}, "total": 0})
 		}
 
-		var results []map[string]any
-		for _, r := range records {
-			results = append(results, map[string]any{
+		results := make([]map[string]any, len(records))
+		for i, r := range records {
+			results[i] = map[string]any{
 				"author_key":  r.GetString("author_key"),
 				"author_name": r.GetString("author_name"),
-			})
+			}
 		}
-		if results == nil {
-			results = []map[string]any{}
+		return e.JSON(http.StatusOK, map[string]any{"authors": results, "total": total})
+	}
+}
+
+// CheckBookFollow handles GET /books/{workId}/follow
+func CheckBookFollow(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		workID := e.Request.PathValue("workId")
+
+		books, _ := app.FindRecordsByFilter("books",
+			"open_library_id = {:id}", "", 1, 0,
+			map[string]any{"id": workID},
+		)
+		if len(books) == 0 {
+			return e.JSON(http.StatusOK, map[string]any{"following": false})
 		}
-		return e.JSON(http.StatusOK, results)
+
+		existing, _ := app.FindRecordsByFilter("book_follows",
+			"user = {:user} && book = {:book}",
+			"", 1, 0,
+			map[string]any{"user": user.Id, "book": books[0].Id},
+		)
+		return e.JSON(http.StatusOK, map[string]any{"following": len(existing) > 0})
 	}
 }
 
@@ -956,6 +1358,8 @@ func FollowBook(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": err.Error()})
 		}
 
+		recordActivity(app, user.Id, "followed_book", map[string]any{"book": books[0].Id})
+
 		return e.JSON(http.StatusOK, map[string]any{"message": "Following book"})
 	}
 }
@@ -987,10 +1391,128 @@ func UnfollowBook(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// GetBookReaders handles GET /books/{workId}/readers
+// Returns up to 5 users the viewer follows who have this book in their library.
+func GetBookReaders(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		workID := e.Request.PathValue("workId")
+		viewerID := ""
+		if e.Auth != nil {
+			viewerID = e.Auth.Id
+		}
+		if viewerID == "" {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		// Find the local book
+		books, _ := app.FindRecordsByFilter("books",
+			"open_library_id = {:id}", "", 1, 0,
+			map[string]any{"id": workID},
+		)
+		if len(books) == 0 {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		type readerRow struct {
+			UserID      string  `db:"user_id" json:"user_id"`
+			Username    string  `db:"username" json:"username"`
+			DisplayName *string `db:"display_name" json:"display_name"`
+			Avatar      *string `db:"avatar" json:"avatar"`
+			StatusName  *string `db:"status_name" json:"status_name"`
+		}
+
+		var readers []readerRow
+		err := app.DB().NewQuery(`
+			SELECT u.id as user_id, u.username, u.display_name, u.avatar,
+				(SELECT tv.name FROM book_tag_values btv
+					JOIN tag_values tv ON btv.tag_value = tv.id
+					JOIN tag_keys tk ON tv.tag_key = tk.id
+					WHERE btv.user = u.id AND btv.book = {:book}
+					AND tk.slug = 'status'
+					LIMIT 1) as status_name
+			FROM user_books ub
+			JOIN users u ON ub.user = u.id
+			JOIN follows f ON f.followee = u.id AND f.follower = {:viewer} AND f.status = 'active'
+			WHERE ub.book = {:book}
+				AND u.is_private = false
+			ORDER BY ub.created DESC
+			LIMIT 5
+		`).Bind(map[string]any{
+			"book":   books[0].Id,
+			"viewer": viewerID,
+		}).All(&readers)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		var result []map[string]any
+		for _, r := range readers {
+			var avatarURL *string
+			if r.Avatar != nil && *r.Avatar != "" {
+				url := fmt.Sprintf("/api/files/users/%s/%s", r.UserID, *r.Avatar)
+				avatarURL = &url
+			}
+			result = append(result, map[string]any{
+				"user_id":      r.UserID,
+				"username":     r.Username,
+				"display_name": r.DisplayName,
+				"avatar_url":   avatarURL,
+				"status_name":  r.StatusName,
+			})
+		}
+		if result == nil {
+			result = []map[string]any{}
+		}
+		return e.JSON(http.StatusOK, result)
+	}
+}
+
+// GetBookFollowerCount handles GET /books/{workId}/followers/count
+func GetBookFollowerCount(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		workID := e.Request.PathValue("workId")
+
+		books, _ := app.FindRecordsByFilter("books",
+			"open_library_id = {:id}", "", 1, 0,
+			map[string]any{"id": workID},
+		)
+		if len(books) == 0 {
+			return e.JSON(http.StatusOK, map[string]any{"follower_count": 0})
+		}
+
+		type countResult struct {
+			Count int `db:"count"`
+		}
+		var result countResult
+		err := app.DB().NewQuery(`SELECT COUNT(*) as count FROM book_follows WHERE book = {:book}`).
+			Bind(map[string]any{"book": books[0].Id}).One(&result)
+		if err != nil {
+			return e.JSON(http.StatusOK, map[string]any{"follower_count": 0})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"follower_count": result.Count})
+	}
+}
+
 // GetFollowedBooks handles GET /me/followed-books
 func GetFollowedBooks(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		user := e.Auth
+
+		limit, _ := strconv.Atoi(e.Request.URL.Query().Get("limit"))
+		if limit <= 0 || limit > 50 {
+			limit = 50
+		}
+		offset, _ := strconv.Atoi(e.Request.URL.Query().Get("offset"))
+		if offset < 0 {
+			offset = 0
+		}
+
+		var total int
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) FROM book_follows WHERE "user" = {:user}
+		`).Bind(map[string]any{"user": user.Id}).Row(&total)
+
 		type bookRow struct {
 			OLID     string  `db:"open_library_id" json:"open_library_id"`
 			Title    string  `db:"title" json:"title"`
@@ -1004,9 +1526,10 @@ func GetFollowedBooks(app core.App) func(e *core.RequestEvent) error {
 			JOIN books b ON bf.book = b.id
 			WHERE bf.user = {:user}
 			ORDER BY bf.created DESC
-		`).Bind(map[string]any{"user": user.Id}).All(&books)
+			LIMIT {:limit} OFFSET {:offset}
+		`).Bind(map[string]any{"user": user.Id, "limit": limit, "offset": offset}).All(&books)
 		if err != nil {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{"books": []any{}, "total": 0})
 		}
 		result := make([]map[string]any, len(books))
 		for i, b := range books {
@@ -1017,6 +1540,6 @@ func GetFollowedBooks(app core.App) func(e *core.RequestEvent) error {
 				"cover_url":       b.CoverURL,
 			}
 		}
-		return e.JSON(http.StatusOK, result)
+		return e.JSON(http.StatusOK, map[string]any{"books": result, "total": total})
 	}
 }
