@@ -13,7 +13,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## data integrity
 
-- [ ] Add length validation to series name and description: `PATCH /series/:seriesId` in `api/handlers/series.go` accepts `name` and `description` with no length limits. Add max 255 chars for name and 5000 chars for description, returning 400 with descriptive error messages. Also validate `series_name` length in `POST /books/:workId/series`. On the frontend, add `maxLength` to inputs in `webapp/src/components/series-description.tsx`.
 
 ## API gaps
 
