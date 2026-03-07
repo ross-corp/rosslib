@@ -1,5 +1,6 @@
 import Link from "next/link";
 import BookList from "@/components/book-list";
+import SavedSearches from "@/components/saved-searches";
 import RecentlyViewedBooks from "@/components/recently-viewed-books";
 import Pagination from "@/components/pagination";
 import { type StatusValue } from "@/components/shelf-picker";
@@ -169,6 +170,23 @@ async function fetchPopularBooks(): Promise<BookResult[]> {
   return res.json();
 }
 
+type SavedSearch = {
+  id: string;
+  name: string;
+  query: string;
+  filters: Record<string, string> | null;
+  created_at: string;
+};
+
+async function fetchSavedSearches(token: string): Promise<SavedSearch[]> {
+  const res = await fetch(`${process.env.API_URL}/me/saved-searches`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function buildSearchParams(base: {
@@ -227,13 +245,14 @@ export default async function SearchPage({
 
   const hasQuery = q.trim().length > 0;
 
-  const [bookData, users, authorData, tagKeys, statusMap, popularBooks] = await Promise.all([
+  const [bookData, users, authorData, tagKeys, statusMap, popularBooks, savedSearches] = await Promise.all([
     hasQuery && activeTab === "books" ? searchBooks(q, sort, year_min, year_max, subject, language, page) : Promise.resolve({ total: 0, page: 1, results: [] }),
     hasQuery && activeTab === "people" ? searchUsers(q) : Promise.resolve([]),
     hasQuery && activeTab === "authors" ? searchAuthors(q) : Promise.resolve({ total: 0, results: [] }),
     currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
     currentUser && token ? fetchStatusMap(token) : Promise.resolve(null),
     !hasQuery ? fetchPopularBooks() : Promise.resolve([]),
+    currentUser && token ? fetchSavedSearches(token) : Promise.resolve([]),
   ]);
 
   const statusKey = tagKeys?.find((k) => k.slug === "status") ?? null;
@@ -261,6 +280,15 @@ export default async function SearchPage({
           {subject && <input type="hidden" name="subject" value={subject} />}
           {language && <input type="hidden" name="language" value={language} />}
         </form>
+
+        {/* Saved searches */}
+        {currentUser && (
+          <SavedSearches
+            searches={savedSearches}
+            currentQuery={q}
+            currentFilters={{ sort, year_min, year_max, subject, language, tab: activeTab }}
+          />
+        )}
 
         {/* Tab selector */}
         <div role="tablist" className="flex gap-1 mb-6 border-b border-border">
