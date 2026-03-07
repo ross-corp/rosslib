@@ -56,9 +56,6 @@ for i in $(seq 1 "$N"); do
   SESSION_ID=$(echo "$OUTPUT" | jq -r '.session_id // empty' 2>/dev/null)
   RESULT=$(echo "$OUTPUT" | jq -r '.result // empty' 2>/dev/null)
 
-  # Extract PR URL if present
-  PR_URL=$(echo "$RESULT" | grep -oP 'https://github\.com/\S+/pull/\d+' | head -n 1)
-
   # Get a meaningful summary — skip preamble lines like "Done! Here's a summary..."
   SUMMARY=$(echo "$RESULT" | grep -v -iE '^(done|all done|here|the plan is ready)' | grep -v '^$' | head -n 1 | cut -c 1-200)
   # Fallback: second line if the filter killed everything
@@ -99,7 +96,6 @@ for i in $(seq 1 "$N"); do
       --arg status "ok" \
       --arg session "$SESSION_ID" \
       --arg summary "$SUMMARY" \
-      --arg pr "$PR_URL" \
-      '{timestamp: $ts, status: $status, session_id: $session, summary: $summary, pr_url: (if $pr != "" then $pr else null end)}' >> "$LOG"
+      '{timestamp: $ts, status: $status, session_id: $session, summary: $summary}' >> "$LOG"
   fi
 done

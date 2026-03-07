@@ -66,7 +66,7 @@ function LoginForm() {
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           {error && (
-            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
+            <p role="alert" aria-live="assertive" className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
               {error}
             </p>
           )}
