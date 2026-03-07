@@ -110,11 +110,14 @@ export default function RecommendButton({
           onClick={handleClose}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="recommend-modal-title"
             className="bg-surface-0 border border-border rounded-lg shadow-lg w-full max-w-md flex flex-col mx-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b border-border">
-              <h3 className="text-sm font-semibold text-text-primary">
+              <h3 id="recommend-modal-title" className="text-sm font-semibold text-text-primary">
                 Recommend &ldquo;{bookTitle}&rdquo;
               </h3>
               <button
