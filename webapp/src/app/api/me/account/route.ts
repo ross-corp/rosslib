@@ -15,3 +15,26 @@ export async function GET() {
   const data = await apiRes.json();
   return NextResponse.json(data, { status: apiRes.status });
 }
+
+export async function DELETE() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  if (!token) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const res = await fetch(`${process.env.API_URL}/me/account`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
+    const response = NextResponse.json(data, { status: res.status });
+    response.cookies.set("token", "", { maxAge: 0, path: "/" });
+    return response;
+  }
+
+  return NextResponse.json(data, { status: res.status });
+}
