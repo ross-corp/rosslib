@@ -430,6 +430,10 @@ Client component on the book detail page (shown when status is "currently-readin
 
 Client component on user profile pages. Shows "Block" button that opens an inline confirmation prompt. After blocking, the page reloads to show the restricted view. When already blocked, shows "Unblock" button instead. Calls `POST /api/users/:username/block` and `DELETE /api/users/:username/block`.
 
+### `ThreadLockToggle` (`components/thread-lock-toggle.tsx`)
+
+Client component shown on the thread detail page for moderators only. Renders a Lock/Unlock toggle button. Calls `POST /api/threads/:threadId/lock` or `POST /api/threads/:threadId/unlock` and updates the button state optimistically.
+
 ### `SavedSearches` (`components/saved-searches.tsx`)
 
 Client component rendered on the search page for logged-in users. Shows saved searches as clickable chips above the search bar — clicking a chip populates the query and filters. Each chip has a small "x" button to delete the saved search. When filters or a query are active, shows a "Save this search" link that reveals a name input. Max 20 saved searches per user. Calls `GET /api/me/saved-searches`, `POST /api/me/saved-searches`, and `DELETE /api/me/saved-searches/:id`.

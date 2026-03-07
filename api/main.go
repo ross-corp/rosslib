@@ -161,6 +161,8 @@ func main() {
 		authed.DELETE("/threads/{threadId}", handlers.DeleteThread(app))
 		authed.POST("/threads/{threadId}/comments", handlers.AddComment(app))
 		authed.DELETE("/threads/{threadId}/comments/{commentId}", handlers.DeleteComment(app))
+		authed.POST("/threads/{threadId}/lock", handlers.LockThread(app))
+		authed.POST("/threads/{threadId}/unlock", handlers.UnlockThread(app))
 
 		// Series
 		authed.PATCH("/series/{seriesId}", handlers.UpdateSeries(app))
