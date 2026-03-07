@@ -8,10 +8,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [ ] Implement password reset and email verification backend: the webapp proxy routes exist (`POST /auth/forgot-password`, `POST /auth/reset-password`, `POST /auth/verify-email`, `POST /auth/resend-verification`) but the Go handler functions and backing DB tables (`password_reset_tokens`, `email_verification_tokens`) are entirely missing. The `email_verified` field exists on users. Requires: new migration for token tables, `api/internal/email` package for SMTP, four handler functions in `api/handlers/auth.go`, route registration in `api/main.go`. See `docs/planning/completed.md` "Password Reset" and "Email Verification" sections for full spec. **Large task — not suitable for nephewbot.**
 - [ ] Implement set-operation and cross-user-compare backend: the webapp proxy routes exist (`POST /me/shelves/set-operation`, `POST /me/shelves/set-operation/save`, `POST /me/shelves/cross-user-compare`, `POST /me/shelves/cross-user-compare/save`) but no Go handler functions exist in `api/handlers/collections.go`. Requires: new `computed_collections` table migration, four handler functions, route registration. See `docs/planning/completed.md` "Computed Lists" sections for full spec. **Large task — not suitable for nephewbot.**
 
-## error handling
-
-- [ ] Standardize server-side fetch error handling: some server components return empty arrays on fetch failure (e.g., search page returns `[]`), others return `null` (e.g., profile page), and others call `notFound()` (e.g., book detail). Establish a consistent pattern: return `notFound()` for 404s, throw for 500s (caught by `error.tsx`), and only return empty arrays for list endpoints where "no data" is a valid state. Apply this consistently to `webapp/src/app/[username]/page.tsx`, `webapp/src/app/series/[seriesId]/page.tsx`, and `webapp/src/app/[username]/reviews/page.tsx`.
-
 ## Pending PRs
 
 - [Fix search page popular section to match active tab](https://github.com/ross-corp/rosslib/pull/120) — show popular authors/people instead of always showing books when on Authors/People tabs

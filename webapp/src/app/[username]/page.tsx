@@ -108,7 +108,8 @@ async function fetchProfile(
     cache: "no-store",
     headers,
   });
-  if (!res.ok) return null;
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Failed to load profile");
   return res.json();
 }
 

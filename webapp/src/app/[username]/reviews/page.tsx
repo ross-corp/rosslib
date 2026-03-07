@@ -40,7 +40,7 @@ async function fetchReviews(
     { cache: "no-store" }
   );
   if (res.status === 404) return null;
-  if (!res.ok) return { reviews: [], total: 0, page: 1 };
+  if (!res.ok) throw new Error("Failed to load reviews");
   return res.json();
 }
 
