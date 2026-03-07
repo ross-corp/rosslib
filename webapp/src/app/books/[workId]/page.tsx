@@ -330,6 +330,18 @@ export default async function BookPage({
     ? await fetchSeriesDetail(firstSeries.series_id)
     : null;
 
+  // Compute prev/next books in the series
+  let prevBook: SeriesBook | null = null;
+  let nextBook: SeriesBook | null = null;
+  if (seriesDetail && firstSeries?.position != null) {
+    const sorted = [...seriesDetail.books]
+      .filter((b) => b.position != null)
+      .sort((a, b) => a.position! - b.position!);
+    const idx = sorted.findIndex((b) => b.open_library_id === workId);
+    if (idx > 0) prevBook = sorted[idx - 1];
+    if (idx >= 0 && idx < sorted.length - 1) nextBook = sorted[idx + 1];
+  }
+
   // Extract the Status key and its values for the StatusPicker
   const statusKey = tagKeys?.find((k) => k.slug === "status") ?? null;
   const statusValues: StatusValue[] = statusKey?.values ?? [];
@@ -525,6 +537,63 @@ export default async function BookPage({
                 {seriesDetail.name}
               </Link>
             </h2>
+
+            {/* Prev / Next navigation */}
+            {(prevBook || nextBook) && (
+              <div className="flex items-center justify-between gap-4 mb-4">
+                {prevBook ? (
+                  <Link
+                    href={`/books/${prevBook.open_library_id}`}
+                    className="flex items-center gap-2 group"
+                  >
+                    <span className="text-xs text-text-tertiary group-hover:text-text-primary transition-colors">&larr;</span>
+                    {prevBook.cover_url ? (
+                      <img
+                        src={prevBook.cover_url}
+                        alt={prevBook.title}
+                        className="w-8 h-12 object-cover rounded shadow-sm bg-surface-2"
+                      />
+                    ) : (
+                      <div className="w-8 h-12 bg-surface-2 rounded shadow-sm" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-text-tertiary">Previous in series</p>
+                      <p className="text-xs text-text-secondary group-hover:text-text-primary transition-colors line-clamp-1">
+                        {prevBook.title}
+                      </p>
+                    </div>
+                  </Link>
+                ) : (
+                  <div />
+                )}
+                {nextBook ? (
+                  <Link
+                    href={`/books/${nextBook.open_library_id}`}
+                    className="flex items-center gap-2 group text-right"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-text-tertiary">Next in series</p>
+                      <p className="text-xs text-text-secondary group-hover:text-text-primary transition-colors line-clamp-1">
+                        {nextBook.title}
+                      </p>
+                    </div>
+                    {nextBook.cover_url ? (
+                      <img
+                        src={nextBook.cover_url}
+                        alt={nextBook.title}
+                        className="w-8 h-12 object-cover rounded shadow-sm bg-surface-2"
+                      />
+                    ) : (
+                      <div className="w-8 h-12 bg-surface-2 rounded shadow-sm" />
+                    )}
+                    <span className="text-xs text-text-tertiary group-hover:text-text-primary transition-colors">&rarr;</span>
+                  </Link>
+                ) : (
+                  <div />
+                )}
+              </div>
+            )}
+
             <div className="flex gap-3 overflow-x-auto pb-2">
               {seriesDetail.books.slice(0, 6).map((sb) => {
                 const isCurrent = sb.open_library_id === workId;
