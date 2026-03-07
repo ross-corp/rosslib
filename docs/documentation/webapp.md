@@ -231,11 +231,11 @@ Layout: `h-screen flex flex-col overflow-hidden` on the page, then inside Librar
 └──────────┴──────────────────────────────────────────┘
 ```
 
-**Sidebar** — clicking a label fetches its books client-side via `GET /api/users/:username/shelves/:slug`. Clicking a tag collection fetches via `GET /api/users/:username/tags/:path`. Clicking a label value fetches via `GET /api/users/:username/labels/:keySlug/*valuePath` (includes sub-values). Nested label values are indented by depth in the sidebar, showing only the last path segment as the display name.
+**Sidebar** — clicking a label fetches its books client-side via `GET /api/users/:username/shelves/:slug`. Clicking a tag collection fetches via `GET /api/users/:username/tags/:path`. Clicking a label value fetches via `GET /api/users/:username/labels/:keySlug/*valuePath` (includes sub-values). Nested label values are indented by depth in the sidebar, showing only the last path segment as the display name. A "+ New label" button at the bottom opens an inline form to create a custom label with a name and optional description (max 1000 chars).
 
 **Search** — a search input in the top bar lets users search within the current library by title or author. Typing triggers a debounced (400ms) API call to `GET /api/users/:username/books/search?q=`. Results replace the displayed book grid while the search is active. Clearing the search restores the original view. Search state is also cleared when navigating to a different sidebar filter.
 
-**Top bar** — shows the current label name, book count, and sort options when nothing is selected. Sort options: Date added (default), Title, Author, Rating. Changing the sort re-fetches the current view from the API with the `sort` query param. Transforms into the bulk action toolbar when one or more books are checked:
+**Top bar** — shows the current label name, book count, description (if set), and sort options when nothing is selected. Custom labels (non-status, non-default) show an "Edit description" / "Add description" button. Sort options: Date added (default), Title, Author, Rating. Changing the sort re-fetches the current view from the API with the `sort` query param. Transforms into the bulk action toolbar when one or more books are checked:
 - Rate — sets rating on all selected books via `PATCH /api/shelves/:shelfId/books/:olId`
 - Move to label — moves via `POST /api/shelves/:targetId/books`, then refreshes the current label
 - Labels — applies or clears a label value across all selected books via `PUT/DELETE /api/me/books/:olId/tags/:keyId`

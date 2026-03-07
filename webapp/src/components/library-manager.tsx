@@ -25,6 +25,7 @@ export type ShelfSummary = {
   exclusive_group: string;
   item_count: number;
   collection_type: string;
+  description?: string;
 };
 
 type StatusFilter = { kind: "status"; slug: string; name: string };
@@ -144,6 +145,13 @@ export default function LibraryManager({
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const [showTagsMenu, setShowTagsMenu] = useState(false);
   const [localShelves, setLocalShelves] = useState(allShelves);
+  const [showCreateLabel, setShowCreateLabel] = useState(false);
+  const [newLabelName, setNewLabelName] = useState("");
+  const [newLabelDescription, setNewLabelDescription] = useState("");
+  const [creatingLabel, setCreatingLabel] = useState(false);
+  const [editingShelfId, setEditingShelfId] = useState<string | null>(null);
+  const [editDescription, setEditDescription] = useState("");
+  const [savingDescription, setSavingDescription] = useState(false);
   const [localStatusCounts, setLocalStatusCounts] = useState(statusCounts);
   const [localStatusList, setLocalStatusList] = useState(statusList);
   const [searchQuery, setSearchQuery] = useState("");
@@ -189,6 +197,7 @@ export default function LibraryManager({
     },
     [username]
   );
+
 
   // ── Navigation ───────────────────────────────────────────────────────────────
 
@@ -471,6 +480,57 @@ export default function LibraryManager({
     }
   }
 
+  async function createLabel(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newLabelName.trim()) return;
+    setCreatingLabel(true);
+    const res = await fetch("/api/me/shelves", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: newLabelName.trim(),
+        description: newLabelDescription.trim() || undefined,
+      }),
+    });
+    setCreatingLabel(false);
+    if (res.ok) {
+      const data = await res.json();
+      const newShelf: ShelfSummary = {
+        id: data.id,
+        name: newLabelName.trim(),
+        slug: data.slug,
+        exclusive_group: "",
+        item_count: 0,
+        collection_type: "shelf",
+        description: newLabelDescription.trim() || undefined,
+      };
+      setLocalShelves((prev) => [...prev, newShelf]);
+      setNewLabelName("");
+      setNewLabelDescription("");
+      setShowCreateLabel(false);
+    }
+  }
+
+  async function saveDescription(shelfId: string) {
+    setSavingDescription(true);
+    const res = await fetch(`/api/me/shelves/${shelfId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: editDescription }),
+    });
+    setSavingDescription(false);
+    if (res.ok) {
+      setLocalShelves((prev) =>
+        prev.map((s) =>
+          s.id === shelfId
+            ? { ...s, description: editDescription || undefined }
+            : s
+        )
+      );
+      setEditingShelfId(null);
+    }
+  }
+
   async function massRemoveTag(tagCollection: ShelfSummary) {
     setBulkWorking(true);
     setShowTagsMenu(false);
@@ -561,6 +621,57 @@ export default function LibraryManager({
             ))}
           </SidebarSection>
         )}
+
+        {/* Create label */}
+        <div className="px-3 mt-auto pt-2">
+          {showCreateLabel ? (
+            <form onSubmit={createLabel} className="space-y-2">
+              <input
+                type="text"
+                placeholder="Label name"
+                value={newLabelName}
+                onChange={(e) => setNewLabelName(e.target.value)}
+                className="w-full text-xs border border-border rounded px-2 py-1.5 focus:outline-none focus:border-border-strong"
+                autoFocus
+              />
+              <textarea
+                placeholder="Description (optional)"
+                value={newLabelDescription}
+                onChange={(e) => setNewLabelDescription(e.target.value)}
+                maxLength={1000}
+                rows={2}
+                className="w-full text-xs border border-border rounded px-2 py-1.5 focus:outline-none focus:border-border-strong resize-none"
+              />
+              <div className="flex gap-1.5">
+                <button
+                  type="submit"
+                  disabled={creatingLabel || !newLabelName.trim()}
+                  className="text-xs px-2.5 py-1 rounded bg-accent text-text-inverted hover:bg-accent-hover transition-colors disabled:opacity-50"
+                >
+                  {creatingLabel ? "..." : "Create"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateLabel(false);
+                    setNewLabelName("");
+                    setNewLabelDescription("");
+                  }}
+                  className="text-xs px-2.5 py-1 rounded text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <button
+              onClick={() => setShowCreateLabel(true)}
+              className="w-full text-xs text-text-secondary hover:text-text-primary transition-colors text-left px-1 py-1"
+            >
+              + New label
+            </button>
+          )}
+        </div>
       </aside>
 
       {/* ── Main ────────────────────────────────────────────────────────────── */}
@@ -758,49 +869,102 @@ export default function LibraryManager({
             </div>
           </div>
         ) : (
-          <div className="border-b border-border px-5 py-2.5 flex items-center gap-3 shrink-0">
-            <span className="text-sm font-semibold text-text-primary">
-              {filter.kind === "label"
-                ? `${filter.keyName}: ${filter.valueName}`
-                : filter.kind === "all"
-                  ? "All Books"
-                  : filter.name}
-            </span>
-            <span className="text-xs text-text-primary">
-              {searchResults !== null
-                ? `${searchResults.length} result${searchResults.length === 1 ? "" : "s"}`
-                : `${books.length} ${books.length === 1 ? "book" : "books"}`}
-            </span>
-            {books.length > 1 && (
-              <div className="ml-auto flex items-center gap-1.5">
-                <span className="text-xs text-text-secondary">Sort:</span>
-                {SORT_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => changeSort(option.value)}
-                    className={`text-xs px-2 py-1 rounded transition-colors ${
-                      sort === option.value
-                        ? "bg-surface-2 text-text-primary font-medium"
-                        : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div>
-              <input
-                type="text"
-                placeholder="Search library..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  doSearch(e.target.value);
-                }}
-                className="text-sm px-3 py-1 rounded border border-border bg-surface-0 text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-accent w-48"
-              />
-            </div>
+          <div className="border-b border-border px-5 py-2.5 shrink-0">
+            {(() => {
+              const currentSlug = filter.kind === "status" ? filter.slug : filter.kind === "tag" ? filter.slug : null;
+              const currentShelf = currentSlug ? localShelves.find((s) => s.slug === currentSlug && !s.exclusive_group) : null;
+              const isEditableShelf = currentShelf && currentShelf.exclusive_group !== "read_status";
+              return (
+                <>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-text-primary">
+                      {filter.kind === "label"
+                        ? `${filter.keyName}: ${filter.valueName}`
+                        : filter.kind === "all"
+                          ? "All Books"
+                          : filter.name}
+                    </span>
+                    <span className="text-xs text-text-primary">
+                      {searchResults !== null
+                        ? `${searchResults.length} result${searchResults.length === 1 ? "" : "s"}`
+                        : `${books.length} ${books.length === 1 ? "book" : "books"}`}
+                    </span>
+                    {isEditableShelf && editingShelfId !== currentShelf.id && (
+                      <button
+                        onClick={() => {
+                          setEditingShelfId(currentShelf.id);
+                          setEditDescription(currentShelf.description ?? "");
+                        }}
+                        className="text-xs text-text-secondary hover:text-text-primary transition-colors"
+                      >
+                        {currentShelf.description ? "Edit description" : "Add description"}
+                      </button>
+                    )}
+                    {books.length > 1 && (
+                      <div className="ml-auto flex items-center gap-1.5">
+                        <span className="text-xs text-text-secondary">Sort:</span>
+                        {SORT_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => changeSort(option.value)}
+                            className={`text-xs px-2 py-1 rounded transition-colors ${
+                              sort === option.value
+                                ? "bg-surface-2 text-text-primary font-medium"
+                                : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className={books.length <= 1 ? "ml-auto" : ""}>
+                      <input
+                        type="text"
+                        placeholder="Search library..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          doSearch(e.target.value);
+                        }}
+                        className="text-sm px-3 py-1 rounded border border-border bg-surface-0 text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-accent w-48"
+                      />
+                    </div>
+                  </div>
+                  {isEditableShelf && editingShelfId === currentShelf.id && (
+                    <div className="mt-2 space-y-2">
+                      <textarea
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        maxLength={1000}
+                        rows={2}
+                        placeholder="Add a description..."
+                        className="w-full text-xs border border-border rounded px-2 py-1.5 focus:outline-none focus:border-border-strong resize-none max-w-lg"
+                        autoFocus
+                      />
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => saveDescription(currentShelf.id)}
+                          disabled={savingDescription}
+                          className="text-xs px-2.5 py-1 rounded bg-accent text-text-inverted hover:bg-accent-hover transition-colors disabled:opacity-50"
+                        >
+                          {savingDescription ? "Saving..." : "Save"}
+                        </button>
+                        <button
+                          onClick={() => setEditingShelfId(null)}
+                          className="text-xs px-2.5 py-1 rounded text-text-secondary hover:text-text-primary transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {isEditableShelf && editingShelfId !== currentShelf.id && currentShelf.description && (
+                    <p className="text-xs text-text-secondary mt-1">{currentShelf.description}</p>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 
