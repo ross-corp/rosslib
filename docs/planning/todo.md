@@ -10,9 +10,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## error handling
 
-- [ ] Add `error.tsx` boundary for book detail page: `webapp/src/app/books/[workId]/` has a `not-found.tsx` but no `error.tsx`. Create `webapp/src/app/books/[workId]/error.tsx` as a client component (`"use client"`) that displays a "Something went wrong loading this book" message with a "Try again" button (calls `reset()`) and a link to search. Follow the Next.js error boundary pattern: `export default function Error({ error, reset })`.
-- [ ] Add `error.tsx` boundary for user profile page: `webapp/src/app/[username]/` has a `not-found.tsx` but no `error.tsx`. Create `webapp/src/app/[username]/error.tsx` as a client component that displays "Something went wrong loading this profile" with a "Try again" button and a link to `/users`. This catches runtime errors in the profile page and its nested routes (stats, reviews, timeline, etc.).
-- [ ] Add `error.tsx` boundary for admin page: the admin page at `webapp/src/app/admin/page.tsx` loads multiple data sources (users, feedback, reports, link edits) and any of them could fail. Create `webapp/src/app/admin/error.tsx` with a "Failed to load admin panel" message, "Try again" button, and a reminder to check moderator permissions.
 - [ ] Standardize server-side fetch error handling: some server components return empty arrays on fetch failure (e.g., search page returns `[]`), others return `null` (e.g., profile page), and others call `notFound()` (e.g., book detail). Establish a consistent pattern: return `notFound()` for 404s, throw for 500s (caught by `error.tsx`), and only return empty arrays for list endpoints where "no data" is a valid state. Apply this consistently to `webapp/src/app/[username]/page.tsx`, `webapp/src/app/series/[seriesId]/page.tsx`, and `webapp/src/app/[username]/reviews/page.tsx`.
 
 ## Pending PRs
