@@ -19,6 +19,9 @@ export const metadata: Metadata = {
   description: "Track your reading. Build your library.",
 };
 
+// Inline script to set data-theme before first paint (avoids FOUC)
+const themeScript = `(function(){try{var t=localStorage.getItem('rosslib-theme')||'system';document.documentElement.setAttribute('data-theme',t)}catch(e){}})()`;
+
 export default async function RootLayout({
   children,
 }: {
@@ -31,6 +34,9 @@ export default async function RootLayout({
       className={`${inter.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
         className="font-sans antialiased bg-surface-0 text-text-primary"
         suppressHydrationWarning

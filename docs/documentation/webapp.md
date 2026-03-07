@@ -202,6 +202,10 @@ Top navigation bar. Server component that fetches the current user. Links are or
 
 Client component rendered inside `Nav`, visible only below the `md:` breakpoint. Shows a hamburger button (`☰`) that toggles a full-width dropdown panel with all nav links stacked vertically, grouped under "Browse" and "Community" section headings. Includes notification, admin, profile, and sign out links for authenticated users, or sign in/sign up for guests. Closes when a link is clicked or when clicking outside.
 
+### `ThemeToggle` (`components/theme-toggle.tsx`)
+
+Client component in the nav bar that cycles through `system` → `light` → `dark` themes. Stores the preference in `localStorage` (key: `rosslib-theme`) and applies it via `data-theme` attribute on `<html>`. For logged-in users, also persists the choice to the API via `PUT /api/me/theme`. Shows a sun icon in light mode, moon icon in dark mode, with an "auto" badge when set to system.
+
 ### `NavDropdown` (`components/nav-dropdown.tsx`)
 
 Client component used by `Nav` for dropdown menus. Opens on hover (desktop) or click (mobile). Closes when clicking outside. Takes a `label` string and an array of `{ href, label }` items.

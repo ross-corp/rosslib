@@ -96,6 +96,10 @@ func main() {
 		authed.POST("/me/avatar", handlers.UploadAvatar(app))
 		authed.POST("/me/banner", handlers.UploadBanner(app))
 
+		// Theme
+		authed.GET("/me/theme", handlers.GetTheme(app))
+		authed.PUT("/me/theme", handlers.UpdateTheme(app))
+
 		// Reading goals
 		authed.GET("/me/goals", handlers.GetMyGoals(app))
 		authed.PUT("/me/goals/{year}", handlers.UpsertGoal(app))
