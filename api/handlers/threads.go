@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,34 +24,64 @@ func GetBookThreads(app core.App) func(e *core.RequestEvent) error {
 			map[string]any{"id": workID},
 		)
 		if len(books) == 0 {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{"threads": []any{}, "total": 0})
 		}
 
+		// Parse pagination params
+		page := 1
+		limit := 20
+		if p, err := strconv.Atoi(e.Request.URL.Query().Get("page")); err == nil && p > 0 {
+			page = p
+		}
+		if l, err := strconv.Atoi(e.Request.URL.Query().Get("limit")); err == nil && l > 0 {
+			if l > 100 {
+				l = 100
+			}
+			limit = l
+		}
+		offset := (page - 1) * limit
+
+		// Get total count
+		type countResult struct {
+			Count int `db:"count"`
+		}
+		var cnt countResult
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) as count FROM threads t
+			WHERE t.book = {:book} AND (t.deleted_at IS NULL OR t.deleted_at = '')
+		`).Bind(map[string]any{"book": books[0].Id}).One(&cnt)
+
 		type threadRow struct {
-			ID          string  `db:"id" json:"id"`
-			BookID      string  `db:"book_id" json:"book_id"`
-			UserID      string  `db:"user_id" json:"user_id"`
-			Username    string  `db:"username" json:"username"`
-			DisplayName *string `db:"display_name" json:"display_name"`
-			Avatar      *string `db:"avatar" json:"avatar"`
-			Title       string  `db:"title" json:"title"`
-			Body        string  `db:"body" json:"body"`
-			Spoiler     bool    `db:"spoiler" json:"spoiler"`
-			CreatedAt   string  `db:"created_at" json:"created_at"`
+			ID           string  `db:"id" json:"id"`
+			BookID       string  `db:"book_id" json:"book_id"`
+			UserID       string  `db:"user_id" json:"user_id"`
+			Username     string  `db:"username" json:"username"`
+			DisplayName  *string `db:"display_name" json:"display_name"`
+			Avatar       *string `db:"avatar" json:"avatar"`
+			Title        string  `db:"title" json:"title"`
+			Body         string  `db:"body" json:"body"`
+			Spoiler      bool    `db:"spoiler" json:"spoiler"`
+			CreatedAt    string  `db:"created_at" json:"created_at"`
+			CommentCount int     `db:"comment_count" json:"comment_count"`
+			LockedAt     *string `db:"locked_at" json:"locked_at"`
 		}
 
 		var threads []threadRow
 		err := app.DB().NewQuery(`
 			SELECT t.id, t.book as book_id, t.user as user_id, u.username,
 				   u.display_name, u.avatar,
-				   t.title, t.body, t.spoiler, t.created as created_at
+				   t.title, t.body, t.spoiler, t.created as created_at,
+				   (SELECT COUNT(*) FROM thread_comments tc
+				    WHERE tc.thread = t.id AND (tc.deleted_at IS NULL OR tc.deleted_at = '')) as comment_count,
+				   t.locked_at
 			FROM threads t
 			JOIN users u ON t.user = u.id
 			WHERE t.book = {:book} AND (t.deleted_at IS NULL OR t.deleted_at = '')
 			ORDER BY t.created DESC
-		`).Bind(map[string]any{"book": books[0].Id}).All(&threads)
+			LIMIT {:limit} OFFSET {:offset}
+		`).Bind(map[string]any{"book": books[0].Id, "limit": limit, "offset": offset}).All(&threads)
 		if err != nil {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{"threads": []any{}, "total": 0})
 		}
 
 		var result []map[string]any
@@ -59,15 +91,6 @@ func GetBookThreads(app core.App) func(e *core.RequestEvent) error {
 				url := fmt.Sprintf("/api/files/users/%s/%s", t.UserID, *t.Avatar)
 				avatarURL = &url
 			}
-
-			type countResult struct {
-				Count int `db:"count"`
-			}
-			var cnt countResult
-			_ = app.DB().NewQuery(`
-				SELECT COUNT(*) as count FROM thread_comments
-				WHERE thread = {:thread} AND (deleted_at IS NULL OR deleted_at = '')
-			`).Bind(map[string]any{"thread": t.ID}).One(&cnt)
 
 			result = append(result, map[string]any{
 				"id":            t.ID,
@@ -80,14 +103,15 @@ func GetBookThreads(app core.App) func(e *core.RequestEvent) error {
 				"body":          t.Body,
 				"spoiler":       t.Spoiler,
 				"created_at":    t.CreatedAt,
-				"comment_count": cnt.Count,
+				"comment_count": t.CommentCount,
+				"locked_at":     t.LockedAt,
 			})
 		}
 		if result == nil {
 			result = []map[string]any{}
 		}
 
-		return e.JSON(http.StatusOK, result)
+		return e.JSON(http.StatusOK, map[string]any{"threads": result, "total": cnt.Count})
 	}
 }
 
@@ -221,6 +245,11 @@ func GetThread(app core.App) func(e *core.RequestEvent) error {
 			commentResults = []map[string]any{}
 		}
 
+		var lockedAt *string
+		if la := thread.GetString("locked_at"); la != "" {
+			lockedAt = &la
+		}
+
 		return e.JSON(http.StatusOK, map[string]any{
 			"id":           thread.Id,
 			"book":         thread.GetString("book"),
@@ -232,6 +261,7 @@ func GetThread(app core.App) func(e *core.RequestEvent) error {
 			"body":         thread.GetString("body"),
 			"spoiler":      thread.GetBool("spoiler"),
 			"created_at":   thread.GetString("created"),
+			"locked_at":    lockedAt,
 			"comments":     commentResults,
 		})
 	}
@@ -277,6 +307,10 @@ func AddComment(app core.App) func(e *core.RequestEvent) error {
 		thread, err := app.FindRecordById("threads", threadID)
 		if err != nil || thread.GetString("deleted_at") != "" {
 			return e.JSON(http.StatusNotFound, map[string]any{"error": "Thread not found"})
+		}
+
+		if thread.GetString("locked_at") != "" {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "This thread is locked."})
 		}
 
 		data := struct {
@@ -354,6 +388,281 @@ func DeleteComment(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// LockThread handles POST /threads/{threadId}/lock
+func LockThread(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+		if !user.GetBool("is_moderator") {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Moderator access required"})
+		}
+		threadID := e.Request.PathValue("threadId")
+
+		thread, err := app.FindRecordById("threads", threadID)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Thread not found"})
+		}
+
+		thread.Set("locked_at", time.Now().UTC().Format(time.RFC3339))
+		if err := app.Save(thread); err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to lock thread"})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"locked_at": thread.GetString("locked_at")})
+	}
+}
+
+// UnlockThread handles POST /threads/{threadId}/unlock
+func UnlockThread(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+		if !user.GetBool("is_moderator") {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Moderator access required"})
+		}
+		threadID := e.Request.PathValue("threadId")
+
+		thread, err := app.FindRecordById("threads", threadID)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Thread not found"})
+		}
+
+		thread.Set("locked_at", "")
+		if err := app.Save(thread); err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to unlock thread"})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"locked_at": nil})
+	}
+}
+// trigramSimilarity computes the pg_trgm-style similarity between two strings.
+// It generates trigrams (3-character substrings) from each lowercased string
+// and returns the Jaccard index: |intersection| / |union|.
+func trigramSimilarity(a, b string) float64 {
+	tgA := trigrams(strings.ToLower(a))
+	tgB := trigrams(strings.ToLower(b))
+	if len(tgA) == 0 && len(tgB) == 0 {
+		return 1.0
+	}
+	if len(tgA) == 0 || len(tgB) == 0 {
+		return 0.0
+	}
+	intersect := 0
+	for k := range tgA {
+		if tgB[k] {
+			intersect++
+		}
+	}
+	union := len(tgA) + len(tgB) - intersect
+	if union == 0 {
+		return 0.0
+	}
+	return float64(intersect) / float64(union)
+}
+
+// trigrams returns the set of 3-character substrings of s, padded with leading
+// and trailing spaces as pg_trgm does.
+func trigrams(s string) map[string]bool {
+	padded := "  " + s + " "
+	set := map[string]bool{}
+	runes := []rune(padded)
+	for i := 0; i+3 <= len(runes); i++ {
+		set[string(runes[i:i+3])] = true
+	}
+	return set
+}
+
+// SimilarThreads handles GET /books/{workId}/similar-threads?title=<title>
+// Returns up to 5 threads on the same book whose titles are similar to the
+// given title (trigram similarity > 0.3). Used to suggest existing discussions.
+func SimilarThreads(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		workID := e.Request.PathValue("workId")
+		title := e.Request.URL.Query().Get("title")
+		if title == "" {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		books, _ := app.FindRecordsByFilter("books",
+			"open_library_id = {:id}", "", 1, 0,
+			map[string]any{"id": workID},
+		)
+		if len(books) == 0 {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		type threadRow struct {
+			ID           string  `db:"id" json:"id"`
+			UserID       string  `db:"user_id" json:"user_id"`
+			Username     string  `db:"username" json:"username"`
+			DisplayName  *string `db:"display_name" json:"display_name"`
+			Avatar       *string `db:"avatar" json:"avatar"`
+			Title        string  `db:"title" json:"title"`
+			CreatedAt    string  `db:"created_at" json:"created_at"`
+			CommentCount int     `db:"comment_count" json:"comment_count"`
+		}
+		var threads []threadRow
+		err := app.DB().NewQuery(`
+			SELECT t.id, t.user as user_id, u.username, u.display_name, u.avatar,
+				   t.title, t.created as created_at,
+				   (SELECT COUNT(*) FROM thread_comments tc
+				    WHERE tc.thread = t.id AND (tc.deleted_at IS NULL OR tc.deleted_at = '')) as comment_count
+			FROM threads t
+			JOIN users u ON t.user = u.id
+			WHERE t.book = {:book} AND (t.deleted_at IS NULL OR t.deleted_at = '')
+			ORDER BY t.created DESC
+		`).Bind(map[string]any{"book": books[0].Id}).All(&threads)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		type scoredThread struct {
+			row        threadRow
+			similarity float64
+		}
+		var matches []scoredThread
+		for _, t := range threads {
+			sim := trigramSimilarity(title, t.Title)
+			if sim > 0.3 {
+				matches = append(matches, scoredThread{row: t, similarity: sim})
+			}
+		}
+
+		// Sort by similarity descending
+		for i := 0; i < len(matches); i++ {
+			for j := i + 1; j < len(matches); j++ {
+				if matches[j].similarity > matches[i].similarity {
+					matches[i], matches[j] = matches[j], matches[i]
+				}
+			}
+		}
+		if len(matches) > 5 {
+			matches = matches[:5]
+		}
+
+		var result []map[string]any
+		for _, m := range matches {
+			var avatarURL *string
+			if m.row.Avatar != nil && *m.row.Avatar != "" {
+				url := fmt.Sprintf("/api/files/users/%s/%s", m.row.UserID, *m.row.Avatar)
+				avatarURL = &url
+			}
+
+			result = append(result, map[string]any{
+				"id":            m.row.ID,
+				"title":         m.row.Title,
+				"user_id":       m.row.UserID,
+				"username":      m.row.Username,
+				"display_name":  m.row.DisplayName,
+				"avatar_url":    avatarURL,
+				"comment_count": m.row.CommentCount,
+				"similarity":    math.Round(m.similarity*100) / 100,
+				"created_at":    m.row.CreatedAt,
+			})
+		}
+		if result == nil {
+			result = []map[string]any{}
+		}
+
+		return e.JSON(http.StatusOK, result)
+	}
+}
+
+// GetSimilarThreads handles GET /threads/{threadId}/similar
+// Returns threads on the same book whose titles are similar to the given thread.
+func GetSimilarThreads(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		threadID := e.Request.PathValue("threadId")
+
+		thread, err := app.FindRecordById("threads", threadID)
+		if err != nil || thread.GetString("deleted_at") != "" {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Thread not found"})
+		}
+
+		title := thread.GetString("title")
+		bookID := thread.GetString("book")
+
+		type threadRow struct {
+			ID           string  `db:"id" json:"id"`
+			UserID       string  `db:"user_id" json:"user_id"`
+			Username     string  `db:"username" json:"username"`
+			DisplayName  *string `db:"display_name" json:"display_name"`
+			Avatar       *string `db:"avatar" json:"avatar"`
+			Title        string  `db:"title" json:"title"`
+			CreatedAt    string  `db:"created_at" json:"created_at"`
+			CommentCount int     `db:"comment_count" json:"comment_count"`
+		}
+		var threads []threadRow
+		err = app.DB().NewQuery(`
+			SELECT t.id, t.user as user_id, u.username, u.display_name, u.avatar,
+				   t.title, t.created as created_at,
+				   (SELECT COUNT(*) FROM thread_comments tc
+				    WHERE tc.thread = t.id AND (tc.deleted_at IS NULL OR tc.deleted_at = '')) as comment_count
+			FROM threads t
+			JOIN users u ON t.user = u.id
+			WHERE t.book = {:book} AND t.id != {:threadId}
+				AND (t.deleted_at IS NULL OR t.deleted_at = '')
+			ORDER BY t.created DESC
+		`).Bind(map[string]any{"book": bookID, "threadId": threadID}).All(&threads)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		type scoredThread struct {
+			row        threadRow
+			similarity float64
+		}
+		var matches []scoredThread
+		for _, t := range threads {
+			sim := trigramSimilarity(title, t.Title)
+			if sim > 0.3 {
+				matches = append(matches, scoredThread{row: t, similarity: sim})
+			}
+		}
+
+		for i := 0; i < len(matches); i++ {
+			for j := i + 1; j < len(matches); j++ {
+				if matches[j].similarity > matches[i].similarity {
+					matches[i], matches[j] = matches[j], matches[i]
+				}
+			}
+		}
+		if len(matches) > 5 {
+			matches = matches[:5]
+		}
+
+		var result []map[string]any
+		for _, m := range matches {
+			var avatarURL *string
+			if m.row.Avatar != nil && *m.row.Avatar != "" {
+				url := fmt.Sprintf("/api/files/users/%s/%s", m.row.UserID, *m.row.Avatar)
+				avatarURL = &url
+			}
+
+			result = append(result, map[string]any{
+				"id":            m.row.ID,
+				"title":         m.row.Title,
+				"user_id":       m.row.UserID,
+				"username":      m.row.Username,
+				"display_name":  m.row.DisplayName,
+				"avatar_url":    avatarURL,
+				"comment_count": m.row.CommentCount,
+				"similarity":    math.Round(m.similarity*100) / 100,
+				"created_at":    m.row.CreatedAt,
+			})
+		}
+		if result == nil {
+			result = []map[string]any{}
+		}
+
+		return e.JSON(http.StatusOK, result)
+	}
+}
+
 // fanOutMentionNotifications scans a comment body for @username mentions and
 // creates a thread_mention notification for each valid, distinct, non-self user.
 func fanOutMentionNotifications(app core.App, commenter *core.Record, thread *core.Record, commentID, body string) {
@@ -402,6 +711,10 @@ func fanOutMentionNotifications(app core.App, commenter *core.Record, thread *co
 			continue
 		}
 		mentioned := users[0]
+
+		if !ShouldNotify(app, mentioned.Id, "thread_mention") {
+			continue
+		}
 
 		notifColl, err := app.FindCollectionByNameOrId("notifications")
 		if err != nil {

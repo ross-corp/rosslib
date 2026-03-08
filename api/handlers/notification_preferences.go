@@ -130,6 +130,7 @@ func ShouldNotify(app core.App, userID, notifType string) bool {
 		"review_liked":       "review_liked",
 		"thread_mention":     "thread_mention",
 		"book_recommendation": "book_recommendation",
+		"review_comment":      "review_comment",
 	}
 
 	field, ok := fieldMap[notifType]

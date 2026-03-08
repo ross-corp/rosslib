@@ -58,7 +58,8 @@ export default function BookReviewEditor({
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const hasExisting = initialRating != null || (initialReviewText != null && initialReviewText !== "");
+  const hasDateInfo = !!(initialDateStarted || initialDateRead || initialDateDnf);
+  const hasExisting = initialRating != null || (initialReviewText != null && initialReviewText !== "") || hasDateInfo;
   const hasChanges =
     rating !== initialRating ||
     reviewText !== (initialReviewText ?? "") ||
@@ -280,10 +281,10 @@ export default function BookReviewEditor({
                   <ReviewText text={initialReviewText} />
                 </div>
               )}
-              {initialDateStarted && (
+              {initialDateStarted && showDateStarted && (
                 <p className="text-xs text-text-primary mt-1">
-                  Started {new Date(initialDateStarted).toLocaleDateString("en-US", {
-                    month: "long",
+                  Started: {new Date(initialDateStarted).toLocaleDateString("en-US", {
+                    month: "short",
                     day: "numeric",
                     year: "numeric",
                   })}
@@ -291,8 +292,8 @@ export default function BookReviewEditor({
               )}
               {initialDateRead && (
                 <p className="text-xs text-text-primary mt-1">
-                  Read {new Date(initialDateRead).toLocaleDateString("en-US", {
-                    month: "long",
+                  Read: {new Date(initialDateRead).toLocaleDateString("en-US", {
+                    month: "short",
                     day: "numeric",
                     year: "numeric",
                   })}
@@ -300,8 +301,8 @@ export default function BookReviewEditor({
               )}
               {initialDateDnf && (
                 <p className="text-xs text-text-primary mt-1">
-                  Stopped {new Date(initialDateDnf).toLocaleDateString("en-US", {
-                    month: "long",
+                  Stopped: {new Date(initialDateDnf).toLocaleDateString("en-US", {
+                    month: "short",
                     day: "numeric",
                     year: "numeric",
                   })}
@@ -436,7 +437,7 @@ export default function BookReviewEditor({
                     type="button"
                     onClick={clearReview}
                     disabled={saving}
-                    className="text-xs text-red-400 hover:text-red-600 transition-colors disabled:opacity-50 ml-auto"
+                    className="text-xs text-semantic-error hover:text-semantic-error transition-colors disabled:opacity-50 ml-auto"
                   >
                     Clear review
                   </button>

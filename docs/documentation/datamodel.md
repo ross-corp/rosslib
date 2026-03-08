@@ -18,6 +18,7 @@ Schema is applied idempotently at API startup via `db.Migrate` in `api/internal/
 | display_name | varchar(100) | nullable |
 | bio | text | nullable |
 | avatar_url | text | nullable; S3 key |
+| banner | file | nullable; profile banner image (JPEG/PNG/GIF/WebP, max 10 MB) |
 | is_private | boolean | default false |
 | is_moderator | boolean | default false; grants moderation privileges (e.g. deleting community links); managed via admin UI (`/admin`) |
 | author_key | varchar(50) | nullable; Open Library author ID (e.g. `OL23919A`); links user account to their author page; shows "Author" badge on profile; managed via admin UI |
@@ -82,6 +83,7 @@ A named list owned by a user. Covers default labels, custom labels, and tag coll
 | exclusive_group | varchar(100) | nullable; labels in the same group enforce mutual exclusivity |
 | is_public | boolean | default true |
 | collection_type | varchar(20) | `'shelf'` (default) or `'tag'` |
+| description | text | nullable; max 1000 chars; user-provided description for the label |
 | created_at | timestamptz | |
 
 Unique constraint: `(user_id, slug)`
@@ -210,6 +212,7 @@ Discussion threads on a book's page. Any logged-in user can create a thread.
 | title | varchar(500) | |
 | body | text | |
 | spoiler | boolean | default false |
+| locked_at | timestamptz | nullable; set by moderators to prevent new comments |
 | created_at | timestamptz | |
 | deleted_at | timestamptz | soft delete |
 
@@ -411,6 +414,7 @@ users ──< book_follows >── books  (book subscriptions)
 users ──< notifications      (per-user notifications)
 users ──< notification_preferences  (per-user notification settings)
 users ──< password_reset_tokens  (password reset tokens)
+users ──< api_tokens             (personal access tokens)
 users ──< genre_ratings >── books  (per-user genre dimension scores)
 author_works_snapshot        (OL author key → work count snapshot)
 collections ──< computed_collections  (operation definition for live lists)
@@ -418,6 +422,7 @@ books ──< book_stats               (precomputed aggregate stats)
 users ──< pending_imports          (unmatched import rows)
 users ──< reports                  (content reports, reviewer)
 users ──< review_likes >── books, users  (review likes)
+users ──< review_comments >── books, users  (review comments)
 
 ```
 
@@ -435,6 +440,23 @@ Likes on user reviews. Each row represents a user liking another user's review o
 
 Unique constraint: `(user, book, review_user)` — one like per user per review.
 Index: `(book, review_user)` for efficient like count queries.
+
+### `review_comments`
+
+Comments on user reviews. Any authenticated user can comment on a review. Supports soft delete.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user | uuid FK → users (cascade) | the commenter |
+| book | uuid FK → books (cascade) | the book being reviewed |
+| review_user | uuid FK → users (cascade) | the review author |
+| body | text | required; max 2000 chars |
+| deleted_at | timestamptz | nullable; soft delete |
+| created | timestamptz | PocketBase auto-generated |
+
+Index: `(book, review_user)` for listing comments on a review.
+Index: `user` for user-scoped queries.
 
 ### `genre_ratings`
 
@@ -490,6 +512,21 @@ Tokens for the forgot-password flow. Tokens are stored as SHA-256 hashes (not ra
 | created_at | timestamptz | |
 
 Index: `user_id`
+
+### `api_tokens`
+
+Personal access tokens for external API integrations (CLI tools, Calibre, etc.). Tokens are stored as SHA-256 hashes. Max 5 per user.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | auto-generated |
+| user | relation → users | cascade delete |
+| name | text | user-chosen label (e.g. "CLI", "Calibre"), max 100 chars |
+| token_hash | text | SHA-256 hash of the raw token (unique index) |
+| last_used_at | date | nullable, updated on each use |
+| created | timestamptz | auto-generated |
+
+Indexes: `user`, `token_hash` (unique)
 
 ### `book_stats`
 
@@ -567,6 +604,23 @@ Unmatched rows from Goodreads CSV imports. Saved so users can retry or manually 
 | created | timestamptz | auto |
 
 Index: `(user, status)` for efficient listing of unresolved imports.
+
+### `reading_sessions`
+
+Re-read tracking. Each row represents one reading of a book, with optional dates, rating, and notes. Multiple sessions per book are allowed. The existing `user_books` record keeps the "current" status/rating/review; sessions are historical.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | `gen_random_uuid()` |
+| user | uuid FK → users (cascade) | |
+| book | uuid FK → books (cascade) | |
+| date_started | date | nullable |
+| date_finished | date | nullable |
+| rating | number | nullable; 1–5 |
+| notes | text | nullable; max 2000 chars (app-enforced) |
+| created | timestamptz | PocketBase auto-generated |
+
+Index: `(user, book)` for listing sessions by book.
 
 ---
 

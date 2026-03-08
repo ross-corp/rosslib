@@ -4,7 +4,7 @@ All routes are served by the Go API on `:8080`. The webapp proxies them through 
 
 **Interactive docs:** Visit [`/docs`](http://localhost:8080/docs) for a Swagger UI with the full OpenAPI 3.0 spec. The raw spec is at [`/docs/openapi.yaml`](http://localhost:8080/docs/openapi.yaml).
 
-Auth is via a 30-day JWT in an `httpOnly` cookie named `token`. The Go API reads it via `Authorization: Bearer <token>` header — the Next.js proxy extracts the cookie and forwards it as a header.
+Auth is via a 30-day JWT in an `httpOnly` cookie named `token`. The Go API reads it via `Authorization: Bearer <token>` header — the Next.js proxy extracts the cookie and forwards it as a header. External integrations can also authenticate with personal API tokens (see **API Tokens** section below) using the same `Authorization: Bearer <token>` header.
 
 ---
 
@@ -95,6 +95,23 @@ Set or change the user's password. If the user already has a password, `current_
 401 { "error": "current password is incorrect" }
 ```
 
+### `PUT /me/email`  *(auth required)*
+
+Change the user's email address. Requires the current password for verification. Sets `email_verified` to `false` on the account after the change.
+
+```json
+{ "new_email": "newemail@example.com", "current_password": "current-pass" }
+```
+
+```
+200 { "message": "Email updated" }
+400 { "error": "New email and current password are required" }
+400 { "error": "Invalid email address" }
+400 { "error": "Current password is incorrect" }
+400 { "error": "New email is the same as the current email" }
+409 { "error": "Email is already in use" }
+```
+
 ### `DELETE /me/account/data`  *(auth required)*
 
 Permanently deletes all data owned by the authenticated user: user_books, collection_items, collections, tag_keys, tag_values, book_tag_values, genre_ratings, threads, thread_comments, follows, author_follows, book_follows, notifications, activities, book_links, book_link_votes, and book_link_edits. The user account itself is **not** deleted.
@@ -106,19 +123,73 @@ Permanently deletes all data owned by the authenticated user: user_books, collec
 401 { "error": "Authentication required" }
 ```
 
+### `DELETE /me/account`  *(auth required)*
+
+Permanently deletes all data owned by the authenticated user **and** the user account itself. The webapp proxy clears the auth cookie on success.
+
+**Request body:** none
+
+```
+200 { "message": "Account deleted" }
+401 { "error": "Authentication required" }
+500 { "error": "Failed to delete account" }
+```
+
+---
+
+## API Tokens
+
+Personal access tokens for external integrations (CLI tools, Calibre, etc.). Tokens authenticate via the same `Authorization: Bearer <token>` header as JWTs. Max 5 tokens per user.
+
+### `GET /me/api-tokens`  *(auth required)*
+
+List all API tokens for the authenticated user. Never returns the raw token — only metadata.
+
+```
+200 { "tokens": [{ "id": "abc123", "name": "CLI", "created": "2024-01-15 10:30:00.000Z", "last_used_at": "2024-02-01 08:00:00.000Z" }] }
+```
+
+### `POST /me/api-tokens`  *(auth required)*
+
+Create a new API token. The raw token is returned **once** in the response — it is not stored and cannot be retrieved later.
+
+```json
+{ "name": "CLI" }
+```
+
+```
+200 { "id": "abc123", "name": "CLI", "token": "64-char-hex-string" }
+400 { "error": "Token name is required" }
+400 { "error": "Maximum of 5 API tokens reached. Delete an existing token first." }
+```
+
+### `DELETE /me/api-tokens/:tokenId`  *(auth required)*
+
+Revoke (delete) an API token. Only the token owner can delete it.
+
+```
+200 { "message": "Token deleted" }
+404 { "error": "Token not found" }
+```
+
 ---
 
 ## Books
 
-### `GET /books/search?q=<title>[&sort=reads|rating][&year_min=N][&year_max=N]`
+### `GET /books/search?q=<title>[&page=1][&sort=reads|rating][&year_min=N][&year_max=N]`
 
-Searches both Meilisearch (local catalog) and Open Library concurrently. Local matches appear first, followed by external results deduplicated by work ID. Returns up to 20 results.
+Searches both local catalog and Open Library concurrently. Local matches appear first, followed by external results deduplicated by work ID. Returns up to 20 results per page.
 
-Optional `year_min` and `year_max` filter results by publication year. Meilisearch uses its `publication_year` filterable attribute; Open Library uses the `first_publish_year` range parameter. Books without a year are excluded when a year filter is active.
+**Query parameters:**
+- `q` *(required)* — search query
+- `page` *(optional, default 1)* — page number for pagination. Each page returns up to 20 results.
+- `sort` *(optional)* — sort order: `reads` (most read) or `rating` (highest rated)
+- `year_min` / `year_max` *(optional)* — filter by publication year range
 
 ```json
 {
   "total": 1234,
+  "page": 1,
   "results": [
     {
       "key": "/works/OL82592W",
@@ -127,13 +198,15 @@ Optional `year_min` and `year_max` filter results by publication year. Meilisear
       "publish_year": 1925,
       "isbn": ["9780743273565"],
       "cover_url": "https://covers.openlibrary.org/b/id/8410459-M.jpg",
-      "edition_count": 120
+      "edition_count": 120,
+      "subjects": ["Fiction", "Classic Literature", "American Literature"],
+      "link_count": 3
     }
   ]
 }
 ```
 
-`authors`, `isbn`, and `cover_url` may be null.
+`authors`, `isbn`, `cover_url`, and `subjects` may be null. `link_count` is the number of community links (related books) for local books; 0 for Open Library-only results. For local books, `subjects` is derived from the book's comma-separated subjects column (first 3). For Open Library results, `subjects` comes from the OL search response (first 3).
 
 ### `GET /books/popular`
 
@@ -155,6 +228,29 @@ Returns up to 12 popular books from the local catalog, ordered by reads count. D
 ```
 
 Returns an empty array if no books have stats yet.
+
+### `GET /books/trending?period=week&limit=10`
+
+Returns books with the most new `user_books` activity in a recent time window. Queries `user_books` rows created in the last 7 days (default) or 30 days, grouped by book, ordered by activity count descending. Used on the search landing page as a "Trending This Week" section.
+
+**Query parameters:**
+- `period` — `week` (default, 7 days) or `month` (30 days)
+- `limit` — max books to return (default 10, max 50)
+
+```json
+[
+  {
+    "key": "OL82592W",
+    "title": "The Great Gatsby",
+    "authors": ["F. Scott Fitzgerald"],
+    "cover_url": "https://covers.openlibrary.org/b/id/8410459-M.jpg",
+    "publish_year": 1925,
+    "activity_count": 8
+  }
+]
+```
+
+Returns an empty array if no recent activity.
 
 ### `GET /books/lookup?isbn=<isbn>`
 
@@ -185,6 +281,8 @@ Returns `422` if no barcode is detected (with a `hint` field), `404` if the ISBN
 Returns book details by its bare OL work ID (e.g. `OL82592W`). Fetches enriched data from Open Library with local fallback. 404 if not found.
 
 The `authors` field returns an array of objects with `name` (string) and `key` (string or null). The `key` is the bare OL author ID (e.g. `OL23919A`) when available from Open Library, or `null` for local-only records. Includes a `subjects` array (up to 10 strings) sourced from the Open Library work's `subjects` field, with a fallback to the local book record's comma-separated `subjects` column. Response also includes a `series` array (or null) with the book's series memberships, each containing `series_id`, `name`, and `position`.
+
+**Auto-populated series data:** On first view of a book that has no series links, the endpoint automatically checks the Open Library editions response for `series` fields and the work's subjects for series-like patterns (e.g. containing "trilogy", "saga", etc.). When found, series and book_series records are created automatically. This is best-effort — not all OL works have series data. Series population is logged for visibility into coverage.
 
 ```json
 { "authors": [{ "name": "Author Name", "key": "OL23919A" }] }
@@ -231,11 +329,32 @@ Returns precomputed aggregate stats for a book from the `book_stats` cache table
 
 `average_rating` is null when no users have rated the book. Returns 404 if the book is not in the local catalog.
 
+### `GET /books/:workId/readers`  *(optional auth)*
+
+Returns up to 5 users the viewer follows who have this book in their library. Returns an empty array for unauthenticated users or if no followed users have the book.
+
+```json
+[
+  {
+    "user_id": "abc123",
+    "username": "alice",
+    "display_name": "Alice",
+    "avatar_url": "/api/files/users/abc123/avatar.jpg",
+    "status_name": "Currently Reading"
+  }
+]
+```
+
+`display_name`, `avatar_url`, and `status_name` may be null.
+
 ### `GET /books/:workId/reviews`  *(optional auth)*
 
 Returns all community reviews for a book. Each user appears at most once (most recent review).
 
-When a valid token is provided, reviews from users the caller follows are sorted first (`is_followed: true`), then all reviews are ordered by `date_added` descending.
+**Query params:**
+- `sort` — `newest` (default), `oldest`, `highest` (rating DESC), `lowest` (rating ASC), `most_liked` (like count DESC)
+
+The viewer's own review always appears first regardless of sort order. When authenticated, reviews from blocked/blocking users are excluded.
 
 ```json
 [
@@ -268,6 +387,24 @@ Returns `{ "liked": true }` or `{ "liked": false }`.
 Check if the current user has liked a specific review.
 
 Returns `{ "liked": true }` or `{ "liked": false }`.
+
+### `GET /books/:workId/reviews/:userId/comments`
+
+List comments on a review, ordered chronologically. Returns an array of comment objects with `id`, `user_id`, `username`, `display_name`, `avatar_url`, `body`, `created_at`.
+
+### `POST /books/:workId/reviews/:userId/comments`  *(auth required)*
+
+Add a comment to a review. The review must exist (non-empty `review_text` on the user's `user_books` record).
+
+```json
+{ "body": "Great review, I totally agree!" }
+```
+
+`body` is required, max 2000 characters. Generates a `review_comment` notification for the review author (unless commenting on own review).
+
+### `DELETE /review-comments/:commentId`  *(auth required)*
+
+Soft-delete a review comment. Only the comment author or a moderator can delete.
 
 ---
 
@@ -302,11 +439,14 @@ Update metadata on a book in the user's library. Only provided fields are update
   "date_dnf": null,
   "progress_pages": 150,
   "progress_percent": 45,
+  "device_total_pages": 320,
   "status_slug": "currently-reading",
   "selected_edition_key": "OL123M",
   "selected_edition_cover_url": "https://covers.openlibrary.org/b/id/12345-M.jpg"
 }
 ```
+
+`device_total_pages` overrides the catalog `page_count` for progress percentage calculations. When set, page-based progress uses `device_total_pages` as the denominator instead of `books.page_count`. Send `0` or `null` to clear.
 
 `selected_edition_key` and `selected_edition_cover_url` allow the user to select a specific edition of a book. When set, the edition's cover is displayed instead of the default work cover on profile pages, label views, and the book detail page.
 
@@ -328,12 +468,36 @@ Returns the user's status, rating, review, progress, and edition selection for a
   "spoiler": false,
   "date_read": null,
   "date_dnf": null,
+  "date_started": "2026-02-01T00:00:00Z",
+  "date_added": "2026-01-15T12:00:00Z",
   "progress_pages": 150,
   "progress_percent": 45,
+  "device_total_pages": 320,
   "selected_edition_key": "OL123M",
   "selected_edition_cover_url": "https://covers.openlibrary.org/b/id/12345-M.jpg"
 }
 ```
+
+### `GET /me/books/:olId/editions`  *(auth required)*
+
+Returns the user's currently selected edition alongside the full editions list from Open Library. Combines the `selected_edition_key` and `selected_edition_cover_url` from the user's `user_books` record with the OL editions response.
+
+**Query parameters:**
+- `limit` *(optional, default 20, max 100)* — number of editions to return
+- `offset` *(optional, default 0)* — offset into the editions list
+
+```json
+{
+  "selected_edition_key": "OL123M",
+  "selected_edition_cover_url": "https://covers.openlibrary.org/b/id/12345-M.jpg",
+  "editions": {
+    "entries": [...],
+    "size": 251
+  }
+}
+```
+
+`selected_edition_key` and `selected_edition_cover_url` are null when no edition is selected. The `editions` object is the raw Open Library editions response.
 
 ### `PUT /me/books/:olId/status`  *(auth required)*
 
@@ -351,13 +515,39 @@ Returns a map of all the user's books to their status slugs.
 { "OL82592W": "read", "OL27448W": "currently-reading" }
 ```
 
+### `GET /users/:username/books/search?q=<query>`  *(optional auth)*
+
+Search within a user's library by book title or author. Respects profile privacy (returns 403 for private profiles the viewer doesn't follow). Returns up to 50 results ordered by date added descending.
+
+**Query parameters:**
+- `q` *(required)* — search query, matched via case-insensitive LIKE against title and authors
+- `limit` *(optional, default 50, max 100)* — maximum results
+
+```json
+{
+  "books": [
+    {
+      "book_id": "...",
+      "open_library_id": "OL82592W",
+      "title": "The Great Gatsby",
+      "cover_url": "https://...",
+      "authors": "F. Scott Fitzgerald",
+      "rating": 4,
+      "added_at": "2024-06-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+Returns an empty `books` array if `q` is empty or no matches are found.
+
 ---
 
 ## Genres
 
 ### `GET /genres`
 
-Returns the list of predefined genres with book counts from the local catalog.
+Returns genres derived from the `subjects` field on books in the local catalog, with book counts. Sorted by book count descending.
 
 ```json
 [
@@ -374,9 +564,14 @@ Returns the list of predefined genres with book counts from the local catalog.
 ]
 ```
 
-### `GET /genres/:slug/books?page=1&limit=20`
+### `GET /genres/:slug/books?page=1&limit=20&sort=title|rating|year`
 
-Returns books matching a genre, browsing the local Meilisearch index (or DB fallback) without requiring a search query. Paginated.
+Returns books matching a genre from the local catalog, filtered by the `subjects` field on books. Paginated.
+
+**Query parameters:**
+- `page` *(optional, default 1)* — page number
+- `limit` *(optional, default 20, max 100)* — results per page
+- `sort` *(optional)* — sort order: `title` (A-Z), `rating` (highest first), `year` (newest first). Default: no explicit sort.
 
 ```json
 {
@@ -398,6 +593,56 @@ Returns books matching a genre, browsing the local Meilisearch index (or DB fall
 ```
 
 Returns 404 for unknown genre slugs.
+
+---
+
+## Reading Sessions
+
+Re-read tracking. Each session represents one reading of a book, with optional dates, rating, and notes. The existing `user_books` record keeps the "current" status/rating/review; sessions are historical.
+
+### `GET /me/books/:olId/sessions`  *(auth required)*
+
+Returns all reading sessions for a book, ordered by most recent first.
+
+```json
+[
+  {
+    "id": "abc123",
+    "date_started": "2025-01-15",
+    "date_finished": "2025-02-01",
+    "rating": 4,
+    "notes": "Even better the second time",
+    "created": "2025-02-01T12:00:00Z"
+  }
+]
+```
+
+### `POST /me/books/:olId/sessions`  *(auth required)*
+
+Create a new reading session. The book must be in the user's library. All fields are optional.
+
+```json
+{
+  "date_started": "2025-01-15",
+  "date_finished": "2025-02-01",
+  "rating": 4,
+  "notes": "Re-read for book club"
+}
+```
+
+Returns the created session with its `id`.
+
+### `PATCH /me/sessions/:sessionId`  *(auth required)*
+
+Update a reading session. Only provided fields are changed.
+
+```json
+{ "rating": 5, "notes": "Updated notes" }
+```
+
+### `DELETE /me/sessions/:sessionId`  *(auth required)*
+
+Delete a reading session. Returns 403 if the session belongs to another user.
 
 ---
 
@@ -461,6 +706,16 @@ Set or update genre ratings for a book. Accepts an array of `{genre, rating}` ob
 
 **Valid genres:** Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children.
 
+### `GET /books/:workId/followers/count`
+
+Returns the number of users following a book. Public endpoint — no authentication required.
+
+```json
+{ "follower_count": 12 }
+```
+
+Returns `{ "follower_count": 0 }` if the book is not in the local catalog or has no followers.
+
 ### `POST /books/:workId/follow`  *(auth required)*
 
 Follow a book. You'll be notified when new threads are created on it.
@@ -480,19 +735,26 @@ Unfollow a book.
 200 { "message": "Not following" }
 ```
 
+### `GET /books/:workId/follow`  *(auth required)*
+
+Check if you follow a book. Returns `{ "following": true/false }`. Returns `{ "following": false }` if the book is not in the local catalog.
+
 ### `GET /me/followed-books`  *(auth required)*
 
-List books you follow, newest first.
+List books you follow, newest first. Supports pagination via `limit` (default 50, max 50) and `offset` (default 0) query params.
 
 ```json
-[
-  {
-    "open_library_id": "OL82592W",
-    "title": "The Name of the Wind",
-    "authors": ["Patrick Rothfuss"],
-    "cover_url": "https://covers.openlibrary.org/b/id/1234567-M.jpg"
-  }
-]
+{
+  "books": [
+    {
+      "open_library_id": "OL82592W",
+      "title": "The Name of the Wind",
+      "authors": ["Patrick Rothfuss"],
+      "cover_url": "https://covers.openlibrary.org/b/id/1234567-M.jpg"
+    }
+  ],
+  "total": 73
+}
 ```
 
 `authors` and `cover_url` may be null.
@@ -500,6 +762,28 @@ List books you follow, newest first.
 ---
 
 ## Series
+
+### `GET /series/search?q=<name>`
+
+Search series by name. Returns up to 20 results sorted by book count descending.
+
+**Query parameters:**
+- `q` *(required)* — search query, matched via case-insensitive LIKE against series name
+
+```json
+{
+  "results": [
+    {
+      "id": "abc123",
+      "name": "The Lord of the Rings",
+      "description": "A fantasy trilogy by J.R.R. Tolkien.",
+      "book_count": 3
+    }
+  ]
+}
+```
+
+Returns `{ "results": [] }` if `q` is empty or no matches are found.
 
 ### `GET /books/:workId/series`
 
@@ -532,6 +816,26 @@ Returns series details with an ordered list of books. If authenticated, each boo
     }
   ]
 }
+```
+
+### `PATCH /series/:seriesId`  *(auth required)*
+
+Update a series name and/or description. Only provided fields are updated.
+
+```json
+{ "name": "The Lord of the Rings", "description": "A fantasy trilogy by J.R.R. Tolkien." }
+```
+
+Validation: `name` cannot be empty if provided. Returns `200` with the updated series `{ id, name, description }`.
+
+### `DELETE /series/:seriesId`  *(auth required)*
+
+Delete an empty series. The series must have zero `book_series` links (no books). Returns 400 if the series still has books.
+
+```
+200 { "ok": true }
+400 { "error": "Cannot delete series that still has books" }
+404 { "error": "Series not found" }
 ```
 
 ### `POST /books/:workId/series`  *(auth required)*
@@ -602,6 +906,21 @@ Fetches author detail from Open Library including a paginated slice of their wor
 
 `bio`, `birth_date`, `death_date`, `photo_url`, `links`, and `cover_url` on works may be null.
 
+### `GET /authors/:authorKey/series?name=<authorName>`
+
+Returns series containing books whose `authors` field matches the given name. The `name` query param is required.
+
+```json
+[
+  {
+    "id": "abc123",
+    "name": "The Lord of the Rings",
+    "description": "Epic fantasy trilogy",
+    "book_count": 3
+  }
+]
+```
+
 ### `POST /authors/:authorKey/follow`  *(auth required)*
 
 Follow an author. Accepts optional `{ "author_name": "..." }` to cache the display name.
@@ -616,17 +935,17 @@ Check if you follow an author. Returns `{ "following": true/false }`.
 
 ### `GET /me/followed-authors`  *(auth required)*
 
-List authors you follow.
+List authors you follow. Supports pagination via `limit` (default 50, max 50) and `offset` (default 0) query params.
 
 ```json
 {
   "authors": [
     {
       "author_key": "OL26320A",
-      "author_name": "J.R.R. Tolkien",
-      "created_at": "2026-02-25T14:00:00Z"
+      "author_name": "J.R.R. Tolkien"
     }
-  ]
+  ],
+  "total": 1
 }
 ```
 
@@ -643,6 +962,27 @@ Search/browse users by username or display name. 20 per page.
 - `page` *(optional, default 1)* — pagination
 - `sort` *(optional, default `newest`)* — sort order: `newest` (registration date), `books` (most books in library), `followers` (most followers)
 
+### `GET /me/suggested-follows?limit=5`  *(auth required)*
+
+Returns users with the most books in common with the current user, excluding already-followed and blocked users. Useful for follow suggestions on the feed page.
+
+**Query parameters:**
+- `limit` *(optional, default 5, max 20)* — number of suggestions to return
+
+```json
+[
+  {
+    "user_id": "...",
+    "username": "bob",
+    "display_name": "Bob",
+    "avatar_url": "/api/files/...",
+    "books_in_common": 12
+  }
+]
+```
+
+Returns an empty array if no suggestions are available.
+
 ### `GET /users/:username`  *(optional auth)*
 
 Returns a user profile. With a valid token, also returns `is_following` for the requesting user.
@@ -654,6 +994,7 @@ Returns a user profile. With a valid token, also returns `is_following` for the 
   "display_name": "Alice",
   "bio": "...",
   "avatar_url": null,
+  "banner_url": null,
   "is_private": false,
   "member_since": "2024-01-01T00:00:00Z",
   "is_following": false,
@@ -661,7 +1002,14 @@ Returns a user profile. With a valid token, also returns `is_following` for the 
   "following_count": 5,
   "friends_count": 3,
   "books_read": 42,
-  "author_key": null
+  "currently_reading_count": 2,
+  "total_books": 67,
+  "total_pages_read": 14320,
+  "author_key": null,
+  "top_genres": [
+    { "name": "fiction", "count": 15 },
+    { "name": "mystery", "count": 8 }
+  ]
 }
 ```
 
@@ -684,6 +1032,18 @@ Content-type is detected from the file's magic bytes — the `Content-Type` head
 ```
 
 The returned URL is stored in `users.avatar_url` and returned on subsequent `GET /users/:username` calls. In production, point `MINIO_PUBLIC_URL` to the S3 bucket or CDN origin — the URL format is `{MINIO_PUBLIC_URL}/{MINIO_BUCKET}/avatars/{userId}.{ext}`.
+
+### `POST /me/banner`  *(auth required)*
+
+Upload or replace the authenticated user's profile banner image. Accepts a `multipart/form-data` body with a `banner` field containing the image file (JPEG, PNG, GIF, or WebP; max 10 MB). Recommended dimensions: 1200x300.
+
+```
+200 { "banner_url": "/api/files/<collectionId>/<userId>/<filename>" }
+400 { "error": "No banner file provided" }
+400 { "error": "Failed to process uploaded file" }
+```
+
+The returned URL is included in subsequent `GET /users/:username` responses as `banner_url`.
 
 ### `GET /users/:username/followers`  *(optional auth)*
 
@@ -723,29 +1083,36 @@ Returns a paginated list of users this user follows. Respects privacy — return
 ]
 ```
 
-### `GET /users/:username/reviews`
+### `GET /users/:username/reviews?page=1&limit=20&sort=newest`
 
-Returns all reviews (collection items with non-empty `review_text`) for a user, ordered by date added descending.
+Returns paginated reviews (user_books with non-empty `review_text`) for a user.
+
+**Query parameters:**
+- `page` *(optional, default 1)* — page number
+- `limit` *(optional, default 20, max 100)* — results per page
+- `sort` *(optional, default `newest`)* — sort order: `newest` (date added descending), `oldest` (date added ascending), `highest_rating` (highest rated first), `lowest_rating` (lowest rated first)
 
 ```json
-[
-  {
-    "book_id": "...",
-    "open_library_id": "OL82592W",
-    "title": "The Great Gatsby",
-    "cover_url": "https://...",
-    "authors": "F. Scott Fitzgerald",
-    "rating": 4,
-    "review_text": "A timeless classic.",
-    "spoiler": false,
-    "date_read": "2024-06-01T00:00:00Z",
-    "date_dnf": null,
-    "date_added": "2024-06-02T00:00:00Z"
-  }
-]
+{
+  "reviews": [
+    {
+      "open_library_id": "OL82592W",
+      "title": "The Great Gatsby",
+      "cover_url": "https://...",
+      "rating": 4,
+      "review_text": "A timeless classic.",
+      "spoiler": false,
+      "date_read": "2024-06-01T00:00:00Z",
+      "date_added": "2024-06-02T00:00:00Z",
+      "like_count": 3
+    }
+  ],
+  "total": 42,
+  "page": 1
+}
 ```
 
-`authors`, `cover_url`, `rating`, `date_read`, and `date_dnf` may be null.
+`cover_url`, `rating`, and `date_read` may be null.
 
 ### `GET /users/:username/timeline?year=<YYYY>`  *(optional auth)*
 
@@ -781,6 +1148,22 @@ Follow a user. Status is `active` immediately (private account approval not yet 
 ### `DELETE /users/:username/follow`  *(auth required)*
 
 Unfollow a user.
+
+### `GET /me/blocks`  *(auth required)*
+
+List all users the current user has blocked, ordered by most recently blocked first.
+
+```json
+[
+  {
+    "id": "user_id",
+    "username": "blockeduser",
+    "display_name": "Blocked User",
+    "avatar_url": "/api/files/...",
+    "blocked_at": "2026-01-15T14:00:00.000Z"
+  }
+]
+```
 
 ### `POST /users/:username/block`  *(auth required)*
 
@@ -853,22 +1236,26 @@ A "label" is a `collection` row. Default labels (`read_status` exclusive group) 
 
 ### `GET /users/:username/shelves`
 
-Returns all labels for a user (default + custom + tag collections).
+Returns all labels for a user (default + custom + tag collections), plus an aggregate `total_books` count (distinct books across all of the user's `user_books`).
 
 ```json
-[
-  {
-    "id": "...",
-    "name": "Read",
-    "slug": "read",
-    "exclusive_group": "read_status",
-    "collection_type": "shelf",
-    "item_count": 42
-  }
-]
+{
+  "total_books": 137,
+  "shelves": [
+    {
+      "id": "...",
+      "name": "Read",
+      "slug": "read",
+      "exclusive_group": "read_status",
+      "collection_type": "shelf",
+      "item_count": 42,
+      "description": "My finished books"
+    }
+  ]
+}
 ```
 
-`collection_type` is one of `"shelf"`, `"tag"`, or `"computed"`. See `docs/organization.md` for the distinction.
+`description` is only present when non-empty (max 1000 characters). `collection_type` is one of `"shelf"`, `"tag"`, or `"computed"`. See `docs/organization.md` for the distinction.
 
 Computed lists include an additional `computed` object with metadata about the set operation:
 
@@ -892,7 +1279,9 @@ Computed lists include an additional `computed` object with metadata about the s
 
 ### `GET /users/:username/shelves/:slug`
 
-Returns a label with its full book list. Computed lists also include the `computed` object.
+Returns a label with its full book list. Computed lists also include the `computed` object. `description` is only present when non-empty.
+
+**Query params:** `sort` — one of `date_added` (default), `title`, `author`, `rating`.
 
 ```json
 {
@@ -900,6 +1289,7 @@ Returns a label with its full book list. Computed lists also include the `comput
   "name": "Read",
   "slug": "read",
   "exclusive_group": "read_status",
+  "description": "My finished books",
   "books": [
     {
       "book_id": "...",
@@ -927,15 +1317,16 @@ Create a custom label or tag collection.
   "is_exclusive": false,
   "exclusive_group": null,
   "is_public": true,
-  "collection_type": "shelf"
+  "collection_type": "shelf",
+  "description": "My all-time favorite books"
 }
 ```
 
-Slug is auto-derived from `name`. Returns 409 on slug conflict.
+`description` is optional (max 1000 characters). Slug is auto-derived from `name`. Returns 409 on slug conflict.
 
 ### `PATCH /me/shelves/:id`  *(auth required)*
 
-Rename or toggle visibility. Accepts `{ name?, is_public? }`.
+Rename, toggle visibility, or update description. Accepts `{ name?, is_public?, description? }`. `description` max 1000 characters; send an empty string to clear.
 
 ### `DELETE /me/shelves/:id`  *(auth required)*
 
@@ -1039,6 +1430,8 @@ Tags are `collection` rows with `collection_type = 'tag'`. Slugs can contain `/`
 ### `GET /users/:username/tags/*path`
 
 Returns books tagged with the given path or any sub-path.
+
+**Query params:** `sort` — one of `date_added` (default), `title`, `author`, `rating`.
 
 ```
 GET /users/alice/tags/scifi           → books tagged "scifi" or "scifi/*"
@@ -1148,6 +1541,8 @@ Remove a single value assignment (for `select_multiple` keys).
 
 Returns all books for a user that have the given key+value label. Nested: querying `history` also returns books tagged `history/engineering`, `history/science/ancient`, etc.
 
+**Query params:** `sort` — one of `date_added` (default), `title`, `author`, `rating`.
+
 ```
 GET /users/alice/labels/genre/history             → books tagged genre:history or genre:history/*
 GET /users/alice/labels/genre/history/engineering → books tagged genre:history/engineering or deeper
@@ -1190,13 +1585,70 @@ Exports the authenticated user's library as a CSV download. Returns `Content-Typ
 
 ---
 
+## Saved Searches
+
+### `GET /me/saved-searches`  *(auth required)*
+
+Returns the user's saved searches, newest first. Max 20 per user.
+
+```json
+[
+  {
+    "id": "...",
+    "name": "Sci-fi favorites",
+    "query": "science fiction",
+    "filters": {
+      "sort": "rating",
+      "subject": "science fiction",
+      "language": "eng"
+    },
+    "created_at": "2026-02-28T14:00:00Z"
+  }
+]
+```
+
+`filters` may be null if no filters were active when the search was saved. Possible filter keys: `sort`, `year_min`, `year_max`, `subject`, `language`, `tab`.
+
+### `POST /me/saved-searches`  *(auth required)*
+
+Save a search query with optional filters. Max 20 per user.
+
+```json
+{
+  "name": "Sci-fi favorites",
+  "query": "science fiction",
+  "filters": { "sort": "rating", "subject": "science fiction" }
+}
+```
+
+```
+201 { "id": "...", "name": "...", "query": "...", "filters": {...}, "created_at": "..." }
+400 { "error": "name and query are required" }
+400 { "error": "name must be 100 characters or fewer" }
+400 { "error": "maximum of 20 saved searches reached" }
+```
+
+### `DELETE /me/saved-searches/:id`  *(auth required)*
+
+Delete a saved search. Only the owner can delete.
+
+```
+200 { "ok": true }
+403 { "error": "Not your saved search" }
+404 { "error": "Saved search not found" }
+```
+
+---
+
 ## Import
 
 ### `POST /me/import/goodreads/preview`  *(auth required)*
 
 Accepts a multipart form with a `file` field containing a Goodreads CSV export. Returns a preview without writing to the database.
 
-Response groups rows into `matched`, `ambiguous`, and `unmatched`. The lookup chain tries: local DB by ISBN, OL direct ISBN endpoint, OL search by ISBN, OL search by cleaned title+author, OL search by title only, OL comma-subtitle retry, and finally Google Books as a fallback. The Google Books fallback searches by ISBN then by title+author, and maps results back to Open Library by re-searching OL with the title/author from Google. Set the optional `GOOGLE_BOOKS_API_KEY` env var for higher rate limits (free tier: 1,000 req/day); the fallback works without a key.
+Response groups rows into `matched`, `ambiguous`, and `unmatched`. The lookup chain tries: local DB by ISBN, OL direct ISBN endpoint, OL search by ISBN, OL search by cleaned title+author, OL search by title only, OL comma-subtitle retry, Google Books as a fallback, and finally LLM-powered fuzzy matching. The Google Books fallback searches by ISBN then by title+author, and maps results back to Open Library by re-searching OL with the title/author from Google. Set the optional `GOOGLE_BOOKS_API_KEY` env var for higher rate limits (free tier: 1,000 req/day); the fallback works without a key.
+
+**LLM fuzzy matching:** When all standard lookups fail, the API calls the Anthropic API (Claude Haiku) to generate alternate title/author search permutations (correcting misspellings, removing series info, trying alternate titles, reversing author names, etc.) and retries Open Library searches with each permutation. If candidates are found, the row is marked `ambiguous` with up to 5 candidates for the user to choose from. Set the optional `ANTHROPIC_API_KEY` env var to enable this feature; without it, unmatched rows go directly to the `unmatched` state.
 
 ### `POST /me/import/goodreads/commit`  *(auth required)*
 
@@ -1214,11 +1666,21 @@ The request body includes an optional `unmatched_rows` array alongside `rows` an
 
 Accepts a multipart form with a `file` field containing a StoryGraph CSV export. Returns a preview without writing to the database.
 
-StoryGraph CSV columns: `Title`, `Authors`, `ISBN/UID`, `Format`, `Read Status`, `Star Rating`, `Review`, `Tags`, `Read Dates`. The lookup chain is the same as Goodreads import. Status mapping: `to-read` → `want-to-read`, `currently-reading` → `currently-reading`, `read` → `finished`, `did-not-finish` → `dnf`. Tags are imported as custom labels. Read Dates may be a range (`2024/01/15-2024/02/20`); the end date is used as `date_read`.
+StoryGraph CSV columns: `Title`, `Authors`, `ISBN/UID`, `Format`, `Read Status`, `Star Rating`, `Review`, `Tags`, `Read Dates`. The lookup chain is the same as Goodreads import (including LLM fuzzy matching as a final fallback). Status mapping: `to-read` → `want-to-read`, `currently-reading` → `currently-reading`, `read` → `finished`, `did-not-finish` → `dnf`. Tags are imported as custom labels. Read Dates may be a range (`2024/01/15-2024/02/20`); the end date is used as `date_read`.
 
 ### `POST /me/import/storygraph/commit`  *(auth required)*
 
 Accepts the confirmed preview payload and writes to the database. Returns `{ imported, failed, errors, pending_saved }`. Same request body format and `shelf_mappings` actions as the Goodreads commit endpoint. Unmatched rows are saved with `source: "storygraph"`.
+
+### `POST /me/import/librarything/preview`  *(auth required)*
+
+Accepts a multipart form with a `file` field containing a LibraryThing TSV export. Returns a preview without writing to the database.
+
+LibraryThing TSV columns: `Title`, `Author (First, Last)`, `ISBN`, `ISBNs`, `Rating`, `Review`, `Date Read`, `Entry Date`, `Collections`, `Tags`. The export is tab-separated. Author names in "Last, First" format are reversed to "First Last". Collections and Tags are both imported as custom labels. Status mapping: "Currently Reading" → `currently-reading`, "To Read"/"Wishlist" → `to-read` (want-to-read), "Read but unowned" or books with a Date Read → `read` (finished). Ratings > 5 are normalized from a 10-point to a 5-point scale.
+
+### `POST /me/import/librarything/commit`  *(auth required)*
+
+Accepts the confirmed preview payload and writes to the database. Returns `{ imported, failed, errors, pending_saved }`. Same request body format and `shelf_mappings` actions as the Goodreads commit endpoint. Unmatched rows are saved with `source: "librarything"`.
 
 ---
 
@@ -1276,6 +1738,21 @@ Permanently deletes a pending import row.
 404 { "error": "Pending import not found" }
 ```
 
+### `POST /me/imports/pending/:id/retry`  *(auth required)*
+
+Re-runs the full lookup chain (local DB, Open Library ISBN, OL search, Google Books, LLM fuzzy) for a single pending import. If a match is found, auto-resolves (creates user_book, maps status tag) and removes the pending import.
+
+```json
+// Match found — auto-resolved
+{ "status": "matched", "book_id": "...", "match": { "ol_id": "...", "title": "...", "authors": [...], "cover_url": "..." } }
+
+// Ambiguous — candidates returned for user selection
+{ "status": "ambiguous", "candidates": [{ "ol_id": "...", "title": "...", "authors": [...], "cover_url": "..." }] }
+
+// No match
+{ "status": "unmatched" }
+```
+
 ---
 
 ## Activity Feed
@@ -1286,6 +1763,7 @@ Returns a chronological feed of activities from users the authenticated user fol
 
 **Query parameters:**
 - `cursor` *(optional)* — RFC3339Nano timestamp from `next_cursor` to fetch the next page.
+- `type` *(optional)* — comma-separated list of activity types to filter by (e.g. `?type=reviewed,rated`). Valid types: `shelved`, `started_book`, `finished_book`, `rated`, `reviewed`, `created_thread`, `followed_user`, `followed_author`, `created_link`. Default (omitted) returns all types.
 
 ```json
 {
@@ -1316,9 +1794,9 @@ Returns a chronological feed of activities from users the authenticated user fol
 }
 ```
 
-**Activity types:** `shelved`, `started_book`, `finished_book`, `rated`, `reviewed`, `created_thread`, `followed_user`, `followed_author`, `created_link`.
+**Activity types:** `shelved`, `started_book`, `finished_book`, `rated`, `reviewed`, `finished_and_rated`, `created_thread`, `followed_user`, `followed_author`, `created_link`.
 
-Fields are conditional on type — `book` is null for `followed_user`, `target_user` is null for book-related activities, etc. `created_link` includes `link_type`, `to_book_ol_id`, and `to_book_title` for the target book. `followed_author` includes `author_key` and `author_name` in the response.
+Fields are conditional on type — `book` is null for `followed_user`, `target_user` is null for book-related activities, etc. `created_link` includes `link_type`, `to_book_ol_id`, and `to_book_title` for the target book. `followed_author` includes `author_key` and `author_name` in the response. `finished_and_rated` is a synthetic type created by merging a `finished_book` and `rated` event that occur within 60 seconds for the same user and book; it includes the `rating` field.
 
 ### `GET /users/:username/stats`  *(optional auth)*
 
@@ -1343,17 +1821,80 @@ Returns detailed reading statistics for a user. Respects privacy settings — re
     { "rating": 5, "count": 8 }
   ],
   "total_books": 47,
-  "total_reviews": 15
+  "total_reviews": 15,
+  "total_pages_read": 14320
 }
 ```
 
 - `books_by_year` — finished books grouped by year (from `date_read`), descending
 - `books_by_month` — finished books in the current year grouped by month
 - `rating_distribution` — count of books per star rating (1-5)
+- `total_pages_read` — sum of `page_count` across all finished books (only books with known page counts)
+
+### `GET /users/:username/year-in-review?year=<YYYY>`  *(optional auth)*
+
+Returns a year-in-review summary for a user. Defaults to the current year. Respects profile privacy settings.
+
+```json
+{
+  "year": 2025,
+  "total_books": 42,
+  "total_pages": 12500,
+  "average_rating": 3.8,
+  "highest_rated": {
+    "open_library_id": "OL82592W",
+    "title": "The Great Gatsby",
+    "cover_url": "https://...",
+    "rating": 5
+  },
+  "longest_book": {
+    "open_library_id": "OL27448W",
+    "title": "The Lord of the Rings",
+    "cover_url": "https://...",
+    "page_count": 1200
+  },
+  "shortest_book": {
+    "open_library_id": "OL12345W",
+    "title": "Animal Farm",
+    "cover_url": "https://...",
+    "page_count": 112
+  },
+  "top_genres": [
+    { "name": "Fiction", "count": 20 },
+    { "name": "Fantasy", "count": 8 }
+  ],
+  "books_by_month": [
+    {
+      "month": 1,
+      "count": 5,
+      "books": [
+        {
+          "open_library_id": "OL82592W",
+          "title": "The Great Gatsby",
+          "cover_url": "https://...",
+          "rating": 4
+        }
+      ]
+    }
+  ],
+  "available_years": [2025, 2024, 2023]
+}
+```
+
+- `highest_rated`, `longest_book`, `shortest_book` are null when no qualifying books exist
+- `average_rating` is null when no books are rated
+- `top_genres` derived from books' `subjects` field; top 5 by count
+- `books_by_month` only includes months with books; each month includes book covers
+- `available_years` lists all years the user has finished books (for year selector)
 
 ### `GET /users/:username/activity`
 
-Returns recent activity for a specific user. Same response format as `/me/feed`. Cursor-based pagination.
+Returns recent activity for a specific user. Same response format as `/me/feed`.
+
+**Query parameters:**
+- `cursor` *(optional)* — RFC3339Nano timestamp from a previous `next_cursor` value. Only returns activities created before this timestamp.
+
+Returns `{ "activities": [...], "next_cursor": "..." }`. `next_cursor` is `null` when there are no more results. Each page returns up to 30 items.
 
 ---
 
@@ -1369,31 +1910,39 @@ When the rate limit is saturated, requests wait (up to the 15s client timeout) r
 
 ## Discussion Threads
 
-### `GET /books/:workId/threads`
+### `GET /books/:workId/threads?page=1&limit=20`
 
-Returns all discussion threads for a book, ordered by most recent first.
+Returns discussion threads for a book, ordered by most recent first. Paginated.
+
+**Query parameters:**
+- `page` *(optional, default 1)* — page number
+- `limit` *(optional, default 20, max 100)* — threads per page
 
 ```json
-[
-  {
-    "id": "...",
-    "book_id": "...",
-    "user_id": "...",
-    "username": "alice",
-    "display_name": "Alice",
-    "avatar_url": "https://...",
-    "title": "What did the ending mean?",
-    "body": "I just finished and...",
-    "spoiler": true,
-    "created_at": "2026-02-25T14:00:00Z",
-    "comment_count": 3
-  }
-]
+{
+  "threads": [
+    {
+      "id": "...",
+      "book_id": "...",
+      "user_id": "...",
+      "username": "alice",
+      "display_name": "Alice",
+      "avatar_url": "https://...",
+      "title": "What did the ending mean?",
+      "body": "I just finished and...",
+      "spoiler": true,
+      "created_at": "2026-02-25T14:00:00Z",
+      "comment_count": 3,
+      "locked_at": null
+    }
+  ],
+  "total": 42
+}
 ```
 
 ### `GET /threads/:threadId`
 
-Returns a single thread with all its comments.
+Returns a single thread with all its comments. Includes `locked_at` (null if unlocked, ISO timestamp if locked).
 
 ```json
 {
@@ -1436,9 +1985,29 @@ Create a new discussion thread on a book. Records a `created_thread` activity an
 
 Soft-delete a thread (author only). Returns 204.
 
+### `POST /threads/:threadId/lock`  *(auth required, moderator only)*
+
+Lock a thread, preventing new comments. Returns the locked timestamp.
+
+```
+200 { "locked_at": "2024-01-15T10:30:00Z" }
+403 { "error": "Moderator access required" }
+404 { "error": "Thread not found" }
+```
+
+### `POST /threads/:threadId/unlock`  *(auth required, moderator only)*
+
+Unlock a previously locked thread, re-enabling comments.
+
+```
+200 { "locked_at": null }
+403 { "error": "Moderator access required" }
+404 { "error": "Thread not found" }
+```
+
 ### `POST /threads/:threadId/comments`  *(auth required)*
 
-Add a comment to a thread. Set `parent_id` to reply to a top-level comment (one level of nesting only).
+Add a comment to a thread. Set `parent_id` to reply to a top-level comment (one level of nesting only). Returns 403 if the thread is locked.
 
 ```json
 { "body": "I think it meant...", "parent_id": null }
@@ -1450,6 +2019,7 @@ Add a comment to a thread. Set `parent_id` to reply to a top-level comment (one 
 201 { "id": "...", "created_at": "..." }
 400 { "error": "comment must be 5,000 characters or fewer" }
 400 { "error": "replies can only be one level deep" }
+403 { "error": "This thread is locked." }
 ```
 
 ### `DELETE /threads/:threadId/comments/:commentId`  *(auth required)*
@@ -1458,7 +2028,7 @@ Soft-delete a comment (author only). Returns 204.
 
 ### `GET /books/:workId/similar-threads?title=<title>`
 
-Find existing threads on a book whose titles are similar to the given title. Uses PostgreSQL `pg_trgm` trigram similarity with a threshold of 0.3. Returns up to 5 results sorted by similarity score. Used by the thread creation form to suggest existing discussions before posting a duplicate.
+Find existing threads on a book whose titles are similar to the given title. Uses trigram similarity (computed in Go) with a threshold of 0.3. Returns up to 5 results sorted by similarity score. Used by the thread creation form to suggest existing discussions before posting a duplicate.
 
 ```json
 [
@@ -1483,28 +2053,35 @@ Returns threads on the same book whose titles are similar to the given thread. S
 
 User-submitted book-to-book connections (sequel, prequel, similar, etc.). Links are upvotable — sorted by vote count on book pages. Both books must exist in the local catalog.
 
-### `GET /books/:workId/links`
+### `GET /books/:workId/links?limit=50&offset=0`
 
-Returns all community links for a book, sorted by votes descending. If authenticated, includes whether the caller has voted on each link.
+Returns community links for a book, sorted by creation date descending. If authenticated, includes whether the caller has voted on each link. Paginated.
+
+**Query parameters:**
+- `limit` *(optional, default 50, max 100)* — links per page
+- `offset` *(optional, default 0)* — number of links to skip
 
 ```json
-[
-  {
-    "id": "...",
-    "from_book_ol_id": "OL82592W",
-    "to_book_ol_id": "OL27448W",
-    "to_book_title": "Tender Is the Night",
-    "to_book_authors": "F. Scott Fitzgerald",
-    "to_book_cover_url": "https://...",
-    "link_type": "companion",
-    "note": "Same author, similar themes",
-    "username": "alice",
-    "display_name": "Alice",
-    "votes": 3,
-    "user_voted": true,
-    "created_at": "2026-02-24T14:00:00Z"
-  }
-]
+{
+  "links": [
+    {
+      "id": "...",
+      "from_book_ol_id": "OL82592W",
+      "to_book_ol_id": "OL27448W",
+      "to_book_title": "Tender Is the Night",
+      "to_book_authors": "F. Scott Fitzgerald",
+      "to_book_cover_url": "https://...",
+      "link_type": "companion",
+      "note": "Same author, similar themes",
+      "username": "alice",
+      "display_name": "Alice",
+      "votes": 3,
+      "user_voted": true,
+      "created_at": "2026-02-24T14:00:00Z"
+    }
+  ],
+  "total": 12
+}
 ```
 
 **Link types:** `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`.
@@ -1520,6 +2097,8 @@ Submit a community link from this book to another.
   "note": "Same author, similar themes"
 }
 ```
+
+Valid `link_type` values: `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`. Returns 400 with `"invalid link_type"` for any other value.
 
 Returns 201 with `{ id, created_at }`. Auto-upvotes by the creator. Returns 409 if the user already submitted this exact link.
 
@@ -1537,7 +2116,7 @@ Remove upvote. Returns 204.
 
 ### `POST /links/:linkId/edits`  *(auth required)*
 
-Propose an edit to a community link. At least one of `proposed_type` or `proposed_note` must be provided. Only one pending edit per user per link.
+Propose an edit to a community link. At least one of `proposed_type` or `proposed_note` must be provided. Only one pending edit per user per link. If `proposed_type` is provided, it must be one of: `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`.
 
 ```json
 {
@@ -1641,15 +2220,17 @@ Approve or reject a pending community link edit. Approved edits are applied to t
 
 ```json
 {
-  "action": "approve",
-  "comment": "Looks good"
+  "status": "approved",
+  "reviewer_comment": "Looks good"
 }
 ```
 
+`status` must be `"approved"` or `"rejected"`. `reviewer_comment` is optional.
+
 ```
-200 { "ok": true, "status": "approved" }
-400 { "error": "action must be approve or reject" }
-404 { "error": "pending edit not found" }
+200 { "message": "Edit approved" }
+400 { "error": "status must be approved or rejected" }
+404 { "error": "Edit not found" }
 ```
 
 ---
@@ -1823,6 +2404,10 @@ Returns the count of unread notifications.
 
 Mark a single notification as read. Returns `{ "ok": true }`. Returns 404 if the notification doesn't exist or doesn't belong to the user.
 
+### `DELETE /me/notifications/:notifId`  *(auth required)*
+
+Delete a single notification. Returns `{ "ok": true }`. Returns 404 if the notification doesn't exist, 403 if it doesn't belong to the current user.
+
 ### `POST /me/notifications/read-all`  *(auth required)*
 
 Mark all unread notifications as read. Returns `{ "ok": true }`.
@@ -1843,7 +2428,8 @@ Returns the current user's notification preferences. If no preferences row exist
   "book_new_review": true,
   "review_liked": true,
   "thread_mention": true,
-  "book_recommendation": true
+  "book_recommendation": true,
+  "review_comment": true
 }
 ```
 
@@ -1859,6 +2445,28 @@ Returns the full updated preferences object (same shape as GET).
 
 ---
 
+## Theme
+
+### `GET /me/theme`  *(auth required)*
+
+Returns the user's theme preference. Defaults to `"system"` if not set.
+
+```json
+{ "theme": "system" }
+```
+
+### `PUT /me/theme`  *(auth required)*
+
+Set the user's theme preference. Valid values: `light`, `dark`, `system`.
+
+```json
+{ "theme": "dark" }
+```
+
+Returns the saved theme preference.
+
+---
+
 ## Recommendations
 
 ### `POST /me/recommendations`  *(auth required)*
@@ -1869,7 +2477,7 @@ Send a book recommendation to another user.
 { "username": "bob", "book_ol_id": "OL82592W", "note": "You'll love this!" }
 ```
 
-Creates a recommendation record and sends a `book_recommendation` notification to the recipient. Also records a `sent_recommendation` activity. Returns `201` with the recommendation ID. Returns `409` if the same sender/recipient/book triple already exists.
+Creates a recommendation record and sends a `book_recommendation` notification to the recipient. Also records a `sent_recommendation` activity. Returns `201` with the recommendation ID. Returns `409` if the same sender/recipient/book triple already exists. Rate-limited to 10 recommendations per 24-hour window — returns `429` with `"too many recommendations, try again later"` if exceeded.
 
 ### `GET /me/recommendations`  *(auth required)*
 
@@ -1879,6 +2487,33 @@ List received recommendations for the current user.
 - `status` *(optional, default: `pending`)* — filter by `pending`, `seen`, `dismissed`, or `all`.
 
 Returns an array of recommendation objects, each including sender info (username, display_name, avatar_url) and book info (open_library_id, title, cover_url, authors).
+
+### `GET /me/recommendations/sent`  *(auth required)*
+
+List recommendations the current user has sent. Returns up to 50 results ordered by newest first.
+
+```json
+[
+  {
+    "id": "...",
+    "note": "You'll love this!",
+    "status": "pending",
+    "created_at": "2026-02-25T14:00:00Z",
+    "recipient": {
+      "user_id": "...",
+      "username": "bob",
+      "display_name": "Bob",
+      "avatar_url": "/api/files/users/..."
+    },
+    "book": {
+      "open_library_id": "OL82592W",
+      "title": "The Great Gatsby",
+      "cover_url": "https://...",
+      "authors": "F. Scott Fitzgerald"
+    }
+  }
+]
+```
 
 ### `PATCH /me/recommendations/:recId`  *(auth required)*
 
