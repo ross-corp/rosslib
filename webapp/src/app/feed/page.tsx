@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ActivityCard } from "@/components/activity";
@@ -5,6 +6,10 @@ import type { FeedResponse } from "@/components/activity";
 import { FollowSuggestions } from "@/components/follow-suggestions";
 import { getUser, getToken } from "@/lib/auth";
 import EmptyState from "@/components/empty-state";
+
+export const metadata: Metadata = {
+  title: "Feed",
+};
 
 const FILTER_OPTIONS = [
   { label: "All", value: "" },
