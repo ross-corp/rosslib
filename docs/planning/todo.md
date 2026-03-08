@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## Error Handling & Reliability
 
-- [ ] Add `error.tsx` boundary for the genres pages: create `webapp/src/app/genres/error.tsx` that catches server errors and shows "Could not load genres" with a "Try again" button. The genre page currently silently returns an empty array on API failure.
 - [ ] Fix feed page to distinguish between empty feed and API errors: in `webapp/src/app/feed/page.tsx` line 18, `if (!res.ok) return { activities: [] }` silently swallows 500 errors, showing "No activity yet" instead of an error message. Change to `if (!res.ok) throw new Error("Failed to load feed")` so the error boundary catches it, and let the empty state only trigger when `res.ok` returns an empty activities array.
 
 ## Loading States
