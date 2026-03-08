@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  /* Dark theme (default) */
+  :root,
+  [data-theme="dark"] {
     --surface-0: #0a0a0a;
     --surface-1: #141414;
     --surface-2: #1c1c1c;
@@ -16,11 +18,121 @@
     --text-inverted: #0a0a0a;
     --accent: #d4d4d4;
     --accent-hover: #e5e5e5;
-  }
-
-  html {
+    --overlay: rgba(0, 0, 0, 0.5);
+    --error-text: #f87171;
+    --error-bg: rgba(127, 29, 29, 0.3);
+    --error-border: #991b1b;
+    --success-text: #4ade80;
+    --success-bg: rgba(20, 83, 45, 0.3);
+    --success-border: #166534;
+    --warning-text: #fcd34d;
+    --warning-bg: rgba(120, 53, 15, 0.3);
+    --warning-border: #92400e;
+    --info-text: #60a5fa;
+    --info-bg: rgba(30, 58, 138, 0.3);
+    --info-border: #1e3a8a;
+    --danger-btn-bg: rgba(239, 68, 68, 0.2);
+    --danger-btn-bg-hover: rgba(239, 68, 68, 0.3);
+    --danger-btn-text: #f87171;
+    --link-color: #60a5fa;
+    --like-color: #ef4444;
+    --like-color-hover: #f87171;
+    --badge-bg: #ef4444;
+    --badge-text: #ffffff;
+    --toggle-bg: #374151;
+    --toggle-bg-active: #4ade80;
+    --toggle-knob: #ffffff;
+    --progress-bar: #22c55e;
     color-scheme: dark;
   }
+
+  /* Light theme */
+  [data-theme="light"] {
+    --surface-0: #ffffff;
+    --surface-1: #f5f5f5;
+    --surface-2: #ebebeb;
+    --surface-3: #e0e0e0;
+    --border: #d4d4d4;
+    --border-strong: #b5b5b5;
+    --text-primary: #171717;
+    --text-secondary: #404040;
+    --text-tertiary: #737373;
+    --text-inverted: #f0f0f0;
+    --accent: #404040;
+    --accent-hover: #262626;
+    --overlay: rgba(0, 0, 0, 0.4);
+    --error-text: #dc2626;
+    --error-bg: #fef2f2;
+    --error-border: #fecaca;
+    --success-text: #16a34a;
+    --success-bg: #f0fdf4;
+    --success-border: #bbf7d0;
+    --warning-text: #d97706;
+    --warning-bg: #fffbeb;
+    --warning-border: #fde68a;
+    --info-text: #2563eb;
+    --info-bg: #eff6ff;
+    --info-border: #bfdbfe;
+    --danger-btn-bg: #fef2f2;
+    --danger-btn-bg-hover: #fee2e2;
+    --danger-btn-text: #dc2626;
+    --link-color: #2563eb;
+    --like-color: #ef4444;
+    --like-color-hover: #dc2626;
+    --badge-bg: #ef4444;
+    --badge-text: #ffffff;
+    --toggle-bg: #d1d5db;
+    --toggle-bg-active: #22c55e;
+    --toggle-knob: #ffffff;
+    --progress-bar: #22c55e;
+    color-scheme: light;
+  }
+
+  /* System preference when no explicit theme is set */
+  @media (prefers-color-scheme: light) {
+    [data-theme="system"] {
+      --surface-0: #ffffff;
+      --surface-1: #f5f5f5;
+      --surface-2: #ebebeb;
+      --surface-3: #e0e0e0;
+      --border: #d4d4d4;
+      --border-strong: #b5b5b5;
+      --text-primary: #171717;
+      --text-secondary: #404040;
+      --text-tertiary: #737373;
+      --text-inverted: #f0f0f0;
+      --accent: #404040;
+      --accent-hover: #262626;
+      --overlay: rgba(0, 0, 0, 0.4);
+      --error-text: #dc2626;
+      --error-bg: #fef2f2;
+      --error-border: #fecaca;
+      --success-text: #16a34a;
+      --success-bg: #f0fdf4;
+      --success-border: #bbf7d0;
+      --warning-text: #d97706;
+      --warning-bg: #fffbeb;
+      --warning-border: #fde68a;
+      --info-text: #2563eb;
+      --info-bg: #eff6ff;
+      --info-border: #bfdbfe;
+      --danger-btn-bg: #fef2f2;
+      --danger-btn-bg-hover: #fee2e2;
+      --danger-btn-text: #dc2626;
+      --link-color: #2563eb;
+      --like-color: #ef4444;
+      --like-color-hover: #dc2626;
+      --badge-bg: #ef4444;
+      --badge-text: #ffffff;
+      --toggle-bg: #d1d5db;
+      --toggle-bg-active: #22c55e;
+      --toggle-knob: #ffffff;
+      --progress-bar: #22c55e;
+      color-scheme: light;
+    }
+  }
+
+  /* color-scheme is set per data-theme above */
 
   /* All links get underlines to indicate interactivity */
   a {

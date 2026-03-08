@@ -44,12 +44,33 @@ export function formatTime(iso: string): string {
   const diff = now.getTime() - d.getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins === 1) return "1 minute ago";
+  if (mins < 60) return `${mins} minutes ago`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours === 1) return "1 hour ago";
+  if (hours < 24) return `${hours} hours ago`;
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (days === 1) return "1 day ago";
+  if (days < 30) return `${days} days ago`;
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: d.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+  });
+}
+
+export function formatFullDate(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export function Stars({ rating }: { rating: number }) {
@@ -161,6 +182,26 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
             >
               {item.book.title}
             </Link>
+          )}
+        </>
+      );
+    case "finished_and_rated":
+      return (
+        <>
+          finished{" "}
+          {item.book && (
+            <Link
+              href={`/books/${item.book.open_library_id}`}
+              className="font-medium text-text-primary hover:underline"
+            >
+              {item.book.title}
+            </Link>
+          )}
+          {item.rating && (
+            <>
+              {" "}
+              and rated it <Stars rating={item.rating} />
+            </>
           )}
         </>
       );
@@ -295,7 +336,10 @@ export function ActivityCard({
         )}
 
         {/* Timestamp */}
-        <p className="text-xs text-text-tertiary mt-1">
+        <p
+          className="text-xs text-text-tertiary mt-1"
+          title={formatFullDate(item.created_at)}
+        >
           {formatTime(item.created_at)}
         </p>
       </div>

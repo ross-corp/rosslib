@@ -70,34 +70,51 @@ webapp/src/app/
 ├── register/page.tsx
 ├── forgot-password/page.tsx          forgot password (request reset link)
 ├── reset-password/page.tsx           set new password (from email link)
-├── search/page.tsx                 book + user + author search (shows popular books when no query)
+├── search/page.tsx                 book + user + author search (shows trending + popular books when no query)
+├── search/loading.tsx              search loading skeleton
+├── feed/page.tsx                   activity feed with filter chips (All, Reviews, Ratings, Status Updates, Threads, Social)
 ├── users/page.tsx                  browse all users (sort by newest/books/followers)
 ├── books/[workId]/page.tsx         single book page (shows series badges below title, "More by Author" section)
 ├── series/[seriesId]/page.tsx     series detail — ordered book list with covers & reading progress
+
+├── books/[workId]/page.tsx         single book page (series badges, series navigation row, review sort dropdown)
+├── books/[workId]/loading.tsx     book detail loading skeleton
+├── books/[workId]/not-found.tsx   "Book not found" with search link
+├── series/[seriesId]/page.tsx     series detail — ordered book list with covers, reading progress & status picker
 ├── settings/
 │   ├── page.tsx                    profile settings
-│   ├── import/page.tsx             CSV import (Goodreads & StoryGraph tabs)
+│   ├── import/page.tsx             CSV import (Goodreads, StoryGraph & LibraryThing tabs)
 │   ├── imports/pending/page.tsx   review unmatched imports
 │   ├── export/page.tsx             CSV export
 │   ├── tags/page.tsx               label category management
+│   ├── api-tokens/page.tsx         API token management (create/revoke)
 │   ├── ghost-activity/page.tsx     ghost user controls
+│   ├── feedback/page.tsx           view and delete submitted feedback
 │   ├── follow-requests/page.tsx    pending follow requests
-│   └── followed-books/page.tsx     manage followed books
+│   ├── followed-books/page.tsx     manage followed books
+│   ├── followed-authors/page.tsx   manage followed authors
+│   └── blocked/page.tsx            manage blocked users
 ├── scan/page.tsx                   ISBN barcode scanner
 ├── library/compare/page.tsx        compare lists (set operations)
 ├── notifications/page.tsx          notification center
-├── recommendations/page.tsx       received book recommendations
+├── recommendations/page.tsx       book recommendations (Received / Sent tabs)
+├── feed/page.tsx                  activity feed (with follow suggestions)
 ├── feedback/page.tsx              bug report & feature request form
 ├── admin/page.tsx                 admin panel (moderator only)
+├── feed/loading.tsx                feed loading skeleton
 ├── [username]/
-│   ├── page.tsx                    public profile (incl. computed lists section)
+│   ├── not-found.tsx               "User not found" with link to /users
+│   ├── page.tsx                    public profile (incl. computed lists, followed authors sidebar, favorite genre chips)
+│   ├── loading.tsx                 profile loading skeleton
 │   ├── stats/page.tsx              detailed reading statistics
 │   ├── shelves/[slug]/page.tsx     label page (owner gets library manager)
 │   ├── followers/page.tsx          followers list
 │   ├── following/page.tsx          following list
 │   ├── tags/[...path]/page.tsx     tag browsing page
 │   ├── labels/[keySlug]/[...valuePath]/page.tsx   label browsing page (nested)
-│   └── timeline/page.tsx          reading timeline (books by month/year)
+│   ├── reviews/page.tsx           paginated reviews list (?page=N)
+│   ├── timeline/page.tsx          reading timeline (books by month/year)
+│   └── year-in-review/page.tsx   year-in-review summary (stats, top books, genres)
 └── api/                            Next.js proxy route handlers
     ├── auth/login/route.ts
     ├── auth/register/route.ts
@@ -130,7 +147,8 @@ webapp/src/app/
     ├── shelves/[shelfId]/books/route.ts
     ├── shelves/[shelfId]/books/[olId]/route.ts    ← GET, PATCH, DELETE
     ├── books/[workId]/series/route.ts              ← GET, POST series memberships
-    ├── series/[seriesId]/route.ts                 ← GET series detail with books
+    ├── series/[seriesId]/route.ts                 ← GET series detail, PUT update description
+    ├── books/[workId]/readers/route.ts                ← GET friends reading this book
     ├── books/[workId]/reviews/[userId]/like/route.ts ← POST toggle, GET check review like
     ├── books/[workId]/links/route.ts              ← GET, POST community links
     ├── links/[linkId]/route.ts                    ← DELETE community link
@@ -148,18 +166,27 @@ webapp/src/app/
     ├── admin/link-edits/[editId]/route.ts         ← PUT approve/reject link edit
     ├── books/scan/route.ts                            ← POST barcode scan
     ├── books/lookup/route.ts                          ← GET ISBN lookup
+    ├── books/[workId]/followers/count/route.ts        ← GET book follower count (public)
     ├── books/[workId]/genre-ratings/route.ts         ← GET aggregate genre ratings
     ├── me/books/[olId]/genre-ratings/route.ts       ← GET, PUT user genre ratings
     ├── me/account/route.ts                         ← GET account info (has_password, has_google)
     ├── me/account/data/route.ts                   ← DELETE all user data
+    ├── me/avatar/route.ts                           ← POST upload avatar
+    ├── me/banner/route.ts                           ← POST upload banner
     ├── me/password/route.ts                        ← PUT set/change password
     ├── me/notifications/route.ts                  ← GET list notifications
     ├── me/notifications/unread-count/route.ts     ← GET unread count
     ├── me/notifications/read-all/route.ts         ← POST mark all read
+    ├── me/notifications/[notifId]/route.ts         ← DELETE delete notification
     ├── me/notifications/[notifId]/read/route.ts   ← POST mark one read
+    ├── me/followed-authors/route.ts              ← GET followed authors list
     ├── me/notification-preferences/route.ts     ← GET, PUT notification prefs
     ├── me/recommendations/route.ts               ← GET, POST recommendations
+    ├── me/recommendations/sent/route.ts          ← GET sent recommendations
     ├── me/recommendations/[recId]/route.ts       ← PATCH update recommendation status
+    ├── me/suggested-follows/route.ts             ← GET follow suggestions
+    ├── me/saved-searches/route.ts                ← GET, POST saved searches
+    ├── me/saved-searches/[id]/route.ts           ← DELETE saved search
     ├── users/route.ts                             ← GET search users
     └── users/[username]/
         ├── followers/route.ts                     ← GET followers list
@@ -167,8 +194,10 @@ webapp/src/app/
         ├── stats/route.ts                         ← GET reading statistics
         ├── tags/[...path]/route.ts
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths
+        ├── books/search/route.ts                   ← GET search within user's library
         ├── shelves/[slug]/route.ts                ← GET (for client-side label switching)
-        └── timeline/route.ts                      ← GET reading timeline
+        ├── timeline/route.ts                      ← GET reading timeline
+        └── year-in-review/route.ts                ← GET year-in-review summary
 ```
 
 ---
@@ -177,11 +206,23 @@ webapp/src/app/
 
 ### `Nav` (`components/nav.tsx`)
 
-Top navigation bar. Server component that fetches the current user. Links are organized into two dropdown menus: **Browse** (Search books, Genres, Scan ISBN) and **Community** (Browse users, My feed). Notification bell, admin link, user avatar, and sign out remain as standalone items.
+Top navigation bar. Server component that fetches the current user. Links are organized into two dropdown menus: **Browse** (Search books, Genres, Scan ISBN) and **Community** (Browse users, My feed). Notification bell, admin link, user avatar, and sign out remain as standalone items. On desktop (`md:` and above), the search bar and nav links are shown inline. Below `md:`, the search bar and desktop nav are hidden and replaced by the `MobileNav` hamburger menu.
+
+### `MobileNav` (`components/mobile-nav.tsx`)
+
+Client component rendered inside `Nav`, visible only below the `md:` breakpoint. Shows a hamburger button (`☰`) that toggles a full-width dropdown panel with all nav links stacked vertically, grouped under "Browse" and "Community" section headings. Includes notification, admin, profile, and sign out links for authenticated users, or sign in/sign up for guests. Closes when a link is clicked or when clicking outside.
+
+### `ThemeToggle` (`components/theme-toggle.tsx`)
+
+Client component in the nav bar that cycles through `system` → `light` → `dark` themes. Stores the preference in `localStorage` (key: `rosslib-theme`) and applies it via `data-theme` attribute on `<html>`. For logged-in users, also persists the choice to the API via `PUT /api/me/theme`. Shows a sun icon in light mode, moon icon in dark mode, with an "auto" badge when set to system.
 
 ### `NavDropdown` (`components/nav-dropdown.tsx`)
 
 Client component used by `Nav` for dropdown menus. Opens on hover (desktop) or click (mobile). Closes when clicking outside. Takes a `label` string and an array of `{ href, label }` items.
+
+### `Pagination` (`components/pagination.tsx`)
+
+Shared server component for consistent pagination across pages. Takes `prevHref` (string or null), `nextHref` (string or null), and an optional `label` string (e.g., "Page 2 of 5"). Renders Previous/Next links with matching border+rounded styling. Used on search, users, and reviews pages.
 
 ### `LibraryManager` (`components/library-manager.tsx`)
 
@@ -204,9 +245,11 @@ Layout: `h-screen flex flex-col overflow-hidden` on the page, then inside Librar
 └──────────┴──────────────────────────────────────────┘
 ```
 
-**Sidebar** — clicking a label fetches its books client-side via `GET /api/users/:username/shelves/:slug`. Clicking a tag collection fetches via `GET /api/users/:username/tags/:path`. Clicking a label value fetches via `GET /api/users/:username/labels/:keySlug/*valuePath` (includes sub-values). Nested label values are indented by depth in the sidebar, showing only the last path segment as the display name.
+**Sidebar** — clicking a label fetches its books client-side via `GET /api/users/:username/shelves/:slug`. Clicking a tag collection fetches via `GET /api/users/:username/tags/:path`. Clicking a label value fetches via `GET /api/users/:username/labels/:keySlug/*valuePath` (includes sub-values). Nested label values are indented by depth in the sidebar, showing only the last path segment as the display name. A "+ New label" button at the bottom opens an inline form to create a custom label with a name and optional description (max 1000 chars).
 
-**Top bar** — shows the current label name and book count when nothing is selected. Transforms into the bulk action toolbar when one or more books are checked:
+**Search** — a search input in the top bar lets users search within the current library by title or author. Typing triggers a debounced (400ms) API call to `GET /api/users/:username/books/search?q=`. Results replace the displayed book grid while the search is active. Clearing the search restores the original view. Search state is also cleared when navigating to a different sidebar filter.
+
+**Top bar** — shows the current label name, book count, description (if set), and sort options when nothing is selected. Custom labels (non-status, non-default) show an "Edit description" / "Add description" button. Sort options: Date added (default), Title, Author, Rating. Changing the sort re-fetches the current view from the API with the `sort` query param. Transforms into the bulk action toolbar when one or more books are checked:
 - Rate — sets rating on all selected books via `PATCH /api/shelves/:shelfId/books/:olId`
 - Move to label — moves via `POST /api/shelves/:targetId/books`, then refreshes the current label
 - Labels — applies or clears a label value across all selected books via `PUT/DELETE /api/me/books/:olId/tags/:keyId`
@@ -256,9 +299,17 @@ Client component that renders a small flag icon button. When clicked, opens a `R
 
 Client component that renders a modal overlay for submitting content reports. Shows a reason radio group (spam, harassment, inappropriate, other) and an optional details textarea. Calls `POST /api/reports`. Displays success message and auto-closes on completion.
 
+### `FollowSuggestions` (`components/follow-suggestions.tsx`)
+
+Client component showing follow suggestions based on books in common. Fetches `GET /api/me/suggested-follows` on mount and renders a list of user cards with avatar, display name, books-in-common count, and a follow button. Shown on the feed page when the feed is empty and at the bottom of the feed. Hides itself if no suggestions are available.
+
 ### `FeedbackForm` (`components/feedback-form.tsx`)
 
 Client component for the `/feedback` page. Two-tab form for submitting bug reports or feature requests. Bug report tab includes title, description, steps to reproduce, and severity dropdown. Feature request tab includes title and description. Calls `POST /api/feedback`.
+
+### `FeedbackList` (`app/settings/feedback/feedback-list.tsx`)
+
+Client component for the `/settings/feedback` page. Displays the user's submitted bug reports and feature requests in a list. Each item shows type badge (Bug/Feature), status badge (Open/Closed), severity badge (for bugs), title, description preview (2-line clamp), and submission date. Each item has a "Delete" button that calls `DELETE /api/me/feedback/:id` and optimistically removes the item from the list.
 
 ### `AdminLinkEdits` (`components/admin-link-edits.tsx`)
 
@@ -267,6 +318,10 @@ Client component for the `/admin` page. Displays proposed community link edits w
 ### `EditionPicker` (`components/edition-picker.tsx`)
 
 Client component for selecting a specific edition of a book. Shown on the book detail page below the cover image when the user has the book in their library. Opens a modal listing all available editions (reusing the editions data from `GET /books/:workId/editions`) with cover thumbnails, format badges, publisher, and ISBN. Selecting an edition saves the edition key and cover URL to the user's `user_books` record via `PATCH /api/me/books/:olId`. The selected edition's cover is then displayed on the book detail page, profile pages, and shelf views instead of the default work cover.
+
+### `AuthorBio` (`components/author-bio.tsx`)
+
+Client component for the author detail page. Displays the author's bio text with automatic truncation. Bios longer than 500 characters are truncated with an ellipsis and a "Read more" button that toggles to show the full text. Short bios are displayed in full with no toggle.
 
 ### `AuthorWorksGrid` (`components/author-works-grid.tsx`)
 
@@ -286,15 +341,26 @@ Used on book detail pages (community reviews), user reviews pages, recent review
 
 ### `SettingsNav` (`components/settings-nav.tsx`)
 
-Client component providing pill-style navigation across settings sub-pages. Uses `usePathname()` to highlight the active section. Rendered on all settings pages (Profile, Import, Export, Ghost Activity). The active pill uses `bg-accent text-white`; inactive pills use `bg-surface-2`.
+Client component providing pill-style navigation across settings sub-pages. Uses `usePathname()` to highlight the active section. Rendered on all settings pages (Profile, Import, Export, API Tokens, Ghost Activity). The active pill uses `bg-accent text-white`; inactive pills use `bg-surface-2`. Fetches pending follow request count on mount and displays a red numeric badge on the "Follow requests" pill when count > 0.
+
+### `APITokensForm` (`components/api-tokens-form.tsx`)
+
+Client component rendered on `/settings/api-tokens`. Manages personal API tokens for external integrations. Fetches tokens on mount via `GET /api/me/api-tokens`. Shows a create form (name input + button, disabled at 5 tokens), and a table of existing tokens with name, created date, last used date, and a "Revoke" button. Creating a token via `POST /api/me/api-tokens` shows the raw token once in a green banner with `select-all` styling. Revoking calls `DELETE /api/me/api-tokens/:id`.
 
 ### `PasswordForm` (`components/password-form.tsx`)
 
 Client component rendered on the settings page below the profile form. Fetches `GET /api/me/account` on mount to determine whether the user has a password and/or Google linked, then shows the appropriate form: "Set password" for OAuth-only users, or "Change password" (with current password verification) for users who already have one. Calls `PUT /api/me/password`.
 
+### `EmailForm` (`components/email-form.tsx`)
+
+Client component rendered on the settings page below the password form. Fetches `GET /api/me/account` on mount to display the current email. Provides a form with "New email" and "Current password" fields. Calls `PUT /api/me/email` to change the email address. On success, the account's `email_verified` is set to false and the email verification banner will reappear.
+
 ### `DeleteDataForm` (`components/delete-data-form.tsx`)
 
-Client component rendered on the settings page below the password form in a "Danger zone" section. Shows a red "Delete all my data" button. Clicking it reveals a confirmation form where the user must type "delete my data" to proceed. Calls `DELETE /api/me/account/data` which removes all user-owned records (books, reviews, tags, labels, follows, threads, notifications, etc.) but keeps the account. On success, redirects to the home page.
+Client component rendered on the settings page below the password form in a "Danger zone" section. Contains two destructive actions:
+
+1. **Delete all my data** — red button that reveals a confirmation form requiring the user to type "delete my data". Calls `DELETE /api/me/account/data` to remove all user-owned records (books, reviews, tags, labels, follows, threads, notifications, etc.) while keeping the account. Redirects to home on success.
+2. **Delete my account permanently** — second red button below, requiring the user to type "delete my account". Calls `DELETE /api/me/account` to remove all data **and** the user account itself. The proxy clears the auth cookie, and the user is redirected to the home page.
 
 ### `PendingImportsManager` (`components/pending-imports-manager.tsx`)
 
@@ -316,6 +382,10 @@ Client component rendered on the settings page. Displays toggle switches for eac
 
 Client component for liking/unliking reviews. Shows a heart icon with like count. Toggling calls `POST /api/books/:workId/reviews/:userId/like`. Disabled for the user's own reviews. Used on the book detail page's community reviews section. Unauthenticated users see a static like count (no button).
 
+### `ReviewComments` (`components/review-comments.tsx`)
+
+Client component for viewing and posting comments on reviews. Shows a comment count toggle button below each review. When expanded, loads comments via `GET /api/books/:workId/reviews/:userId/comments` and displays them in a threaded view with avatars and timestamps. Logged-in users see a text input to post new comments via `POST`. Comment authors can delete their own comments via `DELETE /api/review-comments/:commentId`. Generates a `review_comment` notification for the review author.
+
 ### `GenreRatingEditor` (`components/genre-rating-editor.tsx`)
 
 Client component for genre dimension ratings on book detail pages. Shows aggregate community ratings as horizontal bar charts (genre name, progress bar, average/10, rater count). Logged-in users can expand an editor with 0–10 sliders for each of the 12 predefined genres (Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children). Setting a slider to 0 removes the rating. Saves via `PUT /api/me/books/:olId/genre-ratings` and refreshes aggregate data on save.
@@ -323,6 +393,30 @@ Client component for genre dimension ratings on book detail pages. Shows aggrega
 ### `BookScanner` (`components/book-scanner.tsx`)
 
 Client component for the `/scan` page. Three input modes: Camera (uses browser `BarcodeDetector` API for real-time EAN-13 scanning on supported devices), Upload (sends image to `POST /api/books/scan` for server-side barcode detection via gozxing), and Enter ISBN (manual input via `GET /api/books/lookup`). Detected books are displayed with cover, metadata, and a StatusPicker for quick library addition. Supports scanning multiple books in a session with a history list.
+
+### `EmptyState` (`components/empty-state.tsx`)
+
+Reusable component for zero-data states across the app. Renders a centered message with an optional call-to-action link. Used on the feed page, notifications page, library pages (owner and visitor), and shelf/label views. Keeps empty state styling consistent: centered `py-16` container, `text-sm` message text, bordered button link.
+
+### `Skeleton` (`components/skeleton.tsx`)
+
+Pulsing placeholder component for loading states. Accepts `width`, `height`, and `variant` ("text", "circular", "rectangular") props. Uses a custom `animate-skeleton-pulse` animation defined in `tailwind.config.ts`. Also exports composed skeletons:
+- `BookGridSkeleton` — grid of cover-sized rectangles matching the `ShelfBookGrid` layout
+- `ProfileSkeleton` — avatar circle, heading lines, stats, and sidebar placeholders matching the profile page
+- `ReviewSkeleton` — avatar + text lines matching the reviews section
+- `BookDetailSkeleton` — full book detail page placeholder (cover, metadata, reviews)
+- `FeedSkeleton` — activity feed placeholder (heading + activity rows)
+- `SearchSkeleton` — search page placeholder (input, tabs, result rows)
+
+Used via Next.js `loading.tsx` files in `app/feed/`, `app/[username]/`, `app/books/[workId]/`, and `app/search/` to show loading states while server components fetch data.
+
+### `KeyboardShortcuts` (`components/keyboard-shortcuts.tsx`)
+
+Client component rendered in the root layout. Registers global keyboard shortcuts via the `useKeyboardShortcuts` hook: `/` focuses the search input, `Escape` closes any open modal or blurs the focused element, and `?` toggles a shortcuts help overlay. All shortcuts except `Escape` are suppressed when an input or textarea is focused. Shows a "Press ? for shortcuts" hint in the bottom-right corner for logged-in users.
+
+### `KeyboardShortcutsOverlay` (`components/keyboard-shortcuts-overlay.tsx`)
+
+Client component rendered by `KeyboardShortcuts` when the help overlay is open. Lists all available keyboard shortcuts in a modal with `kbd` badges. Closes on backdrop click or `Escape`.
 
 ### `StarRating` (`components/star-rating.tsx`)
 
@@ -348,9 +442,41 @@ Client component displaying a reading goal progress bar on user profile pages. S
 
 Client component on the settings page for setting an annual reading goal. Calls `PUT /api/me/goals/:year` to create or update the goal.
 
+### `Toast` (`components/toast.tsx`)
+
+Global toast notification system. `ToastProvider` wraps the app in `layout.tsx` and renders fixed-position banners in the bottom-right corner. The `useToast()` hook exposes `toast.success(message)` and `toast.error(message)`. Toasts auto-dismiss after 4 seconds with a slide-in animation. Used across the app for feedback on user actions: book added/moved/removed, follow/unfollow, review saved, import complete, profile updated, export download, block/unblock, reading progress updated, and bulk library operations.
+
+### `ReadingProgress` (`components/reading-progress.tsx`)
+
+Client component on the book detail page (shown when status is "currently-reading"). Lets the user update progress by page number or percentage. Displays a progress bar and, when enough data is available (at least 1 day of reading, a known page count, and `progress_pages > 0`), shows an estimated reading pace ("~X pages/day") and estimated finish date below the progress bar. Uses `date_started` (or `date_added` as fallback) for the elapsed time calculation.
+
 ### `BlockButton` (`components/block-button.tsx`)
 
 Client component on user profile pages. Shows "Block" button that opens an inline confirmation prompt. After blocking, the page reloads to show the restricted view. When already blocked, shows "Unblock" button instead. Calls `POST /api/users/:username/block` and `DELETE /api/users/:username/block`.
+
+### `ReadingHistory` (`components/reading-history.tsx`)
+
+Client component on the book detail page for re-read tracking. Shows a list of past reading sessions with dates, ratings, and notes. Includes a "Log a read" button to add new sessions, and edit/delete controls on each session. Calls `GET/POST /api/me/books/:olId/sessions` and `PATCH/DELETE /api/me/sessions/:sessionId`.
+
+### `ThreadLockToggle` (`components/thread-lock-toggle.tsx`)
+
+Client component shown on the thread detail page for moderators only. Renders a Lock/Unlock toggle button. Calls `POST /api/threads/:threadId/lock` or `POST /api/threads/:threadId/unlock` and updates the button state optimistically.
+
+### `SavedSearches` (`components/saved-searches.tsx`)
+
+Client component rendered on the search page for logged-in users. Shows saved searches as clickable chips above the search bar — clicking a chip populates the query and filters. Each chip has a small "x" button to delete the saved search. When filters or a query are active, shows a "Save this search" link that reveals a name input. Max 20 saved searches per user. Calls `GET /api/me/saved-searches`, `POST /api/me/saved-searches`, and `DELETE /api/me/saved-searches/:id`.
+
+### `UserActivityList` (`components/user-activity-list.tsx`)
+
+Client component that renders a list of activity items with cursor-based "Load more" pagination. Used on the user profile page sidebar. Receives initial activities and cursor from the server component, then fetches additional pages via `GET /api/users/:username/activity?cursor=`.
+
+### `SeriesBookList` (`components/series-book-list.tsx`)
+
+Client component that renders the book list on the series detail page. Each book shows position number, cover (with `BookCoverPlaceholder` fallback), title, author, and an interactive `StatusPicker` for logged-in users. Receives `books`, `statusValues`, `statusKeyId`, and `bookStatusMap` as props from the server component.
+
+### `SeriesDescription` (`components/series-description.tsx`)
+
+Client component for displaying and inline-editing a series name and description. Receives `seriesId`, `initialName`, `initialDescription`, and `isLoggedIn` as props. Renders the series `<h1>` title and description text. Logged-in users see an "Edit series" button that reveals an inline form with a name input and description textarea. Saves via `PATCH /api/series/:seriesId`.
 
 ---
 

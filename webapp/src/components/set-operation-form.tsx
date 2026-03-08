@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 type Shelf = {
   id: string;
@@ -213,7 +214,7 @@ export default function SetOperationForm({
         {loading ? "Computing..." : "Compare"}
       </button>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-semantic-error">{error}</p>}
 
       {/* Results */}
       {hasResult && (
@@ -247,11 +248,7 @@ export default function SetOperationForm({
                           className="w-full aspect-[2/3] object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
                         />
                       ) : (
-                        <div className="w-full aspect-[2/3] bg-surface-2 rounded shadow-sm flex items-end p-2 group-hover:shadow-md transition-shadow">
-                          <span className="text-xs text-text-primary leading-tight line-clamp-3">
-                            {book.title}
-                          </span>
-                        </div>
+                        <BookCoverPlaceholder title={book.title} className="w-full aspect-[2/3]" />
                       )}
                     </Link>
                     <div className="min-w-0">
@@ -291,11 +288,11 @@ export default function SetOperationForm({
                   Save as new list
                 </h3>
                 {savedSlug ? (
-                  <p className="text-sm text-green-700">
+                  <p className="text-sm text-semantic-success">
                     Saved!{" "}
                     <Link
                       href={`/${username}/library/${savedSlug}`}
-                      className="underline hover:text-green-900"
+                      className="underline hover:text-semantic-success"
                     >
                       View list
                     </Link>

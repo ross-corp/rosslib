@@ -112,6 +112,15 @@ func CreateFeedback(app core.App) func(e *core.RequestEvent) error {
 		if data.Type == "bug" && data.Severity != "" && data.Severity != "low" && data.Severity != "medium" && data.Severity != "high" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "severity must be low, medium, or high"})
 		}
+		if len(data.Title) > 500 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "title must be 500 characters or fewer"})
+		}
+		if len(data.Description) > 10000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "description must be 10000 characters or fewer"})
+		}
+		if len(data.StepsToReproduce) > 5000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "steps_to_reproduce must be 5000 characters or fewer"})
+		}
 
 		coll, err := app.FindCollectionByNameOrId("feedback")
 		if err != nil {

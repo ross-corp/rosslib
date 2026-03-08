@@ -45,7 +45,7 @@ export default function NotificationBell() {
       </svg>
       {count > 0 && (
         <span
-          className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none"
+          className="absolute -top-0.5 -right-0.5 bg-badge text-badge-text text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none"
           aria-hidden="true"
         >
           {count > 9 ? "9+" : count}

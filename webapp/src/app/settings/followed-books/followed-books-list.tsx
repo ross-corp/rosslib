@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 type FollowedBook = {
   open_library_id: string;
@@ -12,11 +13,15 @@ type FollowedBook = {
 
 export default function FollowedBooksList({
   initialBooks,
+  initialTotal,
 }: {
   initialBooks: FollowedBook[];
+  initialTotal: number;
 }) {
   const [books, setBooks] = useState(initialBooks);
+  const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const [loadingMore, setLoadingMore] = useState(false);
 
   async function unfollow(workId: string) {
     setLoading((prev) => ({ ...prev, [workId]: true }));
@@ -25,8 +30,22 @@ export default function FollowedBooksList({
     });
     if (res.ok) {
       setBooks((prev) => prev.filter((b) => b.open_library_id !== workId));
+      setTotal((prev) => prev - 1);
     }
     setLoading((prev) => ({ ...prev, [workId]: false }));
+  }
+
+  async function loadMore() {
+    setLoadingMore(true);
+    const res = await fetch(
+      `/api/me/followed-books?limit=50&offset=${books.length}`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      setBooks((prev) => [...prev, ...data.books]);
+      setTotal(data.total);
+    }
+    setLoadingMore(false);
   }
 
   if (books.length === 0) {
@@ -53,9 +72,7 @@ export default function FollowedBooksList({
                   className="w-10 h-14 object-cover rounded shadow-sm bg-surface-2"
                 />
               ) : (
-                <div className="w-10 h-14 rounded bg-surface-2 flex items-center justify-center">
-                  <span className="text-text-primary text-xs select-none">No cover</span>
-                </div>
+                <BookCoverPlaceholder title={book.title} author={book.authors?.join(", ")} className="w-10 h-14" />
               )}
             </Link>
             <div className="min-w-0">
@@ -81,6 +98,17 @@ export default function FollowedBooksList({
           </button>
         </div>
       ))}
+      {books.length < total && (
+        <div className="pt-4 text-center">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="text-sm px-4 py-2 rounded border border-border text-text-primary hover:border-border hover:text-text-primary transition-colors disabled:opacity-50"
+          >
+            {loadingMore ? "Loading..." : "Load more"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

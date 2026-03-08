@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Pagination from "@/components/pagination";
 import ReviewText from "@/components/review-text";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
+import ReviewSortDropdown from "@/components/review-sort-dropdown";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -19,15 +22,26 @@ type ReviewItem = {
   like_count?: number;
 };
 
+type ReviewsResponse = {
+  reviews: ReviewItem[];
+  total: number;
+  page: number;
+};
+
 // ── Data fetchers ───────────────────────────────────────────────────────────────
 
-async function fetchReviews(username: string): Promise<ReviewItem[] | null> {
+async function fetchReviews(
+  username: string,
+  page: number,
+  sort: string
+): Promise<ReviewsResponse | null> {
+  const sortParam = sort && sort !== "newest" ? `&sort=${sort}` : "";
   const res = await fetch(
-    `${process.env.API_URL}/users/${username}/reviews`,
+    `${process.env.API_URL}/users/${username}/reviews?page=${page}&limit=20${sortParam}`,
     { cache: "no-store" }
   );
   if (res.status === 404) return null;
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error("Failed to load reviews");
   return res.json();
 }
 
@@ -49,13 +63,21 @@ function formatDate(iso: string): string {
 
 export default async function ReviewsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string }>;
+  searchParams: Promise<{ page?: string; sort?: string }>;
 }) {
   const { username } = await params;
-  const reviews = await fetchReviews(username);
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(sp.page || "1", 10) || 1);
+  const sort = sp.sort || "newest";
+  const data = await fetchReviews(username, page, sort);
 
-  if (reviews === null) notFound();
+  if (data === null) notFound();
+
+  const { reviews, total } = data;
+  const totalPages = Math.ceil(total / 20);
 
   return (
     <div className="min-h-screen">
@@ -67,7 +89,14 @@ export default async function ReviewsPage({
           >
             &larr; {username}
           </Link>
-          <h1 className="text-2xl font-bold text-text-primary mt-2">Reviews</h1>
+          <div className="flex items-center justify-between mt-2">
+            <h1 className="text-2xl font-bold text-text-primary">
+              Reviews{total > 0 && <span className="text-text-tertiary font-normal text-lg ml-2">({total})</span>}
+            </h1>
+            {total > 1 && (
+              <ReviewSortDropdown username={username} currentSort={sort} />
+            )}
+          </div>
         </div>
 
         {reviews.length === 0 ? (
@@ -75,7 +104,7 @@ export default async function ReviewsPage({
         ) : (
           <div className="space-y-8">
             {reviews.map((review, i) => (
-              <article key={`${review.book_id}-${i}`} className="flex gap-4">
+              <article key={`${review.open_library_id}-${i}`} className="flex gap-4">
                 {/* Cover */}
                 <Link href={`/books/${review.open_library_id}`} className="shrink-0">
                   {review.cover_url ? (
@@ -85,7 +114,7 @@ export default async function ReviewsPage({
                       className="w-16 rounded shadow-sm object-cover"
                     />
                   ) : (
-                    <div className="w-16 h-24 bg-surface-2 rounded" />
+                    <BookCoverPlaceholder title={review.title} author={review.authors} className="w-16 h-24" />
                   )}
                 </Link>
 
@@ -156,6 +185,13 @@ export default async function ReviewsPage({
             ))}
           </div>
         )}
+
+        {/* Pagination */}
+        <Pagination
+          prevHref={page > 1 ? `/${username}/reviews?page=${page - 1}${sort !== "newest" ? `&sort=${sort}` : ""}` : null}
+          nextHref={page < totalPages ? `/${username}/reviews?page=${page + 1}${sort !== "newest" ? `&sort=${sort}` : ""}` : null}
+          label={totalPages > 1 ? `Page ${page} of ${totalPages}` : undefined}
+        />
       </main>
     </div>
   );

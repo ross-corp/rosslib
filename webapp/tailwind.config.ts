@@ -33,6 +33,51 @@ const config: Config = {
           DEFAULT: "var(--accent)",
           hover: "var(--accent-hover)",
         },
+        semantic: {
+          error: {
+            DEFAULT: "var(--error-text)",
+            bg: "var(--error-bg)",
+            border: "var(--error-border)",
+          },
+          success: {
+            DEFAULT: "var(--success-text)",
+            bg: "var(--success-bg)",
+            border: "var(--success-border)",
+          },
+          warning: {
+            DEFAULT: "var(--warning-text)",
+            bg: "var(--warning-bg)",
+            border: "var(--warning-border)",
+          },
+          info: {
+            DEFAULT: "var(--info-text)",
+            bg: "var(--info-bg)",
+            border: "var(--info-border)",
+          },
+        },
+        danger: {
+          DEFAULT: "var(--danger-btn-text)",
+          bg: "var(--danger-btn-bg)",
+          "bg-hover": "var(--danger-btn-bg-hover)",
+        },
+        link: "var(--link-color)",
+        like: {
+          DEFAULT: "var(--like-color)",
+          hover: "var(--like-color-hover)",
+        },
+        badge: {
+          DEFAULT: "var(--badge-bg)",
+          text: "var(--badge-text)",
+        },
+        toggle: {
+          bg: "var(--toggle-bg)",
+          active: "var(--toggle-bg-active)",
+          knob: "var(--toggle-knob)",
+        },
+        progress: "var(--progress-bar)",
+      },
+      backgroundColor: {
+        overlay: "var(--overlay)",
       },
       maxWidth: {
         shell: "1280px",
@@ -42,9 +87,14 @@ const config: Config = {
           "0%": { opacity: "0", transform: "translateY(8px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        "skeleton-pulse": {
+          "0%, 100%": { opacity: "0.4" },
+          "50%": { opacity: "0.8" },
+        },
       },
       animation: {
         "toast-in": "toast-in 0.2s ease-out",
+        "skeleton-pulse": "skeleton-pulse 1.8s ease-in-out infinite",
       },
     },
   },

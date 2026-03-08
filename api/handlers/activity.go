@@ -3,10 +3,26 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 )
+
+// validActivityTypes is the set of allowed activity_type values for filtering.
+var validActivityTypes = map[string]bool{
+	"shelved":         true,
+	"started_book":    true,
+	"finished_book":   true,
+	"rated":           true,
+	"reviewed":        true,
+	"created_thread":  true,
+	"followed_user":   true,
+	"followed_author": true,
+	"created_link":    true,
+}
 
 // enrichActivity takes a raw activity row and enriches it with book, user, and
 // metadata details to match the webapp's ActivityItem type.
@@ -105,6 +121,124 @@ func enrichActivity(app core.App, row activityRow) map[string]any {
 	return item
 }
 
+// flattenActivities merges near-simultaneous related activities for the same
+// user and book into a single combined event. For example, a "finished_book"
+// and "rated" event within 60 seconds become "finished_and_rated".
+func flattenActivities(items []map[string]any) []map[string]any {
+	const mergeWindow = 60.0 // seconds
+
+	// bookKey returns a comparable key for an activity's book, or "" if none.
+	bookKey := func(item map[string]any) string {
+		if b, ok := item["book"].(map[string]any); ok {
+			if olid, ok := b["open_library_id"].(string); ok && olid != "" {
+				return olid
+			}
+		}
+		return ""
+	}
+
+	userKey := func(item map[string]any) string {
+		if u, ok := item["user"].(map[string]any); ok {
+			if uid, ok := u["user_id"].(string); ok {
+				return uid
+			}
+		}
+		return ""
+	}
+
+	parseTime := func(item map[string]any) time.Time {
+		if s, ok := item["created_at"].(string); ok {
+			for _, layout := range []string{
+				"2006-01-02 15:04:05.000Z",
+				time.RFC3339,
+				"2006-01-02 15:04:05.000Z07:00",
+			} {
+				if t, err := time.Parse(layout, s); err == nil {
+					return t
+				}
+			}
+		}
+		return time.Time{}
+	}
+
+	merged := make([]bool, len(items))
+	result := make([]map[string]any, 0, len(items))
+
+	for i, item := range items {
+		if merged[i] {
+			continue
+		}
+
+		typ, _ := item["type"].(string)
+		if typ != "finished_book" && typ != "rated" {
+			result = append(result, item)
+			continue
+		}
+
+		bk := bookKey(item)
+		uk := userKey(item)
+		t1 := parseTime(item)
+
+		// Look for a partner in the nearby items (check a small window)
+		var partner int = -1
+		for j := i + 1; j < len(items) && j < i+5; j++ {
+			if merged[j] {
+				continue
+			}
+			jTyp, _ := items[j]["type"].(string)
+			if jTyp == typ {
+				continue // same type, not a pair
+			}
+			if jTyp != "finished_book" && jTyp != "rated" {
+				continue
+			}
+			if bookKey(items[j]) != bk || bk == "" {
+				continue
+			}
+			if userKey(items[j]) != uk {
+				continue
+			}
+			t2 := parseTime(items[j])
+			if math.Abs(t1.Sub(t2).Seconds()) <= mergeWindow {
+				partner = j
+				break
+			}
+		}
+
+		if partner < 0 {
+			result = append(result, item)
+			continue
+		}
+
+		// Merge: use the finished_book as the base, carry over rating from rated
+		merged[partner] = true
+		var finishedItem, ratedItem map[string]any
+		if typ == "finished_book" {
+			finishedItem = item
+			ratedItem = items[partner]
+		} else {
+			finishedItem = items[partner]
+			ratedItem = item
+		}
+
+		combined := make(map[string]any, len(finishedItem))
+		for k, v := range finishedItem {
+			combined[k] = v
+		}
+		combined["type"] = "finished_and_rated"
+		if rating, ok := ratedItem["rating"]; ok {
+			combined["rating"] = rating
+		}
+		if snippet, ok := ratedItem["review_snippet"]; ok {
+			combined["review_snippet"] = snippet
+		}
+
+		result = append(result, combined)
+	}
+
+	return result
+}
+
 // activityRow holds the result of the enriched activity query.
 type activityRow struct {
 	ID                string  `db:"id"`
@@ -151,6 +285,7 @@ func GetFeed(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		cursor := e.Request.URL.Query().Get("cursor")
+		typeFilter := e.Request.URL.Query().Get("type")
 		limit := 30
 
 		// Check if user follows anyone
@@ -177,6 +312,26 @@ func GetFeed(app core.App) func(e *core.RequestEvent) error {
 		`
 		params := map[string]any{"user": user.Id}
 
+		if typeFilter != "" {
+			types := strings.Split(typeFilter, ",")
+			var filtered []string
+			for _, t := range types {
+				t = strings.TrimSpace(t)
+				if validActivityTypes[t] {
+					filtered = append(filtered, t)
+				}
+			}
+			if len(filtered) > 0 {
+				placeholders := make([]string, len(filtered))
+				for i, t := range filtered {
+					key := fmt.Sprintf("type%d", i)
+					placeholders[i] = "{:" + key + "}"
+					params[key] = t
+				}
+				query += " AND a.activity_type IN (" + strings.Join(placeholders, ", ") + ")"
+			}
+		}
+
 		if cursor != "" {
 			query += " AND a.created < {:cursor}"
 			params["cursor"] = cursor
@@ -193,10 +348,11 @@ func GetFeed(app core.App) func(e *core.RequestEvent) error {
 			})
 		}
 
-		result := make([]map[string]any, 0, len(rows))
+		enriched := make([]map[string]any, 0, len(rows))
 		for _, row := range rows {
-			result = append(result, enrichActivity(app, row))
+			enriched = append(enriched, enrichActivity(app, row))
 		}
+		result := flattenActivities(enriched)
 
 		var nextCursor any
 		if len(rows) == limit {
@@ -232,23 +388,44 @@ func GetUserActivity(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusForbidden, map[string]any{"error": "Profile is private"})
 		}
 
+		cursor := e.Request.URL.Query().Get("cursor")
+		limit := 30
+
 		query := activitySelectClause + `
 			WHERE a.user = {:user}
-			ORDER BY a.created DESC
-			LIMIT 30
 		`
+		params := map[string]any{"user": targetUser.Id}
+
+		if cursor != "" {
+			query += " AND a.created < {:cursor}"
+			params["cursor"] = cursor
+		}
+		query += " ORDER BY a.created DESC LIMIT {:limit}"
+		params["limit"] = limit
 
 		var rows []activityRow
-		err = app.DB().NewQuery(query).Bind(map[string]any{"user": targetUser.Id}).All(&rows)
+		err = app.DB().NewQuery(query).Bind(params).All(&rows)
 		if err != nil {
-			return e.JSON(http.StatusOK, map[string]any{"activities": []any{}})
+			return e.JSON(http.StatusOK, map[string]any{
+				"activities":  []any{},
+				"next_cursor": nil,
+			})
 		}
 
-		result := make([]map[string]any, 0, len(rows))
+		enriched := make([]map[string]any, 0, len(rows))
 		for _, row := range rows {
-			result = append(result, enrichActivity(app, row))
+			enriched = append(enriched, enrichActivity(app, row))
+		}
+		result := flattenActivities(enriched)
+
+		var nextCursor any
+		if len(rows) == limit {
+			nextCursor = rows[len(rows)-1].Created
 		}
 
-		return e.JSON(http.StatusOK, map[string]any{"activities": result})
+		return e.JSON(http.StatusOK, map[string]any{
+			"activities":  result,
+			"next_cursor": nextCursor,
+		})
 	}
 }

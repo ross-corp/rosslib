@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 type Edition = {
   key: string;
@@ -118,15 +119,18 @@ export default function EditionPicker({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay"
           onClick={() => setOpen(false)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edition-picker-modal-title"
             className="bg-surface-0 border border-border rounded-lg shadow-lg w-full max-w-lg max-h-[80vh] flex flex-col mx-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b border-border">
-              <h3 className="text-sm font-semibold text-text-primary">
+              <h3 id="edition-picker-modal-title" className="text-sm font-semibold text-text-primary">
                 Select edition
               </h3>
               <button
@@ -169,7 +173,7 @@ export default function EditionPicker({
                         className="w-12 h-[72px] shrink-0 rounded object-cover bg-surface-2"
                       />
                     ) : (
-                      <div className="w-12 h-[72px] shrink-0 rounded bg-surface-2" />
+                      <BookCoverPlaceholder title={ed.title || "Untitled"} className="w-12 h-[72px] shrink-0" />
                     )}
 
                     <div className="flex-1 min-w-0">
