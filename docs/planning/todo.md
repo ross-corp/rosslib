@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## Loading States
 
-- [ ] Add `loading.tsx` for the users browse page: create `webapp/src/app/users/loading.tsx` that shows a grid of placeholder cards (8 items, each with a gray circle for avatar and two gray bars for name/stats) matching the layout in `users/page.tsx`. Use simple `animate-pulse` div placeholders.
 - [ ] Add `loading.tsx` for the feed page: create `webapp/src/app/feed/loading.tsx` that shows 5 placeholder activity cards (gray bars for avatar, name, and description) matching the `ActivityCard` layout. Use `animate-pulse` div placeholders.
 - [ ] Add `loading.tsx` for the stats page: create `webapp/src/app/[username]/stats/loading.tsx` that shows placeholder bar charts (5 summary cards at top with gray squares, then placeholder horizontal bars) matching the stats page layout. Use `animate-pulse` div placeholders.
 - [ ] Add `loading.tsx` for the timeline page: create `webapp/src/app/[username]/timeline/loading.tsx` that shows a placeholder year heading and 3 month sections each with 4 gray book cover rectangles. Use `animate-pulse` div placeholders.
