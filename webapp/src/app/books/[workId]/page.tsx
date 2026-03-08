@@ -14,6 +14,7 @@ import GenreRatingEditor from "@/components/genre-rating-editor";
 import ReportButton from "@/components/report-button";
 import ReviewLikeButton from "@/components/review-like-button";
 import RecommendButton from "@/components/recommend-button";
+import BookQuoteList from "@/components/book-quote-list";
 import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import ReadingHistory from "@/components/reading-history";
 import ReviewComments from "@/components/review-comments";
@@ -150,6 +151,19 @@ type TagKey = {
   values: StatusValue[];
 };
 
+type BookQuote = {
+  id: string;
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  text: string;
+  page_number: number | null;
+  note: string | null;
+  is_public?: boolean;
+  created_at: string;
+};
+
 type ReadingSessionData = {
   id: string;
   date_started: string | null;
@@ -168,6 +182,12 @@ type AggregateGenreRating = {
 type MyGenreRating = {
   genre: string;
   rating: number;
+};
+
+type AuthorWork = {
+  key: string;
+  title: string;
+  cover_url: string | null;
 };
 
 type FriendReader = {
@@ -288,6 +308,30 @@ async function fetchAggregateGenreRatings(
   return res.json();
 }
 
+async function fetchBookQuotes(workId: string): Promise<BookQuote[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/books/${workId}/quotes`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchMyBookQuotes(
+  token: string,
+  workId: string
+): Promise<BookQuote[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/me/books/${workId}/quotes`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
 async function fetchSessions(
   token: string,
   workId: string
@@ -316,6 +360,20 @@ async function fetchMyGenreRatings(
   );
   if (!res.ok) return [];
   return res.json();
+}
+
+async function fetchAuthorWorks(
+  authorKey: string,
+  excludeWorkId: string
+): Promise<AuthorWork[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/authors/${authorKey}?limit=7&offset=0`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  const data = await res.json();
+  const works: AuthorWork[] = data.works ?? [];
+  return works.filter((w) => w.key !== excludeWorkId).slice(0, 6);
 }
 
 async function fetchBookFollowerCount(workId: string): Promise<number> {
@@ -376,7 +434,7 @@ export default async function BookPage({
   const reviewSort = REVIEW_SORT_OPTIONS.some((o) => o.value === sortParam) ? sortParam! : "newest";
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings, sessions, friendReaders, followerCount] = await Promise.all([
+  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings, bookQuotes, myBookQuotes, sessions, friendReaders, followerCount] = await Promise.all([
     fetchBook(workId),
     fetchBookReviews(workId, token ?? undefined, reviewSort),
     fetchThreads(workId),
@@ -392,6 +450,10 @@ export default async function BookPage({
     currentUser && token
       ? fetchMyGenreRatings(token, workId)
       : Promise.resolve([]),
+    fetchBookQuotes(workId),
+    currentUser && token
+      ? fetchMyBookQuotes(token, workId)
+      : Promise.resolve([]),
     currentUser && token
       ? fetchSessions(token, workId)
       : Promise.resolve([]),
@@ -402,6 +464,12 @@ export default async function BookPage({
   ]);
 
   if (!book) notFound();
+
+  // Fetch "more by this author" works
+  const firstAuthor = book.authors?.find((a) => a.key) ?? null;
+  const authorWorks = firstAuthor?.key
+    ? await fetchAuthorWorks(firstAuthor.key, workId)
+    : [];
 
   // Fetch series detail for the first series (if any)
   const firstSeries = book.series && book.series.length > 0 ? book.series[0] : null;
@@ -937,6 +1005,17 @@ export default async function BookPage({
           )}
         </section>
 
+        {/* ── Quotes ── */}
+        <section className="border-t border-border pt-8 mt-10">
+          <BookQuoteList
+            workId={workId}
+            initialQuotes={bookQuotes}
+            myQuotes={myBookQuotes}
+            isLoggedIn={!!currentUser}
+            hasStatus={!!myStatus}
+          />
+        </section>
+
         {/* ── Editions ── */}
         {book.editions && book.editions.length > 0 && (
           <section className="border-t border-border pt-8 mt-10">
@@ -948,6 +1027,47 @@ export default async function BookPage({
               totalEditions={book.edition_count}
               workId={workId}
             />
+          </section>
+        )}
+
+        {/* ── More by this author ── */}
+        {firstAuthor && authorWorks.length > 0 && (
+          <section className="border-t border-border pt-8 mt-10">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider">
+                More by {firstAuthor.name}
+              </h2>
+              {firstAuthor.key && (
+                <Link
+                  href={`/authors/${firstAuthor.key}`}
+                  className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
+                >
+                  See all
+                </Link>
+              )}
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
+              {authorWorks.map((work) => (
+                <Link key={work.key} href={`/books/${work.key}`} className="group">
+                  {work.cover_url ? (
+                    <img
+                      src={work.cover_url}
+                      alt={work.title}
+                      className="w-full aspect-[2/3] object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
+                    />
+                  ) : (
+                    <div className="w-full aspect-[2/3] bg-surface-2 rounded flex items-center justify-center p-2">
+                      <span className="text-[10px] text-text-primary text-center leading-tight line-clamp-3">
+                        {work.title}
+                      </span>
+                    </div>
+                  )}
+                  <p className="mt-1.5 text-xs text-text-primary leading-tight line-clamp-2 group-hover:text-text-primary transition-colors">
+                    {work.title}
+                  </p>
+                </Link>
+              ))}
+            </div>
           </section>
         )}
 

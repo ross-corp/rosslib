@@ -42,6 +42,9 @@ func main() {
 		se.Router.GET("/books/{workId}/series", handlers.GetBookSeries(app))
 		se.Router.GET("/series/{seriesId}", handlers.GetSeriesDetail(app)).BindFunc(handlers.OptionalAuthFunc(app))
 
+		// ── Book quotes (public) ─────────────────────────────────
+		se.Router.GET("/books/{workId}/quotes", handlers.GetBookQuotes(app))
+
 		// ── Books (optional auth) ────────────────────────────────
 		se.Router.GET("/books/{workId}/readers", handlers.GetBookReaders(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/books/{workId}/reviews", handlers.GetBookReviews(app)).BindFunc(handlers.OptionalAuthFunc(app))
@@ -199,6 +202,11 @@ func main() {
 		authed.PATCH("/me/imports/pending/{id}", handlers.ResolvePendingImport(app))
 		authed.POST("/me/imports/pending/{id}/retry", handlers.RetryPendingImport(app))
 		authed.DELETE("/me/imports/pending/{id}", handlers.DeletePendingImport(app))
+
+		// Quotes
+		authed.GET("/me/books/{olId}/quotes", handlers.GetMyBookQuotes(app))
+		authed.POST("/me/books/{olId}/quotes", handlers.CreateBookQuote(app))
+		authed.DELETE("/me/quotes/{quoteId}", handlers.DeleteBookQuote(app))
 
 		// Reading sessions
 		authed.GET("/me/books/{olId}/sessions", handlers.GetSessions(app))
