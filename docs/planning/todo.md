@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Show reading goal on visitor profile pages: on `webapp/src/app/[username]/page.tsx`, the `ReadingGoalCard` (line 607-611) is already shown for visitors because `fetchGoal` uses the public endpoint `GET /users/:username/goals/:year`. However, there's no link to set a goal visible on the own-profile view aside from settings. Add a small "Set a reading goal" link in the Reading Stats section (near line 615) when `isOwnProfile && !readingGoal` that links to `/settings#reading-goal`.
 - [ ] Add page title metadata to the feed page: `webapp/src/app/feed/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Feed" }` so the browser tab shows "Feed" instead of the default app title.
 - [ ] Add page title metadata to the genres index page: `webapp/src/app/genres/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Genres" }` so the browser tab shows "Genres".
 - [ ] Add page title metadata to the notifications page: `webapp/src/app/notifications/page.tsx` — check if it has a `metadata` export and add `export const metadata = { title: "Notifications" }` if missing.
