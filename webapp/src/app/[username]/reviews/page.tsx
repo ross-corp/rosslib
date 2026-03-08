@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Pagination from "@/components/pagination";
 import ReviewText from "@/components/review-text";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import ReviewSortDropdown from "@/components/review-sort-dropdown";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -113,7 +114,7 @@ export default async function ReviewsPage({
                       className="w-16 rounded shadow-sm object-cover"
                     />
                   ) : (
-                    <div className="w-16 h-24 bg-surface-2 rounded" />
+                    <BookCoverPlaceholder title={review.title} author={review.authors} className="w-16 h-24" />
                   )}
                 </Link>
 

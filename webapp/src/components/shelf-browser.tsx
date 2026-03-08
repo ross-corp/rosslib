@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 type StatusBook = {
   book_id: string;
@@ -98,6 +99,15 @@ export default function ShelfBrowser({
                   href={`/books/${book.open_library_id}`}
                   className="group"
                 >
+                  {book.cover_url ? (
+                    <img
+                      src={book.cover_url}
+                      alt={book.title}
+                      className="w-full aspect-[2/3] object-cover rounded shadow-sm group-hover:shadow-md transition-shadow"
+                    />
+                  ) : (
+                    <BookCoverPlaceholder title={book.title} className="w-full aspect-[2/3]" />
+                  )}
                   <div className="relative">
                     {book.cover_url ? (
                       <img

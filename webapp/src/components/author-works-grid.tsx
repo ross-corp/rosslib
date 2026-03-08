@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 type AuthorWork = {
   key: string;
@@ -56,11 +57,7 @@ export default function AuthorWorksGrid({
                 className="w-full aspect-[2/3] object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
               />
             ) : (
-              <div className="w-full aspect-[2/3] bg-surface-2 rounded flex items-center justify-center p-2">
-                <span className="text-[10px] text-text-primary text-center leading-tight line-clamp-3">
-                  {work.title}
-                </span>
-              </div>
+              <BookCoverPlaceholder title={work.title} className="w-full aspect-[2/3]" />
             )}
             <p className="mt-1.5 text-xs text-text-primary leading-tight line-clamp-2 group-hover:text-text-primary transition-colors">
               {work.title}

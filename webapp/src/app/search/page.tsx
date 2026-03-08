@@ -1,5 +1,6 @@
 import Link from "next/link";
 import BookList from "@/components/book-list";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import SavedSearches from "@/components/saved-searches";
 import RecentlyViewedBooks from "@/components/recently-viewed-books";
 import Pagination from "@/components/pagination";
@@ -434,11 +435,7 @@ export default async function SearchPage({
                             className="w-24 h-36 object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
                           />
                         ) : (
-                          <div className="w-24 h-36 bg-surface-2 rounded shadow-sm flex items-center justify-center">
-                            <span className="text-xs text-text-tertiary px-2 text-center leading-tight">
-                              {book.title}
-                            </span>
-                          </div>
+                          <BookCoverPlaceholder title={book.title} author={book.authors?.[0]} className="w-24 h-36" />
                         )}
                         <span className="text-xs font-medium text-text-primary mt-2 line-clamp-2 max-w-[6rem]">
                           {book.title}
