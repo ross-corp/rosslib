@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getUser, getToken } from "@/lib/auth";
 import NotificationList from "./notification-list";
 import EmptyState from "@/components/empty-state";
+
+export const metadata: Metadata = {
+  title: "Notifications",
+};
 
 type Notification = {
   id: string;
