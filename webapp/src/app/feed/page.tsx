@@ -28,7 +28,7 @@ async function fetchFeed(
     cache: "no-store",
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return { activities: [] };
+  if (!res.ok) throw new Error("Failed to load feed");
   return res.json();
 }
 
