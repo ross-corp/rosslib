@@ -458,6 +458,10 @@ Client component on the book detail page (shown when status is "currently-readin
 
 Client component on user profile pages. Shows "Block" button that opens an inline confirmation prompt. After blocking, the page reloads to show the restricted view. When already blocked, shows "Unblock" button instead. Calls `POST /api/users/:username/block` and `DELETE /api/users/:username/block`.
 
+### `ReadingHistory` (`components/reading-history.tsx`)
+
+Client component on the book detail page for re-read tracking. Shows a list of past reading sessions with dates, ratings, and notes. Includes a "Log a read" button to add new sessions, and edit/delete controls on each session. Calls `GET/POST /api/me/books/:olId/sessions` and `PATCH/DELETE /api/me/sessions/:sessionId`.
+
 ### `ThreadLockToggle` (`components/thread-lock-toggle.tsx`)
 
 Client component shown on the thread detail page for moderators only. Renders a Lock/Unlock toggle button. Calls `POST /api/threads/:threadId/lock` or `POST /api/threads/:threadId/unlock` and updates the button state optimistically.
