@@ -43,12 +43,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add empty state illustrations for zero-data pages](https://github.com/ross-corp/rosslib/pull/117) — reusable EmptyState component with consistent CTA links on feed, notifications, library, and label pages
 - [Auto-predict label names from shelf naming patterns](https://github.com/ross-corp/rosslib/pull/121) — detect common prefix and year-based patterns in Goodreads/StoryGraph shelf names and auto-group them into labels during import
 
-## Loading States
-
-- [ ] Add `loading.tsx` for the feed page: create `webapp/src/app/feed/loading.tsx` that shows 5 placeholder activity cards (gray bars for avatar, name, and description) matching the `ActivityCard` layout. Use `animate-pulse` div placeholders.
-- [ ] Add `loading.tsx` for the stats page: create `webapp/src/app/[username]/stats/loading.tsx` that shows placeholder bar charts (5 summary cards at top with gray squares, then placeholder horizontal bars) matching the stats page layout. Use `animate-pulse` div placeholders.
-- [ ] Add `loading.tsx` for the timeline page: create `webapp/src/app/[username]/timeline/loading.tsx` that shows a placeholder year heading and 3 month sections each with 4 gray book cover rectangles. Use `animate-pulse` div placeholders.
-
 ## UX Polish
 
 - [ ] Add a "View timeline" link to the profile page: on `webapp/src/app/[username]/page.tsx`, add a link below the "Reading Stats →" section heading that says "Reading Timeline →" and links to `/${username}/timeline`. Currently the timeline page exists but is only discoverable via direct URL — there's no link to it anywhere in the UI.
