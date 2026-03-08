@@ -60,10 +60,12 @@ func main() {
 
 		// ── Authors (public) ─────────────────────────────────────
 		se.Router.GET("/authors/search", handlers.SearchAuthors(app))
+		se.Router.GET("/authors/popular", handlers.GetPopularAuthors(app))
 		se.Router.GET("/authors/{authorKey}", handlers.GetAuthorDetail(app))
 		se.Router.GET("/authors/{authorKey}/series", handlers.GetAuthorSeries(app))
 
 		// ── Users (public / optional auth) ───────────────────────
+		se.Router.GET("/users/popular", handlers.GetPopularUsers(app))
 		se.Router.GET("/users", handlers.SearchUsers(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}", handlers.GetProfile(app)).BindFunc(handlers.OptionalAuthFunc(app))
 		se.Router.GET("/users/{username}/reviews", handlers.GetUserReviews(app)).BindFunc(handlers.OptionalAuthFunc(app))
