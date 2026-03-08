@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add page title metadata to the feed page: `webapp/src/app/feed/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Feed" }` so the browser tab shows "Feed" instead of the default app title.
 - [ ] Add page title metadata to the genres index page: `webapp/src/app/genres/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Genres" }` so the browser tab shows "Genres".
 - [ ] Add page title metadata to the notifications page: `webapp/src/app/notifications/page.tsx` — check if it has a `metadata` export and add `export const metadata = { title: "Notifications" }` if missing.
 - [ ] Add page title metadata to the recommendations page: `webapp/src/app/recommendations/page.tsx` — add `export const metadata = { title: "Recommendations" }` if missing.
