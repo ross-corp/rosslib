@@ -1,8 +1,13 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getUser, getToken } from "@/lib/auth";
 import RecommendationList from "./recommendation-list";
 import SentRecommendationList from "./sent-recommendation-list";
+
+export const metadata: Metadata = {
+  title: "Recommendations",
+};
 
 type Recommendation = {
   id: string;
