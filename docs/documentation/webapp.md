@@ -74,10 +74,7 @@ webapp/src/app/
 ├── search/loading.tsx              search loading skeleton
 ├── feed/page.tsx                   activity feed with filter chips (All, Reviews, Ratings, Status Updates, Threads, Social)
 ├── users/page.tsx                  browse all users (sort by newest/books/followers)
-├── books/[workId]/page.tsx         single book page (shows series badges below title, "More by Author" section)
-├── series/[seriesId]/page.tsx     series detail — ordered book list with covers & reading progress
-
-├── books/[workId]/page.tsx         single book page (series badges, series navigation row, review sort dropdown)
+├── books/[workId]/page.tsx         single book page (series badges, series navigation row, review sort dropdown, "More by Author" section)
 ├── books/[workId]/loading.tsx     book detail loading skeleton
 ├── books/[workId]/not-found.tsx   "Book not found" with search link
 ├── series/[seriesId]/page.tsx     series detail — ordered book list with covers, reading progress & status picker
@@ -148,6 +145,7 @@ webapp/src/app/
     ├── shelves/[shelfId]/books/[olId]/route.ts    ← GET, PATCH, DELETE
     ├── books/[workId]/series/route.ts              ← GET, POST series memberships
     ├── series/[seriesId]/route.ts                 ← GET series detail, PUT update description
+    ├── books/[workId]/quotes/route.ts               ← GET public quotes for a book
     ├── books/[workId]/readers/route.ts                ← GET friends reading this book
     ├── books/[workId]/reviews/[userId]/like/route.ts ← POST toggle, GET check review like
     ├── books/[workId]/links/route.ts              ← GET, POST community links
@@ -168,7 +166,9 @@ webapp/src/app/
     ├── books/lookup/route.ts                          ← GET ISBN lookup
     ├── books/[workId]/followers/count/route.ts        ← GET book follower count (public)
     ├── books/[workId]/genre-ratings/route.ts         ← GET aggregate genre ratings
+    ├── me/books/[olId]/quotes/route.ts               ← GET, POST user's quotes for a book
     ├── me/books/[olId]/genre-ratings/route.ts       ← GET, PUT user genre ratings
+    ├── me/quotes/[quoteId]/route.ts                 ← DELETE user's quote
     ├── me/account/route.ts                         ← GET account info (has_password, has_google)
     ├── me/account/data/route.ts                   ← DELETE all user data
     ├── me/avatar/route.ts                           ← POST upload avatar
@@ -278,6 +278,10 @@ Dropdown for adding/moving/removing a single book from labels. Used on search re
 ### `BookLinkList` (`components/book-link-list.tsx`)
 
 Client component for community links (related books) on book detail pages. Shows links grouped by relationship type (sequel, prequel, companion, similar, etc.), sorted by upvote count. Logged-in users can upvote/unvote links, suggest new ones via an inline form, and propose edits to existing links (edit pencil icon). Proposed edits are submitted for moderator review. Target book is selected via a search-as-you-type dropdown that queries `/api/books/search` with 400ms debounce.
+
+### `BookQuoteList` (`components/book-quote-list.tsx`)
+
+Client component for the Quotes section on book detail pages. Displays public quotes from community members and the current user's own quotes (including private ones). Shows an "Add quote" button when the user has the book in their library. The add form accepts quote text (max 2000 chars), optional page number, optional note (max 500 chars), and a "Visible to others" checkbox (defaults to checked). Users can delete their own quotes. Private quotes show a "Private" badge. Calls `GET /api/books/:workId/quotes`, `GET /api/me/books/:olId/quotes`, `POST /api/me/books/:olId/quotes`, and `DELETE /api/me/quotes/:quoteId`.
 
 ### `AdminUserList` (`components/admin-user-list.tsx`)
 

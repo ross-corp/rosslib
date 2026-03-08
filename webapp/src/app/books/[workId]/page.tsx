@@ -14,6 +14,7 @@ import GenreRatingEditor from "@/components/genre-rating-editor";
 import ReportButton from "@/components/report-button";
 import ReviewLikeButton from "@/components/review-like-button";
 import RecommendButton from "@/components/recommend-button";
+import BookQuoteList from "@/components/book-quote-list";
 import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import ReadingHistory from "@/components/reading-history";
 import ReviewComments from "@/components/review-comments";
@@ -150,6 +151,19 @@ type TagKey = {
   values: StatusValue[];
 };
 
+type BookQuote = {
+  id: string;
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  text: string;
+  page_number: number | null;
+  note: string | null;
+  is_public?: boolean;
+  created_at: string;
+};
+
 type ReadingSessionData = {
   id: string;
   date_started: string | null;
@@ -174,6 +188,7 @@ type AuthorWork = {
   key: string;
   title: string;
   cover_url: string | null;
+};
 
 type FriendReader = {
   user_id: string;
@@ -293,6 +308,30 @@ async function fetchAggregateGenreRatings(
   return res.json();
 }
 
+async function fetchBookQuotes(workId: string): Promise<BookQuote[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/books/${workId}/quotes`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchMyBookQuotes(
+  token: string,
+  workId: string
+): Promise<BookQuote[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/me/books/${workId}/quotes`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
 async function fetchSessions(
   token: string,
   workId: string
@@ -335,6 +374,7 @@ async function fetchAuthorWorks(
   const data = await res.json();
   const works: AuthorWork[] = data.works ?? [];
   return works.filter((w) => w.key !== excludeWorkId).slice(0, 6);
+}
 
 async function fetchBookFollowerCount(workId: string): Promise<number> {
   const res = await fetch(
@@ -394,7 +434,7 @@ export default async function BookPage({
   const reviewSort = REVIEW_SORT_OPTIONS.some((o) => o.value === sortParam) ? sortParam! : "newest";
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings, sessions, friendReaders, followerCount] = await Promise.all([
+  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings, bookQuotes, myBookQuotes, sessions, friendReaders, followerCount] = await Promise.all([
     fetchBook(workId),
     fetchBookReviews(workId, token ?? undefined, reviewSort),
     fetchThreads(workId),
@@ -409,6 +449,10 @@ export default async function BookPage({
     fetchAggregateGenreRatings(workId),
     currentUser && token
       ? fetchMyGenreRatings(token, workId)
+      : Promise.resolve([]),
+    fetchBookQuotes(workId),
+    currentUser && token
+      ? fetchMyBookQuotes(token, workId)
       : Promise.resolve([]),
     currentUser && token
       ? fetchSessions(token, workId)
@@ -959,6 +1003,17 @@ export default async function BookPage({
               ))}
             </div>
           )}
+        </section>
+
+        {/* ── Quotes ── */}
+        <section className="border-t border-border pt-8 mt-10">
+          <BookQuoteList
+            workId={workId}
+            initialQuotes={bookQuotes}
+            myQuotes={myBookQuotes}
+            isLoggedIn={!!currentUser}
+            hasStatus={!!myStatus}
+          />
         </section>
 
         {/* ── Editions ── */}
