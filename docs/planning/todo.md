@@ -43,10 +43,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 - [Add empty state illustrations for zero-data pages](https://github.com/ross-corp/rosslib/pull/117) — reusable EmptyState component with consistent CTA links on feed, notifications, library, and label pages
 - [Auto-predict label names from shelf naming patterns](https://github.com/ross-corp/rosslib/pull/121) — detect common prefix and year-based patterns in Goodreads/StoryGraph shelf names and auto-group them into labels during import
 
-## Error Handling & Reliability
-
-- [ ] Fix feed page to distinguish between empty feed and API errors: in `webapp/src/app/feed/page.tsx` line 18, `if (!res.ok) return { activities: [] }` silently swallows 500 errors, showing "No activity yet" instead of an error message. Change to `if (!res.ok) throw new Error("Failed to load feed")` so the error boundary catches it, and let the empty state only trigger when `res.ok` returns an empty activities array.
-
 ## Loading States
 
 - [ ] Add `loading.tsx` for the users browse page: create `webapp/src/app/users/loading.tsx` that shows a grid of placeholder cards (8 items, each with a gray circle for avatar and two gray bars for name/stats) matching the layout in `users/page.tsx`. Use simple `animate-pulse` div placeholders.
