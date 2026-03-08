@@ -683,6 +683,12 @@ export default async function UserPage({
                   Reading Stats →
                 </Link>
                 <Link
+                  href={`/${username}/timeline`}
+                  className="text-xs text-text-tertiary hover:text-accent transition-colors"
+                >
+                  Reading Timeline →
+                </Link>
+                <Link
                   href={`/${username}/year-in-review`}
                   className="text-xs text-text-tertiary hover:text-accent transition-colors"
                 >

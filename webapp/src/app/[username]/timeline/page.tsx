@@ -79,12 +79,20 @@ export default async function TimelinePage({
     <div className="min-h-screen">
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
         <div className="mb-8">
-          <Link
-            href={`/${username}`}
-            className="text-sm text-text-tertiary hover:text-text-primary transition-colors"
-          >
-            &larr; {username}
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href={`/${username}`}
+              className="text-sm text-text-tertiary hover:text-text-primary transition-colors"
+            >
+              &larr; {username}
+            </Link>
+            <Link
+              href={`/${username}/stats`}
+              className="text-sm text-text-tertiary hover:text-accent transition-colors"
+            >
+              Stats →
+            </Link>
+          </div>
           <div className="flex items-center justify-between mt-2">
             <h1 className="text-2xl font-bold text-text-primary">
               Reading Timeline
