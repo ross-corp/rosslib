@@ -928,6 +928,42 @@ func GetPopularBooks(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// GetPopularAuthors handles GET /authors/popular
+// Returns the most-read authors on Rosslib, aggregated from user_books + books using json_each.
+func GetPopularAuthors(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		type row struct {
+			Author    string `db:"author"`
+			BookCount int    `db:"book_count"`
+		}
+
+		var rows []row
+		err := app.DB().NewQuery(`
+			SELECT je.value AS author, COUNT(*) AS book_count
+			FROM books b, json_each(b.authors) je
+			JOIN user_books ub ON ub.book = b.id
+			WHERE b.authors IS NOT NULL AND b.authors != '[]'
+			GROUP BY je.value
+			HAVING author != ''
+			ORDER BY book_count DESC
+			LIMIT 12
+		`).All(&rows)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		results := make([]map[string]any, 0, len(rows))
+		for _, r := range rows {
+			results = append(results, map[string]any{
+				"name":       r.Author,
+				"book_count": r.BookCount,
+			})
+		}
+
+		return e.JSON(http.StatusOK, results)
+	}
+}
+
 // GetTrendingBooks handles GET /books/trending?period=week&limit=10
 func GetTrendingBooks(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {

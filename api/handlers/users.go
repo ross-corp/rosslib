@@ -160,6 +160,7 @@ func GetPopularUsers(app core.App) func(e *core.RequestEvent) error {
 				COUNT(ub.id) AS book_count
 			FROM users u
 			LEFT JOIN user_books ub ON ub."user" = u.id
+			WHERE (u.is_private = false OR u.is_private IS NULL)
 			GROUP BY u.id
 			HAVING book_count > 0
 			ORDER BY book_count DESC
