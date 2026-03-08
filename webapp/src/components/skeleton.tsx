@@ -226,6 +226,113 @@ export function UsersBrowseSkeleton({ count = 8 }: { count?: number }) {
   );
 }
 
+export function StatsPageSkeleton() {
+  return (
+    <div className="min-h-screen">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
+        {/* Back link + heading */}
+        <div className="mb-8">
+          <Skeleton variant="text" className="h-4 w-20 mb-2" />
+          <Skeleton variant="text" className="h-7 w-36" />
+        </div>
+
+        {/* Summary cards */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5 mb-10">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i}>
+              <Skeleton variant="text" className="h-7 w-12 mb-1" />
+              <Skeleton variant="text" className="h-3 w-16" />
+            </div>
+          ))}
+        </div>
+
+        {/* Rating Distribution */}
+        <section className="mb-10">
+          <Skeleton variant="text" className="h-3 w-36 mb-4" />
+          <div className="space-y-2">
+            {Array.from({ length: 5 }, (_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton variant="text" className="w-12 h-4" />
+                <Skeleton variant="rectangular" className="flex-1 h-5" />
+                <Skeleton variant="text" className="w-8 h-3" />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Books by Year */}
+        <section className="mb-10">
+          <Skeleton variant="text" className="h-3 w-28 mb-4" />
+          <div className="space-y-2">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton variant="text" className="w-12 h-4" />
+                <Skeleton variant="rectangular" className="flex-1 h-5" />
+                <Skeleton variant="text" className="w-8 h-3" />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Books by Month */}
+        <section className="mb-10">
+          <Skeleton variant="text" className="h-3 w-32 mb-4" />
+          <div className="space-y-2">
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton variant="text" className="w-12 h-4" />
+                <Skeleton variant="rectangular" className="flex-1 h-5" />
+                <Skeleton variant="text" className="w-8 h-3" />
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+export function TimelineSkeleton() {
+  return (
+    <div className="min-h-screen">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
+        {/* Back link + heading */}
+        <div className="mb-8">
+          <Skeleton variant="text" className="h-4 w-20 mb-2" />
+          <div className="flex items-center justify-between">
+            <Skeleton variant="text" className="h-7 w-40" />
+            <Skeleton variant="rectangular" className="h-8 w-20" />
+          </div>
+          <Skeleton variant="text" className="h-4 w-36 mt-1" />
+        </div>
+
+        {/* Month sections */}
+        <div className="space-y-8">
+          {Array.from({ length: 3 }, (_, i) => (
+            <section key={i}>
+              <div className="flex items-center gap-2 mb-3">
+                <Skeleton variant="text" className="h-3 w-20" />
+                <Skeleton variant="text" className="h-3 w-6" />
+              </div>
+              <div className="flex gap-4">
+                {Array.from({ length: 4 }, (_, j) => (
+                  <div key={j} className="space-y-2">
+                    <Skeleton
+                      variant="rectangular"
+                      className="w-24 h-36 shrink-0"
+                    />
+                    <Skeleton variant="text" className="h-3 w-20" />
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export function SearchSkeleton() {
   return (
     <div className="min-h-screen">
