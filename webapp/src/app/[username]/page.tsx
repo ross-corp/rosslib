@@ -701,6 +701,14 @@ export default async function UserPage({
                 booksThisYear={profile.books_this_year}
                 averageRating={profile.average_rating}
               />
+              {isOwnProfile && !readingGoal && (
+                <p className="text-sm text-text-tertiary mt-3">
+                  <Link href="/settings#reading-goal" className="text-accent hover:underline">
+                    Set a reading goal
+                  </Link>{" "}
+                  for {currentYear}
+                </p>
+              )}
             </section>
 
             {/* Recent Reviews */}

@@ -49,7 +49,7 @@ export default function ReadingGoalForm({
   }
 
   return (
-    <div className="border-t border-border pt-8 mt-8">
+    <div id="reading-goal" className="border-t border-border pt-8 mt-8">
       <h2 className="text-lg font-bold text-text-primary mb-1">
         Reading Goal
       </h2>
