@@ -236,11 +236,11 @@ async function fetchGoal(
   return res.json();
 }
 
-async function fetchFollowedAuthors(token: string): Promise<FollowedAuthor[]> {
-  const res = await fetch(`${process.env.API_URL}/me/followed-authors`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
+async function fetchFollowedAuthors(username: string): Promise<FollowedAuthor[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/users/${username}/followed-authors`,
+    { cache: "no-store" }
+  );
   if (!res.ok) return [];
   return res.json();
 }
@@ -280,7 +280,7 @@ export default async function UserPage({
         fetchRecentReviews(username),
         !isOwnProfile && token ? fetchViewerTagKeys(token) : Promise.resolve([] as ViewerTagKey[]),
         fetchGoal(username, currentYear, token ?? undefined),
-        isOwnProfile && token ? fetchFollowedAuthors(token) : Promise.resolve([] as FollowedAuthor[]),
+        fetchFollowedAuthors(username),
       ]);
 
   const shelves = shelvesResponse.shelves;
@@ -752,7 +752,7 @@ export default async function UserPage({
                 </div>
               ) : null}
 
-              {isOwnProfile && followedAuthors.length > 0 && (
+              {followedAuthors.length > 0 && (
                 <div className="mt-6">
                   <h2 className="section-heading mb-2">Followed Authors</h2>
                   <ul className="space-y-1.5">
@@ -769,7 +769,7 @@ export default async function UserPage({
                   </ul>
                   {followedAuthors.length > 5 && (
                     <Link
-                      href="/settings/followed-authors"
+                      href={isOwnProfile ? "/settings/followed-authors" : `/authors`}
                       className="block mt-2 text-xs text-text-tertiary hover:text-text-primary transition-colors"
                     >
                       View all {followedAuthors.length} →

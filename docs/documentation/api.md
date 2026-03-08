@@ -1113,6 +1113,19 @@ Returns a paginated list of users this user follows. Respects privacy — return
 ]
 ```
 
+### `GET /users/:username/followed-authors`  *(optional auth)*
+
+Returns the authors this user follows. Respects privacy — returns 403 for private profiles the viewer doesn't follow.
+
+```json
+[
+  {
+    "author_key": "OL23919A",
+    "author_name": "J.R.R. Tolkien"
+  }
+]
+```
+
 ### `GET /users/:username/reviews?page=1&limit=20&sort=newest`
 
 Returns paginated reviews (user_books with non-empty `review_text`) for a user.

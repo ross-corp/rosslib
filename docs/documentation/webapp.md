@@ -191,6 +191,7 @@ webapp/src/app/
     └── users/[username]/
         ├── followers/route.ts                     ← GET followers list
         ├── following/route.ts                     ← GET following list
+        ├── followed-authors/route.ts              ← GET followed authors list (public)
         ├── stats/route.ts                         ← GET reading statistics
         ├── tags/[...path]/route.ts
         ├── labels/[keySlug]/[...valuePath]/route.ts   ← catch-all for nested label paths

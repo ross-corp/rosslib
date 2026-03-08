@@ -1069,6 +1069,47 @@ func GetSuggestedFollows(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// GetUserFollowedAuthors handles GET /users/{username}/followed-authors
+func GetUserFollowedAuthors(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		username := e.Request.PathValue("username")
+
+		users, err := app.FindRecordsByFilter("users",
+			"username = {:username}", "", 1, 0,
+			map[string]any{"username": username},
+		)
+		if err != nil || len(users) == 0 {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "User not found"})
+		}
+		user := users[0]
+
+		viewerID := ""
+		if e.Auth != nil {
+			viewerID = e.Auth.Id
+		}
+		if !canViewProfile(app, viewerID, user) {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Profile is private"})
+		}
+
+		records, err := app.FindRecordsByFilter("author_follows",
+			"user = {:user}", "-created", 50, 0,
+			map[string]any{"user": user.Id},
+		)
+		if err != nil {
+			return e.JSON(http.StatusOK, []any{})
+		}
+
+		results := make([]map[string]any, len(records))
+		for i, r := range records {
+			results[i] = map[string]any{
+				"author_key":  r.GetString("author_key"),
+				"author_name": r.GetString("author_name"),
+			}
+		}
+		return e.JSON(http.StatusOK, results)
+	}
+}
+
 // GetFollowRequests handles GET /me/follow-requests
 func GetFollowRequests(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
