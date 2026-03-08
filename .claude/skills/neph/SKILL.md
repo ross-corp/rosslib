@@ -8,10 +8,8 @@ You are nephewbot, an autonomous worker that implements features from the projec
 ## Setup
 
 1. Run `git checkout main && git pull origin main` to get the latest code
-2. **Dedup check**: Run `gh pr list --state open --head neph/ --json title,url` and read the `## Pending PRs` section of `docs/planning/todo.md`. Collect the set of tasks that already have an open PR or are listed in Pending PRs. Skip any task that is already covered.
-3. Read `docs/planning/todo.md` and select the **top unchecked item** (first `- [ ]` line) that is NOT already covered by an open PR or Pending PRs entry. If every unchecked task is already covered, stop and report "nothing to do".
-4. If a task has sub-items indented beneath it, implement the parent and all its sub-items together as one unit
-5. Create a feature branch off main: `git checkout -b neph/<short-slug>` (e.g. `neph/bug-report-form`)
+2. Read `docs/planning/todo.md` and select the **top unchecked item** (first `- [ ]` line). If every item is checked, stop and report "nothing to do".
+3. If a task has sub-items indented beneath it, implement the parent and all its sub-items together as one unit
 
 ## Before coding
 
@@ -45,37 +43,24 @@ You are nephewbot, an autonomous worker that implements features from the projec
 2. Update `docs/documentation/webapp.md` if you added/changed pages or components
 3. If the task spawns follow-up work, note the new items — you'll add them to todo.md on main later
 
-## Committing & PR
+## Committing & Pushing
 
 - Stage only files you changed — never stage binaries (`api/api`, `api/tmp/`, `api/server`)
 - Write a descriptive commit message summarizing what was implemented
-- Push your feature branch: `git push -u origin neph/<short-slug>`
-- Open a PR to main using `gh pr create`:
-  - Title: short summary of the feature (under 70 chars)
-  - Body: `## Summary` with 1-3 bullet points describing what was implemented, and `## Test plan` with verification steps
+- Before pushing, always pull to pick up any changes from other automated runs: `git pull --rebase origin main`
+- Push directly to main: `git push origin main`
+- If the push is rejected, pull rebase and retry: `git pull --rebase origin main && git push origin main`
 
-## CI Check
+## After pushing
 
-After creating the PR, wait for CI checks to complete and fix any failures:
-
-1. Wait ~30 seconds, then check status: `gh pr checks <PR_NUMBER> --watch`
-2. If all checks pass, you're done — proceed to switch back to main
-3. If any checks fail:
-   - Run `gh pr checks <PR_NUMBER>` to see which checks failed
-   - Use `gh run view <RUN_ID> --log-failed` to get the failure logs
-   - Fix the issues on the same branch
-   - Commit and push the fix: `git push`
-   - Repeat from step 1 until all checks pass
-4. After all checks pass, update todo.md **on main** so the next run doesn't pick the same task:
-   - `git checkout main`
-   - In `docs/planning/todo.md`: remove the completed item from its current section and add it to the `## Pending PRs` section, formatted as `- [PR title](PR_URL) — one-line description`
-   - If the task spawns follow-up work, add new `- [ ]` items to the appropriate section now
-   - Commit and push: `git add docs/planning/todo.md && git commit -m "docs: move <task> to pending PRs" && git push origin main`
+1. Remove the completed item from `docs/planning/todo.md` entirely (delete the line). Do NOT leave it as `- [x]` — the file should only contain unchecked tasks.
+2. If the task spawns follow-up work, add new `- [ ]` items to the appropriate section now
+3. Commit and push: `git add docs/planning/todo.md && git commit -m "docs: remove completed task" && git pull --rebase origin main && git push origin main`
 
 ## Constraints
 
 - Do NOT pick tasks that need external services you can't configure (SMTP, Google OAuth)
 - Do NOT modify docker-compose.yml, Dockerfile, or CI config unless the task explicitly calls for it
 - Do NOT refactor unrelated code — stay focused on the single task
-- If a task is ambiguous, implement the simplest reasonable interpretation. Leaving comments or questions in the PR is fine.
+- If a task is ambiguous, implement the simplest reasonable interpretation.
 - If you get stuck or a task seems impossible, skip it (leave unchecked) and move to the next one instead of wasting turns. add a comment in the todo.md near the task to indicate a struggle. 

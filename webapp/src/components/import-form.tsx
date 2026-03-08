@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useToast } from "@/components/toast";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -86,6 +87,61 @@ type TagKey = {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+/**
+ * Detect common naming patterns in Goodreads shelf names and suggest label groupings.
+ *
+ * Patterns detected:
+ * 1. Common prefix: `genre-scifi`, `genre-romance`, `genre-fantasy` → label "genre"
+ * 2. Year-based: `read-2023`, `read-2024` → label "read"
+ *
+ * Returns a map of shelf name → { label_name } for shelves that should be grouped.
+ */
+function detectShelfPatterns(shelfNames: string[]): Map<string, string> {
+  const result = new Map<string, string>();
+  if (shelfNames.length < 2) return result;
+
+  // Split each shelf by common separators (-, _)
+  // Group shelves by their prefix (first segment before separator)
+  const prefixGroups = new Map<string, { sep: string; shelves: string[] }>();
+
+  for (const shelf of shelfNames) {
+    // Try dash first, then underscore
+    for (const sep of ["-", "_"]) {
+      const idx = shelf.indexOf(sep);
+      if (idx > 0 && idx < shelf.length - 1) {
+        const prefix = shelf.substring(0, idx);
+        const key = `${prefix}${sep}`;
+        const group = prefixGroups.get(key);
+        if (group) {
+          group.shelves.push(shelf);
+        } else {
+          prefixGroups.set(key, { sep, shelves: [shelf] });
+        }
+        break; // only use first separator found
+      }
+    }
+  }
+
+  // Only suggest grouping when 2+ shelves share the same prefix
+  for (const [, { shelves }] of prefixGroups) {
+    if (shelves.length < 2) continue;
+
+    // Extract the prefix as the label name
+    const firstShelf = shelves[0];
+    const sep = firstShelf.includes("-") ? "-" : "_";
+    const prefix = firstShelf.substring(0, firstShelf.indexOf(sep));
+
+    // Humanize: replace separators with spaces, capitalize first letter
+    const labelName = prefix.replace(/[-_]/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+
+    for (const shelf of shelves) {
+      result.set(shelf, labelName);
+    }
+  }
+
+  return result;
+}
+
 function shelfLabel(slug: string): string {
   const labels: Record<string, string> = {
     "read": "Read",
@@ -105,9 +161,10 @@ function stars(rating: number | null): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function ImportForm({ username, source = "goodreads" }: { username: string; source?: "goodreads" | "storygraph" }) {
+export default function ImportForm({ username, source = "goodreads" }: { username: string; source?: "goodreads" | "storygraph" | "librarything" }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const toast = useToast();
 
   type Phase = "idle" | "previewing" | "review" | "configure" | "importing" | "done";
   const [phase, setPhase] = useState<Phase>("idle");
@@ -355,8 +412,10 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
       await loadPendingImports();
       setDoneResult(data);
       setPhase("done");
+      toast.success(`Import complete — ${data.imported} book${data.imported !== 1 ? "s" : ""} imported`);
     } catch {
       setError("Network error. Please try again.");
+      toast.error("Import failed — network error");
       setPhase("review");
     }
   }
@@ -370,10 +429,19 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
         counts.set(shelf, (counts.get(shelf) ?? 0) + 1);
       }
     }
-    // Initialize all custom shelves to "tag" by default
+    // Detect naming patterns (prefix groups, year-based shelves)
+    const patterns = detectShelfPatterns(Array.from(counts.keys()));
+    // Initialize mappings: use detected pattern as default, otherwise "tag"
     const mappings = new Map<string, ShelfMapping>();
     for (const shelf of counts.keys()) {
-      mappings.set(shelf, shelfMappings.get(shelf) ?? { action: "tag" });
+      if (shelfMappings.has(shelf)) {
+        // Preserve user's previous choice if they went back and re-entered configure
+        mappings.set(shelf, shelfMappings.get(shelf)!);
+      } else if (patterns.has(shelf)) {
+        mappings.set(shelf, { action: "create_label", label_name: patterns.get(shelf)! });
+      } else {
+        mappings.set(shelf, { action: "tag" });
+      }
     }
     setShelfMappings(mappings);
     // Fetch existing tag keys for "Add to existing label"
@@ -404,7 +472,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
           {doneResult.imported} book{doneResult.imported !== 1 ? "s" : ""} imported successfully.
         </p>
         {doneResult.failed > 0 && (
-          <p className="text-sm text-red-600">
+          <p className="text-sm text-semantic-error">
             {doneResult.failed} book{doneResult.failed !== 1 ? "s" : ""} failed to import.
           </p>
         )}
@@ -463,7 +531,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
       <div className="space-y-8">
         {/* Summary */}
         <div className="flex flex-wrap gap-4 text-sm">
-          <span className="px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-800">
+          <span className="px-2.5 py-1 rounded-full bg-semantic-success-bg border border-semantic-success-border text-semantic-success">
             {preview.matched} matched
           </span>
           {preview.ambiguous > 0 && (
@@ -594,7 +662,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
           </section>
         )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-semantic-error">{error}</p>}
 
         {/* Action bar */}
         <div className="flex items-center gap-4 pt-2 border-t border-border">
@@ -629,6 +697,11 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
     }
     const sortedShelves = Array.from(shelfCounts.entries()).sort((a, b) => b[1] - a[1]);
     const hasCustomShelves = sortedShelves.length > 0;
+    // Count how many shelves were auto-grouped by pattern detection
+    const autoGroupedCount = sortedShelves.filter(([shelf]) => {
+      const m = shelfMappings.get(shelf);
+      return m?.action === "create_label" && m.label_name;
+    }).length;
 
     return (
       <div className="space-y-8">
@@ -669,8 +742,13 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
               Custom labels ({sortedShelves.length})
             </h2>
             <p className="text-xs text-text-primary mb-3">
-              Choose how to import each {source === "storygraph" ? "StoryGraph tag" : "custom Goodreads shelf"} as a label.
+              Choose how to import each {source === "librarything" ? "LibraryThing collection/tag" : source === "storygraph" ? "StoryGraph tag" : "custom Goodreads shelf"} as a label.
             </p>
+            {autoGroupedCount > 0 && (
+              <p className="text-xs text-accent mb-3">
+                {autoGroupedCount} {autoGroupedCount === 1 ? "shelf was" : "shelves were"} auto-grouped into labels based on naming patterns. You can adjust or undo these below.
+              </p>
+            )}
             <ul className="divide-y divide-border border border-border rounded-lg overflow-hidden">
               {(() => {
                 // Collect all label names entered across all shelves (sorted for stable order)
@@ -824,7 +902,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
           </p>
         )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-semantic-error">{error}</p>}
 
         {/* Action bar */}
         <div className="flex items-center gap-4 pt-2 border-t border-border">
@@ -895,7 +973,14 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
       )}
 
       <div className="text-sm text-text-primary space-y-1">
-        {source === "storygraph" ? (
+        {source === "librarything" ? (
+          <>
+            <p>Export your library from LibraryThing:</p>
+            <p className="text-text-primary">
+              More &rarr; Import/Export &rarr; Export as tab-delimited
+            </p>
+          </>
+        ) : source === "storygraph" ? (
           <>
             <p>Export your library from StoryGraph:</p>
             <p className="text-text-primary">
@@ -919,7 +1004,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv"
+              accept=".csv,.tsv,.txt"
               className="sr-only"
               onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
             />
@@ -928,7 +1013,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
         {fileName && <span className="text-xs text-text-primary truncate max-w-xs">{fileName}</span>}
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-semantic-error">{error}</p>}
 
       <button
         type="button"

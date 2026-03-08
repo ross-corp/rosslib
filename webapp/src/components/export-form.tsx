@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/toast";
 
 export default function ExportForm() {
   const [downloading, setDownloading] = useState(false);
+  const toast = useToast();
 
   async function handleExport() {
     setDownloading(true);
@@ -17,8 +19,9 @@ export default function ExportForm() {
       a.download = "rosslib-export.csv";
       a.click();
       URL.revokeObjectURL(a.href);
+      toast.success("Export downloaded");
     } catch {
-      alert("Export failed. Please try again.");
+      toast.error("Export failed. Please try again.");
     } finally {
       setDownloading(false);
     }
@@ -34,7 +37,7 @@ export default function ExportForm() {
       <button
         onClick={handleExport}
         disabled={downloading}
-        className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-text-inverted hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {downloading ? "Downloading..." : "Download CSV"}
       </button>

@@ -87,6 +87,31 @@ func MarkNotificationRead(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+// DeleteNotification handles DELETE /me/notifications/{notifId}
+func DeleteNotification(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+		notifID := e.Request.PathValue("notifId")
+
+		rec, err := app.FindRecordById("notifications", notifID)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Notification not found"})
+		}
+		if rec.GetString("user") != user.Id {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Not your notification"})
+		}
+
+		if err := app.Delete(rec); err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to delete notification"})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"ok": true})
+	}
+}
+
 // MarkAllRead handles POST /me/notifications/read-all
 func MarkAllRead(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {

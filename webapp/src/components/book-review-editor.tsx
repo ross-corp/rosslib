@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import StarRatingInput from "@/components/star-rating-input";
 import ReviewText from "@/components/review-text";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import { useToast } from "@/components/toast";
 
 type BookSuggestion = {
@@ -57,7 +58,8 @@ export default function BookReviewEditor({
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const hasExisting = initialRating != null || (initialReviewText != null && initialReviewText !== "");
+  const hasDateInfo = !!(initialDateStarted || initialDateRead || initialDateDnf);
+  const hasExisting = initialRating != null || (initialReviewText != null && initialReviewText !== "") || hasDateInfo;
   const hasChanges =
     rating !== initialRating ||
     reviewText !== (initialReviewText ?? "") ||
@@ -279,10 +281,10 @@ export default function BookReviewEditor({
                   <ReviewText text={initialReviewText} />
                 </div>
               )}
-              {initialDateStarted && (
+              {initialDateStarted && showDateStarted && (
                 <p className="text-xs text-text-primary mt-1">
-                  Started {new Date(initialDateStarted).toLocaleDateString("en-US", {
-                    month: "long",
+                  Started: {new Date(initialDateStarted).toLocaleDateString("en-US", {
+                    month: "short",
                     day: "numeric",
                     year: "numeric",
                   })}
@@ -290,8 +292,8 @@ export default function BookReviewEditor({
               )}
               {initialDateRead && (
                 <p className="text-xs text-text-primary mt-1">
-                  Read {new Date(initialDateRead).toLocaleDateString("en-US", {
-                    month: "long",
+                  Read: {new Date(initialDateRead).toLocaleDateString("en-US", {
+                    month: "short",
                     day: "numeric",
                     year: "numeric",
                   })}
@@ -299,8 +301,8 @@ export default function BookReviewEditor({
               )}
               {initialDateDnf && (
                 <p className="text-xs text-text-primary mt-1">
-                  Stopped {new Date(initialDateDnf).toLocaleDateString("en-US", {
-                    month: "long",
+                  Stopped: {new Date(initialDateDnf).toLocaleDateString("en-US", {
+                    month: "short",
                     day: "numeric",
                     year: "numeric",
                   })}
@@ -339,7 +341,7 @@ export default function BookReviewEditor({
                        {book.cover_url ? (
                          <img src={book.cover_url} alt="" className="w-8 h-12 object-cover rounded bg-surface-2" />
                        ) : (
-                         <div className="w-8 h-12 bg-surface-2 rounded flex-shrink-0" />
+                         <BookCoverPlaceholder title={book.title} className="w-8 h-12 flex-shrink-0" />
                        )}
                        <div>
                          <div className="text-sm font-medium text-text-primary line-clamp-1">{book.title}</div>
@@ -435,7 +437,7 @@ export default function BookReviewEditor({
                     type="button"
                     onClick={clearReview}
                     disabled={saving}
-                    className="text-xs text-red-400 hover:text-red-600 transition-colors disabled:opacity-50 ml-auto"
+                    className="text-xs text-semantic-error hover:text-semantic-error transition-colors disabled:opacity-50 ml-auto"
                   >
                     Clear review
                   </button>

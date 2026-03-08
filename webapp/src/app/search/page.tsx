@@ -1,5 +1,9 @@
 import Link from "next/link";
 import BookList from "@/components/book-list";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
+import SavedSearches from "@/components/saved-searches";
+import RecentlyViewedBooks from "@/components/recently-viewed-books";
+import Pagination from "@/components/pagination";
 import { type StatusValue } from "@/components/shelf-picker";
 import { getToken, getUser } from "@/lib/auth";
 
@@ -17,10 +21,12 @@ type BookResult = {
   rating_count: number;
   already_read_count: number;
   subjects: string[] | null;
+  link_count: number;
 };
 
 type BookSearchResponse = {
   total: number;
+  page: number;
   results: BookResult[];
 };
 
@@ -100,19 +106,21 @@ async function searchBooks(
   yearMax: string,
   subject: string,
   language: string,
+  page: string,
 ): Promise<BookSearchResponse> {
-  if (!q.trim()) return { total: 0, results: [] };
+  if (!q.trim()) return { total: 0, page: 1, results: [] };
   const params = new URLSearchParams({ q });
   if (sort) params.set("sort", sort);
   if (yearMin) params.set("year_min", yearMin);
   if (yearMax) params.set("year_max", yearMax);
   if (subject) params.set("subject", subject);
   if (language) params.set("language", language);
+  if (page && page !== "1") params.set("page", page);
   const res = await fetch(
     `${process.env.API_URL}/books/search?${params}`,
     { cache: "no-store" }
   );
-  if (!res.ok) return { total: 0, results: [] };
+  if (!res.ok) return { total: 0, page: 1, results: [] };
   return res.json();
 }
 
@@ -163,35 +171,39 @@ async function fetchPopularBooks(): Promise<BookResult[]> {
   return res.json();
 }
 
-type PopularAuthor = {
+type SavedSearch = {
+  id: string;
   name: string;
-  total_reads: number;
-  book_count: number;
+  query: string;
+  filters: Record<string, string> | null;
+  created_at: string;
 };
 
-async function fetchPopularAuthors(): Promise<PopularAuthor[]> {
-  const res = await fetch(`${process.env.API_URL}/authors/popular`, {
+async function fetchSavedSearches(token: string): Promise<SavedSearch[]> {
+  const res = await fetch(`${process.env.API_URL}/me/saved-searches`, {
+    headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
   });
   if (!res.ok) return [];
   return res.json();
 }
 
-type PopularUser = {
-  user_id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  book_count: number;
+type TrendingBook = {
+  key: string;
+  title: string;
+  authors: string[] | null;
+  cover_url: string | null;
+  publish_year: number | null;
+  activity_count: number;
 };
 
-async function fetchPopularUsers(): Promise<PopularUser[]> {
-  const res = await fetch(`${process.env.API_URL}/users/popular`, {
-    cache: "no-store",
-  });
+async function fetchTrendingBooks(): Promise<TrendingBook[]> {
+  const res = await fetch(
+    `${process.env.API_URL}/books/trending?period=week&limit=10`,
+    { cache: "no-store" },
+  );
   if (!res.ok) return [];
-  const data = await res.json();
-  return Array.isArray(data) ? data : [];
+  return res.json();
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -204,6 +216,7 @@ function buildSearchParams(base: {
   year_max: string;
   subject: string;
   language: string;
+  page: string;
 }, overrides: Partial<typeof base> = {}) {
   const merged = { ...base, ...overrides };
   const p = new URLSearchParams({ type: merged.type });
@@ -213,6 +226,7 @@ function buildSearchParams(base: {
   if (merged.year_max) p.set("year_max", merged.year_max);
   if (merged.subject) p.set("subject", merged.subject);
   if (merged.language) p.set("language", merged.language);
+  if (merged.page && merged.page !== "1") p.set("page", merged.page);
   return `/search?${p}`;
 }
 
@@ -229,6 +243,7 @@ export default async function SearchPage({
     year_max?: string;
     subject?: string;
     language?: string;
+    page?: string;
   }>;
 }) {
   const {
@@ -239,24 +254,25 @@ export default async function SearchPage({
     year_max = "",
     subject = "",
     language = "",
+    page = "1",
   } = await searchParams;
   const activeTab = type === "authors" ? "authors" : type === "people" ? "people" : "books";
 
-  const base = { q, type: activeTab, sort, year_min, year_max, subject, language };
+  const base = { q, type: activeTab, sort, year_min, year_max, subject, language, page };
 
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
   const hasQuery = q.trim().length > 0;
 
-  const [bookData, users, authorData, tagKeys, statusMap, popularBooks, popularAuthors, popularUsers] = await Promise.all([
-    hasQuery && activeTab === "books" ? searchBooks(q, sort, year_min, year_max, subject, language) : Promise.resolve({ total: 0, results: [] }),
+  const [bookData, users, authorData, tagKeys, statusMap, popularBooks, savedSearches, trendingBooks] = await Promise.all([
+    hasQuery && activeTab === "books" ? searchBooks(q, sort, year_min, year_max, subject, language, page) : Promise.resolve({ total: 0, page: 1, results: [] }),
     hasQuery && activeTab === "people" ? searchUsers(q) : Promise.resolve([]),
     hasQuery && activeTab === "authors" ? searchAuthors(q) : Promise.resolve({ total: 0, results: [] }),
     currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
     currentUser && token ? fetchStatusMap(token) : Promise.resolve(null),
-    !hasQuery && activeTab === "books" ? fetchPopularBooks() : Promise.resolve([]),
-    !hasQuery && activeTab === "authors" ? fetchPopularAuthors() : Promise.resolve([]),
-    !hasQuery && activeTab === "people" ? fetchPopularUsers() : Promise.resolve([]),
+    !hasQuery ? fetchPopularBooks() : Promise.resolve([]),
+    currentUser && token ? fetchSavedSearches(token) : Promise.resolve([]),
+    !hasQuery ? fetchTrendingBooks() : Promise.resolve([]),
   ]);
 
   const statusKey = tagKeys?.find((k) => k.slug === "status") ?? null;
@@ -285,10 +301,23 @@ export default async function SearchPage({
           {language && <input type="hidden" name="language" value={language} />}
         </form>
 
+        {/* Saved searches */}
+        {currentUser && (
+          <SavedSearches
+            searches={savedSearches}
+            currentQuery={q}
+            currentFilters={{ sort, year_min, year_max, subject, language, tab: activeTab }}
+          />
+        )}
+
         {/* Tab selector */}
-        <div className="flex gap-1 mb-6 border-b border-border">
+        <div role="tablist" className="flex gap-1 mb-6 border-b border-border">
           <Link
-            href={buildSearchParams(base, { type: "books", sort: "", year_min: "", year_max: "", subject: "", language: "" })}
+            href={buildSearchParams(base, { type: "books", sort: "", year_min: "", year_max: "", subject: "", language: "", page: "1" })}
+            role="tab"
+            id="tab-books"
+            aria-selected={activeTab === "books"}
+            aria-controls="tabpanel-results"
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "books"
                 ? "border-accent text-text-primary"
@@ -298,7 +327,11 @@ export default async function SearchPage({
             Books
           </Link>
           <Link
-            href={buildSearchParams(base, { type: "authors", sort: "", year_min: "", year_max: "", subject: "", language: "" })}
+            href={buildSearchParams(base, { type: "authors", sort: "", year_min: "", year_max: "", subject: "", language: "", page: "1" })}
+            role="tab"
+            id="tab-authors"
+            aria-selected={activeTab === "authors"}
+            aria-controls="tabpanel-results"
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "authors"
                 ? "border-accent text-text-primary"
@@ -308,7 +341,11 @@ export default async function SearchPage({
             Authors
           </Link>
           <Link
-            href={buildSearchParams(base, { type: "people", sort: "", year_min: "", year_max: "", subject: "", language: "" })}
+            href={buildSearchParams(base, { type: "people", sort: "", year_min: "", year_max: "", subject: "", language: "", page: "1" })}
+            role="tab"
+            id="tab-people"
+            aria-selected={activeTab === "people"}
+            aria-controls="tabpanel-results"
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "people"
                 ? "border-accent text-text-primary"
@@ -319,6 +356,9 @@ export default async function SearchPage({
           </Link>
         </div>
 
+        {/* Results panel */}
+        <div role="tabpanel" id="tabpanel-results" aria-labelledby={`tab-${activeTab}`}>
+
         {/* Empty state when no query */}
         {!hasQuery && (
           <div>
@@ -326,20 +366,21 @@ export default async function SearchPage({
               Start typing to search for {activeTab === "books" ? "books" : activeTab === "authors" ? "authors" : "people"}.
             </p>
 
-            {/* Popular books */}
-            {activeTab === "books" && popularBooks.length > 0 && (
-              <div>
+            <RecentlyViewedBooks />
+
+            {trendingBooks.length > 0 && (
+              <div className="mb-10">
                 <h2 className="text-lg font-semibold text-text-primary mb-4">
-                  Popular on Rosslib
+                  Trending This Week
                 </h2>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                  {popularBooks.map((book) => {
+                <div className="flex gap-4 overflow-x-auto pb-2">
+                  {trendingBooks.map((book) => {
                     const workId = book.key.replace("/works/", "");
                     return (
                       <Link
                         key={book.key}
                         href={`/books/${workId}`}
-                        className="group flex flex-col items-center text-center"
+                        className="group flex flex-col items-center text-center flex-shrink-0"
                       >
                         {book.cover_url ? (
                           <img
@@ -371,75 +412,43 @@ export default async function SearchPage({
               </div>
             )}
 
-            {/* Popular authors */}
-            {activeTab === "authors" && popularAuthors.length > 0 && (
+            {popularBooks.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-text-primary mb-4">
-                  Popular authors on Rosslib
+                  Popular on Rosslib
                 </h2>
-                <ul className="divide-y divide-border max-w-2xl">
-                  {popularAuthors.map((author) => (
-                    <li key={author.name} className="flex items-center gap-3 py-3">
-                      <div className="w-10 h-10 rounded-full bg-surface-2 flex-shrink-0 flex items-center justify-center text-sm font-medium text-text-primary">
-                        {author.name.charAt(0)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium text-text-primary">
-                          {author.name}
-                        </span>
-                        <p className="text-xs text-text-secondary mt-0.5">
-                          {author.total_reads} read{author.total_reads === 1 ? "" : "s"} &middot; {author.book_count} book{author.book_count === 1 ? "" : "s"}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Popular people */}
-            {activeTab === "people" && popularUsers.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold text-text-primary mb-4">
-                  Active readers on Rosslib
-                </h2>
-                <ul className="divide-y divide-border max-w-md">
-                  {popularUsers.map((user) => (
-                    <li key={user.user_id}>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                  {popularBooks.map((book) => {
+                    const workId = book.key.replace("/works/", "");
+                    return (
                       <Link
-                        href={`/${user.username}`}
-                        className="flex items-center gap-3 py-3 hover:bg-surface-2 -mx-3 px-3 rounded transition-colors"
+                        key={book.key}
+                        href={`/books/${workId}`}
+                        className="group flex flex-col items-center text-center"
                       >
-                        {user.avatar_url ? (
+                        {book.cover_url ? (
                           <img
-                            src={user.avatar_url}
-                            alt=""
-                            className="w-9 h-9 rounded-full object-cover bg-surface-2 shrink-0"
+                            src={book.cover_url}
+                            alt={book.title}
+                            width={96}
+                            height={144}
+                            className="w-24 h-36 object-cover rounded shadow-sm bg-surface-2 group-hover:shadow-md transition-shadow"
                           />
                         ) : (
-                          <div className="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center shrink-0">
-                            <span className="text-text-tertiary text-sm font-medium select-none">
-                              {(user.display_name || user.username)[0].toUpperCase()}
-                            </span>
-                          </div>
+                          <BookCoverPlaceholder title={book.title} author={book.authors?.[0]} className="w-24 h-36" />
                         )}
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-text-primary">
-                            {user.display_name || user.username}
+                        <span className="text-xs font-medium text-text-primary mt-2 line-clamp-2 max-w-[6rem]">
+                          {book.title}
+                        </span>
+                        {book.authors && book.authors.length > 0 && (
+                          <span className="text-xs text-text-secondary truncate max-w-[6rem]">
+                            {book.authors[0]}
                           </span>
-                          {user.display_name && (
-                            <span className="text-xs text-text-secondary mt-0.5">
-                              @{user.username}
-                            </span>
-                          )}
-                          <span className="text-xs text-text-secondary">
-                            {user.book_count} book{user.book_count === 1 ? "" : "s"}
-                          </span>
-                        </div>
+                        )}
                       </Link>
-                    </li>
-                  ))}
-                </ul>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
@@ -452,7 +461,7 @@ export default async function SearchPage({
             {SORT_OPTIONS.map((opt) => (
               <Link
                 key={opt.value}
-                href={buildSearchParams(base, { sort: opt.value })}
+                href={buildSearchParams(base, { sort: opt.value, page: "1" })}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   sort === opt.value
                     ? "border-accent bg-accent text-text-inverted"
@@ -472,7 +481,7 @@ export default async function SearchPage({
             {GENRE_OPTIONS.map((genre) => (
               <Link
                 key={genre}
-                href={buildSearchParams(base, { subject: subject === genre.toLowerCase() ? "" : genre.toLowerCase() })}
+                href={buildSearchParams(base, { subject: subject === genre.toLowerCase() ? "" : genre.toLowerCase(), page: "1" })}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   subject === genre.toLowerCase()
                     ? "border-accent bg-accent text-text-inverted"
@@ -492,7 +501,7 @@ export default async function SearchPage({
             {LANGUAGE_OPTIONS.map((lang) => (
               <Link
                 key={lang.code}
-                href={buildSearchParams(base, { language: language === lang.code ? "" : lang.code })}
+                href={buildSearchParams(base, { language: language === lang.code ? "" : lang.code, page: "1" })}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   language === lang.code
                     ? "border-accent bg-accent text-text-inverted"
@@ -542,7 +551,7 @@ export default async function SearchPage({
               </button>
               {hasYearFilter && (
                 <Link
-                  href={buildSearchParams(base, { year_min: "", year_max: "" })}
+                  href={buildSearchParams(base, { year_min: "", year_max: "", page: "1" })}
                   className="text-xs px-2.5 py-1 rounded-full border border-border text-text-primary hover:border-border-strong hover:text-text-primary transition-colors"
                 >
                   Clear
@@ -556,7 +565,7 @@ export default async function SearchPage({
         {activeTab === "books" && q && hasAnyFilter && (
           <div className="mb-5">
             <Link
-              href={buildSearchParams({ q, type: "books", sort, year_min: "", year_max: "", subject: "", language: "" })}
+              href={buildSearchParams({ q, type: "books", sort, year_min: "", year_max: "", subject: "", language: "", page: "1" })}
               className="text-xs text-text-primary hover:text-text-primary underline transition-colors"
             >
               Clear all filters
@@ -589,12 +598,22 @@ export default async function SearchPage({
 
         {/* Book results */}
         {activeTab === "books" && hasQuery && (
-          <BookList
-            books={bookData.results}
-            statusValues={statusValues}
-            statusKeyId={statusKeyId}
-            bookStatusMap={bookStatusMap}
-          />
+          <>
+            <BookList
+              books={bookData.results}
+              statusValues={statusValues}
+              statusKeyId={statusKeyId}
+              bookStatusMap={bookStatusMap}
+            />
+            {/* Pagination */}
+            {bookData.results.length > 0 && (
+              <Pagination
+                prevHref={parseInt(page) > 1 ? buildSearchParams(base, { page: String(parseInt(page) - 1) }) : null}
+                nextHref={bookData.results.length >= 20 && parseInt(page) * 20 < bookData.total ? buildSearchParams(base, { page: String(parseInt(page) + 1) }) : null}
+                label={`Page ${page}`}
+              />
+            )}
+          </>
         )}
 
         {/* Author results */}
@@ -650,7 +669,7 @@ export default async function SearchPage({
                   {user.avatar_url ? (
                     <img
                       src={user.avatar_url}
-                      alt=""
+                      alt={user.display_name || user.username}
                       className="w-9 h-9 rounded-full object-cover bg-surface-2 shrink-0"
                     />
                   ) : (
@@ -675,6 +694,8 @@ export default async function SearchPage({
             ))}
           </ul>
         )}
+
+        </div>{/* end tabpanel */}
       </main>
     </div>
   );

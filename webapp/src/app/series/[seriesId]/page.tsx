@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getUser, getToken } from "@/lib/auth";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
+import SeriesDescription from "@/components/series-description";
+import SeriesBookList from "@/components/series-book-list";
+import { type StatusValue } from "@/components/shelf-picker";
 
 type SeriesBook = {
   book_id: string;
@@ -19,21 +23,39 @@ type SeriesDetail = {
   books: SeriesBook[];
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  "want-to-read": "Want to Read",
-  "currently-reading": "Reading",
-  finished: "Finished",
-  dnf: "Did Not Finish",
-  "owned-to-read": "Owned",
+type TagKey = {
+  id: string;
+  name: string;
+  slug: string;
+  mode: string;
+  values: StatusValue[];
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  finished: "bg-emerald-900/40 text-emerald-400 border-emerald-800",
-  "currently-reading": "bg-blue-900/40 text-blue-400 border-blue-800",
-  "want-to-read": "bg-amber-900/40 text-amber-400 border-amber-800",
-  dnf: "bg-red-900/40 text-red-400 border-red-800",
+  finished: "bg-semantic-success-bg text-semantic-success border-semantic-success-border",
+  "currently-reading": "bg-semantic-info-bg text-semantic-info border-semantic-info-border",
+  "want-to-read": "bg-semantic-warning-bg text-semantic-warning border-semantic-warning-border",
+  dnf: "bg-semantic-error-bg text-semantic-error border-semantic-error-border",
   "owned-to-read": "bg-purple-900/40 text-purple-400 border-purple-800",
 };
+
+async function fetchTagKeys(token: string): Promise<TagKey[]> {
+  const res = await fetch(`${process.env.API_URL}/me/tag-keys`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchStatusMap(token: string): Promise<Record<string, string>> {
+  const res = await fetch(`${process.env.API_URL}/me/books/status-map`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return {};
+  return res.json();
+}
 
 export default async function SeriesPage({
   params,
@@ -52,8 +74,21 @@ export default async function SeriesPage({
     `${process.env.API_URL}/series/${seriesId}`,
     { headers, cache: "no-store" }
   );
-  if (!res.ok) notFound();
+  if (res.status === 404) notFound();
+  if (!res.ok) {
+    throw new Error("Failed to load series");
+  }
   const series: SeriesDetail = await res.json();
+
+  const [tagKeys, statusMap] = await Promise.all([
+    currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
+    currentUser && token ? fetchStatusMap(token) : Promise.resolve(null),
+  ]);
+
+  const statusKey = tagKeys?.find((k) => k.slug === "status") ?? null;
+  const statusValues: StatusValue[] | null = statusKey ? statusKey.values : null;
+  const statusKeyId: string | null = statusKey?.id ?? null;
+  const bookStatusMap: Record<string, string> | null = statusMap;
 
   const totalBooks = series.books.length;
   const readCount = series.books.filter(
@@ -71,15 +106,12 @@ export default async function SeriesPage({
           <span className="text-text-secondary">{series.name}</span>
         </nav>
 
-        <h1 className="text-2xl font-bold text-text-primary mb-2">
-          {series.name}
-        </h1>
-
-        {series.description && (
-          <p className="text-sm text-text-secondary mb-6 leading-relaxed">
-            {series.description}
-          </p>
-        )}
+        <SeriesDescription
+          seriesId={series.id}
+          initialName={series.name}
+          initialDescription={series.description ?? ""}
+          isLoggedIn={!!currentUser}
+        />
 
         <div className="flex items-center gap-4 mb-8 text-sm text-text-tertiary">
           <span>
@@ -136,11 +168,7 @@ export default async function SeriesPage({
                     className="w-12 h-[72px] object-cover rounded shadow-sm bg-surface-2"
                   />
                 ) : (
-                  <div className="w-12 h-[72px] bg-surface-2 rounded shadow-sm flex items-end p-1">
-                    <span className="text-[9px] text-text-tertiary leading-tight line-clamp-3">
-                      {book.title}
-                    </span>
-                  </div>
+                  <BookCoverPlaceholder title={book.title} author={book.authors} className="w-12 h-[72px]" />
                 )}
               </div>
 
@@ -175,6 +203,12 @@ export default async function SeriesPage({
             No books in this series yet.
           </p>
         )}
+        <SeriesBookList
+          books={series.books}
+          statusValues={statusValues}
+          statusKeyId={statusKeyId}
+          bookStatusMap={bookStatusMap}
+        />
       </main>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 
 type Edition = {
   key: string;
@@ -104,7 +105,7 @@ export default function EditionList({
                 className="w-12 h-[72px] shrink-0 rounded object-cover bg-surface-2"
               />
             ) : (
-              <div className="w-12 h-[72px] shrink-0 rounded bg-surface-2" />
+              <BookCoverPlaceholder title={ed.title || "Untitled"} className="w-12 h-[72px] shrink-0" />
             )}
 
             <div className="flex-1 min-w-0">
