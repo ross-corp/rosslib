@@ -192,6 +192,40 @@ export function FeedSkeleton() {
   );
 }
 
+export function UsersBrowseSkeleton({ count = 8 }: { count?: number }) {
+  return (
+    <div className="min-h-screen">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+        <div className="flex items-center justify-between mb-8">
+          <Skeleton variant="text" className="h-7 w-24" />
+          <Skeleton variant="text" className="h-4 w-24" />
+        </div>
+
+        <div className="flex items-center gap-2 mb-6">
+          <Skeleton variant="text" className="h-4 w-14" />
+          <div className="flex gap-1">
+            <Skeleton variant="text" className="h-7 w-16 rounded-md" />
+            <Skeleton variant="text" className="h-7 w-20 rounded-md" />
+            <Skeleton variant="text" className="h-7 w-24 rounded-md" />
+          </div>
+        </div>
+
+        <ul className="divide-y divide-border max-w-md">
+          {Array.from({ length: count }, (_, i) => (
+            <li key={i} className="flex items-center gap-3 py-3">
+              <Skeleton variant="circular" className="w-9 h-9 shrink-0" />
+              <div className="flex flex-col gap-1">
+                <Skeleton variant="text" className="h-4 w-28" />
+                <Skeleton variant="text" className="h-3 w-20" />
+              </div>
+            </li>
+          ))}
+        </ul>
+      </main>
+    </div>
+  );
+}
+
 export function SearchSkeleton() {
   return (
     <div className="min-h-screen">
