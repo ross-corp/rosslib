@@ -44,7 +44,7 @@ async function fetchGenres(): Promise<GenreInfo[]> {
   const res = await fetch(`${process.env.API_URL}/genres`, {
     cache: "no-store",
   });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error("Failed to load genres");
   return res.json();
 }
 
