@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getUser, getToken } from "@/lib/auth";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import SeriesDescription from "@/components/series-description";
 import SeriesBookList from "@/components/series-book-list";
 import { type StatusValue } from "@/components/shelf-picker";
@@ -138,6 +139,70 @@ export default async function SeriesPage({
         )}
 
         {/* Book list */}
+        <div className="space-y-4">
+          {series.books.map((book) => (
+            <Link
+              key={book.book_id}
+              href={`/books/${book.open_library_id}`}
+              className="flex gap-4 items-start p-3 -mx-3 rounded-lg hover:bg-surface-2 transition-colors group"
+            >
+              {/* Position */}
+              <div className="shrink-0 w-8 text-center">
+                {book.position != null ? (
+                  <span className="text-sm font-mono text-text-tertiary">
+                    #{book.position}
+                  </span>
+                ) : (
+                  <span className="text-sm font-mono text-text-tertiary">
+                    —
+                  </span>
+                )}
+              </div>
+
+              {/* Cover */}
+              <div className="shrink-0">
+                {book.cover_url ? (
+                  <img
+                    src={book.cover_url}
+                    alt={book.title}
+                    className="w-12 h-[72px] object-cover rounded shadow-sm bg-surface-2"
+                  />
+                ) : (
+                  <BookCoverPlaceholder title={book.title} author={book.authors} className="w-12 h-[72px]" />
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0 py-1">
+                <p className="text-sm font-medium text-text-primary group-hover:text-text-primary line-clamp-1">
+                  {book.title}
+                </p>
+                {book.authors && (
+                  <p className="text-xs text-text-tertiary mt-0.5">
+                    {book.authors}
+                  </p>
+                )}
+              </div>
+
+              {/* Status badge */}
+              {book.viewer_status && (
+                <div className="shrink-0 py-1">
+                  <span
+                    className={`text-[10px] font-medium border rounded px-1.5 py-0.5 leading-none ${STATUS_COLORS[book.viewer_status] ?? "bg-surface-2 text-text-tertiary border-border"}`}
+                  >
+                    {STATUS_LABELS[book.viewer_status] ?? book.viewer_status}
+                  </span>
+                </div>
+              )}
+            </Link>
+          ))}
+        </div>
+
+        {series.books.length === 0 && (
+          <p className="text-sm text-text-tertiary">
+            No books in this series yet.
+          </p>
+        )}
         <SeriesBookList
           books={series.books}
           statusValues={statusValues}

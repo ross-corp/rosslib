@@ -15,6 +15,7 @@ import ReportButton from "@/components/report-button";
 import ReviewLikeButton from "@/components/review-like-button";
 import RecommendButton from "@/components/recommend-button";
 import BookQuoteList from "@/components/book-quote-list";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import ReadingHistory from "@/components/reading-history";
 import ReviewComments from "@/components/review-comments";
 import RecordRecentlyViewed from "@/components/record-recently-viewed";
@@ -512,7 +513,7 @@ export default async function BookPage({
                 className="w-32 rounded shadow-sm object-cover"
               />
             ) : (
-              <div className="w-32 h-48 bg-surface-2 rounded" />
+              <BookCoverPlaceholder title={book.title} author={book.authors?.[0]?.name} className="w-32 h-48" />
             )}
             {myStatus && book.editions && book.editions.length > 0 && (
               <div className="mt-2 text-center">

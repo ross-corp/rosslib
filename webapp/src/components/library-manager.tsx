@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useRef, useCallback, ReactNode } from "react";
 import { TagKey, TagValue } from "@/components/book-tag-picker";
+import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import EmptyState from "@/components/empty-state";
 import { useToast } from "@/components/toast";
 import ConfirmDialog from "@/components/confirm-dialog";
@@ -1032,15 +1033,12 @@ export default function LibraryManager({
                           draggable={false}
                         />
                       ) : (
-                        <div
-                          className={`w-full aspect-[2/3] bg-surface-2 rounded shadow-sm flex items-end p-1.5 transition-all ${
+                        <BookCoverPlaceholder
+                          title={book.title}
+                          className={`w-full aspect-[2/3] transition-all ${
                             selected ? "opacity-70" : "group-hover:shadow-md"
                           }`}
-                        >
-                          <span className="text-[9px] text-text-primary leading-tight line-clamp-3">
-                            {book.title}
-                          </span>
-                        </div>
+                        />
                       )}
                       {book.series_position != null && (
                         <span className="absolute top-1 right-1 bg-surface-0/80 backdrop-blur-sm text-[10px] font-mono font-medium text-text-secondary border border-border rounded px-1 py-0.5 leading-none">
