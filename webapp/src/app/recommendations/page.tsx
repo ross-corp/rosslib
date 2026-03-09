@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getUser, getToken } from "@/lib/auth";
+import EmptyState from "@/components/empty-state";
 import RecommendationList from "./recommendation-list";
 import SentRecommendationList from "./sent-recommendation-list";
 
@@ -152,13 +153,15 @@ export default async function RecommendationsPage({
             </div>
 
             {recommendations.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-text-secondary text-sm">
-                  {filter === "pending"
+              <EmptyState
+                message={
+                  filter === "pending"
                     ? "No pending recommendations."
-                    : "No recommendations found."}
-                </p>
-              </div>
+                    : "No recommendations found."
+                }
+                actionLabel="Browse users"
+                actionHref="/users"
+              />
             ) : (
               <RecommendationList recommendations={recommendations} />
             )}
@@ -168,11 +171,11 @@ export default async function RecommendationsPage({
         {activeTab === "sent" && (
           <div role="tabpanel" id="tabpanel-sent" aria-labelledby="tab-sent">
             {sentRecommendations.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-text-secondary text-sm">
-                  You haven&apos;t sent any recommendations yet.
-                </p>
-              </div>
+              <EmptyState
+                message="You haven't sent any recommendations yet."
+                actionLabel="Browse users"
+                actionHref="/users"
+              />
             ) : (
               <SentRecommendationList recommendations={sentRecommendations} />
             )}
