@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import FollowButton from "@/components/follow-button";
+import EmptyState from "@/components/empty-state";
 import { getUser, getToken } from "@/lib/auth";
 
 type FollowUser = {
@@ -92,7 +93,11 @@ export default async function FollowingPage({
       </div>
 
       {following.length === 0 ? (
-        <p className="text-sm text-text-tertiary">Not following anyone yet.</p>
+        <EmptyState
+          message="Not following anyone yet."
+          actionLabel="Browse users"
+          actionHref="/users"
+        />
       ) : (
         <ul className="divide-y divide-border max-w-md">
           {following.map((user) => (
