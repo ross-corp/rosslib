@@ -34,6 +34,8 @@ export default function MobileNav({
       <button
         onClick={() => setOpen((o) => !o)}
         className="nav-link text-lg leading-none"
+        aria-label="Open menu"
+        aria-expanded={open}
       >
         {open ? "✕" : "☰"}
       </button>
