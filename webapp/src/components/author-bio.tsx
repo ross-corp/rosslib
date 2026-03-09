@@ -17,6 +17,7 @@ export default function AuthorBio({ bio }: { bio: string }) {
       {needsTruncation && (
         <button
           onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
           className="text-accent hover:text-accent-hover text-sm mt-1 transition-colors"
         >
           {expanded ? "Show less" : "Read more"}
