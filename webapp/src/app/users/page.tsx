@@ -1,5 +1,10 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import Pagination from "@/components/pagination";
+
+export const metadata: Metadata = {
+  title: "Browse Users",
+};
 
 type UserRow = {
   user_id: string;

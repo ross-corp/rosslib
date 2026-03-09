@@ -1,9 +1,14 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import Link from "next/link";
 import SetOperationForm from "@/components/set-operation-form";
 import CrossUserCompareForm from "@/components/cross-user-compare-form";
 import CompareTabs from "@/components/compare-tabs";
 import { getUser, getToken } from "@/lib/auth";
+
+export const metadata: Metadata = {
+  title: "Compare Lists",
+};
 
 type Shelf = {
   id: string;

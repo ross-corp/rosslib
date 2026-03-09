@@ -1,8 +1,13 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import Link from "next/link";
 import BookScanner from "@/components/book-scanner";
 import { type StatusValue } from "@/components/shelf-picker";
 import { getUser, getToken } from "@/lib/auth";
+
+export const metadata: Metadata = {
+  title: "Scan ISBN",
+};
 
 type TagKey = {
   id: string;

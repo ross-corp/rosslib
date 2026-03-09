@@ -1,9 +1,14 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import AdminFeedback from "@/components/admin-feedback";
 import AdminReports from "@/components/admin-reports";
 import AdminUserList from "@/components/admin-user-list";
 import AdminLinkEdits from "@/components/admin-link-edits";
 import { getUser } from "@/lib/auth";
+
+export const metadata: Metadata = {
+  title: "Admin",
+};
 
 export default async function AdminPage() {
   const user = await getUser();
