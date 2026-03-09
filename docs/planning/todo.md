@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add `aria-label` attributes to icon-only buttons in `ShelfPicker` (`webapp/src/components/shelf-picker.tsx`): the dropdown toggle button and the remove button inside the shelf picker likely use icon-only rendering without accessible labels. Add `aria-label="Change reading status"` to the main toggle and `aria-label="Remove from library"` to the remove action. Also add `aria-haspopup="listbox"` and `aria-expanded={isOpen}` to the toggle button.
 - [ ] Add page title metadata to the search page: `webapp/src/app/search/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Search" }` so the browser tab shows "Search" instead of the site name.
 - [ ] Add page title metadata to the settings page: `webapp/src/app/settings/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Settings" }` so the browser tab shows "Settings".
 - [ ] Add page title metadata to the login page: `webapp/src/app/login/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Log In" }`.
