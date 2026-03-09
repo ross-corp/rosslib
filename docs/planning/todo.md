@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add `aria-label` to mobile nav hamburger button: in `webapp/src/components/mobile-nav.tsx`, the hamburger menu toggle button lacks `aria-label="Open menu"` and `aria-expanded={isOpen}`. Add both attributes for screen reader accessibility.
 - [ ] Use EmptyState component consistently on followers/following pages: `webapp/src/app/[username]/followers/page.tsx` and `webapp/src/app/[username]/following/page.tsx` show plain text "No followers yet." / "Not following anyone yet." when the list is empty. Replace these with the reusable `EmptyState` component (from `webapp/src/components/empty-state.tsx`) with an appropriate icon and CTA link to `/users` to browse users, matching the pattern used on the feed and notifications pages.
 - [ ] Use EmptyState component on the recommendations page: `webapp/src/app/recommendations/page.tsx` shows plain text when there are no recommendations. Replace with the `EmptyState` component with an appropriate message and CTA.
 - [ ] Use EmptyState component on the timeline page: `webapp/src/app/[username]/timeline/page.tsx` shows plain text "No books finished in {year}." when empty. Replace with the `EmptyState` component.
