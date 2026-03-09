@@ -45,12 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add page title metadata to the login page: `webapp/src/app/login/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Log In" }`.
-- [ ] Add page title metadata to the register page: `webapp/src/app/register/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Sign Up" }`.
-- [ ] Add page title metadata to the admin page: `webapp/src/app/admin/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Admin" }`.
-- [ ] Add page title metadata to the scan page: `webapp/src/app/scan/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Scan ISBN" }`.
-- [ ] Add page title metadata to the compare lists page: `webapp/src/app/library/compare/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Compare Lists" }`.
-- [ ] Add page title metadata to the users browse page: `webapp/src/app/users/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Browse Users" }`.
 - [ ] Add `role="dialog"` and `aria-labelledby`/`aria-describedby` to ConfirmDialog component: in `webapp/src/components/confirm-dialog.tsx`, the dialog overlay div is missing `role="dialog"`, `aria-modal="true"`, and `aria-labelledby` pointing to the title element. Add these attributes to make the confirmation dialog accessible to screen readers.
 - [ ] Add `aria-expanded` to AuthorBio expand/collapse button: in `webapp/src/components/author-bio.tsx`, the "Show more"/"Show less" toggle button is missing `aria-expanded={isExpanded}`. Add this attribute so screen readers announce the collapsed/expanded state.
 - [ ] Add `aria-label` to mobile nav hamburger button: in `webapp/src/components/mobile-nav.tsx`, the hamburger menu toggle button lacks `aria-label="Open menu"` and `aria-expanded={isOpen}`. Add both attributes for screen reader accessibility.
