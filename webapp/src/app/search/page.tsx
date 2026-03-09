@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import BookList from "@/components/book-list";
 import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import SavedSearches from "@/components/saved-searches";
@@ -6,6 +7,10 @@ import RecentlyViewedBooks from "@/components/recently-viewed-books";
 import Pagination from "@/components/pagination";
 import { type StatusValue } from "@/components/shelf-picker";
 import { getToken, getUser } from "@/lib/auth";
+
+export const metadata: Metadata = {
+  title: "Search",
+};
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
