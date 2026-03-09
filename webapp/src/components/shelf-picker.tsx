@@ -114,6 +114,9 @@ export default function StatusPicker({
       <button
         onClick={() => setOpen(!open)}
         disabled={loading}
+        aria-label="Change reading status"
+        aria-haspopup="listbox"
+        aria-expanded={open}
         className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 whitespace-nowrap ${
           currentValue
             ? "border-accent bg-accent text-text-inverted hover:bg-accent-hover"
@@ -124,10 +127,12 @@ export default function StatusPicker({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-10 bg-surface-0 border border-border rounded shadow-sm min-w-[160px]">
+        <div role="listbox" aria-label="Reading status options" className="absolute right-0 top-full mt-1 z-10 bg-surface-0 border border-border rounded shadow-sm min-w-[160px]">
           {statusValues.map((value) => (
             <button
               key={value.id}
+              role="option"
+              aria-selected={value.id === activeValueId}
               onClick={() => selectStatus(value)}
               className={`w-full text-left px-3 py-2 text-xs transition-colors hover:bg-surface-2 ${
                 value.id === activeValueId
@@ -144,6 +149,7 @@ export default function StatusPicker({
               <div className="border-t border-border mx-2" />
               <button
                 onClick={() => setConfirmRemove(true)}
+                aria-label="Remove from library"
                 className="w-full text-left px-3 py-2 text-xs text-text-primary hover:text-text-primary hover:bg-surface-2 transition-colors"
               >
                 Remove
