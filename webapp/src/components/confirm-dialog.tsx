@@ -1,5 +1,7 @@
 "use client";
 
+import { useId } from "react";
+
 type Props = {
   title: string;
   message: string;
@@ -15,6 +17,9 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: Props) {
+  const titleId = useId();
+  const descId = useId();
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
@@ -22,11 +27,22 @@ export default function ConfirmDialog({
         if (e.target === e.currentTarget) onCancel();
       }}
     >
-      <div className="bg-surface-0 border border-border rounded-lg p-6 w-full max-w-sm mx-4 shadow-lg">
-        <h3 className="text-sm font-semibold text-text-primary mb-2">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        className="bg-surface-0 border border-border rounded-lg p-6 w-full max-w-sm mx-4 shadow-lg"
+      >
+        <h3
+          id={titleId}
+          className="text-sm font-semibold text-text-primary mb-2"
+        >
           {title}
         </h3>
-        <p className="text-xs text-text-secondary mb-4">{message}</p>
+        <p id={descId} className="text-xs text-text-secondary mb-4">
+          {message}
+        </p>
         <div className="flex items-center gap-3">
           <button
             onClick={onConfirm}
