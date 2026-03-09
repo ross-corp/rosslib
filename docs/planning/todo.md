@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add page title metadata to the settings page: `webapp/src/app/settings/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Settings" }` so the browser tab shows "Settings".
 - [ ] Add page title metadata to the login page: `webapp/src/app/login/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Log In" }`.
 - [ ] Add page title metadata to the register page: `webapp/src/app/register/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Sign Up" }`.
 - [ ] Add page title metadata to the admin page: `webapp/src/app/admin/page.tsx` has no `metadata` export. Add `export const metadata = { title: "Admin" }`.
