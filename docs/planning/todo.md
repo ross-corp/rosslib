@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Use EmptyState component consistently on followers/following pages: `webapp/src/app/[username]/followers/page.tsx` and `webapp/src/app/[username]/following/page.tsx` show plain text "No followers yet." / "Not following anyone yet." when the list is empty. Replace these with the reusable `EmptyState` component (from `webapp/src/components/empty-state.tsx`) with an appropriate icon and CTA link to `/users` to browse users, matching the pattern used on the feed and notifications pages.
 - [ ] Use EmptyState component on the recommendations page: `webapp/src/app/recommendations/page.tsx` shows plain text when there are no recommendations. Replace with the `EmptyState` component with an appropriate message and CTA.
 - [ ] Use EmptyState component on the timeline page: `webapp/src/app/[username]/timeline/page.tsx` shows plain text "No books finished in {year}." when empty. Replace with the `EmptyState` component.
 - [ ] Deduplicate LANG_NAMES dictionary between edition-list.tsx and edition-picker.tsx: the language code-to-name mapping dictionary is copy-pasted identically in `webapp/src/components/edition-list.tsx` (lines 18-39) and `webapp/src/components/edition-picker.tsx`. Extract it to a shared constant in a new file `webapp/src/lib/constants.ts` (or add to an existing constants file), then import it in both components.
