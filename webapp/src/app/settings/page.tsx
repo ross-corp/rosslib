@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import Link from "next/link";
 import DeleteDataForm from "@/components/delete-data-form";
 import EmailForm from "@/components/email-form";
@@ -9,6 +10,10 @@ import ReadingGoalForm from "@/components/reading-goal-form";
 import SettingsForm from "@/components/settings-form";
 import SettingsNav from "@/components/settings-nav";
 import { getUser, getToken } from "@/lib/auth";
+
+export const metadata: Metadata = {
+  title: "Settings",
+};
 
 type UserProfile = {
   display_name: string | null;
