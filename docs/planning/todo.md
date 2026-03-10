@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add confirmation dialog before deleting a book quote: in `webapp/src/components/book-quote-list.tsx`, the delete button removes a quote immediately with no confirmation. Add a confirmation step using the existing `ConfirmDialog` component before deleting.
 - [ ] Replace native `confirm()` with ConfirmDialog in book-review-editor.tsx: in `webapp/src/components/book-review-editor.tsx`, the "Clear review" action uses the browser's native `confirm()` dialog. Replace it with the existing `ConfirmDialog` component (from `webapp/src/components/confirm-dialog.tsx`) for visual consistency with the rest of the app.
 - [ ] Replace native `confirm()` with ConfirmDialog in thread-comments.tsx: in `webapp/src/components/thread-comments.tsx`, comment deletion uses the browser's native `confirm()` dialog. Replace it with the existing `ConfirmDialog` component for consistency.
 - [ ] Replace native `confirm()` with ConfirmDialog in reading-history.tsx: in `webapp/src/components/reading-history.tsx`, deleting a reading session uses the browser's native `confirm()` dialog. Replace it with the existing `ConfirmDialog` component for consistency.
