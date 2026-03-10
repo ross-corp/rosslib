@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Deduplicate LANG_NAMES dictionary between edition-list.tsx and edition-picker.tsx: the language code-to-name mapping dictionary is copy-pasted identically in `webapp/src/components/edition-list.tsx` (lines 18-39) and `webapp/src/components/edition-picker.tsx`. Extract it to a shared constant in a new file `webapp/src/lib/constants.ts` (or add to an existing constants file), then import it in both components.
 - [ ] Add confirmation dialog before revoking API tokens: in `webapp/src/components/api-tokens-form.tsx`, clicking "Revoke" deletes a token immediately with no confirmation. Wrap the delete handler with the existing `ConfirmDialog` component (from `webapp/src/components/confirm-dialog.tsx`), prompting "Are you sure you want to revoke this token? Any integrations using it will stop working."
 - [ ] Add confirmation dialog before deleting a book quote: in `webapp/src/components/book-quote-list.tsx`, the delete button removes a quote immediately with no confirmation. Add a confirmation step using the existing `ConfirmDialog` component before deleting.
 - [ ] Replace native `confirm()` with ConfirmDialog in book-review-editor.tsx: in `webapp/src/components/book-review-editor.tsx`, the "Clear review" action uses the browser's native `confirm()` dialog. Replace it with the existing `ConfirmDialog` component (from `webapp/src/components/confirm-dialog.tsx`) for visual consistency with the rest of the app.
