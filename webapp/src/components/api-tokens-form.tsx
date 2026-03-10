@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ConfirmDialog from "./confirm-dialog";
 
 type APIToken = {
   id: string;
@@ -17,6 +18,7 @@ export default function APITokensForm() {
   const [error, setError] = useState("");
   const [newToken, setNewToken] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
 
   async function fetchTokens() {
     const res = await fetch("/api/me/api-tokens");
@@ -159,7 +161,7 @@ export default function APITokensForm() {
                   </td>
                   <td className="px-4 py-2 text-right">
                     <button
-                      onClick={() => handleDelete(t.id)}
+                      onClick={() => setConfirmRevokeId(t.id)}
                       disabled={deletingId === t.id}
                       className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
                     >
@@ -177,6 +179,19 @@ export default function APITokensForm() {
         <p className="text-sm text-text-secondary">
           No API tokens yet. Create one to use the API from external tools.
         </p>
+      )}
+
+      {confirmRevokeId && (
+        <ConfirmDialog
+          title="Revoke API token"
+          message="Are you sure you want to revoke this token? Any integrations using it will stop working."
+          confirmLabel="Revoke"
+          onConfirm={() => {
+            handleDelete(confirmRevokeId);
+            setConfirmRevokeId(null);
+          }}
+          onCancel={() => setConfirmRevokeId(null)}
+        />
       )}
     </div>
   );
