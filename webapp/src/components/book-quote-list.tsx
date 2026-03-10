@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import ConfirmDialog from "./confirm-dialog";
 
 type Quote = {
   id: string;
@@ -48,6 +49,7 @@ export default function BookQuoteList({
   const [isPublic, setIsPublic] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -234,7 +236,7 @@ export default function BookQuoteList({
                 <span>&middot;</span>
                 <button
                   type="button"
-                  onClick={() => handleDelete(quote.id)}
+                  onClick={() => setDeleteConfirmId(quote.id)}
                   className="text-red-500 hover:text-red-700 transition-colors"
                 >
                   Delete
@@ -292,6 +294,19 @@ export default function BookQuoteList({
             </div>
           ))}
         </div>
+      )}
+
+      {deleteConfirmId && (
+        <ConfirmDialog
+          title="Delete quote"
+          message="Are you sure you want to delete this quote? This cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={() => {
+            handleDelete(deleteConfirmId);
+            setDeleteConfirmId(null);
+          }}
+          onCancel={() => setDeleteConfirmId(null)}
+        />
       )}
     </div>
   );
