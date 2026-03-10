@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import StarRatingInput from "@/components/star-rating-input";
 import ReviewText from "@/components/review-text";
 import BookCoverPlaceholder from "@/components/book-cover-placeholder";
+import ConfirmDialog from "@/components/confirm-dialog";
 import { useToast } from "@/components/toast";
 
 type BookSuggestion = {
@@ -50,6 +51,7 @@ export default function BookReviewEditor({
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Autocomplete state
   const [suggestions, setSuggestions] = useState<BookSuggestion[]>([]);
@@ -210,7 +212,7 @@ export default function BookReviewEditor({
   }
 
   async function clearReview() {
-    if (!confirm("Clear your rating and review for this book?")) return;
+    setShowClearConfirm(false);
     setSaving(true);
     setMessage(null);
 
@@ -435,7 +437,7 @@ export default function BookReviewEditor({
                 {hasExisting && (
                   <button
                     type="button"
-                    onClick={clearReview}
+                    onClick={() => setShowClearConfirm(true)}
                     disabled={saving}
                     className="text-xs text-semantic-error hover:text-semantic-error transition-colors disabled:opacity-50 ml-auto"
                   >
@@ -454,6 +456,16 @@ export default function BookReviewEditor({
       {/* Save feedback when not expanded */}
       {!expanded && message && (
         <p className="text-xs text-text-primary mt-1">{message}</p>
+      )}
+
+      {showClearConfirm && (
+        <ConfirmDialog
+          title="Clear review"
+          message="Clear your rating and review for this book? This cannot be undone."
+          confirmLabel="Clear"
+          onConfirm={clearReview}
+          onCancel={() => setShowClearConfirm(false)}
+        />
       )}
     </div>
   );
