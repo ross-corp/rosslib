@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import ReportButton from "@/components/report-button";
+import ConfirmDialog from "@/components/confirm-dialog";
 
 type Comment = {
   id: string;
@@ -74,7 +75,7 @@ function CommentItem({
   isLocked: boolean;
   currentUserId: string | null;
   onReply: (parentId: string, body: string) => Promise<void>;
-  onDelete: (commentId: string) => Promise<void>;
+  onDelete: (commentId: string) => void;
 }) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [replyBody, setReplyBody] = useState("");
@@ -241,6 +242,7 @@ export default function ThreadComments({
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // Group top-level comments and their replies.
   const topLevel = comments.filter((c) => !c.parent_id);
@@ -297,14 +299,17 @@ export default function ThreadComments({
     }
   }
 
-  async function handleDelete(commentId: string) {
-    if (!confirm("Delete this comment?")) return;
+  function handleDelete(commentId: string) {
+    setDeleteTarget(commentId);
+  }
 
+  async function confirmDelete() {
+    if (!deleteTarget) return;
     const res = await fetch(
-      `/api/threads/${threadId}/comments/${commentId}`,
+      `/api/threads/${threadId}/comments/${deleteTarget}`,
       { method: "DELETE" }
     );
-
+    setDeleteTarget(null);
     if (res.ok) {
       await refreshComments();
     }
@@ -371,6 +376,16 @@ export default function ThreadComments({
             />
           ))}
         </div>
+      )}
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Delete comment"
+          message="Are you sure you want to delete this comment? This cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
       )}
     </div>
   );
