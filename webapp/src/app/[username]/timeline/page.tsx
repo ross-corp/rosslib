@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getUser, getToken } from "@/lib/auth";
 import BookCoverRow from "@/components/book-cover-row";
+import EmptyState from "@/components/empty-state";
 import TimelineYearSelector from "./year-selector";
 
 // ── Types ───────────────────────────────────────────────────────────────────────
@@ -108,9 +109,11 @@ export default async function TimelinePage({
         </div>
 
         {timeline.months.length === 0 ? (
-          <p className="text-text-tertiary text-sm">
-            No books finished in {year}.
-          </p>
+          <EmptyState
+            message={`No books finished in ${year}.`}
+            actionLabel="Search books"
+            actionHref="/search"
+          />
         ) : (
           <div className="space-y-8">
             {timeline.months.map((group) => (
