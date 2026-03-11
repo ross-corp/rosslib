@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Use EmptyState component on the genres page: `webapp/src/app/genres/page.tsx` shows inline text "No genres available" when the genre list is empty. Replace with the `EmptyState` component for consistency with feed, notifications, and library pages.
 - [ ] Add `aria-label` to star-rating component: in `webapp/src/components/star-rating.tsx`, the star rating display has no ARIA label announcing the rating value to screen readers. Add an `aria-label` like `aria-label="${rating} out of 5 stars"` to the wrapper element so assistive technology can announce the rating.
 - [ ] Add `aria-current` to active sort options on book reviews and users page: on `webapp/src/app/books/[workId]/page.tsx` (review sort links) and `webapp/src/app/users/page.tsx` (user sort links), the active sort option is visually highlighted but lacks `aria-current="true"` for screen readers. Add `aria-current="true"` to the currently active sort link in both pages.
 
