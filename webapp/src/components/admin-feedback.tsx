@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import ConfirmDialog from "@/components/confirm-dialog";
 
 type FeedbackItem = {
   id: string;
@@ -38,6 +39,7 @@ export default function AdminFeedback() {
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const fetchFeedback = useCallback(async (status: string) => {
     setLoading(true);
@@ -67,7 +69,7 @@ export default function AdminFeedback() {
   }
 
   async function deleteFeedback(id: string) {
-    if (!confirm("Delete this feedback? This cannot be undone.")) return;
+    setConfirmDeleteId(null);
     setDeletingId(id);
     const res = await fetch(`/api/admin/feedback/${id}`, {
       method: "DELETE",
@@ -151,7 +153,7 @@ export default function AdminFeedback() {
                     {item.status === "open" ? "Close" : "Reopen"}
                   </button>
                   <button
-                    onClick={() => deleteFeedback(item.id)}
+                    onClick={() => setConfirmDeleteId(item.id)}
                     disabled={deletingId === item.id}
                     className="px-3 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 bg-danger-bg text-danger hover:bg-danger-bg-hover"
                   >
@@ -177,6 +179,16 @@ export default function AdminFeedback() {
             </div>
           ))}
         </div>
+      )}
+
+      {confirmDeleteId && (
+        <ConfirmDialog
+          title="Delete feedback"
+          message="Delete this feedback? This cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={() => deleteFeedback(confirmDeleteId)}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
       )}
     </div>
   );
