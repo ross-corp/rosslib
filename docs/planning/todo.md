@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add `aria-label` to QuickAddButton: in `webapp/src/components/quick-add-button.tsx`, the floating action button on book covers has no `aria-label`. Add `aria-label="Add to library"` on the main button and `aria-label="Choose reading status"` on the dropdown trigger so screen readers announce the button purpose.
 - [ ] Add `aria-expanded` to MobileNav hamburger toggle: in `webapp/src/components/mobile-nav.tsx`, the hamburger menu button that toggles the mobile navigation panel is missing `aria-expanded`. Add `aria-expanded={isOpen}` to the toggle button element so screen readers announce whether the menu is open or closed.
 - [ ] Add loading.tsx for followers and following pages: the routes `webapp/src/app/[username]/followers/page.tsx` and `webapp/src/app/[username]/following/page.tsx` have no `loading.tsx` files, so users see a blank page during server-side data fetching. Create `loading.tsx` in both directories using the existing `Skeleton` component — render 10 rows of avatar circle + text lines matching the follower/following list layout.
 - [ ] Add loading.tsx for genres pages: the routes `webapp/src/app/genres/page.tsx` and `webapp/src/app/genres/[slug]/page.tsx` have no `loading.tsx` files. Create `loading.tsx` in both `webapp/src/app/genres/` and `webapp/src/app/genres/[slug]/` using the existing `Skeleton` component — for the index page render a grid of card-sized rectangles, for the detail page render heading + book grid placeholders.
