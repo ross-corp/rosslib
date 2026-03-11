@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import StarRatingInput from "@/components/star-rating-input";
+import ConfirmDialog from "@/components/confirm-dialog";
 
 type ReadingSession = {
   id: string;
@@ -36,6 +37,7 @@ export default function ReadingHistory({ openLibraryId, initialSessions }: Props
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // Form state
   const [formDateStarted, setFormDateStarted] = useState("");
@@ -124,8 +126,6 @@ export default function ReadingHistory({ openLibraryId, initialSessions }: Props
   }
 
   async function handleDelete(sessionId: string) {
-    if (!confirm("Delete this reading session?")) return;
-
     const res = await fetch(`/api/me/sessions/${sessionId}`, {
       method: "DELETE",
     });
@@ -133,6 +133,7 @@ export default function ReadingHistory({ openLibraryId, initialSessions }: Props
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
       if (editingId === sessionId) resetForm();
     }
+    setDeleteTarget(null);
   }
 
   return (
@@ -273,7 +274,7 @@ export default function ReadingHistory({ openLibraryId, initialSessions }: Props
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleDelete(session.id)}
+                  onClick={() => setDeleteTarget(session.id)}
                   className="text-xs text-red-400 hover:text-red-600 transition-colors"
                 >
                   Delete
@@ -282,6 +283,16 @@ export default function ReadingHistory({ openLibraryId, initialSessions }: Props
             </div>
           ))}
         </div>
+      )}
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Delete reading session"
+          message="Are you sure you want to delete this reading session? This cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={() => handleDelete(deleteTarget)}
+          onCancel={() => setDeleteTarget(null)}
+        />
       )}
     </div>
   );
