@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Replace native `confirm()` with ConfirmDialog in reading-history.tsx: in `webapp/src/components/reading-history.tsx`, deleting a reading session uses the browser's native `confirm()` dialog. Replace it with the existing `ConfirmDialog` component for consistency.
 - [ ] Replace native `confirm()` with ConfirmDialog in my-feedback.tsx and admin-feedback.tsx: both `webapp/src/components/my-feedback.tsx` and `webapp/src/components/admin-feedback.tsx` use the browser's native `confirm()` dialog for feedback deletion. Replace both with the existing `ConfirmDialog` component for consistency.
 - [ ] Use EmptyState component on the users browse page: `webapp/src/app/users/page.tsx` shows plain text "No users yet" when empty. Replace with the `EmptyState` component with an appropriate message and action link.
 - [ ] Use EmptyState component on the genres page: `webapp/src/app/genres/page.tsx` shows inline text "No genres available" when the genre list is empty. Replace with the `EmptyState` component for consistency with feed, notifications, and library pages.
