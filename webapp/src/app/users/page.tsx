@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import Pagination from "@/components/pagination";
+import EmptyState from "@/components/empty-state";
 
 export const metadata: Metadata = {
   title: "Browse Users",
@@ -90,7 +91,11 @@ export default async function UsersPage({
         </div>
 
         {users.length === 0 ? (
-          <p className="text-sm text-text-primary">No users yet.</p>
+          <EmptyState
+            message="No users yet. Be the first to join!"
+            actionLabel="Search books"
+            actionHref="/search"
+          />
         ) : (
           <ul className="divide-y divide-border max-w-md">
             {users.map((user) => (
