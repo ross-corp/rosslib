@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import EmptyState from "@/components/empty-state";
 
 export const metadata: Metadata = {
   title: "Genres",
@@ -62,7 +63,11 @@ export default async function GenresPage() {
         <h1 className="text-2xl font-bold text-text-primary mb-8">Genres</h1>
 
         {genres.length === 0 ? (
-          <p className="text-sm text-text-primary">No genres available.</p>
+          <EmptyState
+            message="No genres available."
+            actionLabel="Browse books"
+            actionHref="/search"
+          />
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {genres.map((genre, i) => {
