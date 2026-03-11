@@ -88,6 +88,7 @@ export default function QuickAddButton({
             quickAdd();
           }}
           disabled={loading}
+          aria-label="Add to library"
           className="text-[10px] px-1.5 py-0.5 rounded-l bg-surface-0 border border-border text-text-primary hover:bg-surface-2 transition-colors disabled:opacity-50 whitespace-nowrap"
         >
           {loading ? "..." : "Want to read"}
@@ -98,7 +99,7 @@ export default function QuickAddButton({
             e.stopPropagation();
             setOpen(!open);
           }}
-          aria-label="More options"
+          aria-label="Choose reading status"
           aria-haspopup="true"
           aria-expanded={open}
           className="text-[10px] px-1 py-0.5 rounded-r bg-surface-0 border border-l-0 border-border text-text-primary hover:bg-surface-2 transition-colors"
