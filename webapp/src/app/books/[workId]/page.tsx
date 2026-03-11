@@ -876,6 +876,7 @@ export default async function BookPage({
                     <Link
                       key={option.value}
                       href={`/books/${workId}${option.value === "newest" ? "" : `?sort=${option.value}`}`}
+                      aria-current={reviewSort === option.value ? "true" : undefined}
                       className={`text-sm px-3 py-1 rounded-md transition-colors ${
                         reviewSort === option.value
                           ? "bg-surface-2 text-text-primary font-medium"

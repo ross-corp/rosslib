@@ -78,6 +78,7 @@ export default async function UsersPage({
               <Link
                 key={option.value}
                 href={buildHref({ sort: option.value, page: 1 })}
+                aria-current={sort === option.value ? "true" : undefined}
                 className={`text-sm px-3 py-1 rounded-md transition-colors ${
                   sort === option.value
                     ? "bg-surface-2 text-text-primary font-medium"
