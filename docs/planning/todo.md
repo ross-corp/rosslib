@@ -45,8 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add `aria-current` to active sort options on book reviews and users page: on `webapp/src/app/books/[workId]/page.tsx` (review sort links) and `webapp/src/app/users/page.tsx` (user sort links), the active sort option is visually highlighted but lacks `aria-current="true"` for screen readers. Add `aria-current="true"` to the currently active sort link in both pages.
-
 ## API & Performance
 
 - [ ] Add an index on `thread_comments.user` column: create a new PocketBase migration in `api/migrations/` that adds an index on the `user` column of the `thread_comments` collection. This column is queried when looking up a user's comment history but has no index. Use the pattern from existing migrations — `collection.Indexes` append and `app.Save(collection)`.
