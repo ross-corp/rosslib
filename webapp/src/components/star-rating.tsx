@@ -11,8 +11,8 @@ export default function StarRating({ rating, count, className }: Props) {
   ).join("");
 
   return (
-    <span className={className}>
-      <span className="tracking-tight">{stars}</span>{" "}
+    <span className={className} aria-label={`${rating.toFixed(2)} out of 5 stars`}>
+      <span className="tracking-tight" aria-hidden="true">{stars}</span>{" "}
       <span className="text-text-primary">{rating.toFixed(2)}</span>
       {count != null && count > 0 && (
         <span className="text-text-primary"> ({count.toLocaleString()})</span>
