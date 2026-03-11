@@ -333,6 +333,29 @@ export function TimelineSkeleton() {
   );
 }
 
+export function FollowListSkeleton({ count = 10 }: { count?: number }) {
+  return (
+    <>
+      <div className="flex items-center gap-2 mb-6">
+        <Skeleton variant="text" className="h-4 w-24" />
+        <span className="text-text-tertiary text-sm">/</span>
+        <Skeleton variant="text" className="h-6 w-28" />
+      </div>
+      <ul className="divide-y divide-border max-w-md">
+        {Array.from({ length: count }, (_, i) => (
+          <li key={i} className="flex items-center gap-3 py-3">
+            <Skeleton variant="circular" className="w-9 h-9 shrink-0" />
+            <div className="flex flex-col gap-1">
+              <Skeleton variant="text" className="h-4 w-28" />
+              <Skeleton variant="text" className="h-3 w-20" />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
 export function SearchSkeleton() {
   return (
     <div className="min-h-screen">
