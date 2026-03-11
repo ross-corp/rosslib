@@ -356,6 +356,63 @@ export function FollowListSkeleton({ count = 10 }: { count?: number }) {
   );
 }
 
+export function GenresIndexSkeleton({ count = 12 }: { count?: number }) {
+  return (
+    <div className="min-h-screen">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+        <Skeleton variant="text" className="h-7 w-24 mb-8" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          {Array.from({ length: count }, (_, i) => (
+            <Skeleton
+              key={i}
+              variant="rectangular"
+              className="h-20 w-full"
+            />
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export function GenreDetailSkeleton() {
+  return (
+    <div className="min-h-screen">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+        <Skeleton variant="text" className="h-3 w-14 mb-2" />
+        <Skeleton variant="text" className="h-7 w-40 mb-1" />
+        <Skeleton variant="text" className="h-4 w-24 mb-4" />
+
+        <div className="flex items-center gap-2 mb-8">
+          <Skeleton variant="text" className="h-4 w-14" />
+          <div className="flex gap-1">
+            <Skeleton variant="text" className="h-7 w-16 rounded-md" />
+            <Skeleton variant="text" className="h-7 w-14 rounded-md" />
+            <Skeleton variant="text" className="h-7 w-16 rounded-md" />
+            <Skeleton variant="text" className="h-7 w-12 rounded-md" />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="flex items-start gap-4 py-3">
+              <Skeleton
+                variant="rectangular"
+                className="w-12 h-16 shrink-0"
+              />
+              <div className="flex-1 space-y-2">
+                <Skeleton variant="text" className="h-4 w-48" />
+                <Skeleton variant="text" className="h-3 w-32" />
+                <Skeleton variant="text" className="h-3 w-24" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export function SearchSkeleton() {
   return (
     <div className="min-h-screen">
