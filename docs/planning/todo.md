@@ -45,8 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add `book_series` collection to datamodel.md: the `book_series` collection exists in migration `1700000011_series.go` and is used by `api/handlers/series.go` with fields `book` (FK → books), `series` (FK → series), and `position` (number) — but has no entry in `docs/documentation/datamodel.md`. Add a table definition following the format of existing collections, placed after the `series` section (if one exists) or after `book_stats`.
-
 ## API & Performance
 
 - [ ] Add an index on `thread_comments.user` column: create a new PocketBase migration in `api/migrations/` that adds an index on the `user` column of the `thread_comments` collection. This column is queried when looking up a user's comment history but has no index. Use the pattern from existing migrations — `collection.Indexes` append and `app.Save(collection)`.
