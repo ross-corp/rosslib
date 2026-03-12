@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import AuthorBio from "@/components/author-bio";
 import AuthorFollowButton from "@/components/author-follow-button";
+import AuthorPhoto from "@/components/author-photo";
 import AuthorWorksGrid from "@/components/author-works-grid";
 import { getToken } from "@/lib/auth";
 
@@ -98,18 +99,11 @@ export default async function AuthorPage({
         {/* ── Author header ── */}
         <div className="flex gap-8 items-start mb-10">
           {/* Photo */}
-          {author.photo_url ? (
-            <img
-              src={author.photo_url}
-              alt={author.name}
-              className="w-32 h-40 shrink-0 rounded shadow-sm object-cover bg-surface-2"
-              onError={undefined}
-            />
-          ) : (
-            <div className="w-32 h-40 shrink-0 bg-surface-2 rounded flex items-center justify-center text-3xl font-semibold text-text-primary">
-              {author.name.charAt(0)}
-            </div>
-          )}
+          <AuthorPhoto
+            src={author.photo_url}
+            name={author.name}
+            className="w-32 h-40 shrink-0"
+          />
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
