@@ -17,7 +17,12 @@ export default async function Nav() {
 
   const communityItems = [
     { href: "/users", label: "Browse users" },
-    ...(user ? [{ href: "/feed", label: "My feed" }] : []),
+    ...(user
+      ? [
+          { href: "/feed", label: "My feed" },
+          { href: "/recommendations", label: "Recommendations" },
+        ]
+      : []),
   ];
 
   return (
