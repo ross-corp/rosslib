@@ -6,9 +6,11 @@ export async function GET(
 ) {
   const { username } = await params;
   const cursor = req.nextUrl.searchParams.get("cursor");
+  const limit = req.nextUrl.searchParams.get("limit");
 
   const url = new URL(`${process.env.API_URL}/users/${username}/activity`);
   if (cursor) url.searchParams.set("cursor", cursor);
+  if (limit) url.searchParams.set("limit", limit);
 
   const apiRes = await fetch(url.toString(), { cache: "no-store" });
   const data = await apiRes.json();

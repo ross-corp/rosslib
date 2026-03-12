@@ -190,7 +190,7 @@ type ActivityResponse = {
 
 async function fetchRecentActivity(username: string): Promise<ActivityResponse> {
   const res = await fetch(
-    `${process.env.API_URL}/users/${username}/activity`,
+    `${process.env.API_URL}/users/${username}/activity?limit=10`,
     { cache: "no-store" }
   );
   if (!res.ok) return { activities: [] };

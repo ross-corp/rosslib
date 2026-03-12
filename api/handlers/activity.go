@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -390,6 +391,9 @@ func GetUserActivity(app core.App) func(e *core.RequestEvent) error {
 
 		cursor := e.Request.URL.Query().Get("cursor")
 		limit := 30
+		if l, err := strconv.Atoi(e.Request.URL.Query().Get("limit")); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
 
 		query := activitySelectClause + `
 			WHERE a.user = {:user}

@@ -1936,8 +1936,9 @@ Returns recent activity for a specific user. Same response format as `/me/feed`.
 
 **Query parameters:**
 - `cursor` *(optional)* — RFC3339Nano timestamp from a previous `next_cursor` value. Only returns activities created before this timestamp.
+- `limit` *(optional)* — number of activities to return per page (1–100, default 30).
 
-Returns `{ "activities": [...], "next_cursor": "..." }`. `next_cursor` is `null` when there are no more results. Each page returns up to 30 items.
+Returns `{ "activities": [...], "next_cursor": "..." }`. `next_cursor` is `null` when there are no more results.
 
 ---
 
