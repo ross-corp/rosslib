@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Show username validation feedback on registration page: in `webapp/src/app/register/page.tsx`, the username input shows a hint "lowercase letters, numbers, and hyphens only" but has no client-side validation pattern. Add `pattern="[a-z0-9-]+"` to the input element and use CSS `:invalid` styling (red border) to give immediate feedback when the user types invalid characters like uppercase letters or spaces.
 - [ ] Add `book_series` collection to datamodel.md: the `book_series` collection exists in migration `1700000011_series.go` and is used by `api/handlers/series.go` with fields `book` (FK → books), `series` (FK → series), and `position` (number) — but has no entry in `docs/documentation/datamodel.md`. Add a table definition following the format of existing collections, placed after the `series` section (if one exists) or after `book_stats`.
 
 ## API & Performance
