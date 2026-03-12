@@ -102,10 +102,12 @@ export default function RegisterPage() {
               type="text"
               autoComplete="username"
               required
-              className="input-field"
+              pattern="[a-z0-9-]+"
+              title="Lowercase letters, numbers, and hyphens only"
+              className="input-field username-input"
               placeholder="yourname"
             />
-            <p className="mt-1 text-xs text-text-tertiary">
+            <p className="mt-1 text-xs text-text-tertiary username-hint">
               Lowercase letters, numbers, and hyphens only.
             </p>
           </div>

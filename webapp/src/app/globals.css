@@ -177,6 +177,14 @@
     @apply w-full px-3 py-2 bg-surface-2 border border-border rounded text-text-primary placeholder-text-tertiary text-sm focus:outline-none focus:ring-1 focus:ring-accent focus:border-transparent;
   }
 
+  .username-input:invalid:not(:placeholder-shown) {
+    @apply border-semantic-error ring-1 ring-semantic-error;
+  }
+
+  .username-input:invalid:not(:placeholder-shown) ~ .username-hint {
+    @apply text-semantic-error;
+  }
+
   .btn-primary {
     @apply bg-accent text-text-inverted px-4 py-2 rounded font-medium text-sm hover:bg-accent-hover transition-colors disabled:opacity-50;
   }
