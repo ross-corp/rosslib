@@ -419,6 +419,7 @@ users ──< genre_ratings >── books  (per-user genre dimension scores)
 author_works_snapshot        (OL author key → work count snapshot)
 collections ──< computed_collections  (operation definition for live lists)
 books ──< book_stats               (precomputed aggregate stats)
+books ──< book_series >── series   (series membership with position)
 users ──< pending_imports          (unmatched import rows)
 users ──< reports                  (content reports, reviewer)
 users ──< review_likes >── books, users  (review likes)
@@ -545,6 +546,35 @@ Precomputed aggregate stats per book. Avoids expensive multi-join COUNT/AVG quer
 Average rating is computed as `rating_sum / rating_count` at query time.
 
 API: `GET /books/:workId/stats` returns all cached stats. `GET /books/:workId` reads `reads_count` and `want_to_read_count` from this table instead of running the expensive aggregate query.
+
+### `series`
+
+Named book series (e.g. "Harry Potter", "The Lord of the Rings"). Series records are created on-demand when a user adds a book to a series via `POST /books/:workId/series`.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | auto-generated |
+| name | text | required; series name (max 255 chars) |
+| open_library_id | text | nullable; Open Library series/work ID |
+| description | text | nullable; max 5000 chars |
+| created | timestamptz | PocketBase auto-generated |
+
+Index: `name`
+
+### `book_series`
+
+Join table linking books to series with an optional position number. A book can belong to multiple series, and a series can contain many books.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | auto-generated |
+| book | relation → books | required; cascade delete |
+| series | relation → series | required; cascade delete |
+| position | number | nullable; book's position/order within the series |
+| created | timestamptz | PocketBase auto-generated |
+
+Unique constraint: `(book, series)` — a book can only appear once in a given series.
+Index: `series` for listing books in a series.
 
 ### `feedback`
 
