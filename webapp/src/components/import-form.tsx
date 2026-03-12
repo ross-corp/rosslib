@@ -198,9 +198,9 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
         setPendingImports(Array.isArray(data) ? data : []);
       }
     } catch {
-      // ignore
+      toast.error("Something went wrong");
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     loadPendingImports();
@@ -215,7 +215,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
         body: JSON.stringify({ action: "dismiss" }),
       });
     } catch {
-      // ignore
+      toast.error("Something went wrong");
     }
   }
 
@@ -230,7 +230,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
           body: JSON.stringify({ action: "dismiss" }),
         });
       } catch {
-        // ignore
+        toast.error("Something went wrong");
       }
     }
   }
@@ -454,7 +454,7 @@ export default function ImportForm({ username, source = "goodreads" }: { usernam
         );
       }
     } catch {
-      // ignore — existing labels just won't be available
+      toast.error("Something went wrong");
     }
     setPhase("configure");
   }
