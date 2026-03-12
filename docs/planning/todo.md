@@ -47,7 +47,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## API & Performance
 
-- [ ] Add an index on `thread_comments.user` column: create a new PocketBase migration in `api/migrations/` that adds an index on the `user` column of the `thread_comments` collection. This column is queried when looking up a user's comment history but has no index. Use the pattern from existing migrations — `collection.Indexes` append and `app.Save(collection)`.
 - [ ] Add an index on `book_links.user` column: create a new PocketBase migration in `api/migrations/` that adds an index on the `user` column of the `book_links` collection. This supports queries for "links submitted by this user" but currently has no index.
 - [ ] Add an index on `follows.followee` column: create a new PocketBase migration in `api/migrations/` that adds a simple index on the `followee` column of the `follows` collection. The existing unique index on `(follower, followee)` doesn't efficiently serve reverse lookups (e.g., "who follows this user?") because `followee` is the second column. A standalone `followee` index speeds up follower list queries and follower count.
 - [ ] Add pagination to `GET /users/:username/activity` response: the endpoint in `api/handlers/activity.go` already supports cursor-based pagination, but the profile page in `webapp/src/app/[username]/page.tsx` fetches all activities without a limit. Pass `?limit=10` in the `fetchRecentActivity` call (line 154) to avoid loading the entire activity history for users with many activities.
