@@ -70,6 +70,14 @@ func DeleteAccount(app core.App) func(e *core.RequestEvent) error {
 			log.Printf("DeleteAccount: error deleting recommendations (recipient): %v", err)
 		}
 
+		// Blocks have blocker/blocked instead of user
+		if err := deleteUserRecords(app, "blocks", "blocker", userID); err != nil {
+			log.Printf("DeleteAccount: error deleting blocks (blocker): %v", err)
+		}
+		if err := deleteUserRecords(app, "blocks", "blocked", userID); err != nil {
+			log.Printf("DeleteAccount: error deleting blocks (blocked): %v", err)
+		}
+
 		// Delete the user account itself
 		if err := app.Delete(user); err != nil {
 			log.Printf("DeleteAccount: error deleting user record: %v", err)
@@ -140,6 +148,14 @@ func DeleteAllData(app core.App) func(e *core.RequestEvent) error {
 		// recommendations where user is the recipient
 		if err := deleteUserRecords(app, "recommendations", "recipient", userID); err != nil {
 			log.Printf("DeleteAllData: error deleting recommendations (recipient): %v", err)
+		}
+
+		// Blocks have blocker/blocked instead of user
+		if err := deleteUserRecords(app, "blocks", "blocker", userID); err != nil {
+			log.Printf("DeleteAllData: error deleting blocks (blocker): %v", err)
+		}
+		if err := deleteUserRecords(app, "blocks", "blocked", userID); err != nil {
+			log.Printf("DeleteAllData: error deleting blocks (blocked): %v", err)
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{"message": "All data deleted"})
