@@ -76,6 +76,8 @@ export default function StatusPicker({
       if (res.ok) {
         setActiveValueId(value.id);
         toast.success(`Added to ${value.name}`);
+      } else {
+        toast.error("Failed to update status");
       }
     } else {
       // Change status via tag endpoint
@@ -88,6 +90,8 @@ export default function StatusPicker({
       if (res.ok) {
         setActiveValueId(value.id);
         toast.success(`Moved to ${value.name}`);
+      } else {
+        toast.error("Failed to update status");
       }
     }
   }
@@ -106,6 +110,8 @@ export default function StatusPicker({
     if (res.ok) {
       setActiveValueId(null);
       toast.success("Removed from library");
+    } else {
+      toast.error("Failed to update status");
     }
   }
 
