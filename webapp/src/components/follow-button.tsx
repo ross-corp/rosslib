@@ -31,6 +31,8 @@ export default function FollowButton({
         setStatus(newStatus);
         toast.success(newStatus === "pending" ? `Follow request sent to ${username}` : `Following ${username}`);
       }
+    } else {
+      toast.error("Failed to update follow");
     }
   }
 
