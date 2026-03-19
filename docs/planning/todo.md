@@ -45,8 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add `aria-label` to ShelfPicker dropdown trigger: in `webapp/src/components/shelf-picker.tsx`, the dropdown button has `aria-haspopup` but lacks a descriptive `aria-label`. Add `aria-label="Change reading status"` to help screen readers announce what the button does.
-- [ ] Show error toast when LibraryManager search fails: in `webapp/src/components/library-manager.tsx`, the `doSearch` callback (line 183-198) fetches search results but doesn't handle errors. If the search request fails, no feedback is shown. Add an `else` branch after the `if (res.ok)` check that calls `toast.error("Search failed")` and sets `setSearchResults(null)`.
 
 ## API & Performance
 
