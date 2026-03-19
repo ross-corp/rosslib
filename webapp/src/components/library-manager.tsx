@@ -194,6 +194,9 @@ export default function LibraryManager({
         if (res.ok) {
           const data = await res.json();
           setSearchResults(data.books ?? []);
+        } else {
+          toast.error("Search failed");
+          setSearchResults(null);
         }
       }, 400);
     },
