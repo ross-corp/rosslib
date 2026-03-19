@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add `aria-label` to FollowButton: in `webapp/src/components/follow-button.tsx`, the button (line 45-58) has `aria-pressed` but lacks a descriptive `aria-label`. Add `aria-label={status === "active" ? "Unfollow this user" : status === "pending" ? "Cancel follow request" : "Follow this user"}` so screen readers announce the button's purpose clearly.
 - [ ] Show error toast when ShelfPicker status change fails: in `webapp/src/components/shelf-picker.tsx`, when a user changes a book's reading status, if the API fetch fails the component silently reverts the optimistic update without notifying the user. After the fetch call, add an error check: if `!res.ok`, call `toast.error("Failed to update status")` so the user knows the operation failed.
 - [ ] Add `aria-label` to ShelfPicker dropdown trigger: in `webapp/src/components/shelf-picker.tsx`, the dropdown button has `aria-haspopup` but lacks a descriptive `aria-label`. Add `aria-label="Change reading status"` to help screen readers announce what the button does.
 - [ ] Show error toast when LibraryManager search fails: in `webapp/src/components/library-manager.tsx`, the `doSearch` callback (line 183-198) fetches search results but doesn't handle errors. If the search request fails, no feedback is shown. Add an `else` branch after the `if (res.ok)` check that calls `toast.error("Search failed")` and sets `setSearchResults(null)`.
