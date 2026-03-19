@@ -48,6 +48,7 @@ export default function FollowButton({
       onClick={toggle}
       disabled={loading}
       aria-pressed={status !== "none"}
+      aria-label={status === "active" ? "Unfollow this user" : status === "pending" ? "Cancel follow request" : "Follow this user"}
       className={`text-sm px-3 py-1.5 rounded border transition-colors disabled:opacity-50 ${
         status === "active"
           ? "border-border text-text-secondary hover:border-border-strong hover:text-text-primary"
