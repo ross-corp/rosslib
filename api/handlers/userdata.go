@@ -110,6 +110,7 @@ func DeleteAllData(app core.App) func(e *core.RequestEvent) error {
 			"tag_values",
 			"tag_keys",
 			"collections",
+			"recommendations",
 		}
 
 		for _, coll := range userOwned {
@@ -134,6 +135,11 @@ func DeleteAllData(app core.App) func(e *core.RequestEvent) error {
 		// activities also has a "target_user" field
 		if err := deleteUserRecords(app, "activities", "target_user", userID); err != nil {
 			log.Printf("DeleteAllData: error deleting activities (target_user): %v", err)
+		}
+
+		// recommendations where user is the recipient
+		if err := deleteUserRecords(app, "recommendations", "recipient", userID); err != nil {
+			log.Printf("DeleteAllData: error deleting recommendations (recipient): %v", err)
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{"message": "All data deleted"})
