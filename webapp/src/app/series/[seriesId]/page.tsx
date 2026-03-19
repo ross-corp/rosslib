@@ -39,6 +39,14 @@ const STATUS_COLORS: Record<string, string> = {
   "owned-to-read": "bg-purple-900/40 text-purple-400 border-purple-800",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  finished: "Finished",
+  "currently-reading": "Currently Reading",
+  "want-to-read": "Want to Read",
+  dnf: "DNF",
+  "owned-to-read": "Owned to Read",
+};
+
 async function fetchTagKeys(token: string): Promise<TagKey[]> {
   const res = await fetch(`${process.env.API_URL}/me/tag-keys`, {
     headers: { Authorization: `Bearer ${token}` },
