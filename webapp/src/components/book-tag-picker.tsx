@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useToast } from "@/components/toast";
 
 export type TagValue = {
   id: string;
@@ -37,6 +38,7 @@ export default function BookTagPicker({
   const [freeInput, setFreeInput] = useState<Record<string, string>>({});
   const [addingFree, setAddingFree] = useState<string | null>(null); // keyId
   const containerRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
 
   // Lazily load current tags on first open.
   useEffect(() => {
@@ -83,33 +85,38 @@ export default function BookTagPicker({
     setSaving(valueId);
     const assigned = isAssigned(key.id, valueId);
 
-    if (assigned) {
-      if (key.mode === "select_one") {
-        // Clear the entire key.
-        await fetch(`/api/me/books/${openLibraryId}/tags/${key.id}`, { method: "DELETE" });
-        setAssignments((prev) => ({ ...prev, [key.id]: new Set() }));
+    try {
+      if (assigned) {
+        if (key.mode === "select_one") {
+          const res = await fetch(`/api/me/books/${openLibraryId}/tags/${key.id}`, { method: "DELETE" });
+          if (!res.ok) { toast.error("Failed to update tag"); setSaving(null); return; }
+          setAssignments((prev) => ({ ...prev, [key.id]: new Set() }));
+        } else {
+          const res = await fetch(`/api/me/books/${openLibraryId}/tags/${key.id}/values/${valueId}`, {
+            method: "DELETE",
+          });
+          if (!res.ok) { toast.error("Failed to update tag"); setSaving(null); return; }
+          setAssignments((prev) => {
+            const next = new Set(prev[key.id] ?? []);
+            next.delete(valueId);
+            return { ...prev, [key.id]: next };
+          });
+        }
       } else {
-        // Remove just this value.
-        await fetch(`/api/me/books/${openLibraryId}/tags/${key.id}/values/${valueId}`, {
-          method: "DELETE",
+        const res = await fetch(`/api/me/books/${openLibraryId}/tags/${key.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ value_id: valueId }),
         });
+        if (!res.ok) { toast.error("Failed to update tag"); setSaving(null); return; }
         setAssignments((prev) => {
-          const next = new Set(prev[key.id] ?? []);
-          next.delete(valueId);
-          return { ...prev, [key.id]: next };
+          const existing = key.mode === "select_one" ? new Set<string>() : new Set(prev[key.id] ?? []);
+          existing.add(valueId);
+          return { ...prev, [key.id]: existing };
         });
       }
-    } else {
-      await fetch(`/api/me/books/${openLibraryId}/tags/${key.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ value_id: valueId }),
-      });
-      setAssignments((prev) => {
-        const existing = key.mode === "select_one" ? new Set<string>() : new Set(prev[key.id] ?? []);
-        existing.add(valueId);
-        return { ...prev, [key.id]: existing };
-      });
+    } catch {
+      toast.error("Failed to update tag");
     }
 
     setSaving(null);
@@ -120,29 +127,32 @@ export default function BookTagPicker({
     if (!name) return;
     setAddingFree(key.id);
 
-    const res = await fetch(`/api/me/books/${openLibraryId}/tags/${key.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ value_name: name }),
-    });
+    try {
+      const res = await fetch(`/api/me/books/${openLibraryId}/tags/${key.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value_name: name }),
+      });
 
-    setAddingFree(null);
-    if (res.ok) {
-      // Refresh tag keys to pick up the new value — simplest approach is to
-      // reload. We don't have a hook to update tagKeys here, so we just update
-      // the assignment optimistically with the value_name as a temporary label.
-      // A full reload would require lifting state; for now we just note it's set.
-      setFreeInput((prev) => ({ ...prev, [key.id]: "" }));
-      // Reload assignments so the new value appears as checked.
-      const updated = await fetch(`/api/me/books/${openLibraryId}/tags`).then((r) =>
-        r.ok ? r.json() : []
-      );
-      const map: Record<string, Set<string>> = {};
-      for (const t of updated as BookTag[]) {
-        if (!map[t.key_id]) map[t.key_id] = new Set();
-        map[t.key_id].add(t.value_id);
+      setAddingFree(null);
+      if (res.ok) {
+        setFreeInput((prev) => ({ ...prev, [key.id]: "" }));
+        // Reload assignments so the new value appears as checked.
+        const updated = await fetch(`/api/me/books/${openLibraryId}/tags`).then((r) =>
+          r.ok ? r.json() : []
+        );
+        const map: Record<string, Set<string>> = {};
+        for (const t of updated as BookTag[]) {
+          if (!map[t.key_id]) map[t.key_id] = new Set();
+          map[t.key_id].add(t.value_id);
+        }
+        setAssignments(map);
+      } else {
+        toast.error("Failed to update tag");
       }
-      setAssignments(map);
+    } catch {
+      setAddingFree(null);
+      toast.error("Failed to update tag");
     }
   }
 
