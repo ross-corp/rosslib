@@ -160,9 +160,15 @@ func UpdateBook(app core.App) func(e *core.RequestEvent) error {
 			ub.Set("date_started", *data.DateStarted)
 		}
 		if data.ProgressPages != nil {
+			if *data.ProgressPages < 0 {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Progress pages must not be negative"})
+			}
 			ub.Set("progress_pages", *data.ProgressPages)
 		}
 		if data.ProgressPercent != nil {
+			if *data.ProgressPercent < 0 || *data.ProgressPercent > 100 {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Progress percent must be between 0 and 100"})
+			}
 			ub.Set("progress_percent", *data.ProgressPercent)
 		}
 		if data.DeviceTotalPages != nil {
