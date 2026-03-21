@@ -45,8 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Show "follows you" badge on user cards in followers list: on `webapp/src/app/[username]/following/page.tsx`, each user card in the "following" list shows avatar, name, and follow button but doesn't indicate if they follow the profile owner back. When rendering each user, check if the user appears in the profile owner's followers list and show a small "Follows you" text badge in `text-xs text-muted` next to the username. This helps users identify mutual follows.
-
 ## API & Performance
 
 - [ ] Include `saved_searches` and `reading_sessions` in account data deletion: in `api/handlers/userdata.go`, the `DeleteAllData` and `DeleteAccount` handlers are missing `saved_searches`, `reading_sessions`, `book_quotes`, and `reading_goals` from the list of collections to delete. Add these collection names to the deletion loop (they all have a `user` field that links to the user being deleted).
