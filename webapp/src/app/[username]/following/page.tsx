@@ -9,6 +9,7 @@ type FollowUser = {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  follows_back?: boolean;
 };
 
 type UserProfile = {
@@ -120,9 +121,16 @@ export default async function FollowingPage({
                   </div>
                 )}
                 <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-medium text-text-primary truncate">
-                    {user.display_name || user.username}
-                  </span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-sm font-medium text-text-primary truncate">
+                      {user.display_name || user.username}
+                    </span>
+                    {user.follows_back && (
+                      <span className="text-xs text-text-tertiary shrink-0">
+                        Follows you
+                      </span>
+                    )}
+                  </div>
                   {user.display_name && (
                     <span className="text-xs text-text-tertiary mt-0.5">
                       @{user.username}

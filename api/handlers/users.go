@@ -760,13 +760,16 @@ func GetUserFollowing(app core.App) func(e *core.RequestEvent) error {
 			Username    string  `db:"username"`
 			DisplayName *string `db:"display_name"`
 			Avatar      string  `db:"avatar"`
+			FollowsBack bool   `db:"follows_back"`
 		}
 
 		var rows []followingRow
 		err = app.DB().NewQuery(`
-			SELECT u.id as user_id, u.username, u.display_name, u.avatar
+			SELECT u.id as user_id, u.username, u.display_name, u.avatar,
+			       CASE WHEN fb.id IS NOT NULL THEN 1 ELSE 0 END as follows_back
 			FROM follows f
 			JOIN users u ON f.followee = u.id
+			LEFT JOIN follows fb ON fb.follower = f.followee AND fb.followee = f.follower AND fb.status = 'active'
 			WHERE f.follower = {:user} AND f.status = 'active'
 			ORDER BY f.created DESC
 			LIMIT {:limit} OFFSET {:offset}
@@ -787,6 +790,7 @@ func GetUserFollowing(app core.App) func(e *core.RequestEvent) error {
 				"username":     r.Username,
 				"display_name": r.DisplayName,
 				"avatar_url":   avatarURL,
+				"follows_back": r.FollowsBack,
 			})
 		}
 

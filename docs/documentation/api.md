@@ -1108,7 +1108,8 @@ Returns a paginated list of users this user follows. Respects privacy — return
     "user_id": "...",
     "username": "alice",
     "display_name": "Alice",
-    "avatar_url": "/api/files/..."
+    "avatar_url": "/api/files/...",
+    "follows_back": true
   }
 ]
 ```
