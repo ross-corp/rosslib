@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/toast";
 
 export default function AuthorFollowButton({
   authorKey,
@@ -13,6 +14,7 @@ export default function AuthorFollowButton({
 }) {
   const [following, setFollowing] = useState(initialFollowing);
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   async function toggle() {
     setLoading(true);
@@ -24,6 +26,9 @@ export default function AuthorFollowButton({
     setLoading(false);
     if (res.ok) {
       setFollowing(!following);
+      toast.success(following ? `Unfollowed ${authorName}` : `Following ${authorName}`);
+    } else {
+      toast.error("Failed to update follow");
     }
   }
 
