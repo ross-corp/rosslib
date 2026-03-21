@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/components/toast";
 
 type LinkEdit = {
   id: string;
@@ -46,6 +47,7 @@ export default function AdminLinkEdits() {
   const [edits, setEdits] = useState<LinkEdit[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const toast = useToast();
 
   const fetchEdits = useCallback(async (status: string) => {
     setLoading(true);
@@ -69,6 +71,9 @@ export default function AdminLinkEdits() {
     });
     if (res.ok) {
       setEdits((prev) => prev.filter((e) => e.id !== editId));
+      toast.success(`Link edit ${action === "approve" ? "approved" : "rejected"}`);
+    } else {
+      toast.error(`Failed to ${action} link edit`);
     }
     setReviewingId(null);
   }

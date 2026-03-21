@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/components/toast";
 
 type AdminUser = {
   user_id: string;
@@ -21,6 +22,7 @@ export default function AdminUserList() {
   const [editingAuthor, setEditingAuthor] = useState<string | null>(null);
   const [authorKeyInput, setAuthorKeyInput] = useState("");
   const [savingAuthor, setSavingAuthor] = useState<string | null>(null);
+  const toast = useToast();
 
   const fetchUsers = useCallback(async (q: string, p: number) => {
     setLoading(true);
@@ -63,6 +65,9 @@ export default function AdminUserList() {
             : u
         )
       );
+      toast.success("Moderator status updated");
+    } else {
+      toast.error("Failed to update moderator status");
     }
     setToggling(null);
   }
@@ -93,6 +98,9 @@ export default function AdminUserList() {
       );
       setEditingAuthor(null);
       setAuthorKeyInput("");
+      toast.success("Author key saved");
+    } else {
+      toast.error("Failed to save author key");
     }
     setSavingAuthor(null);
   }

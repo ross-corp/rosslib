@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/components/toast";
 
 type ReportItem = {
   id: string;
@@ -47,6 +48,7 @@ export default function AdminReports() {
   const [items, setItems] = useState<ReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const toast = useToast();
 
   const fetchReports = useCallback(async (status: string) => {
     setLoading(true);
@@ -70,6 +72,9 @@ export default function AdminReports() {
     });
     if (res.ok) {
       setItems((prev) => prev.filter((item) => item.id !== id));
+      toast.success(`Report ${newStatus === "reviewed" ? "reviewed" : "dismissed"}`);
+    } else {
+      toast.error(`Failed to update report`);
     }
     setUpdatingId(null);
   }
