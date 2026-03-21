@@ -51,6 +51,11 @@ export default function NotificationBell() {
           {count > 9 ? "9+" : count}
         </span>
       )}
+      <span className="sr-only" aria-live="polite" role="status">
+        {count > 0
+          ? `${count} unread notification${count !== 1 ? "s" : ""}`
+          : ""}
+      </span>
     </Link>
   );
 }
