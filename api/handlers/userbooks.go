@@ -247,6 +247,16 @@ func DeleteBook(app core.App) func(e *core.RequestEvent) error {
 			_ = app.Delete(ci)
 		}
 
+		// Clean up genre ratings
+		grs, _ := app.FindRecordsByFilter("genre_ratings",
+			"user = {:user} && book = {:book}",
+			"", 100, 0,
+			map[string]any{"user": user.Id, "book": book.Id},
+		)
+		for _, gr := range grs {
+			_ = app.Delete(gr)
+		}
+
 		refreshBookStats(app, book.Id)
 
 		return e.JSON(http.StatusOK, map[string]any{"message": "Book removed"})
