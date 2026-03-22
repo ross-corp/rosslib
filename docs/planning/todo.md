@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add `aria-label` to star rating display throughout the app: in `webapp/src/app/[username]/reviews/page.tsx` and `webapp/src/app/books/[workId]/page.tsx`, star rating elements (yellow star icons + numeric rating) lack `aria-label` attributes, so screen readers can't announce the rating value. Add `aria-label={`${rating} out of 5 stars`}` to the rating container element wherever ratings are displayed (review cards, book detail sidebar, profile shelves). This affects at least: review cards on book pages, review cards on user reviews page, and book cover grid rating badges.
 - [ ] Add `aria-label` to the "Select all" and "Clear" buttons in library manager: in `webapp/src/components/library-manager.tsx`, the "Select all" and "Clear" buttons in the bulk action bar (around line 860-872) lack `aria-label` attributes. Add `aria-label="Select all books"` to the select-all button and `aria-label="Clear selection"` to the clear button so screen readers announce the bulk selection actions.
 - [ ] Show success toast when saving shelf description: in `webapp/src/components/library-manager.tsx`, the `saveDescription()` function (around line 519) saves the description without showing any user feedback on success. Import `useToast` (if not already imported) and add `toast.success("Description saved")` after the successful save. This matches the toast pattern used for other save operations in the library manager.
 
