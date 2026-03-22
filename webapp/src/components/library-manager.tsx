@@ -862,12 +862,14 @@ export default function LibraryManager({
                   setSelectedIds(new Set(books.map((b) => b.book_id)))
                 }
                 className="text-xs text-text-primary hover:text-text-primary transition-colors"
+                aria-label="Select all books"
               >
                 Select all
               </button>
               <button
                 onClick={() => setSelectedIds(new Set())}
                 className="text-xs text-text-primary hover:text-text-primary transition-colors"
+                aria-label="Clear selection"
               >
                 Clear
               </button>
