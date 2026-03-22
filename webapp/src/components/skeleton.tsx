@@ -442,6 +442,57 @@ export function AuthorDetailSkeleton() {
   );
 }
 
+export function SeriesDetailSkeleton() {
+  return (
+    <div className="min-h-screen">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 mb-8">
+          <Skeleton variant="text" className="h-3 w-10" />
+          <span className="text-text-tertiary">/</span>
+          <Skeleton variant="text" className="h-3 w-32" />
+        </div>
+
+        {/* Series title + description */}
+        <Skeleton variant="text" className="h-7 w-56 mb-2" />
+        <div className="space-y-2 mb-6">
+          <Skeleton variant="text" className="h-4 w-full" />
+          <Skeleton variant="text" className="h-4 w-3/4" />
+        </div>
+
+        {/* Book count */}
+        <Skeleton variant="text" className="h-4 w-24 mb-8" />
+
+        {/* Progress bar */}
+        <Skeleton variant="rectangular" className="h-1.5 w-full mb-8" />
+
+        {/* Book list */}
+        <div className="space-y-4">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div
+              key={i}
+              className="flex gap-4 items-start p-3 -mx-3"
+            >
+              {/* Position */}
+              <Skeleton variant="text" className="w-8 h-4 shrink-0" />
+              {/* Cover */}
+              <Skeleton
+                variant="rectangular"
+                className="w-12 h-[72px] shrink-0"
+              />
+              {/* Info */}
+              <div className="flex-1 min-w-0 py-1 space-y-2">
+                <Skeleton variant="text" className="h-4 w-48" />
+                <Skeleton variant="text" className="h-3 w-32" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export function SearchSkeleton() {
   return (
     <div className="min-h-screen">
