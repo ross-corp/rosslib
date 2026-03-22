@@ -45,8 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add loading.tsx skeleton for user reviews page: the page at `webapp/src/app/[username]/reviews/page.tsx` fetches user reviews but has no `loading.tsx` file. Create `webapp/src/app/[username]/reviews/loading.tsx` that returns a skeleton layout matching the review card layout (book cover placeholder, title, star rating placeholder, review text lines). Use the same skeleton pattern as existing loading.tsx files.
-
 ## API & Performance
 
 - [ ] Clean up orphaned `genre_ratings` when deleting a user_book: in `api/handlers/userbooks.go`, the `DeleteBook()` handler cascades deletes to `collection_items` and `book_tag_values` but does not delete `genre_ratings` for the same user+book combination. After the existing cascade deletions, add a query to delete from `genre_ratings` where `user = userId AND book = bookId` to prevent orphaned records.
