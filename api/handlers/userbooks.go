@@ -257,6 +257,16 @@ func DeleteBook(app core.App) func(e *core.RequestEvent) error {
 			_ = app.Delete(gr)
 		}
 
+		// Clean up review likes on this user's review
+		rls, _ := app.FindRecordsByFilter("review_likes",
+			"book = {:book} && review_user = {:user}",
+			"", 100, 0,
+			map[string]any{"book": book.Id, "user": user.Id},
+		)
+		for _, rl := range rls {
+			_ = app.Delete(rl)
+		}
+
 		refreshBookStats(app, book.Id)
 
 		return e.JSON(http.StatusOK, map[string]any{"message": "Book removed"})
