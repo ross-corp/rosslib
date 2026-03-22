@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add loading.tsx skeleton for series detail page: the page at `webapp/src/app/series/[seriesId]/page.tsx` fetches series data and book list but has no `loading.tsx` file. Create `webapp/src/app/series/[seriesId]/loading.tsx` that returns a skeleton layout with a placeholder for the series title, description, and a grid of placeholder book covers. Use the same skeleton pattern as existing loading.tsx files.
 - [ ] Add loading.tsx skeleton for recommendations page: the page at `webapp/src/app/recommendations/page.tsx` fetches recommendation data but has no `loading.tsx` file. Create `webapp/src/app/recommendations/loading.tsx` that returns a skeleton layout with placeholder cards. Use the same skeleton pattern as existing loading.tsx files.
 - [ ] Add loading.tsx skeleton for user reviews page: the page at `webapp/src/app/[username]/reviews/page.tsx` fetches user reviews but has no `loading.tsx` file. Create `webapp/src/app/[username]/reviews/loading.tsx` that returns a skeleton layout matching the review card layout (book cover placeholder, title, star rating placeholder, review text lines). Use the same skeleton pattern as existing loading.tsx files.
 
