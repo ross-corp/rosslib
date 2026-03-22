@@ -860,6 +860,16 @@ func UploadAvatar(app core.App) func(e *core.RequestEvent) error {
 		}
 		defer file.Close()
 
+		// Validate MIME type by sniffing file content
+		buf := make([]byte, 512)
+		n, _ := file.Read(buf)
+		contentType := http.DetectContentType(buf[:n])
+		if !isAllowedImageType(contentType) {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Only JPEG, PNG, GIF, and WebP images are allowed"})
+		}
+		// Reset file reader for PocketBase to process
+		file.Seek(0, 0)
+
 		// Use PocketBase's filesystem to handle file upload
 		f, err := e.FindUploadedFiles("avatar")
 		if err != nil || len(f) == 0 {
@@ -886,6 +896,21 @@ func UploadBanner(app core.App) func(e *core.RequestEvent) error {
 		if user == nil {
 			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
 		}
+
+		// Validate MIME type by sniffing file content
+		file, _, err := e.Request.FormFile("banner")
+		if err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "No banner file provided"})
+		}
+		defer file.Close()
+
+		buf := make([]byte, 512)
+		n, _ := file.Read(buf)
+		contentType := http.DetectContentType(buf[:n])
+		if !isAllowedImageType(contentType) {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Only JPEG, PNG, GIF, and WebP images are allowed"})
+		}
+		file.Seek(0, 0)
 
 		f, err := e.FindUploadedFiles("banner")
 		if err != nil || len(f) == 0 {

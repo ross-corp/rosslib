@@ -243,6 +243,16 @@ func ensureTagValue(app core.App, tagKeyID, name string) (*core.Record, error) {
 }
 
 
+// isAllowedImageType checks if a MIME type is an allowed image format for uploads.
+func isAllowedImageType(contentType string) bool {
+	switch contentType {
+	case "image/jpeg", "image/png", "image/gif", "image/webp":
+		return true
+	default:
+		return false
+	}
+}
+
 // gbClient is a Google Books API client used as a fallback catalog lookup.
 type gbClient struct {
 	httpClient *http.Client
