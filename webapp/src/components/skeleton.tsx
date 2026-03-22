@@ -413,6 +413,35 @@ export function GenreDetailSkeleton() {
   );
 }
 
+export function AuthorDetailSkeleton() {
+  return (
+    <div className="min-h-screen">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+        {/* Author header */}
+        <div className="flex gap-8 items-start mb-10">
+          <Skeleton variant="rectangular" className="w-32 h-40 shrink-0" />
+          <div className="flex-1 space-y-3">
+            <Skeleton variant="text" className="h-7 w-48" />
+            <Skeleton variant="text" className="h-4 w-36" />
+            <Skeleton variant="text" className="h-3 w-20" />
+            <div className="pt-2 space-y-2">
+              <Skeleton variant="text" className="h-4 w-full" />
+              <Skeleton variant="text" className="h-4 w-full" />
+              <Skeleton variant="text" className="h-4 w-3/4" />
+            </div>
+          </div>
+        </div>
+
+        {/* Works section */}
+        <div className="border-t border-border pt-8">
+          <Skeleton variant="text" className="h-3 w-24 mb-6" />
+          <BookGridSkeleton count={6} />
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export function SearchSkeleton() {
   return (
     <div className="min-h-screen">
