@@ -225,8 +225,8 @@ export default function PendingImportsManager({
                   </span>
                 )}
                 {item.rating != null && item.rating > 0 && (
-                  <span className="text-xs text-text-primary">
-                    {"★".repeat(item.rating)}
+                  <span className="text-xs text-text-primary" aria-label={`${item.rating} out of 5 stars`}>
+                    <span aria-hidden="true">{"★".repeat(item.rating)}</span>
                   </span>
                 )}
                 {item.date_read && (

@@ -253,8 +253,8 @@ export default function ReadingHistory({ openLibraryId, initialSessions }: Props
                   )}
                 </div>
                 {session.rating != null && session.rating > 0 && (
-                  <span className="text-sm tracking-tight text-amber-500">
-                    {renderStars(session.rating)}
+                  <span className="text-sm tracking-tight text-amber-500" aria-label={`${session.rating} out of 5 stars`}>
+                    <span aria-hidden="true">{renderStars(session.rating)}</span>
                   </span>
                 )}
                 {session.notes && (

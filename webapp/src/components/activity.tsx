@@ -75,9 +75,11 @@ export function formatFullDate(iso: string): string {
 
 export function Stars({ rating }: { rating: number }) {
   return (
-    <span className="text-amber-500 text-sm tracking-tight">
-      {"★".repeat(rating)}
-      {"☆".repeat(5 - rating)}
+    <span className="text-amber-500 text-sm tracking-tight" aria-label={`${rating} out of 5 stars`}>
+      <span aria-hidden="true">
+        {"★".repeat(rating)}
+        {"☆".repeat(5 - rating)}
+      </span>
     </span>
   );
 }

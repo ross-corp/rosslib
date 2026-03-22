@@ -133,8 +133,8 @@ export default async function StatsPage({
             <div className="space-y-2">
               {[...stats.rating_distribution].reverse().map((bucket) => (
                 <div key={bucket.rating} className="flex items-center gap-3">
-                  <span className="w-12 text-sm text-text-secondary text-right">
-                    {"★".repeat(bucket.rating)}
+                  <span className="w-12 text-sm text-text-secondary text-right" aria-label={`${bucket.rating} out of 5 stars`}>
+                    <span aria-hidden="true">{"★".repeat(bucket.rating)}</span>
                   </span>
                   <div className="flex-1 h-5 bg-surface-2 rounded-full overflow-hidden">
                     <div

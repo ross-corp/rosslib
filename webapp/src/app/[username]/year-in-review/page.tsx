@@ -68,9 +68,11 @@ const monthNames = [
 
 function StarDisplay({ rating }: { rating: number }) {
   return (
-    <span className="text-amber-500">
-      {"★".repeat(Math.round(rating))}
-      {"☆".repeat(5 - Math.round(rating))}
+    <span className="text-amber-500" aria-label={`${rating} out of 5 stars`}>
+      <span aria-hidden="true">
+        {"★".repeat(Math.round(rating))}
+        {"☆".repeat(5 - Math.round(rating))}
+      </span>
     </span>
   );
 }

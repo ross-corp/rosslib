@@ -932,8 +932,8 @@ export default async function BookPage({
                     {/* Rating + date */}
                     <div className="flex items-center gap-3 mt-0.5">
                       {review.rating != null && (
-                        <span className="text-sm tracking-tight text-amber-500">
-                          {renderStars(review.rating)}
+                        <span className="text-sm tracking-tight text-amber-500" aria-label={`${review.rating} out of 5 stars`}>
+                          <span aria-hidden="true">{renderStars(review.rating)}</span>
                         </span>
                       )}
                       {review.date_read && (
