@@ -15,6 +15,7 @@ var notifPrefFields = []string{
 	"review_liked",
 	"thread_mention",
 	"book_recommendation",
+	"new_follower",
 }
 
 // GetNotificationPreferences handles GET /me/notification-preferences
@@ -131,6 +132,7 @@ func ShouldNotify(app core.App, userID, notifType string) bool {
 		"thread_mention":     "thread_mention",
 		"book_recommendation": "book_recommendation",
 		"review_comment":      "review_comment",
+		"new_follower":        "new_follower",
 	}
 
 	field, ok := fieldMap[notifType]

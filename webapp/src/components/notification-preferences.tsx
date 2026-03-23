@@ -10,6 +10,7 @@ type Preferences = {
   review_liked: boolean;
   thread_mention: boolean;
   book_recommendation: boolean;
+  new_follower: boolean;
 };
 
 const PREF_LABELS: { key: keyof Preferences; label: string; description: string }[] = [
@@ -20,6 +21,7 @@ const PREF_LABELS: { key: keyof Preferences; label: string; description: string 
   { key: "review_liked", label: "Review likes", description: "When someone likes your review" },
   { key: "thread_mention", label: "Mentions", description: "When someone @mentions you in a thread comment" },
   { key: "book_recommendation", label: "Recommendations", description: "When someone recommends a book to you" },
+  { key: "new_follower", label: "New followers", description: "When someone follows you" },
 ];
 
 const ALL_TRUE: Preferences = {
@@ -30,6 +32,7 @@ const ALL_TRUE: Preferences = {
   review_liked: true,
   thread_mention: true,
   book_recommendation: true,
+  new_follower: true,
 };
 
 export default function NotificationPreferences() {
