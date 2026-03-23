@@ -533,6 +533,7 @@ export default function LibraryManager({
         )
       );
       setEditingShelfId(null);
+      toast.success("Description saved");
     }
   }
 
