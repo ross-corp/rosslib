@@ -277,6 +277,36 @@ func DeleteBook(app core.App) func(e *core.RequestEvent) error {
 			_ = app.Delete(bf)
 		}
 
+		// Clean up book quotes for this user+book
+		bqs, _ := app.FindRecordsByFilter("book_quotes",
+			"user = {:user} && book = {:book}",
+			"", 100, 0,
+			map[string]any{"user": user.Id, "book": book.Id},
+		)
+		for _, bq := range bqs {
+			_ = app.Delete(bq)
+		}
+
+		// Clean up reading sessions for this user+book
+		rss, _ := app.FindRecordsByFilter("reading_sessions",
+			"user = {:user} && book = {:book}",
+			"", 100, 0,
+			map[string]any{"user": user.Id, "book": book.Id},
+		)
+		for _, rs := range rss {
+			_ = app.Delete(rs)
+		}
+
+		// Clean up review comments on this user's review
+		rcs, _ := app.FindRecordsByFilter("review_comments",
+			"book = {:book} && review_user = {:user}",
+			"", 100, 0,
+			map[string]any{"book": book.Id, "user": user.Id},
+		)
+		for _, rc := range rcs {
+			_ = app.Delete(rc)
+		}
+
 		// Clean up orphaned book_series if no other user has this book
 		var ubCount struct {
 			Count int `db:"count"`
