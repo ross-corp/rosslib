@@ -25,15 +25,15 @@ func GetMyShelves(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusOK, []any{})
 		}
 
+		// Batch-load item counts for all shelves in a single query
+		shelfIDs := make([]any, len(shelves))
+		for i, s := range shelves {
+			shelfIDs[i] = s.Id
+		}
+		countMap := batchShelfCounts(app, shelfIDs)
+
 		var result []map[string]any
 		for _, s := range shelves {
-			type countResult struct {
-				Count int `db:"count"`
-			}
-			var cnt countResult
-			_ = app.DB().NewQuery("SELECT COUNT(*) as count FROM collection_items WHERE collection = {:id}").
-				Bind(map[string]any{"id": s.Id}).One(&cnt)
-
 			entry := map[string]any{
 				"id":              s.Id,
 				"name":            s.GetString("name"),
@@ -42,7 +42,7 @@ func GetMyShelves(app core.App) func(e *core.RequestEvent) error {
 				"exclusive_group": s.GetString("exclusive_group"),
 				"is_public":       s.GetBool("is_public"),
 				"collection_type": s.GetString("collection_type"),
-				"item_count":      cnt.Count,
+				"item_count":      countMap[s.Id],
 			}
 
 			if desc := s.GetString("description"); desc != "" {
@@ -239,22 +239,22 @@ func GetUserShelves(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusOK, []any{})
 		}
 
+		// Batch-load item counts for all shelves in a single query
+		shelfIDs := make([]any, len(shelves))
+		for i, s := range shelves {
+			shelfIDs[i] = s.Id
+		}
+		countMap := batchShelfCounts(app, shelfIDs)
+
 		var result []map[string]any
 		for _, s := range shelves {
-			type countResult struct {
-				Count int `db:"count"`
-			}
-			var cnt countResult
-			_ = app.DB().NewQuery("SELECT COUNT(*) as count FROM collection_items WHERE collection = {:id}").
-				Bind(map[string]any{"id": s.Id}).One(&cnt)
-
 			entry := map[string]any{
 				"id":              s.Id,
 				"name":            s.GetString("name"),
 				"slug":            s.GetString("slug"),
 				"exclusive_group": s.GetString("exclusive_group"),
 				"collection_type": s.GetString("collection_type"),
-				"item_count":      cnt.Count,
+				"item_count":      countMap[s.Id],
 			}
 
 			if desc := s.GetString("description"); desc != "" {

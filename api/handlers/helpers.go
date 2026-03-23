@@ -243,6 +243,39 @@ func ensureTagValue(app core.App, tagKeyID, name string) (*core.Record, error) {
 }
 
 
+// batchShelfCounts returns a map of collection ID → item count using a single query.
+func batchShelfCounts(app core.App, shelfIDs []any) map[string]int {
+	counts := make(map[string]int, len(shelfIDs))
+	if len(shelfIDs) == 0 {
+		return counts
+	}
+
+	// Build placeholder list for IN clause
+	placeholders := make([]string, len(shelfIDs))
+	binds := map[string]any{}
+	for i, id := range shelfIDs {
+		key := fmt.Sprintf("id%d", i)
+		placeholders[i] = "{:" + key + "}"
+		binds[key] = id
+	}
+
+	type countRow struct {
+		Collection string `db:"collection"`
+		Count      int    `db:"count"`
+	}
+	var rows []countRow
+	_ = app.DB().NewQuery(
+		"SELECT collection, COUNT(*) as count FROM collection_items WHERE collection IN (" +
+			strings.Join(placeholders, ",") +
+			") GROUP BY collection",
+	).Bind(binds).All(&rows)
+
+	for _, r := range rows {
+		counts[r.Collection] = r.Count
+	}
+	return counts
+}
+
 // isAllowedImageType checks if a MIME type is an allowed image format for uploads.
 func isAllowedImageType(contentType string) bool {
 	switch contentType {
