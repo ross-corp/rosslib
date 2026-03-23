@@ -178,10 +178,16 @@ func authenticateByAPIToken(app core.App, e *core.RequestEvent) bool {
 
 	e.Auth = user
 
-	// Update last_used_at in the background
+	// Update last_used_at in the background via direct SQL to avoid
+	// a race condition with the in-memory tokenRecord.
+	tokenID := tokenRecord.Id
 	go func() {
-		tokenRecord.Set("last_used_at", time.Now().UTC().Format("2006-01-02 15:04:05.000Z"))
-		_ = app.Save(tokenRecord)
+		_, _ = app.DB().NewQuery(`
+			UPDATE api_tokens SET last_used_at = {:now} WHERE id = {:id}
+		`).Bind(map[string]any{
+			"now": time.Now().UTC().Format("2006-01-02 15:04:05.000Z"),
+			"id":  tokenID,
+		}).Execute()
 	}()
 
 	return true
