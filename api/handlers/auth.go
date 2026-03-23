@@ -6,11 +6,24 @@ import (
 	"fmt"
 	mrand "math/rand/v2"
 	"net/http"
+	"net/mail"
+	"regexp"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 )
+
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+
+// isValidEmail checks that the address parses and matches the expected format.
+func isValidEmail(addr string) bool {
+	_, err := mail.ParseAddress(addr)
+	if err != nil {
+		return false
+	}
+	return emailRegex.MatchString(addr)
+}
 
 // Login handles POST /auth/login.
 func Login(app core.App) func(e *core.RequestEvent) error {
@@ -59,6 +72,10 @@ func Register(app core.App) func(e *core.RequestEvent) error {
 
 		if data.Username == "" || data.Email == "" || data.Password == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Username, email, and password are required"})
+		}
+
+		if !isValidEmail(data.Email) {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid email address"})
 		}
 
 		collection, err := app.FindCollectionByNameOrId("users")
@@ -249,7 +266,7 @@ func ChangeEmail(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "New email and current password are required"})
 		}
 
-		if !strings.Contains(data.NewEmail, "@") {
+		if !isValidEmail(data.NewEmail) {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid email address"})
 		}
 
