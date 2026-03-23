@@ -267,6 +267,16 @@ func DeleteBook(app core.App) func(e *core.RequestEvent) error {
 			_ = app.Delete(rl)
 		}
 
+		// Clean up book follows
+		bfs, _ := app.FindRecordsByFilter("book_follows",
+			"user = {:user} && book = {:book}",
+			"", 100, 0,
+			map[string]any{"user": user.Id, "book": book.Id},
+		)
+		for _, bf := range bfs {
+			_ = app.Delete(bf)
+		}
+
 		refreshBookStats(app, book.Id)
 
 		return e.JSON(http.StatusOK, map[string]any{"message": "Book removed"})
