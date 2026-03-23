@@ -284,11 +284,18 @@ func DeleteThread(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusForbidden, map[string]any{"error": "Not your thread"})
 		}
 
-		// Soft delete
-		thread.Set("deleted_at", time.Now().UTC().Format(time.RFC3339))
+		// Soft delete thread and its comments
+		now := time.Now().UTC().Format(time.RFC3339)
+		thread.Set("deleted_at", now)
 		if err := app.Save(thread); err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to delete"})
 		}
+
+		// Soft-delete all child comments
+		_, _ = app.DB().NewQuery(`
+			UPDATE thread_comments SET deleted_at = {:now}
+			WHERE thread = {:threadId} AND (deleted_at IS NULL OR deleted_at = '')
+		`).Bind(map[string]any{"now": now, "threadId": threadID}).Execute()
 
 		e.Response.WriteHeader(http.StatusNoContent)
 		return nil
