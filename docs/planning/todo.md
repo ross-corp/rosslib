@@ -45,8 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Show success toast when saving shelf description: in `webapp/src/components/library-manager.tsx`, the `saveDescription()` function (around line 519) saves the description without showing any user feedback on success. Import `useToast` (if not already imported) and add `toast.success("Description saved")` after the successful save. This matches the toast pattern used for other save operations in the library manager.
-
 ## API & Performance
 
 - [ ] Clean up orphaned `book_follows` when deleting a user_book: in `api/handlers/userbooks.go`, the `DeleteBook()` handler cascades deletes to `collection_items`, `book_tag_values`, `genre_ratings`, and `review_likes` but does not delete `book_follows` for the same user+book combination. After the existing cascade deletions, add a query to delete from `book_follows` where `user = userId AND book = bookId` to prevent the user from still "following" a book they no longer have in their library.
