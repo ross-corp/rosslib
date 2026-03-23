@@ -277,6 +277,24 @@ func DeleteBook(app core.App) func(e *core.RequestEvent) error {
 			_ = app.Delete(bf)
 		}
 
+		// Clean up orphaned book_series if no other user has this book
+		var ubCount struct {
+			Count int `db:"count"`
+		}
+		err := app.DB().NewQuery(`
+			SELECT COUNT(*) as count FROM user_books WHERE book = {:book}
+		`).Bind(map[string]any{"book": book.Id}).One(&ubCount)
+		if err == nil && ubCount.Count == 0 {
+			bss, _ := app.FindRecordsByFilter("book_series",
+				"book = {:book}",
+				"", 100, 0,
+				map[string]any{"book": book.Id},
+			)
+			for _, bs := range bss {
+				_ = app.Delete(bs)
+			}
+		}
+
 		refreshBookStats(app, book.Id)
 
 		return e.JSON(http.StatusOK, map[string]any{"message": "Book removed"})
