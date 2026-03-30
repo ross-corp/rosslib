@@ -23,6 +23,22 @@ const sizeClasses = {
   lg: "w-20 h-[120px]",
 } as const;
 
+function formatStartedDate(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days < 1) return "Started today";
+  if (days === 1) return "Started 1 day ago";
+  if (days < 30) return `Started ${days} days ago`;
+  return `Started ${d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: d.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+  })}`;
+}
+
 function getProgressPercent(book: Book): number | null {
   if (book.progress_percent != null) return book.progress_percent;
   const total = book.device_total_pages ?? book.page_count;
@@ -95,7 +111,7 @@ export default function BookCoverRow({
               )}
               {showProgress && book.date_started && (
                 <p className="text-[10px] text-text-tertiary mt-0.5 text-center truncate max-w-[80px]">
-                  Since {new Date(book.date_started).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  {formatStartedDate(book.date_started)}
                 </p>
               )}
               {showTitle && (
