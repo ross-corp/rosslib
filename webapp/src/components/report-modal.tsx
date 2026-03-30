@@ -189,6 +189,7 @@ export default function ReportModal({ contentType, contentId, onClose }: Props) 
                   type="button"
                   onClick={handleClose}
                   disabled={submitting}
+                  aria-label="Close report dialog"
                   className="text-xs text-text-primary hover:text-text-primary transition-colors"
                 >
                   Cancel
