@@ -977,10 +977,8 @@ export default function LibraryManager({
         )}
 
         {/* Book grid */}
-        <div className="flex-1 overflow-y-auto p-5">
-          {loading ? (
-            <p className="text-sm text-text-primary">Loading...</p>
-          ) : displayedBooks.length === 0 ? (
+        <div className={`flex-1 overflow-y-auto p-5 transition-opacity ${loading ? "opacity-50 pointer-events-none" : ""}`}>
+          {displayedBooks.length === 0 && !loading ? (
             searchResults !== null ? (
               <p className="text-sm text-text-primary">No books match your search.</p>
             ) : (
