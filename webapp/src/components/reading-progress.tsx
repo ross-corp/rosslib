@@ -176,6 +176,16 @@ export default function ReadingProgress({
               })}
             </p>
           )}
+          {dateStarted && (
+            <p className="text-xs text-text-secondary mt-1">
+              Started reading on{" "}
+              {new Date(dateStarted).toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </p>
+          )}
         </div>
       )}
 
