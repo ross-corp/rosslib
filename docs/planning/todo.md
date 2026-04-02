@@ -45,10 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Fix optimistic state in StatusPicker removal: in `webapp/src/components/shelf-picker.tsx`, the `removeFromLibrary()` function calls `setActiveValueId(null)` (optimistic UI update) before checking if the `DELETE` API call succeeded. If the fetch fails, the UI shows the book as removed even though it wasn't. Move the `setActiveValueId(null)` call inside the `if (res.ok)` branch so the state only updates on success. The add and status-change paths already follow this pattern correctly.
-- [ ] Add `aria-modal="true"` to ShelfPicker dropdown: in `webapp/src/components/shelf-picker.tsx`, the status dropdown modal (around line 135) opens as an overlay but lacks `aria-modal="true"` on the container `div`. Add `aria-modal="true"` and `role="dialog"` to the dropdown container so screen readers correctly announce it as a modal dialog. Other modals in the app (e.g., `ReportModal`, `RecommendButton`) already use `aria-modal="true"` — apply the same pattern here.
-- [ ] Show error state when shelves fetch fails on compare page: in `webapp/src/app/library/compare/page.tsx`, the `fetchShelves()` function (around line 22-33) returns an empty array on any error, so the page silently renders with no shelves and no error message. Add a check: if the API response is not ok (and not 401), render a `<p>` error message like "Failed to load your lists. Please refresh the page." instead of passing empty shelves to the form components.
-
 ## API & Performance
 
 - [ ] Batch tag value loading into a single query in GetTagKeys: in `api/handlers/tags.go`, the `GetTagKeys()` function runs a separate query for each tag key to load its values (N+1 pattern). Replace the per-key value loop with a single query: `SELECT * FROM tag_values WHERE tag_key_id IN (?) ORDER BY tag_key_id, name`, then group the results by `tag_key_id` in Go. This reduces database round-trips from N+1 to 2 for users with many label categories.
