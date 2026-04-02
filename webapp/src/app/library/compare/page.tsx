@@ -22,14 +22,21 @@ type Shelf = {
 async function fetchShelves(
   username: string,
   token: string
-): Promise<Shelf[]> {
-  const res = await fetch(`${process.env.API_URL}/users/${username}/shelves`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.shelves ?? data;
+): Promise<{ shelves: Shelf[]; error: boolean }> {
+  try {
+    const res = await fetch(`${process.env.API_URL}/users/${username}/shelves`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      if (res.status === 401) return { shelves: [], error: false };
+      return { shelves: [], error: true };
+    }
+    const data = await res.json();
+    return { shelves: data.shelves ?? data, error: false };
+  } catch {
+    return { shelves: [], error: true };
+  }
 }
 
 export default async function ComparePage() {
@@ -37,7 +44,7 @@ export default async function ComparePage() {
   if (!user) redirect("/login");
 
   const token = await getToken();
-  const shelves = await fetchShelves(user.username, token || "");
+  const { shelves, error } = await fetchShelves(user.username, token || "");
 
   return (
     <div className="min-h-screen">
@@ -61,17 +68,23 @@ export default async function ComparePage() {
           unique to one list. Save the result as a new list.
         </p>
 
-        <CompareTabs
-          myListsContent={
-            <SetOperationForm shelves={shelves} username={user.username} />
-          }
-          friendContent={
-            <CrossUserCompareForm
-              myShelves={shelves}
-              username={user.username}
-            />
-          }
-        />
+        {error ? (
+          <p className="text-sm text-text-secondary">
+            Failed to load your lists. Please refresh the page.
+          </p>
+        ) : (
+          <CompareTabs
+            myListsContent={
+              <SetOperationForm shelves={shelves} username={user.username} />
+            }
+            friendContent={
+              <CrossUserCompareForm
+                myShelves={shelves}
+                username={user.username}
+              />
+            }
+          />
+        )}
       </main>
     </div>
   );

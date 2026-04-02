@@ -121,7 +121,7 @@ export default function StatusPicker({
         onClick={() => setOpen(!open)}
         disabled={loading}
         aria-label="Change reading status"
-        aria-haspopup="listbox"
+        aria-haspopup="dialog"
         aria-expanded={open}
         className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 whitespace-nowrap ${
           currentValue
@@ -133,7 +133,7 @@ export default function StatusPicker({
       </button>
 
       {open && (
-        <div role="listbox" aria-label="Reading status options" className="absolute right-0 top-full mt-1 z-10 bg-surface-0 border border-border rounded shadow-sm min-w-[160px]">
+        <div role="dialog" aria-modal="true" aria-label="Reading status options" className="absolute right-0 top-full mt-1 z-10 bg-surface-0 border border-border rounded shadow-sm min-w-[160px]">
           {statusValues.map((value) => (
             <button
               key={value.id}
