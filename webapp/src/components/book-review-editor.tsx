@@ -328,8 +328,12 @@ export default function BookReviewEditor({
                 disabled={saving}
                 placeholder="Write your review (optional). Type [[ to link a book."
                 rows={4}
+                maxLength={10000}
                 className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong resize-y disabled:opacity-50"
               />
+              <p className={`text-xs text-right mt-1 ${reviewText.length >= 9500 ? "text-semantic-error" : "text-text-secondary"}`}>
+                {reviewText.length}/10000
+              </p>
 
               {showSuggestions && suggestions.length > 0 && (
                 <div className="absolute left-0 right-0 z-10 bg-surface-0 border border-border rounded shadow-lg max-h-60 overflow-y-auto mt-1">
