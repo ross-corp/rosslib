@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import ConfirmDialog from "@/components/confirm-dialog";
+import Skeleton from "@/components/skeleton";
 
 type FeedbackItem = {
   id: string;
@@ -98,7 +99,28 @@ export default function AdminFeedback() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-text-primary">Loading...</p>
+        <div className="space-y-4">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="border border-border rounded-lg p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Skeleton variant="text" className="h-5 w-14" />
+                    <Skeleton variant="text" className="h-5 w-16" />
+                  </div>
+                  <Skeleton variant="text" className="h-4 w-3/4 mb-1" />
+                  <Skeleton variant="text" className="h-3 w-48" />
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Skeleton variant="rectangular" className="h-7 w-14" />
+                  <Skeleton variant="rectangular" className="h-7 w-16" />
+                </div>
+              </div>
+              <Skeleton variant="text" className="h-4 w-full mt-3" />
+              <Skeleton variant="text" className="h-4 w-2/3 mt-1" />
+            </div>
+          ))}
+        </div>
       ) : items.length === 0 ? (
         <p className="text-sm text-text-primary">
           No {statusFilter} feedback.
