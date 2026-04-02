@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { formatTime } from "@/components/activity";
 
@@ -22,20 +23,52 @@ type SentRecommendation = {
   };
 };
 
+const STATUS_FILTERS = ["all", "pending", "seen", "dismissed"] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+
 export default function SentRecommendationList({
   recommendations,
 }: {
   recommendations: SentRecommendation[];
 }) {
+  const [filter, setFilter] = useState<StatusFilter>("all");
+
   const statusColors: Record<string, string> = {
     pending: "text-amber-600 border-amber-300",
     seen: "text-green-600 border-green-300",
     dismissed: "text-text-secondary border-border",
   };
 
+  const filtered =
+    filter === "all"
+      ? recommendations
+      : recommendations.filter((r) => r.status === filter);
+
   return (
-    <div className="space-y-4">
-      {recommendations.map((rec) => (
+    <div>
+      {/* Status filter pills */}
+      <div className="flex gap-1 mb-6 border-b border-border">
+        {STATUS_FILTERS.map((s) => (
+          <button
+            key={s}
+            onClick={() => setFilter(s)}
+            className={`px-3 py-2 text-xs font-medium transition-colors ${
+              filter === s
+                ? "text-text-primary border-b-2 border-text-primary"
+                : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            {s.charAt(0).toUpperCase() + s.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-4">
+      {filtered.length === 0 ? (
+        <p className="text-sm text-text-secondary py-8 text-center">
+          No {filter === "all" ? "" : filter + " "}sent recommendations.
+        </p>
+      ) : filtered.map((rec) => (
         <div
           key={rec.id}
           className="flex gap-4 p-4 border border-border rounded-lg"
@@ -113,6 +146,7 @@ export default function SentRecommendationList({
           </div>
         </div>
       ))}
+      </div>
     </div>
   );
 }
