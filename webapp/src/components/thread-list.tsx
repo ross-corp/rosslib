@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useToast } from "@/components/toast";
 
 type Thread = {
   id: string;
@@ -35,6 +36,7 @@ function formatDate(iso: string): string {
 }
 
 export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props) {
+  const toast = useToast();
   const [threads, setThreads] = useState<Thread[]>(initialThreads);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
@@ -90,6 +92,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
 
     if (!res.ok) {
       setError("Failed to create thread");
+      toast.error("Failed to create thread");
       return;
     }
 
