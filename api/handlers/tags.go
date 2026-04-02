@@ -26,20 +26,12 @@ func GetTagKeys(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusOK, []any{})
 		}
 
+		// Batch-load all tag values for these keys in a single query
+		valsByKey := batchLoadTagValues(app, keys)
+
 		var result []map[string]any
 		for _, k := range keys {
-			values, _ := app.FindRecordsByFilter("tag_values",
-				"tag_key = {:key}", "created", 100, 0,
-				map[string]any{"key": k.Id},
-			)
-			var vals []map[string]any
-			for _, v := range values {
-				vals = append(vals, map[string]any{
-					"id":   v.Id,
-					"name": v.GetString("name"),
-					"slug": v.GetString("slug"),
-				})
-			}
+			vals := valsByKey[k.Id]
 			if vals == nil {
 				vals = []map[string]any{}
 			}
@@ -420,20 +412,12 @@ func GetUserTagKeys(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusOK, []any{})
 		}
 
+		// Batch-load all tag values for these keys in a single query
+		valsByKey := batchLoadTagValues(app, keys)
+
 		var result []map[string]any
 		for _, k := range keys {
-			values, _ := app.FindRecordsByFilter("tag_values",
-				"tag_key = {:key}", "created", 100, 0,
-				map[string]any{"key": k.Id},
-			)
-			var vals []map[string]any
-			for _, v := range values {
-				vals = append(vals, map[string]any{
-					"id":   v.Id,
-					"name": v.GetString("name"),
-					"slug": v.GetString("slug"),
-				})
-			}
+			vals := valsByKey[k.Id]
 			if vals == nil {
 				vals = []map[string]any{}
 			}
@@ -637,4 +621,32 @@ func GetUserLabelBooks(app core.App) func(e *core.RequestEvent) error {
 			"books":      books,
 		})
 	}
+}
+
+// batchLoadTagValues loads all tag values for the given keys in a single query,
+// returning a map from tag_key ID to a slice of value maps.
+func batchLoadTagValues(app core.App, keys []*core.Record) map[string][]map[string]any {
+	result := map[string][]map[string]any{}
+	if len(keys) == 0 {
+		return result
+	}
+
+	keyIDs := make([]any, len(keys))
+	for i, k := range keys {
+		keyIDs[i] = k.Id
+	}
+
+	allValues, _ := app.FindRecordsByFilter("tag_values",
+		"tag_key IN {:keys}", "tag_key, created", 1000, 0,
+		map[string]any{"keys": keyIDs},
+	)
+	for _, v := range allValues {
+		kid := v.GetString("tag_key")
+		result[kid] = append(result[kid], map[string]any{
+			"id":   v.Id,
+			"name": v.GetString("name"),
+			"slug": v.GetString("slug"),
+		})
+	}
+	return result
 }
