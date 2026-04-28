@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { formatTime } from "@/components/activity";
 import BookCoverPlaceholder from "@/components/book-cover-placeholder";
+import { useToast } from "@/components/toast";
 
 type Recommendation = {
   id: string;
@@ -32,6 +33,7 @@ export default function RecommendationList({
   const [recommendations, setRecommendations] =
     useState<Recommendation[]>(initial);
   const [updating, setUpdating] = useState<string | null>(null);
+  const toast = useToast();
 
   async function updateStatus(id: string, status: string) {
     setUpdating(id);
@@ -45,6 +47,8 @@ export default function RecommendationList({
         setRecommendations((prev) =>
           prev.map((r) => (r.id === id ? { ...r, status } : r))
         );
+      } else {
+        toast.error("Failed to update recommendation");
       }
     } finally {
       setUpdating(null);
