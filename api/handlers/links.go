@@ -60,62 +60,62 @@ func GetBookLinks(app core.App) func(e *core.RequestEvent) error {
 		`).Bind(map[string]any{"book": books[0].Id}).One(&totalCnt)
 
 		type linkRow struct {
-			ID       string  `db:"id" json:"id"`
-			FromBook string  `db:"from_book" json:"from_book"`
-			ToBook   string  `db:"to_book" json:"to_book"`
-			ToOLID   string  `db:"to_olid" json:"to_open_library_id"`
-			ToTitle  string  `db:"to_title" json:"to_title"`
-			UserID   string  `db:"user_id" json:"user_id"`
-			LinkType string  `db:"link_type" json:"link_type"`
-			Note     *string `db:"note" json:"note"`
+			ID        string  `db:"id"`
+			FromBook  string  `db:"from_book"`
+			ToBook    string  `db:"to_book"`
+			ToOLID    string  `db:"to_olid"`
+			ToTitle   string  `db:"to_title"`
+			UserID    string  `db:"user_id"`
+			LinkType  string  `db:"link_type"`
+			Note      *string `db:"note"`
+			VoteCount int     `db:"vote_count"`
+			Voted     int     `db:"voted"`
+		}
+
+		binds := map[string]any{"book": books[0].Id, "limit": limit, "offset": offset}
+
+		viewerJoin := "LEFT JOIN (SELECT NULL AS book_link, NULL AS user LIMIT 0) uv ON uv.book_link = bl.id"
+		if viewerID != "" {
+			viewerJoin = "LEFT JOIN book_link_votes uv ON uv.book_link = bl.id AND uv.user = {:viewer}"
+			binds["viewer"] = viewerID
 		}
 
 		var links []linkRow
 		err := app.DB().NewQuery(`
 			SELECT bl.id, bl.from_book, bl.to_book, b2.open_library_id as to_olid,
-				   b2.title as to_title, bl.user as user_id, bl.link_type, bl.note
+				   b2.title as to_title, bl.user as user_id, bl.link_type, bl.note,
+				   COALESCE(vc.votes, 0) as vote_count,
+				   CASE WHEN uv.user IS NOT NULL THEN 1 ELSE 0 END as voted
 			FROM book_links bl
 			JOIN books b2 ON bl.to_book = b2.id
+			LEFT JOIN (
+				SELECT book_link, COUNT(*) AS votes
+				FROM book_link_votes
+				GROUP BY book_link
+			) vc ON vc.book_link = bl.id
+			` + viewerJoin + `
 			WHERE bl.from_book = {:book} AND (bl.deleted_at IS NULL OR bl.deleted_at = '')
 			ORDER BY bl.created DESC
 			LIMIT {:limit} OFFSET {:offset}
-		`).Bind(map[string]any{"book": books[0].Id, "limit": limit, "offset": offset}).All(&links)
+		`).Bind(binds).All(&links)
 		if err != nil {
 			return e.JSON(http.StatusOK, map[string]any{"links": []any{}, "total": 0})
 		}
 
-		var result []map[string]any
+		result := make([]map[string]any, 0, len(links))
 		for _, l := range links {
-			// Count votes
-			var cnt countResult
-			_ = app.DB().NewQuery("SELECT COUNT(*) as count FROM book_link_votes WHERE book_link = {:link}").
-				Bind(map[string]any{"link": l.ID}).One(&cnt)
-
-			voted := false
-			if viewerID != "" {
-				votes, _ := app.FindRecordsByFilter("book_link_votes",
-					"user = {:user} && book_link = {:link}",
-					"", 1, 0,
-					map[string]any{"user": viewerID, "link": l.ID},
-				)
-				voted = len(votes) > 0
-			}
-
 			result = append(result, map[string]any{
-				"id":                   l.ID,
-				"from_book":            l.FromBook,
-				"to_book":              l.ToBook,
-				"to_open_library_id":   l.ToOLID,
-				"to_title":             l.ToTitle,
-				"user_id":              l.UserID,
-				"link_type":            l.LinkType,
-				"note":                 l.Note,
-				"vote_count":           cnt.Count,
-				"voted":                voted,
+				"id":                 l.ID,
+				"from_book":         l.FromBook,
+				"to_book":           l.ToBook,
+				"to_open_library_id": l.ToOLID,
+				"to_title":          l.ToTitle,
+				"user_id":           l.UserID,
+				"link_type":         l.LinkType,
+				"note":              l.Note,
+				"vote_count":        l.VoteCount,
+				"voted":             l.Voted == 1,
 			})
-		}
-		if result == nil {
-			result = []map[string]any{}
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{
