@@ -28,6 +28,11 @@ func DeleteAccount(app core.App) func(e *core.RequestEvent) error {
 			"reading_sessions",
 			"book_quotes",
 			"reading_goals",
+			"review_likes",
+			"review_comments",
+			"feedback",
+			"api_tokens",
+			"notification_preferences",
 			"user_books",
 			"pending_imports",
 			"notifications",
@@ -74,6 +79,11 @@ func DeleteAccount(app core.App) func(e *core.RequestEvent) error {
 			log.Printf("DeleteAccount: error deleting recommendations (recipient): %v", err)
 		}
 
+		// Reports have "reporter" instead of "user"
+		if err := deleteUserRecords(app, "reports", "reporter", userID); err != nil {
+			log.Printf("DeleteAccount: error deleting reports (reporter): %v", err)
+		}
+
 		// Blocks have blocker/blocked instead of user
 		if err := deleteUserRecords(app, "blocks", "blocker", userID); err != nil {
 			log.Printf("DeleteAccount: error deleting blocks (blocker): %v", err)
@@ -112,6 +122,11 @@ func DeleteAllData(app core.App) func(e *core.RequestEvent) error {
 			"reading_sessions",
 			"book_quotes",
 			"reading_goals",
+			"review_likes",
+			"review_comments",
+			"feedback",
+			"api_tokens",
+			"notification_preferences",
 			"user_books",
 			"pending_imports",
 			"notifications",
@@ -156,6 +171,11 @@ func DeleteAllData(app core.App) func(e *core.RequestEvent) error {
 		// recommendations where user is the recipient
 		if err := deleteUserRecords(app, "recommendations", "recipient", userID); err != nil {
 			log.Printf("DeleteAllData: error deleting recommendations (recipient): %v", err)
+		}
+
+		// Reports have "reporter" instead of "user"
+		if err := deleteUserRecords(app, "reports", "reporter", userID); err != nil {
+			log.Printf("DeleteAllData: error deleting reports (reporter): %v", err)
 		}
 
 		// Blocks have blocker/blocked instead of user
