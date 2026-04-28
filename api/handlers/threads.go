@@ -280,7 +280,7 @@ func DeleteThread(app core.App) func(e *core.RequestEvent) error {
 		if err != nil {
 			return e.JSON(http.StatusNotFound, map[string]any{"error": "Thread not found"})
 		}
-		if thread.GetString("user") != user.Id {
+		if thread.GetString("user") != user.Id && !user.GetBool("is_moderator") {
 			return e.JSON(http.StatusForbidden, map[string]any{"error": "Not your thread"})
 		}
 
@@ -380,7 +380,7 @@ func DeleteComment(app core.App) func(e *core.RequestEvent) error {
 		if err != nil {
 			return e.JSON(http.StatusNotFound, map[string]any{"error": "Comment not found"})
 		}
-		if comment.GetString("user") != user.Id {
+		if comment.GetString("user") != user.Id && !user.GetBool("is_moderator") {
 			return e.JSON(http.StatusForbidden, map[string]any{"error": "Not your comment"})
 		}
 

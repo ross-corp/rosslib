@@ -2028,7 +2028,7 @@ Create a new discussion thread on a book. Records a `created_thread` activity an
 
 ### `DELETE /threads/:threadId`  *(auth required)*
 
-Soft-delete a thread (author only). Returns 204.
+Soft-delete a thread (author or moderator). Returns 204.
 
 ### `POST /threads/:threadId/lock`  *(auth required, moderator only)*
 
@@ -2069,7 +2069,7 @@ Add a comment to a thread. Set `parent_id` to reply to a top-level comment (one 
 
 ### `DELETE /threads/:threadId/comments/:commentId`  *(auth required)*
 
-Soft-delete a comment (author only). Returns 204.
+Soft-delete a comment (author or moderator). Returns 204.
 
 ### `GET /books/:workId/similar-threads?title=<title>`
 
