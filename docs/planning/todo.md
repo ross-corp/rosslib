@@ -45,9 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Show loading spinner during initial BookLinkList fetch: in `webapp/src/components/book-link-list.tsx`, the component fetches book links on mount but shows no loading indicator while the request is in flight. Add a `loading` state that's true initially, set to false after the fetch completes, and show a small spinner or "Loading related books..." text while `loading` is true. This matches the loading pattern used in `BookQuoteList` and `ReadingHistory` components.
-- [ ] Add `new_follower` toggle to notification preferences UI: in `webapp/src/components/notification-preferences.tsx`, the toggle list includes preferences for new publications, threads, links, reviews, review likes, mentions, and recommendations, but does NOT include a toggle for `new_follower` notifications. The backend already has the `new_follower` field on `notification_preferences` (migration `1700000029`) and checks `ShouldNotify(app, userId, "new_follower")` when sending follow notifications. Add a toggle row labeled "New followers" between the existing "Recommendations" toggle and the "Mentions" toggle, using the same pattern as the other toggles.
-- [ ] Add `loading.tsx` for settings sub-pages: the settings pages at `webapp/src/app/settings/` (import, export, api-tokens, blocked, feedback, follow-requests, followed-books, followed-authors, ghost-activity, goals, tags) have no `loading.tsx` files, so when navigating between settings sub-pages there is no visual loading state. Create `webapp/src/app/settings/loading.tsx` with a simple centered spinner or "Loading..." text, similar to the existing `webapp/src/app/feed/loading.tsx`. This provides immediate visual feedback during navigation between settings sections.
 
 ## API & Performance
 
