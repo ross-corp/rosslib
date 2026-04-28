@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import BookCoverPlaceholder from "@/components/book-cover-placeholder";
+import { useToast } from "@/components/toast";
 import { type Edition, langName, formatLabel } from "@/lib/constants";
 
 export default function EditionPicker({
@@ -22,6 +23,7 @@ export default function EditionPicker({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(currentEditionKey);
+  const toast = useToast();
 
   async function loadMore() {
     setLoading(true);
@@ -57,6 +59,8 @@ export default function EditionPicker({
         setSelectedKey(edKey || null);
         setOpen(false);
         window.location.reload();
+      } else {
+        toast.error("Failed to select edition");
       }
     } finally {
       setSaving(null);
