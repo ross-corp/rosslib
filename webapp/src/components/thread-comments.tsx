@@ -359,7 +359,7 @@ export default function ThreadComments({
 
       {/* Comment list */}
       {topLevel.length === 0 ? (
-        <p className="text-text-primary text-sm">No comments yet.</p>
+        <p className="text-sm text-text-secondary py-4 text-center">No comments yet. Be the first to comment.</p>
       ) : (
         <div className="space-y-6">
           {topLevel.map((comment) => (
