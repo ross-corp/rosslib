@@ -174,9 +174,23 @@ func UpdateSession(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		if data.DateStarted != nil {
+			if *data.DateStarted != "" {
+				if _, err := time.Parse(time.RFC3339, *data.DateStarted); err != nil {
+					if _, err2 := time.Parse("2006-01-02", *data.DateStarted); err2 != nil {
+						return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid date format for date_started"})
+					}
+				}
+			}
 			rec.Set("date_started", *data.DateStarted)
 		}
 		if data.DateFinished != nil {
+			if *data.DateFinished != "" {
+				if _, err := time.Parse(time.RFC3339, *data.DateFinished); err != nil {
+					if _, err2 := time.Parse("2006-01-02", *data.DateFinished); err2 != nil {
+						return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid date format for date_finished"})
+					}
+				}
+			}
 			rec.Set("date_finished", *data.DateFinished)
 		}
 		if data.Rating != nil {

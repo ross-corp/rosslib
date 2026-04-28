@@ -151,12 +151,33 @@ func UpdateBook(app core.App) func(e *core.RequestEvent) error {
 			ub.Set("spoiler", *data.Spoiler)
 		}
 		if data.DateRead != nil {
+			if *data.DateRead != "" {
+				if _, err := time.Parse(time.RFC3339, *data.DateRead); err != nil {
+					if _, err2 := time.Parse("2006-01-02", *data.DateRead); err2 != nil {
+						return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid date format for date_read"})
+					}
+				}
+			}
 			ub.Set("date_read", *data.DateRead)
 		}
 		if data.DateDnf != nil {
+			if *data.DateDnf != "" {
+				if _, err := time.Parse(time.RFC3339, *data.DateDnf); err != nil {
+					if _, err2 := time.Parse("2006-01-02", *data.DateDnf); err2 != nil {
+						return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid date format for date_dnf"})
+					}
+				}
+			}
 			ub.Set("date_dnf", *data.DateDnf)
 		}
 		if data.DateStarted != nil {
+			if *data.DateStarted != "" {
+				if _, err := time.Parse(time.RFC3339, *data.DateStarted); err != nil {
+					if _, err2 := time.Parse("2006-01-02", *data.DateStarted); err2 != nil {
+						return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid date format for date_started"})
+					}
+				}
+			}
 			ub.Set("date_started", *data.DateStarted)
 		}
 		if data.ProgressPages != nil {
