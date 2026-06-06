@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import FeedbackForm from "@/components/feedback-form";
 import MyFeedback from "@/components/my-feedback";
 import { getUser } from "@/lib/auth";
+
+export const metadata: Metadata = {
+  title: "Submit feedback — rosslib",
+};
 
 export default async function FeedbackPage() {
   const user = await getUser();

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Sign Up",
+  title: "Create account — rosslib",
 };
 
 export default function RegisterLayout({
