@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add error boundary for search page: the page at `webapp/src/app/search/page.tsx` makes server-side fetch calls but has no `error.tsx` boundary. Create `webapp/src/app/search/error.tsx` following the pattern in `webapp/src/app/feed/error.tsx`.
 - [ ] Add error boundary for users browse page: the page at `webapp/src/app/users/page.tsx` fetches user data server-side but has no `error.tsx` boundary. Create `webapp/src/app/users/error.tsx` following the pattern in `webapp/src/app/feed/error.tsx`.
 - [ ] Add page metadata to login and register pages: `webapp/src/app/login/page.tsx` and `webapp/src/app/register/page.tsx` do not export `metadata` objects. Add `export const metadata = { title: "Log in — rosslib" }` to the login page and `export const metadata = { title: "Create account — rosslib" }` to the register page. This improves SEO and shows meaningful browser tab titles. The feedback page at `webapp/src/app/feedback/page.tsx` is also missing metadata — add `export const metadata = { title: "Submit feedback — rosslib" }`.
 - [ ] Add error toast when book review save fails in BookReviewEditor: in `webapp/src/components/book-review-editor.tsx`, the `patchFields()` function returns a boolean indicating success/failure but does not show a toast notification on failure. Import `useToast` and add `toast.error("Failed to save review")` when the fetch returns `!res.ok`. This matches the error toast pattern used in FollowButton and BookFollowButton.
