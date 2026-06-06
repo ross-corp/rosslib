@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -123,11 +124,23 @@ func GetBlockedUsers(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
 		}
 
-		blocks, err := app.FindRecordsByFilter("blocks",
-			"blocker = {:userId}",
-			"-created", 100, 0,
-			map[string]any{"userId": user.Id},
-		)
+		type blockedUserRow struct {
+			ID          string  `db:"id"`
+			Username    string  `db:"username"`
+			DisplayName *string `db:"display_name"`
+			Avatar      *string `db:"avatar"`
+			BlockedAt   string  `db:"blocked_at"`
+		}
+
+		var rows []blockedUserRow
+		err := app.DB().NewQuery(`
+			SELECT u.id, u.username, u.display_name, u.avatar, b.created as blocked_at
+			FROM blocks b
+			JOIN users u ON b.blocked = u.id
+			WHERE b.blocker = {:userId}
+			ORDER BY b.created DESC
+			LIMIT 100
+		`).Bind(map[string]any{"userId": user.Id}).All(&rows)
 		if err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to fetch blocks"})
 		}
@@ -140,23 +153,16 @@ func GetBlockedUsers(app core.App) func(e *core.RequestEvent) error {
 			BlockedAt   string  `json:"blocked_at"`
 		}
 
-		result := make([]blockedUser, 0, len(blocks))
-		for _, b := range blocks {
-			blockedID := b.GetString("blocked")
-			u, err := app.FindRecordById("users", blockedID)
-			if err != nil {
-				continue
-			}
+		result := make([]blockedUser, 0, len(rows))
+		for _, r := range rows {
 			bu := blockedUser{
-				ID:        u.Id,
-				Username:  u.GetString("username"),
-				BlockedAt: b.GetString("created"),
+				ID:          r.ID,
+				Username:    r.Username,
+				DisplayName: r.DisplayName,
+				BlockedAt:   r.BlockedAt,
 			}
-			if dn := u.GetString("display_name"); dn != "" {
-				bu.DisplayName = &dn
-			}
-			if avatar := u.GetString("avatar"); avatar != "" {
-				avatarURL := "/api/files/" + u.Collection().Id + "/" + u.Id + "/" + avatar
+			if r.Avatar != nil && *r.Avatar != "" {
+				avatarURL := fmt.Sprintf("/api/files/users/%s/%s", r.ID, *r.Avatar)
 				bu.AvatarURL = &avatarURL
 			}
 			result = append(result, bu)

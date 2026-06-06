@@ -89,6 +89,9 @@ func CreateSession(app core.App) func(e *core.RequestEvent) error {
 		if data.Rating != nil && (*data.Rating < 1 || *data.Rating > 5) {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Rating must be between 1 and 5"})
 		}
+		if data.Notes != nil && len(*data.Notes) > 2000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Notes must be 2,000 characters or fewer"})
+		}
 
 		// Validate dates if provided
 		if data.DateStarted != nil && *data.DateStarted != "" {
@@ -171,6 +174,9 @@ func UpdateSession(app core.App) func(e *core.RequestEvent) error {
 
 		if data.Rating != nil && *data.Rating != 0 && (*data.Rating < 1 || *data.Rating > 5) {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Rating must be between 1 and 5"})
+		}
+		if data.Notes != nil && len(*data.Notes) > 2000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Notes must be 2,000 characters or fewer"})
 		}
 
 		if data.DateStarted != nil {
