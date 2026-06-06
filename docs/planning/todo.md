@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add error boundary for series detail page: the page at `webapp/src/app/series/[seriesId]/page.tsx` fetches series data server-side but has no `error.tsx` boundary. Create `webapp/src/app/series/[seriesId]/error.tsx` following the pattern in `webapp/src/app/books/[workId]/error.tsx` — show "Something went wrong" with a "Try again" button that calls `reset()`.
 - [ ] Add error boundary for notifications page: the page at `webapp/src/app/notifications/page.tsx` fetches notification data server-side but has no `error.tsx` boundary. Create `webapp/src/app/notifications/error.tsx` following the pattern in `webapp/src/app/feed/error.tsx`.
 - [ ] Add error boundary for recommendations page: the page at `webapp/src/app/recommendations/page.tsx` fetches recommendation data server-side but has no `error.tsx` boundary. Create `webapp/src/app/recommendations/error.tsx` following the pattern in `webapp/src/app/feed/error.tsx`.
 - [ ] Add error boundary for search page: the page at `webapp/src/app/search/page.tsx` makes server-side fetch calls but has no `error.tsx` boundary. Create `webapp/src/app/search/error.tsx` following the pattern in `webapp/src/app/feed/error.tsx`.
