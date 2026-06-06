@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## UX Polish
 
-- [ ] Add error boundary for genre detail page: the page at `webapp/src/app/genres/[slug]/page.tsx` fetches genre book data server-side but has no `error.tsx` boundary. If the API returns an unexpected error or the genre slug is invalid, the page crashes with a Next.js error screen. Create `webapp/src/app/genres/[slug]/error.tsx` following the pattern in `webapp/src/app/books/[workId]/error.tsx` — show "Something went wrong" with a "Try again" button that calls `reset()` and a link back to `/genres`.
 - [ ] Add error boundary for series detail page: the page at `webapp/src/app/series/[seriesId]/page.tsx` fetches series data server-side but has no `error.tsx` boundary. Create `webapp/src/app/series/[seriesId]/error.tsx` following the pattern in `webapp/src/app/books/[workId]/error.tsx` — show "Something went wrong" with a "Try again" button that calls `reset()`.
 - [ ] Add error boundary for notifications page: the page at `webapp/src/app/notifications/page.tsx` fetches notification data server-side but has no `error.tsx` boundary. Create `webapp/src/app/notifications/error.tsx` following the pattern in `webapp/src/app/feed/error.tsx`.
 - [ ] Add error boundary for recommendations page: the page at `webapp/src/app/recommendations/page.tsx` fetches recommendation data server-side but has no `error.tsx` boundary. Create `webapp/src/app/recommendations/error.tsx` following the pattern in `webapp/src/app/feed/error.tsx`.
