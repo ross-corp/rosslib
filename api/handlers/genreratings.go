@@ -108,6 +108,13 @@ func SetGenreRatings(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
 		}
 
+		// Validate rating bounds
+		for _, r := range data.Ratings {
+			if r.Rating < 0 || r.Rating > 10 {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Genre rating must be between 0 and 10"})
+			}
+		}
+
 		// Delete existing ratings
 		existing, _ := app.FindRecordsByFilter("genre_ratings",
 			"user = {:user} && book = {:book}",
