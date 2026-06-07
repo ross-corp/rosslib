@@ -12,12 +12,19 @@ type BlockedUser = {
   blocked_at: string;
 };
 
-async function fetchBlockedUsers(token: string): Promise<BlockedUser[]> {
-  const res = await fetch(`${process.env.API_URL}/me/blocks`, {
+type BlockedUsersResponse = {
+  users: BlockedUser[];
+  total: number;
+  page: number;
+  perPage: number;
+};
+
+async function fetchBlockedUsers(token: string): Promise<BlockedUsersResponse> {
+  const res = await fetch(`${process.env.API_URL}/me/blocks?page=1&perPage=20`, {
     cache: "no-store",
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return [];
+  if (!res.ok) return { users: [], total: 0, page: 1, perPage: 20 };
   return res.json();
 }
 
@@ -26,7 +33,7 @@ export default async function BlockedUsersPage() {
   if (!user) redirect("/login");
 
   const token = await getToken();
-  const blockedUsers = await fetchBlockedUsers(token!);
+  const data = await fetchBlockedUsers(token!);
 
   return (
     <div className="min-h-screen">
@@ -45,7 +52,7 @@ export default async function BlockedUsersPage() {
 
         <h2 className="text-xl font-semibold text-text-primary mb-8">Blocked users</h2>
 
-        <BlockedUsersList initialUsers={blockedUsers} />
+        <BlockedUsersList initialUsers={data.users} total={data.total} />
       </main>
     </div>
   );

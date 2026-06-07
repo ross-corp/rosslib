@@ -1198,18 +1198,27 @@ Unfollow a user.
 
 ### `GET /me/blocks`  *(auth required)*
 
-List all users the current user has blocked, ordered by most recently blocked first.
+List all users the current user has blocked, ordered by most recently blocked first. Supports pagination.
+
+**Query params:**
+- `page` — page number (default `1`)
+- `perPage` — items per page, 1–100 (default `20`)
 
 ```json
-[
-  {
-    "id": "user_id",
-    "username": "blockeduser",
-    "display_name": "Blocked User",
-    "avatar_url": "/api/files/...",
-    "blocked_at": "2026-01-15T14:00:00.000Z"
-  }
-]
+{
+  "users": [
+    {
+      "id": "user_id",
+      "username": "blockeduser",
+      "display_name": "Blocked User",
+      "avatar_url": "/api/files/...",
+      "blocked_at": "2026-01-15T14:00:00.000Z"
+    }
+  ],
+  "total": 42,
+  "page": 1,
+  "perPage": 20
+}
 ```
 
 ### `POST /users/:username/block`  *(auth required)*

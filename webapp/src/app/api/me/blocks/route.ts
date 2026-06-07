@@ -1,14 +1,18 @@
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
   if (!token) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const apiRes = await fetch(`${process.env.API_URL}/me/blocks`, {
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.toString();
+  const url = `${process.env.API_URL}/me/blocks${query ? `?${query}` : ""}`;
+
+  const apiRes = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
 

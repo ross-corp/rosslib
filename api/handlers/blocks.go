@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -124,6 +125,24 @@ func GetBlockedUsers(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
 		}
 
+		page, _ := strconv.Atoi(e.Request.URL.Query().Get("page"))
+		if page < 1 {
+			page = 1
+		}
+		perPage, _ := strconv.Atoi(e.Request.URL.Query().Get("perPage"))
+		if perPage < 1 || perPage > 100 {
+			perPage = 20
+		}
+		offset := (page - 1) * perPage
+
+		// Get total count
+		type countResult struct {
+			Count int `db:"count"`
+		}
+		var total countResult
+		_ = app.DB().NewQuery("SELECT COUNT(*) as count FROM blocks WHERE blocker = {:userId}").
+			Bind(map[string]any{"userId": user.Id}).One(&total)
+
 		type blockedUserRow struct {
 			ID          string  `db:"id"`
 			Username    string  `db:"username"`
@@ -139,8 +158,8 @@ func GetBlockedUsers(app core.App) func(e *core.RequestEvent) error {
 			JOIN users u ON b.blocked = u.id
 			WHERE b.blocker = {:userId}
 			ORDER BY b.created DESC
-			LIMIT 100
-		`).Bind(map[string]any{"userId": user.Id}).All(&rows)
+			LIMIT {:limit} OFFSET {:offset}
+		`).Bind(map[string]any{"userId": user.Id, "limit": perPage, "offset": offset}).All(&rows)
 		if err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to fetch blocks"})
 		}
@@ -168,7 +187,12 @@ func GetBlockedUsers(app core.App) func(e *core.RequestEvent) error {
 			result = append(result, bu)
 		}
 
-		return e.JSON(http.StatusOK, result)
+		return e.JSON(http.StatusOK, map[string]any{
+			"users":   result,
+			"total":   total.Count,
+			"page":    page,
+			"perPage": perPage,
+		})
 	}
 }
 

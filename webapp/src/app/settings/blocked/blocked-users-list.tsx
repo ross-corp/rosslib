@@ -13,11 +13,31 @@ type BlockedUser = {
 
 export default function BlockedUsersList({
   initialUsers,
+  total,
 }: {
   initialUsers: BlockedUser[];
+  total: number;
 }) {
   const [users, setUsers] = useState(initialUsers);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(total);
+
+  const hasMore = users.length < totalCount;
+
+  async function loadMore() {
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    const res = await fetch(`/api/me/blocks?page=${nextPage}&perPage=20`);
+    if (res.ok) {
+      const data = await res.json();
+      setUsers((prev) => [...prev, ...data.users]);
+      setTotalCount(data.total);
+      setPage(nextPage);
+    }
+    setLoadingMore(false);
+  }
 
   async function unblock(username: string) {
     setLoading((prev) => ({ ...prev, [username]: true }));
@@ -26,6 +46,7 @@ export default function BlockedUsersList({
     });
     if (res.ok) {
       setUsers((prev) => prev.filter((u) => u.username !== username));
+      setTotalCount((prev) => prev - 1);
     }
     setLoading((prev) => ({ ...prev, [username]: false }));
   }
@@ -88,6 +109,18 @@ export default function BlockedUsersList({
           </button>
         </div>
       ))}
+
+      {hasMore && (
+        <div className="pt-4 text-center">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="text-sm px-4 py-2 rounded border border-border text-text-primary hover:bg-surface-2 transition-colors disabled:opacity-50"
+          >
+            {loadingMore ? "Loading..." : "Load more"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
