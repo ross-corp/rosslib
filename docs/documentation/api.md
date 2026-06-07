@@ -2494,10 +2494,11 @@ Update a report's status to reviewed or dismissed. Sets the reviewer to the curr
 
 ### `GET /me/notifications`  *(auth required)*
 
-Returns paginated notifications for the current user, newest first. Cursor-based pagination.
+Returns paginated notifications for the current user, newest first.
 
 **Query parameters:**
-- `cursor` *(optional)* — RFC3339Nano timestamp from `next_cursor` to fetch the next page.
+- `page` *(optional, default 1)* — Page number (1-indexed).
+- `perPage` *(optional, default 20, max 100)* — Number of notifications per page.
 
 ```json
 {
@@ -2517,7 +2518,9 @@ Returns paginated notifications for the current user, newest first. Cursor-based
       "created_at": "2026-02-25T14:00:00.000000Z"
     }
   ],
-  "next_cursor": "2026-02-24T13:00:00.000000Z"
+  "total": 42,
+  "page": 1,
+  "perPage": 20
 }
 ```
 

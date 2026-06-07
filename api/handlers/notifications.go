@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// GetNotifications handles GET /me/notifications
+// GetNotifications handles GET /me/notifications?page=<n>&perPage=<n>
 func GetNotifications(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		user := e.Auth
@@ -14,15 +15,38 @@ func GetNotifications(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
 		}
 
+		page, _ := strconv.Atoi(e.Request.URL.Query().Get("page"))
+		if page < 1 {
+			page = 1
+		}
+		perPage, _ := strconv.Atoi(e.Request.URL.Query().Get("perPage"))
+		if perPage < 1 || perPage > 100 {
+			perPage = 20
+		}
+		offset := (page - 1) * perPage
+
+		// Get total count
+		type countResult struct {
+			Count int `db:"count"`
+		}
+		var total countResult
+		_ = app.DB().NewQuery("SELECT COUNT(*) as count FROM notifications WHERE user = {:user}").
+			Bind(map[string]any{"user": user.Id}).One(&total)
+
 		records, err := app.FindRecordsByFilter("notifications",
-			"user = {:user}", "-created", 50, 0,
+			"user = {:user}", "-created", perPage, offset,
 			map[string]any{"user": user.Id},
 		)
 		if err != nil {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{
+				"notifications": []any{},
+				"total":         0,
+				"page":          page,
+				"perPage":       perPage,
+			})
 		}
 
-		var result []map[string]any
+		result := make([]map[string]any, 0, len(records))
 		for _, r := range records {
 			result = append(result, map[string]any{
 				"id":         r.Id,
@@ -34,11 +58,13 @@ func GetNotifications(app core.App) func(e *core.RequestEvent) error {
 				"created_at": r.GetString("created"),
 			})
 		}
-		if result == nil {
-			result = []map[string]any{}
-		}
 
-		return e.JSON(http.StatusOK, result)
+		return e.JSON(http.StatusOK, map[string]any{
+			"notifications": result,
+			"total":         total.Count,
+			"page":          page,
+			"perPage":       perPage,
+		})
 	}
 }
 

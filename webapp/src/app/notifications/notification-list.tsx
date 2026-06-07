@@ -17,10 +17,12 @@ type Notification = {
 
 export default function NotificationList({
   notifications: initialNotifications,
-  nextCursor,
+  page,
+  totalPages,
 }: {
   notifications: Notification[];
-  nextCursor?: string;
+  page: number;
+  totalPages: number;
 }) {
   const [notifications, setNotifications] = useState(initialNotifications);
   const [loading, setLoading] = useState(false);
@@ -81,14 +83,27 @@ export default function NotificationList({
             ))}
           </div>
 
-          {nextCursor && (
-            <div className="mt-8 text-center">
-              <Link
-                href={`/notifications?cursor=${encodeURIComponent(nextCursor)}`}
-                className="text-sm text-text-primary hover:text-text-primary border border-border px-4 py-2 rounded transition-colors"
-              >
-                Load more
-              </Link>
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-center gap-4">
+              {page > 1 && (
+                <Link
+                  href={`/notifications?page=${page - 1}`}
+                  className="text-sm text-text-primary hover:text-text-primary border border-border px-4 py-2 rounded transition-colors"
+                >
+                  Previous
+                </Link>
+              )}
+              <span className="text-sm text-text-secondary">
+                Page {page} of {totalPages}
+              </span>
+              {page < totalPages && (
+                <Link
+                  href={`/notifications?page=${page + 1}`}
+                  className="text-sm text-text-primary hover:text-text-primary border border-border px-4 py-2 rounded transition-colors"
+                >
+                  Next
+                </Link>
+              )}
             </div>
           )}
         </>

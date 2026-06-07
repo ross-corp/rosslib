@@ -21,40 +21,45 @@ type Notification = {
 
 type NotificationsResponse = {
   notifications: Notification[];
-  next_cursor?: string;
+  total: number;
+  page: number;
+  perPage: number;
 };
 
 async function fetchNotifications(
   token: string,
-  cursor?: string
+  page?: number
 ): Promise<NotificationsResponse> {
   const url = new URL(`${process.env.API_URL}/me/notifications`);
-  if (cursor) url.searchParams.set("cursor", cursor);
+  if (page) url.searchParams.set("page", String(page));
 
   const res = await fetch(url.toString(), {
     cache: "no-store",
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return { notifications: [] };
+  if (!res.ok) return { notifications: [], total: 0, page: 1, perPage: 20 };
   const json = await res.json();
-  // API returns a plain array; normalize to expected shape
-  if (Array.isArray(json)) {
-    return { notifications: json };
-  }
-  return { notifications: json.notifications ?? [], next_cursor: json.next_cursor };
+  return {
+    notifications: json.notifications ?? [],
+    total: json.total ?? 0,
+    page: json.page ?? 1,
+    perPage: json.perPage ?? 20,
+  };
 }
 
 export default async function NotificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ cursor?: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const [user, token] = await Promise.all([getUser(), getToken()]);
 
   if (!user || !token) redirect("/login");
 
-  const { cursor } = await searchParams;
-  const data = await fetchNotifications(token, cursor);
+  const { page: pageParam } = await searchParams;
+  const page = pageParam ? parseInt(pageParam, 10) : 1;
+  const data = await fetchNotifications(token, page);
+  const totalPages = Math.ceil(data.total / data.perPage);
 
   return (
     <div className="min-h-screen">
@@ -80,7 +85,8 @@ export default async function NotificationsPage({
         ) : (
           <NotificationList
             notifications={data.notifications}
-            nextCursor={data.next_cursor}
+            page={data.page}
+            totalPages={totalPages}
           />
         )}
       </main>

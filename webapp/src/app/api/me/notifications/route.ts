@@ -10,8 +10,10 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const url = new URL(`${process.env.API_URL}/me/notifications`);
-  const cursor = searchParams.get("cursor");
-  if (cursor) url.searchParams.set("cursor", cursor);
+  const page = searchParams.get("page");
+  if (page) url.searchParams.set("page", page);
+  const perPage = searchParams.get("perPage");
+  if (perPage) url.searchParams.set("perPage", perPage);
 
   const apiRes = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${token}` },
