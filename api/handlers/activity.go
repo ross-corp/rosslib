@@ -343,10 +343,8 @@ func GetFeed(app core.App) func(e *core.RequestEvent) error {
 		var rows []activityRow
 		err := app.DB().NewQuery(query).Bind(params).All(&rows)
 		if err != nil {
-			return e.JSON(http.StatusOK, map[string]any{
-				"activities":  []any{},
-				"next_cursor": nil,
-			})
+			app.Logger().Error("GetFeed: failed to load activities", "error", err)
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to load feed"})
 		}
 
 		enriched := make([]map[string]any, 0, len(rows))
@@ -410,10 +408,8 @@ func GetUserActivity(app core.App) func(e *core.RequestEvent) error {
 		var rows []activityRow
 		err = app.DB().NewQuery(query).Bind(params).All(&rows)
 		if err != nil {
-			return e.JSON(http.StatusOK, map[string]any{
-				"activities":  []any{},
-				"next_cursor": nil,
-			})
+			app.Logger().Error("GetUserActivity: failed to load activities", "error", err)
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to load feed"})
 		}
 
 		enriched := make([]map[string]any, 0, len(rows))
