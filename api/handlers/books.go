@@ -1508,10 +1508,14 @@ func GetBookFollowerCount(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		workID := e.Request.PathValue("workId")
 
-		books, _ := app.FindRecordsByFilter("books",
+		books, err := app.FindRecordsByFilter("books",
 			"open_library_id = {:id}", "", 1, 0,
 			map[string]any{"id": workID},
 		)
+		if err != nil {
+			app.Logger().Error("GetBookFollowerCount: failed to find book", "error", err)
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to count followers"})
+		}
 		if len(books) == 0 {
 			return e.JSON(http.StatusOK, map[string]any{"follower_count": 0})
 		}
@@ -1520,10 +1524,11 @@ func GetBookFollowerCount(app core.App) func(e *core.RequestEvent) error {
 			Count int `db:"count"`
 		}
 		var result countResult
-		err := app.DB().NewQuery(`SELECT COUNT(*) as count FROM book_follows WHERE book = {:book}`).
+		err = app.DB().NewQuery(`SELECT COUNT(*) as count FROM book_follows WHERE book = {:book}`).
 			Bind(map[string]any{"book": books[0].Id}).One(&result)
 		if err != nil {
-			return e.JSON(http.StatusOK, map[string]any{"follower_count": 0})
+			app.Logger().Error("GetBookFollowerCount: failed to count followers", "error", err)
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to count followers"})
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{"follower_count": result.Count})
