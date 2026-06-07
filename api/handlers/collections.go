@@ -98,7 +98,7 @@ func CreateShelf(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name is required"})
 		}
 		if len(data.Name) > 255 {
-			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name must be 255 characters or fewer"})
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Shelf name must be 255 characters or fewer"})
 		}
 
 		slug := slugify(data.Name)
@@ -163,6 +163,9 @@ func UpdateShelf(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		if data.Name != nil {
+			if len(*data.Name) > 255 {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Shelf name must be 255 characters or fewer"})
+			}
 			shelf.Set("name", *data.Name)
 			shelf.Set("slug", slugify(*data.Name))
 		}
