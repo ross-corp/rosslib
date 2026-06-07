@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -149,10 +150,19 @@ func CreateFeedback(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
-// GetFeedback handles GET /admin/feedback
+// GetFeedback handles GET /admin/feedback?status=<status>&page=<n>&perPage=<n>
 func GetFeedback(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		status := e.Request.URL.Query().Get("status")
+		page, _ := strconv.Atoi(e.Request.URL.Query().Get("page"))
+		if page < 1 {
+			page = 1
+		}
+		perPage, _ := strconv.Atoi(e.Request.URL.Query().Get("perPage"))
+		if perPage < 1 || perPage > 100 {
+			perPage = 20
+		}
+		offset := (page - 1) * perPage
 
 		type feedbackRow struct {
 			ID               string  `db:"id" json:"id"`
@@ -181,11 +191,21 @@ func GetFeedback(app core.App) func(e *core.RequestEvent) error {
 			binds["status"] = status
 		}
 		query += " ORDER BY f.created DESC"
+		query += fmt.Sprintf(" LIMIT %d OFFSET %d", perPage+1, offset)
 
 		var rows []feedbackRow
 		err := app.DB().NewQuery(query).Bind(binds).All(&rows)
 		if err != nil {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{
+				"items":    []any{},
+				"page":     page,
+				"has_next": false,
+			})
+		}
+
+		hasNext := len(rows) > perPage
+		if hasNext {
+			rows = rows[:perPage]
 		}
 
 		result := make([]map[string]any, 0, len(rows))
@@ -205,7 +225,11 @@ func GetFeedback(app core.App) func(e *core.RequestEvent) error {
 			})
 		}
 
-		return e.JSON(http.StatusOK, result)
+		return e.JSON(http.StatusOK, map[string]any{
+			"items":    result,
+			"page":     page,
+			"has_next": hasNext,
+		})
 	}
 }
 

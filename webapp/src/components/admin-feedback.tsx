@@ -37,23 +37,34 @@ function formatDate(iso: string): string {
 export default function AdminFeedback() {
   const [statusFilter, setStatusFilter] = useState("open");
   const [items, setItems] = useState<FeedbackItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const fetchFeedback = useCallback(async (status: string) => {
+  const fetchFeedback = useCallback(async (status: string, p: number) => {
     setLoading(true);
-    const res = await fetch(`/api/admin/feedback?status=${status}`);
+    const params = new URLSearchParams({ status, page: String(p) });
+    const res = await fetch(`/api/admin/feedback?${params}`);
     if (res.ok) {
-      setItems(await res.json());
+      const data = await res.json();
+      setItems(data.items ?? []);
+      setHasNext(data.has_next ?? false);
     }
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    fetchFeedback(statusFilter);
+    setPage(1);
+    fetchFeedback(statusFilter, 1);
   }, [statusFilter, fetchFeedback]);
+
+  useEffect(() => {
+    fetchFeedback(statusFilter, page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   async function toggleStatus(id: string, currentStatus: string) {
     const newStatus = currentStatus === "open" ? "closed" : "open";
@@ -200,6 +211,26 @@ export default function AdminFeedback() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {!loading && items.length > 0 && (
+        <div className="flex items-center gap-4 mt-4">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="text-sm text-text-primary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-text-primary">Page {page}</span>
+          <button
+            onClick={() => setPage((p) => p + 1)}
+            disabled={!hasNext}
+            className="text-sm text-text-primary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
         </div>
       )}
 

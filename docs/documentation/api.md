@@ -2382,26 +2382,30 @@ Submit a bug report or feature request.
 400 { "error": "type must be bug or feature" }
 ```
 
-### `GET /admin/feedback?status=open`  *(moderator required)*
+### `GET /admin/feedback?status=open&page=1&perPage=20`  *(moderator required)*
 
-List feedback submissions. Filterable by `status` (`open`, `closed`). Returns all submissions sorted by newest first.
+List feedback submissions with pagination. Filterable by `status` (`open`, `closed`). `page` defaults to 1, `perPage` defaults to 20 (max 100). Returns submissions sorted by newest first.
 
 ```json
-[
-  {
-    "id": "...",
-    "user_id": "...",
-    "username": "alice",
-    "display_name": "Alice",
-    "type": "bug",
-    "title": "Search results don't load",
-    "description": "When I search...",
-    "steps_to_reproduce": "1. Go to search...",
-    "severity": "high",
-    "status": "open",
-    "created_at": "2026-02-25T14:00:00Z"
-  }
-]
+{
+  "items": [
+    {
+      "id": "...",
+      "user_id": "...",
+      "username": "alice",
+      "display_name": "Alice",
+      "type": "bug",
+      "title": "Search results don't load",
+      "description": "When I search...",
+      "steps_to_reproduce": "1. Go to search...",
+      "severity": "high",
+      "status": "open",
+      "created_at": "2026-02-25T14:00:00Z"
+    }
+  ],
+  "page": 1,
+  "has_next": true
+}
 ```
 
 ### `PATCH /admin/feedback/:feedbackId`  *(moderator required)*
