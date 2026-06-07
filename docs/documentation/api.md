@@ -818,9 +818,9 @@ Returns series details with an ordered list of books. If authenticated, each boo
 }
 ```
 
-### `PATCH /series/:seriesId`  *(auth required)*
+### `PATCH /series/:seriesId`  *(moderator required)*
 
-Update a series name and/or description. Only provided fields are updated.
+Update a series name and/or description. Only provided fields are updated. Returns `403` if the user is not a moderator.
 
 ```json
 { "name": "The Lord of the Rings", "description": "A fantasy trilogy by J.R.R. Tolkien." }
@@ -828,13 +828,14 @@ Update a series name and/or description. Only provided fields are updated.
 
 Validation: `name` cannot be empty if provided. Returns `200` with the updated series `{ id, name, description }`.
 
-### `DELETE /series/:seriesId`  *(auth required)*
+### `DELETE /series/:seriesId`  *(moderator required)*
 
-Delete an empty series. The series must have zero `book_series` links (no books). Returns 400 if the series still has books.
+Delete an empty series. The series must have zero `book_series` links (no books). Returns `403` if the user is not a moderator, `400` if the series still has books.
 
 ```
 200 { "ok": true }
 400 { "error": "Cannot delete series that still has books" }
+403 { "error": "Forbidden" }
 404 { "error": "Series not found" }
 ```
 

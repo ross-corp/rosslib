@@ -217,6 +217,10 @@ func UpdateSeries(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
 		}
 
+		if !user.GetBool("is_moderator") {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Forbidden"})
+		}
+
 		seriesID := e.Request.PathValue("seriesId")
 
 		series, err := app.FindRecordById("series", seriesID)
@@ -268,6 +272,10 @@ func DeleteSeries(app core.App) func(e *core.RequestEvent) error {
 		user := e.Auth
 		if user == nil {
 			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
+		}
+
+		if !user.GetBool("is_moderator") {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Forbidden"})
 		}
 
 		seriesID := e.Request.PathValue("seriesId")
