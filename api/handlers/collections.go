@@ -200,6 +200,16 @@ func DeleteShelf(app core.App) func(e *core.RequestEvent) error {
 		if shelf.GetString("user") != user.Id {
 			return e.JSON(http.StatusForbidden, map[string]any{"error": "Not your shelf"})
 		}
+
+		// Clean up activities that reference this collection to prevent orphaned feed entries
+		orphanedActivities, _ := app.FindRecordsByFilter("activities",
+			"collection_ref = {:shelfID}", "", 200, 0,
+			map[string]any{"shelfID": shelfID},
+		)
+		for _, a := range orphanedActivities {
+			_ = app.Delete(a)
+		}
+
 		if err := app.Delete(shelf); err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to delete"})
 		}
