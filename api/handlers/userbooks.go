@@ -3,12 +3,15 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 )
+
+var validOLWorkID = regexp.MustCompile(`^OL\d+W$`)
 
 // AddBook handles POST /me/books
 func AddBook(app core.App) func(e *core.RequestEvent) error {
@@ -34,6 +37,9 @@ func AddBook(app core.App) func(e *core.RequestEvent) error {
 		}
 		if data.OpenLibraryID == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "open_library_id required"})
+		}
+		if !validOLWorkID.MatchString(data.OpenLibraryID) {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid Open Library work ID. Must match format OLnnnW (e.g. OL82592W)"})
 		}
 
 		authors := strings.Join(data.Authors, ", ")

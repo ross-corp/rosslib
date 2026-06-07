@@ -414,6 +414,8 @@ Soft-delete a review comment. Only the comment author or a moderator can delete.
 
 Add a book to the user's library. Upserts the book into the global catalog.
 
+`open_library_id` is required and must match the format `OLnnnW` (e.g. `OL82592W`). Returns `400` if the format is invalid.
+
 ```json
 {
   "open_library_id": "OL82592W",
