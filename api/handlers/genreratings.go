@@ -1,10 +1,27 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/pocketbase/pocketbase/core"
 )
+
+// allowedGenres is the predefined set of valid genre names for genre ratings.
+var allowedGenres = map[string]bool{
+	"Fiction":         true,
+	"Non-fiction":     true,
+	"Fantasy":        true,
+	"Science fiction": true,
+	"Mystery":        true,
+	"Romance":        true,
+	"Horror":         true,
+	"Thriller":       true,
+	"Biography":      true,
+	"History":        true,
+	"Poetry":         true,
+	"Children":       true,
+}
 
 // GetBookGenreRatings handles GET /books/{workId}/genre-ratings
 func GetBookGenreRatings(app core.App) func(e *core.RequestEvent) error {
@@ -108,8 +125,11 @@ func SetGenreRatings(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
 		}
 
-		// Validate rating bounds
+		// Validate genre names and rating bounds
 		for _, r := range data.Ratings {
+			if !allowedGenres[r.Genre] {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": fmt.Sprintf("Unknown genre: %s", r.Genre)})
+			}
 			if r.Rating < 0 || r.Rating > 10 {
 				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Genre rating must be between 0 and 10"})
 			}

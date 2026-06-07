@@ -699,8 +699,8 @@ Set or update genre ratings for a book. Accepts an array of `{genre, rating}` ob
 
 ```
 200 { "ok": true }
-400 { "error": "invalid genre: ..." }
-400 { "error": "rating must be 0-10" }
+400 { "error": "Unknown genre: <name>" }
+400 { "error": "Genre rating must be between 0 and 10" }
 404 { "error": "book not found" }
 ```
 
