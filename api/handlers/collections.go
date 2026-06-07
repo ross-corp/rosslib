@@ -108,7 +108,7 @@ func CreateShelf(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		if data.Description != nil && len(*data.Description) > 1000 {
-			return e.JSON(http.StatusBadRequest, map[string]any{"error": "description must be 1000 characters or fewer"})
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Description must be 1,000 characters or fewer"})
 		}
 
 		coll, err := app.FindCollectionByNameOrId("collections")
@@ -174,7 +174,7 @@ func UpdateShelf(app core.App) func(e *core.RequestEvent) error {
 		}
 		if data.Description != nil {
 			if len(*data.Description) > 1000 {
-				return e.JSON(http.StatusBadRequest, map[string]any{"error": "description must be 1000 characters or fewer"})
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Description must be 1,000 characters or fewer"})
 			}
 			shelf.Set("description", *data.Description)
 		}
