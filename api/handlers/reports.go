@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -76,10 +77,19 @@ func CreateReport(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
-// GetReports handles GET /admin/reports
+// GetReports handles GET /admin/reports?status=<s>&page=<n>&perPage=<n>
 func GetReports(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		status := e.Request.URL.Query().Get("status")
+		page, _ := strconv.Atoi(e.Request.URL.Query().Get("page"))
+		if page < 1 {
+			page = 1
+		}
+		perPage, _ := strconv.Atoi(e.Request.URL.Query().Get("perPage"))
+		if perPage < 1 || perPage > 100 {
+			perPage = 20
+		}
+		offset := (page - 1) * perPage
 
 		type reportRow struct {
 			ID              string  `db:"id" json:"id"`
@@ -111,12 +121,22 @@ func GetReports(app core.App) func(e *core.RequestEvent) error {
 			query += " WHERE r.status = {:status}"
 			binds["status"] = status
 		}
-		query += " ORDER BY r.created DESC"
+		query += fmt.Sprintf(" ORDER BY r.created DESC LIMIT %d OFFSET %d", perPage+1, offset)
 
 		var rows []reportRow
 		err := app.DB().NewQuery(query).Bind(binds).All(&rows)
 		if err != nil {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{
+				"reports":  []any{},
+				"page":     page,
+				"per_page": perPage,
+				"has_next": false,
+			})
+		}
+
+		hasNext := len(rows) > perPage
+		if hasNext {
+			rows = rows[:perPage]
 		}
 
 		result := make([]map[string]any, 0, len(rows))
@@ -141,7 +161,12 @@ func GetReports(app core.App) func(e *core.RequestEvent) error {
 			})
 		}
 
-		return e.JSON(http.StatusOK, result)
+		return e.JSON(http.StatusOK, map[string]any{
+			"reports":  result,
+			"page":     page,
+			"per_page": perPage,
+			"has_next": hasNext,
+		})
 	}
 }
 

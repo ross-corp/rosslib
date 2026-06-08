@@ -48,21 +48,26 @@ export default function AdminReports() {
   const [statusFilter, setStatusFilter] = useState("pending");
   const [items, setItems] = useState<ReportItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const toast = useToast();
 
-  const fetchReports = useCallback(async (status: string) => {
+  const fetchReports = useCallback(async (status: string, pg: number) => {
     setLoading(true);
-    const res = await fetch(`/api/admin/reports?status=${status}`);
+    const res = await fetch(`/api/admin/reports?status=${status}&page=${pg}&perPage=20`);
     if (res.ok) {
-      setItems(await res.json());
+      const data = await res.json();
+      setItems(data.reports ?? []);
+      setPage(data.page ?? 1);
+      setHasNext(data.has_next ?? false);
     }
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    fetchReports(statusFilter);
-  }, [statusFilter, fetchReports]);
+    fetchReports(statusFilter, page);
+  }, [statusFilter, page, fetchReports]);
 
   async function updateStatus(id: string, newStatus: "reviewed" | "dismissed") {
     setUpdatingId(id);
@@ -86,7 +91,7 @@ export default function AdminReports() {
         {["pending", "reviewed", "dismissed"].map((s) => (
           <button
             key={s}
-            onClick={() => setStatusFilter(s)}
+            onClick={() => { setPage(1); setStatusFilter(s); }}
             className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
               statusFilter === s
                 ? "bg-accent text-text-inverted"
@@ -204,6 +209,26 @@ export default function AdminReports() {
               </div>
             </div>
           ))}
+
+          {(page > 1 || hasNext) && (
+            <div className="flex items-center justify-between pt-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="px-3 py-1 rounded text-xs font-medium bg-surface-2 text-text-primary hover:bg-surface-3 transition-colors disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="text-xs text-text-secondary">Page {page}</span>
+              <button
+                onClick={() => setPage((p) => p + 1)}
+                disabled={!hasNext}
+                className="px-3 py-1 rounded text-xs font-medium bg-surface-2 text-text-primary hover:bg-surface-3 transition-colors disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

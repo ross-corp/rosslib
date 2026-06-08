@@ -2459,28 +2459,33 @@ Report a piece of content (review, thread, comment, or link). Prevents duplicate
 409 { "error": "You have already reported this content" }
 ```
 
-### `GET /admin/reports?status=pending`  *(moderator required)*
+### `GET /admin/reports?status=pending&page=1&perPage=20`  *(moderator required)*
 
-List content reports. Filterable by `status` (`pending`, `reviewed`, `dismissed`). Returns reports with reporter info and a content preview, sorted by newest first.
+List content reports. Filterable by `status` (`pending`, `reviewed`, `dismissed`). Paginated with `page` (default 1) and `perPage` (default 20, max 100). Returns reports with reporter info and a content preview, sorted by newest first.
 
 ```json
-[
-  {
-    "id": "...",
-    "reporter_id": "...",
-    "reporter_username": "alice",
-    "reporter_display_name": "Alice",
-    "content_type": "review",
-    "content_id": "abc123",
-    "reason": "spam",
-    "details": "This review is advertising a product",
-    "status": "pending",
-    "reviewer_id": null,
-    "reviewer_username": null,
-    "created_at": "2026-02-26T14:00:00Z",
-    "content_preview": "Buy my product at example.com..."
-  }
-]
+{
+  "reports": [
+    {
+      "id": "...",
+      "reporter_id": "...",
+      "reporter_username": "alice",
+      "reporter_display_name": "Alice",
+      "content_type": "review",
+      "content_id": "abc123",
+      "reason": "spam",
+      "details": "This review is advertising a product",
+      "status": "pending",
+      "reviewer_id": null,
+      "reviewer_username": null,
+      "created_at": "2026-02-26T14:00:00Z",
+      "content_preview": "Buy my product at example.com..."
+    }
+  ],
+  "page": 1,
+  "per_page": 20,
+  "has_next": false
+}
 ```
 
 ### `PATCH /admin/reports/:reportId`  *(moderator required)*
