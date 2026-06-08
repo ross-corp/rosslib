@@ -190,6 +190,20 @@ func UpdateBook(app core.App) func(e *core.RequestEvent) error {
 			if *data.ProgressPages < 0 {
 				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Progress pages must not be negative"})
 			}
+			if *data.ProgressPages > 0 {
+				// Check against book's total page count
+				totalPages := 0
+				if data.DeviceTotalPages != nil && *data.DeviceTotalPages > 0 {
+					totalPages = *data.DeviceTotalPages
+				} else if dtp := ub.GetInt("device_total_pages"); dtp > 0 {
+					totalPages = dtp
+				} else {
+					totalPages = book.GetInt("page_count")
+				}
+				if totalPages > 0 && *data.ProgressPages > totalPages {
+					return e.JSON(http.StatusBadRequest, map[string]any{"error": "Page number exceeds book length"})
+				}
+			}
 			ub.Set("progress_pages", *data.ProgressPages)
 		}
 		if data.ProgressPercent != nil {
