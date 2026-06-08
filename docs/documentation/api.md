@@ -1060,8 +1060,8 @@ Content-type is detected from the file's magic bytes — the `Content-Type` head
 
 ```
 200 { "avatar_url": "http://localhost:9000/rosslib/avatars/<userId>.jpg" }
-400 { "error": "unsupported image type: ..." }
-400 { "error": "file too large (max 5 MB)" }
+400 { "error": "Only JPEG, PNG, GIF, and WebP images are allowed" }
+400 { "error": "Avatar must be 5 MB or smaller" }
 ```
 
 The returned URL is stored in `users.avatar_url` and returned on subsequent `GET /users/:username` calls. In production, point `MINIO_PUBLIC_URL` to the S3 bucket or CDN origin — the URL format is `{MINIO_PUBLIC_URL}/{MINIO_BUCKET}/avatars/{userId}.{ext}`.
@@ -1073,7 +1073,8 @@ Upload or replace the authenticated user's profile banner image. Accepts a `mult
 ```
 200 { "banner_url": "/api/files/<collectionId>/<userId>/<filename>" }
 400 { "error": "No banner file provided" }
-400 { "error": "Failed to process uploaded file" }
+400 { "error": "Banner must be 10 MB or smaller" }
+400 { "error": "Only JPEG, PNG, GIF, and WebP images are allowed" }
 ```
 
 The returned URL is included in subsequent `GET /users/:username` responses as `banner_url`.

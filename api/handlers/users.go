@@ -854,11 +854,22 @@ func UploadAvatar(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
 		}
 
+		// Limit request body to 5 MB + some overhead for multipart headers
+		const maxAvatarSize int64 = 5 << 20 // 5 MB
+		e.Request.Body = http.MaxBytesReader(e.Response, e.Request.Body, maxAvatarSize+1024)
+
 		file, header, err := e.Request.FormFile("avatar")
 		if err != nil {
+			if err.Error() == "http: request body too large" {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Avatar must be 5 MB or smaller"})
+			}
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "No avatar file provided"})
 		}
 		defer file.Close()
+
+		if header.Size > maxAvatarSize {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Avatar must be 5 MB or smaller"})
+		}
 
 		// Validate MIME type by sniffing file content
 		buf := make([]byte, 512)
@@ -873,7 +884,6 @@ func UploadAvatar(app core.App) func(e *core.RequestEvent) error {
 		// Use PocketBase's filesystem to handle file upload
 		f, err := e.FindUploadedFiles("avatar")
 		if err != nil || len(f) == 0 {
-			_ = header // suppress unused warning
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Failed to process uploaded file"})
 		}
 
@@ -897,12 +907,22 @@ func UploadBanner(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
 		}
 
-		// Validate MIME type by sniffing file content
-		file, _, err := e.Request.FormFile("banner")
+		// Limit request body to 10 MB + some overhead for multipart headers
+		const maxBannerSize int64 = 10 << 20 // 10 MB
+		e.Request.Body = http.MaxBytesReader(e.Response, e.Request.Body, maxBannerSize+1024)
+
+		file, header, err := e.Request.FormFile("banner")
 		if err != nil {
+			if err.Error() == "http: request body too large" {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Banner must be 10 MB or smaller"})
+			}
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "No banner file provided"})
 		}
 		defer file.Close()
+
+		if header.Size > maxBannerSize {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Banner must be 10 MB or smaller"})
+		}
 
 		buf := make([]byte, 512)
 		n, _ := file.Read(buf)
