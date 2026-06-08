@@ -137,6 +137,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Thread title"
+            maxLength={500}
             disabled={submitting}
             className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong disabled:opacity-50"
           />
@@ -169,6 +170,7 @@ export default function ThreadList({ workId, initialThreads, isLoggedIn }: Props
             onChange={(e) => setBody(e.target.value)}
             placeholder="What do you want to discuss?"
             rows={4}
+            maxLength={10000}
             disabled={submitting}
             className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong resize-y disabled:opacity-50"
           />

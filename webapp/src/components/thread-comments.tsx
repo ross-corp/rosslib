@@ -151,6 +151,7 @@ function CommentItem({
                 onChange={(e) => setReplyBody(e.target.value)}
                 placeholder="Write a reply..."
                 rows={2}
+                maxLength={5000}
                 disabled={submitting}
                 className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong resize-y disabled:opacity-50"
               />
@@ -341,6 +342,7 @@ export default function ThreadComments({
             onChange={(e) => setNewComment(e.target.value)}
             placeholder="Add a comment..."
             rows={3}
+            maxLength={5000}
             disabled={submitting}
             className="w-full border border-border rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-primary focus:outline-none focus:ring-1 focus:ring-border-strong resize-y disabled:opacity-50"
           />
