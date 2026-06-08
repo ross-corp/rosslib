@@ -63,6 +63,9 @@ func UpsertGoal(app core.App) func(e *core.RequestEvent) error {
 		if data.Target < 1 {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Target must be at least 1"})
 		}
+		if data.Target > 9999 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Goal target must be 9,999 or fewer"})
+		}
 
 		// Find existing goal for this user+year
 		existing, _ := app.FindRecordsByFilter("reading_goals",
