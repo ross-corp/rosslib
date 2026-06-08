@@ -635,7 +635,9 @@ func GetBookDetail(app core.App) func(e *core.RequestEvent) error {
 		// Back-fill subjects on the local book record if empty
 		if len(localBooks) > 0 && len(subjects) > 0 && localBooks[0].GetString("subjects") == "" {
 			localBooks[0].Set("subjects", strings.Join(subjects, ", "))
-			_ = app.Save(localBooks[0])
+			if err := app.Save(localBooks[0]); err != nil {
+				app.Logger().Error("GetBookDetail: failed to save enriched book", "error", err, "book_id", localBooks[0].Id)
+			}
 		}
 
 		// Auto-populate series data from Open Library if not already present
