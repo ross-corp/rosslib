@@ -1379,11 +1379,11 @@ Create a custom label or tag collection.
 }
 ```
 
-`description` is optional (max 1000 characters). Slug is auto-derived from `name`. Returns 409 on slug conflict.
+`description` is optional (max 1000 characters). Slug is auto-derived from `name`. Returns 400 if the user already has a shelf with the same name.
 
 ### `PATCH /me/shelves/:id`  *(auth required)*
 
-Rename, toggle visibility, or update description. Accepts `{ name?, is_public?, description? }`. `description` max 1000 characters; send an empty string to clear.
+Rename, toggle visibility, or update description. Accepts `{ name?, is_public?, description? }`. `description` max 1000 characters; send an empty string to clear. Returns 400 if renaming to a name that already exists on another shelf.
 
 ### `DELETE /me/shelves/:id`  *(auth required)*
 

@@ -101,6 +101,15 @@ func CreateShelf(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Shelf name must be 255 characters or fewer"})
 		}
 
+		// Enforce unique shelf names per user
+		existing, _ := app.FindRecordsByFilter("collections",
+			"user = {:user} && name = {:name}", "", 1, 0,
+			map[string]any{"user": user.Id, "name": data.Name},
+		)
+		if len(existing) > 0 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "A shelf with that name already exists"})
+		}
+
 		slug := slugify(data.Name)
 		isPublic := true
 		if data.IsPublic != nil {
@@ -165,6 +174,14 @@ func UpdateShelf(app core.App) func(e *core.RequestEvent) error {
 		if data.Name != nil {
 			if len(*data.Name) > 255 {
 				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Shelf name must be 255 characters or fewer"})
+			}
+			// Enforce unique shelf names per user (exclude current shelf)
+			existing, _ := app.FindRecordsByFilter("collections",
+				"user = {:user} && name = {:name} && id != {:id}", "", 1, 0,
+				map[string]any{"user": user.Id, "name": *data.Name, "id": shelfID},
+			)
+			if len(existing) > 0 {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "A shelf with that name already exists"})
 			}
 			shelf.Set("name", *data.Name)
 			shelf.Set("slug", slugify(*data.Name))
