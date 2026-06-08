@@ -19,10 +19,20 @@ export default function RegisterPage() {
 
     const form = e.currentTarget;
     const emailValue = (form.elements.namedItem("email") as HTMLInputElement).value;
+    const password = (form.elements.namedItem("password") as HTMLInputElement).value;
+    const passwordConfirm = (form.elements.namedItem("passwordConfirm") as HTMLInputElement).value;
+
+    if (password !== passwordConfirm) {
+      setLoading(false);
+      setError("Passwords do not match.");
+      return;
+    }
+
     const data = {
       username: (form.elements.namedItem("username") as HTMLInputElement).value,
       email: emailValue,
-      password: (form.elements.namedItem("password") as HTMLInputElement).value,
+      password,
+      passwordConfirm,
     };
 
     const res = await fetch("/api/auth/register", {
@@ -148,6 +158,25 @@ export default function RegisterPage() {
               placeholder="••••••••"
             />
             <p className="mt-1 text-xs text-text-tertiary">At least 8 characters.</p>
+          </div>
+
+          <div>
+            <label
+              htmlFor="passwordConfirm"
+              className="label-mono block mb-1"
+            >
+              Confirm password
+            </label>
+            <input
+              id="passwordConfirm"
+              name="passwordConfirm"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              className="input-field"
+              placeholder="••••••••"
+            />
           </div>
 
           <button

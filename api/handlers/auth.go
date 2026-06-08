@@ -74,6 +74,10 @@ func Register(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Username, email, and password are required"})
 		}
 
+		if data.Password != data.PasswordConfirm {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Passwords do not match"})
+		}
+
 		if !isValidEmail(data.Email) {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid email address"})
 		}
