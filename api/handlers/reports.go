@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -77,6 +78,21 @@ func CreateReport(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
+type reportRow struct {
+	ID              string  `db:"id" json:"id"`
+	ReporterID      string  `db:"reporter_id" json:"reporter_id"`
+	ReporterName    string  `db:"reporter_username" json:"reporter_username"`
+	ReporterDisplay *string `db:"reporter_display" json:"reporter_display_name"`
+	ContentType     string  `db:"content_type" json:"content_type"`
+	ContentID       string  `db:"content_id" json:"content_id"`
+	Reason          string  `db:"reason" json:"reason"`
+	Details         *string `db:"details" json:"details"`
+	Status          string  `db:"status" json:"status"`
+	ReviewerID      *string `db:"reviewer_id" json:"reviewer_id"`
+	ReviewerName    *string `db:"reviewer_username" json:"reviewer_username"`
+	CreatedAt       string  `db:"created_at" json:"created_at"`
+}
+
 // GetReports handles GET /admin/reports?status=<s>&page=<n>&perPage=<n>
 func GetReports(app core.App) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
@@ -90,21 +106,6 @@ func GetReports(app core.App) func(e *core.RequestEvent) error {
 			perPage = 20
 		}
 		offset := (page - 1) * perPage
-
-		type reportRow struct {
-			ID              string  `db:"id" json:"id"`
-			ReporterID      string  `db:"reporter_id" json:"reporter_id"`
-			ReporterName    string  `db:"reporter_username" json:"reporter_username"`
-			ReporterDisplay *string `db:"reporter_display" json:"reporter_display_name"`
-			ContentType     string  `db:"content_type" json:"content_type"`
-			ContentID       string  `db:"content_id" json:"content_id"`
-			Reason          string  `db:"reason" json:"reason"`
-			Details         *string `db:"details" json:"details"`
-			Status          string  `db:"status" json:"status"`
-			ReviewerID      *string `db:"reviewer_id" json:"reviewer_id"`
-			ReviewerName    *string `db:"reviewer_username" json:"reviewer_username"`
-			CreatedAt       string  `db:"created_at" json:"created_at"`
-		}
 
 		query := `
 			SELECT r.id, r.reporter as reporter_id, u.username as reporter_username,
@@ -139,10 +140,15 @@ func GetReports(app core.App) func(e *core.RequestEvent) error {
 			rows = rows[:perPage]
 		}
 
+		// Batch-fetch content previews grouped by type to avoid N+1 queries.
+		previews := batchFetchContentPreviews(app, rows)
+
 		result := make([]map[string]any, 0, len(rows))
 		for _, r := range rows {
-			// Fetch a content preview based on type
-			preview := fetchContentPreview(app, r.ContentType, r.ContentID)
+			preview := previews[r.ContentType+":"+r.ContentID]
+			if preview == "" {
+				preview = "(content not found)"
+			}
 
 			result = append(result, map[string]any{
 				"id":                    r.ID,
@@ -200,63 +206,141 @@ func UpdateReportStatus(app core.App) func(e *core.RequestEvent) error {
 	}
 }
 
-// fetchContentPreview returns a short preview string for reported content.
-func fetchContentPreview(app core.App, contentType, contentID string) string {
-	switch contentType {
-	case "review":
-		// contentID is the user_books record ID
-		rec, err := app.FindRecordById("user_books", contentID)
-		if err != nil {
-			return "(content not found)"
-		}
-		text := rec.GetString("review_text")
-		if len(text) > 200 {
-			text = text[:200] + "..."
-		}
-		if text == "" {
-			text = "(rating only, no text)"
-		}
-		return text
-
-	case "thread":
-		rec, err := app.FindRecordById("threads", contentID)
-		if err != nil {
-			return "(content not found)"
-		}
-		title := rec.GetString("title")
-		body := rec.GetString("body")
-		if len(body) > 150 {
-			body = body[:150] + "..."
-		}
-		return title + ": " + body
-
-	case "comment":
-		rec, err := app.FindRecordById("thread_comments", contentID)
-		if err != nil {
-			return "(content not found)"
-		}
-		body := rec.GetString("body")
-		if len(body) > 200 {
-			body = body[:200] + "..."
-		}
-		return body
-
-	case "link":
-		rec, err := app.FindRecordById("book_links", contentID)
-		if err != nil {
-			return "(content not found)"
-		}
-		note := rec.GetString("note")
-		linkType := rec.GetString("link_type")
-		if note != "" {
-			if len(note) > 150 {
-				note = note[:150] + "..."
-			}
-			return linkType + ": " + note
-		}
-		return linkType + " link"
-
-	default:
-		return "(unknown content type)"
+// batchFetchContentPreviews batch-fetches content previews for all reports,
+// returning a map keyed by "content_type:content_id" → preview string.
+// This reduces DB round-trips from N+1 to at most 4 (one per content type).
+func batchFetchContentPreviews(app core.App, rows []reportRow) map[string]string {
+	// Group content IDs by type.
+	idsByType := map[string][]string{}
+	for _, r := range rows {
+		idsByType[r.ContentType] = append(idsByType[r.ContentType], r.ContentID)
 	}
+
+	previews := map[string]string{}
+
+	// Reviews: fetch from user_books
+	if ids := idsByType["review"]; len(ids) > 0 {
+		placeholders := make([]string, len(ids))
+		binds := map[string]any{}
+		for i, id := range ids {
+			key := fmt.Sprintf("id%d", i)
+			placeholders[i] = "{:" + key + "}"
+			binds[key] = id
+		}
+		type reviewRow struct {
+			ID         string  `db:"id"`
+			ReviewText *string `db:"review_text"`
+		}
+		var results []reviewRow
+		err := app.DB().NewQuery(
+			"SELECT id, review_text FROM user_books WHERE id IN ("+strings.Join(placeholders, ",")+")").
+			Bind(binds).All(&results)
+		if err == nil {
+			for _, r := range results {
+				text := ""
+				if r.ReviewText != nil {
+					text = *r.ReviewText
+				}
+				if len(text) > 200 {
+					text = text[:200] + "..."
+				}
+				if text == "" {
+					text = "(rating only, no text)"
+				}
+				previews["review:"+r.ID] = text
+			}
+		}
+	}
+
+	// Threads: fetch from threads
+	if ids := idsByType["thread"]; len(ids) > 0 {
+		placeholders := make([]string, len(ids))
+		binds := map[string]any{}
+		for i, id := range ids {
+			key := fmt.Sprintf("id%d", i)
+			placeholders[i] = "{:" + key + "}"
+			binds[key] = id
+		}
+		type threadRow struct {
+			ID    string `db:"id"`
+			Title string `db:"title"`
+			Body  string `db:"body"`
+		}
+		var results []threadRow
+		err := app.DB().NewQuery(
+			"SELECT id, title, body FROM threads WHERE id IN ("+strings.Join(placeholders, ",")+")").
+			Bind(binds).All(&results)
+		if err == nil {
+			for _, r := range results {
+				body := r.Body
+				if len(body) > 150 {
+					body = body[:150] + "..."
+				}
+				previews["thread:"+r.ID] = r.Title + ": " + body
+			}
+		}
+	}
+
+	// Comments: fetch from thread_comments
+	if ids := idsByType["comment"]; len(ids) > 0 {
+		placeholders := make([]string, len(ids))
+		binds := map[string]any{}
+		for i, id := range ids {
+			key := fmt.Sprintf("id%d", i)
+			placeholders[i] = "{:" + key + "}"
+			binds[key] = id
+		}
+		type commentRow struct {
+			ID   string `db:"id"`
+			Body string `db:"body"`
+		}
+		var results []commentRow
+		err := app.DB().NewQuery(
+			"SELECT id, body FROM thread_comments WHERE id IN ("+strings.Join(placeholders, ",")+")").
+			Bind(binds).All(&results)
+		if err == nil {
+			for _, r := range results {
+				body := r.Body
+				if len(body) > 200 {
+					body = body[:200] + "..."
+				}
+				previews["comment:"+r.ID] = body
+			}
+		}
+	}
+
+	// Links: fetch from book_links
+	if ids := idsByType["link"]; len(ids) > 0 {
+		placeholders := make([]string, len(ids))
+		binds := map[string]any{}
+		for i, id := range ids {
+			key := fmt.Sprintf("id%d", i)
+			placeholders[i] = "{:" + key + "}"
+			binds[key] = id
+		}
+		type linkRow struct {
+			ID       string  `db:"id"`
+			LinkType string  `db:"link_type"`
+			Note     *string `db:"note"`
+		}
+		var results []linkRow
+		err := app.DB().NewQuery(
+			"SELECT id, link_type, note FROM book_links WHERE id IN ("+strings.Join(placeholders, ",")+")").
+			Bind(binds).All(&results)
+		if err == nil {
+			for _, r := range results {
+				if r.Note != nil && *r.Note != "" {
+					note := *r.Note
+					if len(note) > 150 {
+						note = note[:150] + "..."
+					}
+					previews["link:"+r.ID] = r.LinkType + ": " + note
+				} else {
+					previews["link:"+r.ID] = r.LinkType + " link"
+				}
+			}
+		}
+	}
+
+	return previews
 }
