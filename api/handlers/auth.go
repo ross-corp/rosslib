@@ -319,6 +319,10 @@ func ChangePassword(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Current password is incorrect"})
 		}
 
+		if len(data.NewPassword) < 8 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "New password must be at least 8 characters"})
+		}
+
 		user.SetPassword(data.NewPassword)
 		if err := app.Save(user); err != nil {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": err.Error()})
