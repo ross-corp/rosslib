@@ -63,7 +63,11 @@ func CreateTagKey(app core.App) func(e *core.RequestEvent) error {
 			Name string `json:"name"`
 			Mode string `json:"mode"`
 		}{}
-		if err := e.BindBody(&data); err != nil || data.Name == "" {
+		if err := e.BindBody(&data); err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name is required"})
+		}
+		data.Name = strings.TrimSpace(data.Name)
+		if data.Name == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name is required"})
 		}
 		if len(data.Name) > 100 {
@@ -147,7 +151,11 @@ func CreateTagValue(app core.App) func(e *core.RequestEvent) error {
 		data := struct {
 			Name string `json:"name"`
 		}{}
-		if err := e.BindBody(&data); err != nil || data.Name == "" {
+		if err := e.BindBody(&data); err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name is required"})
+		}
+		data.Name = strings.TrimSpace(data.Name)
+		if data.Name == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name is required"})
 		}
 		if len(data.Name) > 100 {
