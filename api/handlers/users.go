@@ -240,73 +240,91 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			Count int `db:"count"`
 		}
 		var followersCount, followingCount countResult
-		_ = app.DB().NewQuery("SELECT COUNT(*) as count FROM follows WHERE followee = {:id} AND status = 'active'").
-			Bind(map[string]any{"id": user.Id}).One(&followersCount)
-		_ = app.DB().NewQuery("SELECT COUNT(*) as count FROM follows WHERE follower = {:id} AND status = 'active'").
-			Bind(map[string]any{"id": user.Id}).One(&followingCount)
+		if err := app.DB().NewQuery("SELECT COUNT(*) as count FROM follows WHERE followee = {:id} AND status = 'active'").
+			Bind(map[string]any{"id": user.Id}).One(&followersCount); err != nil {
+			app.Logger().Error("GetProfile: failed to count followers", "error", err)
+		}
+		if err := app.DB().NewQuery("SELECT COUNT(*) as count FROM follows WHERE follower = {:id} AND status = 'active'").
+			Bind(map[string]any{"id": user.Id}).One(&followingCount); err != nil {
+			app.Logger().Error("GetProfile: failed to count following", "error", err)
+		}
 
 		var friendsCount countResult
-		_ = app.DB().NewQuery(`
+		if err := app.DB().NewQuery(`
 			SELECT COUNT(*) as count
 			FROM follows f1
 			JOIN follows f2 ON f1.follower = f2.followee AND f1.followee = f2.follower
 			WHERE f1.follower = {:id} AND f1.status = 'active' AND f2.status = 'active'
-		`).Bind(map[string]any{"id": user.Id}).One(&friendsCount)
+		`).Bind(map[string]any{"id": user.Id}).One(&friendsCount); err != nil {
+			app.Logger().Error("GetProfile: failed to count friends", "error", err)
+		}
 
 		// Count books read, currently reading & reviews
 		var booksRead, currentlyReading, reviewsCount countResult
-		_ = app.DB().NewQuery(`
+		if err := app.DB().NewQuery(`
 			SELECT COUNT(DISTINCT btv.book) as count
 			FROM book_tag_values btv
 			JOIN tag_values tv ON btv.tag_value = tv.id
 			WHERE btv.user = {:id} AND tv.slug = 'finished'
-		`).Bind(map[string]any{"id": user.Id}).One(&booksRead)
-		_ = app.DB().NewQuery(`
+		`).Bind(map[string]any{"id": user.Id}).One(&booksRead); err != nil {
+			app.Logger().Error("GetProfile: failed to count books read", "error", err)
+		}
+		if err := app.DB().NewQuery(`
 			SELECT COUNT(DISTINCT btv.book) as count
 			FROM book_tag_values btv
 			JOIN tag_values tv ON btv.tag_value = tv.id
 			WHERE btv.user = {:id} AND tv.slug = 'currently-reading'
-		`).Bind(map[string]any{"id": user.Id}).One(&currentlyReading)
-		_ = app.DB().NewQuery(`
+		`).Bind(map[string]any{"id": user.Id}).One(&currentlyReading); err != nil {
+			app.Logger().Error("GetProfile: failed to count currently reading", "error", err)
+		}
+		if err := app.DB().NewQuery(`
 			SELECT COUNT(*) as count FROM user_books
 			WHERE user = {:id} AND review_text != '' AND review_text IS NOT NULL
-		`).Bind(map[string]any{"id": user.Id}).One(&reviewsCount)
+		`).Bind(map[string]any{"id": user.Id}).One(&reviewsCount); err != nil {
+			app.Logger().Error("GetProfile: failed to count reviews", "error", err)
+		}
 
 		// Count books finished this year
 		var booksThisYear countResult
 		startOfYear := fmt.Sprintf("%d-01-01 00:00:00", time.Now().Year())
-		_ = app.DB().NewQuery(`
+		if err := app.DB().NewQuery(`
 			SELECT COUNT(DISTINCT btv.book) as count
 			FROM book_tag_values btv
 			JOIN tag_values tv ON btv.tag_value = tv.id
 			JOIN user_books ub ON ub.user = btv.user AND ub.book = btv.book
 			WHERE btv.user = {:id} AND tv.slug = 'finished'
 			AND ub.date_read >= {:startOfYear}
-		`).Bind(map[string]any{"id": user.Id, "startOfYear": startOfYear}).One(&booksThisYear)
+		`).Bind(map[string]any{"id": user.Id, "startOfYear": startOfYear}).One(&booksThisYear); err != nil {
+			app.Logger().Error("GetProfile: failed to count books this year", "error", err)
+		}
 
 		// Average rating
 		type avgResult struct {
 			Avg *float64 `db:"avg"`
 		}
 		var avgRating avgResult
-		_ = app.DB().NewQuery(`
+		if err := app.DB().NewQuery(`
 			SELECT AVG(rating) as avg FROM user_books
 			WHERE user = {:id} AND rating > 0
-		`).Bind(map[string]any{"id": user.Id}).One(&avgRating)
+		`).Bind(map[string]any{"id": user.Id}).One(&avgRating); err != nil {
+			app.Logger().Error("GetProfile: failed to calculate average rating", "error", err)
+		}
 
 		// Favorite genres — derived from finished books' subjects
 		type subjectRow struct {
 			Subjects string `db:"subjects"`
 		}
 		var subjectRows []subjectRow
-		_ = app.DB().NewQuery(`
+		if err := app.DB().NewQuery(`
 			SELECT b.subjects
 			FROM books b
 			JOIN book_tag_values btv ON btv.book = b.id
 			JOIN tag_values tv ON btv.tag_value = tv.id
 			WHERE btv.user = {:id} AND tv.slug = 'finished'
 			AND b.subjects != '' AND b.subjects IS NOT NULL
-		`).Bind(map[string]any{"id": user.Id}).All(&subjectRows)
+		`).Bind(map[string]any{"id": user.Id}).All(&subjectRows); err != nil {
+			app.Logger().Error("GetProfile: failed to load favorite genres", "error", err)
+		}
 
 		genreCounts := map[string]int{}
 		for _, row := range subjectRows {
@@ -337,7 +355,7 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			Total *int `db:"total"`
 		}
 		var totalPages sumResult
-		_ = app.DB().NewQuery(`
+		if err := app.DB().NewQuery(`
 			SELECT COALESCE(SUM(b.page_count), 0) as total
 			FROM user_books ub
 			JOIN books b ON ub.book = b.id
@@ -346,7 +364,9 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 			WHERE ub.user = {:id}
 			  AND tv.slug = 'finished'
 			  AND b.page_count IS NOT NULL AND b.page_count > 0
-		`).Bind(map[string]any{"id": user.Id}).One(&totalPages)
+		`).Bind(map[string]any{"id": user.Id}).One(&totalPages); err != nil {
+			app.Logger().Error("GetProfile: failed to sum total pages read", "error", err)
+		}
 
 		totalPagesRead := 0
 		if totalPages.Total != nil {
@@ -355,9 +375,11 @@ func GetProfile(app core.App) func(e *core.RequestEvent) error {
 
 		// Total books in library
 		var totalBooks countResult
-		_ = app.DB().NewQuery(`
+		if err := app.DB().NewQuery(`
 			SELECT COUNT(*) as count FROM user_books WHERE "user" = {:id}
-		`).Bind(map[string]any{"id": user.Id}).One(&totalBooks)
+		`).Bind(map[string]any{"id": user.Id}).One(&totalBooks); err != nil {
+			app.Logger().Error("GetProfile: failed to count total books", "error", err)
+		}
 
 		// Avatar URL
 		var avatarURL *string
