@@ -94,7 +94,11 @@ func CreateShelf(app core.App) func(e *core.RequestEvent) error {
 			IsPublic    *bool   `json:"is_public"`
 			Description *string `json:"description"`
 		}{}
-		if err := e.BindBody(&data); err != nil || data.Name == "" {
+		if err := e.BindBody(&data); err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name is required"})
+		}
+		data.Name = strings.TrimSpace(data.Name)
+		if data.Name == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name is required"})
 		}
 		if len(data.Name) > 255 {
@@ -116,6 +120,10 @@ func CreateShelf(app core.App) func(e *core.RequestEvent) error {
 			isPublic = *data.IsPublic
 		}
 
+		if data.Description != nil {
+			trimmed := strings.TrimSpace(*data.Description)
+			data.Description = &trimmed
+		}
 		if data.Description != nil && len(*data.Description) > 1000 {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Description must be 1,000 characters or fewer"})
 		}
@@ -172,6 +180,11 @@ func UpdateShelf(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		if data.Name != nil {
+			trimmed := strings.TrimSpace(*data.Name)
+			data.Name = &trimmed
+			if *data.Name == "" {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "name is required"})
+			}
 			if len(*data.Name) > 255 {
 				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Shelf name must be 255 characters or fewer"})
 			}
@@ -190,6 +203,8 @@ func UpdateShelf(app core.App) func(e *core.RequestEvent) error {
 			shelf.Set("is_public", *data.IsPublic)
 		}
 		if data.Description != nil {
+			trimmed := strings.TrimSpace(*data.Description)
+			data.Description = &trimmed
 			if len(*data.Description) > 1000 {
 				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Description must be 1,000 characters or fewer"})
 			}
