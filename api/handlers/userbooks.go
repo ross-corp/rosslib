@@ -213,6 +213,9 @@ func UpdateBook(app core.App) func(e *core.RequestEvent) error {
 			ub.Set("progress_percent", *data.ProgressPercent)
 		}
 		if data.DeviceTotalPages != nil {
+			if *data.DeviceTotalPages < 0 {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Total pages must not be negative"})
+			}
 			ub.Set("device_total_pages", *data.DeviceTotalPages)
 		}
 		if data.SelectedEditionKey != nil {
