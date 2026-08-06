@@ -501,6 +501,11 @@ func upsertBook(app core.App, olID, title, coverURL, isbn13, authors string, pub
 // recordActivity creates an activity record in a fire-and-forget goroutine.
 func recordActivity(app core.App, userID, activityType string, opts map[string]any) {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				app.Logger().Error("recovered panic in recordActivity", "error", fmt.Sprintf("%v", r))
+			}
+		}()
 		coll, err := app.FindCollectionByNameOrId("activities")
 		if err != nil {
 			return
@@ -531,6 +536,11 @@ func recordActivity(app core.App, userID, activityType string, opts map[string]a
 // refreshBookStats recalculates the book_stats for a given book.
 func refreshBookStats(app core.App, bookID string) {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				app.Logger().Error("recovered panic in refreshBookStats", "error", fmt.Sprintf("%v", r))
+			}
+		}()
 		type statsResult struct {
 			RatingSum   float64 `db:"rating_sum"`
 			RatingCount int     `db:"rating_count"`

@@ -102,6 +102,11 @@ func SendRecommendation(app core.App) func(e *core.RequestEvent) error {
 		bookTitle := book.GetString("title")
 
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					app.Logger().Error("recovered panic in SendRecommendation notification", "error", fmt.Sprintf("%v", r))
+				}
+			}()
 			if !ShouldNotify(app, recipient.Id, "book_recommendation") {
 				return
 			}

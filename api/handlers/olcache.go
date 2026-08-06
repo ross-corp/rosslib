@@ -91,6 +91,11 @@ func newOLClient() *cachedOLClient {
 			cache:      c,
 		}
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("recovered panic in OL cache ticker: %v", r)
+				}
+			}()
 			ticker := time.NewTicker(1 * time.Hour)
 			defer ticker.Stop()
 			for range ticker.C {

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"log"
 	"net/http"
 	"time"
 
@@ -182,6 +183,11 @@ func authenticateByAPIToken(app core.App, e *core.RequestEvent) bool {
 	// a race condition with the in-memory tokenRecord.
 	tokenID := tokenRecord.Id
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("recovered panic in authenticateByAPIToken: %v", r)
+			}
+		}()
 		_, _ = app.DB().NewQuery(`
 			UPDATE api_tokens SET last_used_at = {:now} WHERE id = {:id}
 		`).Bind(map[string]any{
