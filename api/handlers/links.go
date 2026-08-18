@@ -266,7 +266,10 @@ func UnvoteLink(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusOK, map[string]any{"message": "Not voted"})
 		}
 
-		_ = app.Delete(existing[0])
+		if err := app.Delete(existing[0]); err != nil {
+			app.Logger().Error("UnvoteLink: failed to delete vote", "error", err)
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to remove vote"})
+		}
 		return e.JSON(http.StatusOK, map[string]any{"message": "Vote removed"})
 	}
 }

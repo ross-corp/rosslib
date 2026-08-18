@@ -300,8 +300,11 @@ func SetBookTag(app core.App) func(e *core.RequestEvent) error {
 				"", 10, 0,
 				map[string]any{"user": user.Id, "book": book.Id, "key": keyID},
 			)
-			for _, e := range existing {
-				_ = app.Delete(e)
+			for _, rec := range existing {
+				if err := app.Delete(rec); err != nil {
+					app.Logger().Error("SetBookTag: failed to delete existing tag assignment", "error", err)
+					return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to replace existing tag"})
+				}
 			}
 		}
 
@@ -353,8 +356,11 @@ func UnsetBookTag(app core.App) func(e *core.RequestEvent) error {
 			"", 10, 0,
 			map[string]any{"user": user.Id, "book": books[0].Id, "key": keyID},
 		)
-		for _, e := range existing {
-			_ = app.Delete(e)
+		for _, rec := range existing {
+			if err := app.Delete(rec); err != nil {
+				app.Logger().Error("UnsetBookTag: failed to delete tag assignment", "error", err)
+				return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to unset tag"})
+			}
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{"message": "Tag unset"})
@@ -386,7 +392,10 @@ func UnsetBookTagValue(app core.App) func(e *core.RequestEvent) error {
 			map[string]any{"user": user.Id, "book": books[0].Id, "key": keyID, "value": valueID},
 		)
 		if len(existing) > 0 {
-			_ = app.Delete(existing[0])
+			if err := app.Delete(existing[0]); err != nil {
+				app.Logger().Error("UnsetBookTagValue: failed to delete tag value", "error", err)
+				return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to unset tag value"})
+			}
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{"message": "Tag value unset"})
