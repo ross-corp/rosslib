@@ -16,7 +16,9 @@ func GetTagKeys(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		// Ensure Status key exists
-		_, _, _ = ensureStatusTagKey(app, user.Id)
+		if _, _, err := ensureStatusTagKey(app, user.Id); err != nil {
+			app.Logger().Error("GetTagKeys: failed to ensure status tag key", "error", err)
+		}
 
 		keys, err := app.FindRecordsByFilter("tag_keys",
 			"user = {:user}", "created", 100, 0,
