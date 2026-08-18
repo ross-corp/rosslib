@@ -109,7 +109,9 @@ func ToggleReviewLike(app core.App) func(e *core.RequestEvent) error {
 				"liker_username": likerUsername,
 			})
 			notif.Set("read", false)
-			_ = app.Save(notif)
+			if err := app.Save(notif); err != nil {
+				app.Logger().Error("ToggleReviewLike: failed to save notification", "error", err)
+			}
 		}()
 
 		return e.JSON(http.StatusOK, map[string]any{"liked": true})
