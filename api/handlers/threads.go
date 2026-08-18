@@ -358,7 +358,14 @@ func AddComment(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		// Fan out @mention notifications
-		go fanOutMentionNotifications(app, user, thread, rec.Id, data.Body)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					app.Logger().Error("panic in fanOutMentionNotifications", "error", fmt.Sprintf("%v", r))
+				}
+			}()
+			fanOutMentionNotifications(app, user, thread, rec.Id, data.Body)
+		}()
 
 		return e.JSON(http.StatusOK, map[string]any{
 			"id":   rec.Id,
