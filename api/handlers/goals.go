@@ -196,7 +196,7 @@ func countFinishedBooksInYear(app core.App, userID string, year int) int {
 		Count int `db:"count"`
 	}
 	var result countResult
-	_ = app.DB().NewQuery(`
+	if err := app.DB().NewQuery(`
 		SELECT COUNT(DISTINCT ub.book) as count
 		FROM user_books ub
 		JOIN book_tag_values btv ON btv.user = ub.user AND btv.book = ub.book
@@ -209,7 +209,9 @@ func countFinishedBooksInYear(app core.App, userID string, year int) int {
 		"user":  userID,
 		"start": startDate,
 		"end":   endDate,
-	}).One(&result)
+	}).One(&result); err != nil {
+		app.Logger().Error("countFinishedBooksInYear: query failed", "error", err, "userId", userID, "year", year)
+	}
 
 	return result.Count
 }
