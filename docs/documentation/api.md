@@ -704,6 +704,7 @@ Set or update genre ratings for a book. Accepts an array of `{genre, rating}` ob
 400 { "error": "Unknown genre: <name>" }
 400 { "error": "Genre rating must be between 0 and 10" }
 404 { "error": "book not found" }
+500 { "error": "Failed to save genre rating" }
 ```
 
 **Valid genres:** Fiction, Non-fiction, Fantasy, Science fiction, Mystery, Romance, Horror, Thriller, Biography, History, Poetry, Children.

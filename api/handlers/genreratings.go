@@ -156,7 +156,9 @@ func SetGenreRatings(app core.App) func(e *core.RequestEvent) error {
 			rec.Set("book", book.Id)
 			rec.Set("genre", r.Genre)
 			rec.Set("rating", r.Rating)
-			_ = app.Save(rec)
+			if err := app.Save(rec); err != nil {
+				return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to save genre rating"})
+			}
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{"message": "Genre ratings saved"})
