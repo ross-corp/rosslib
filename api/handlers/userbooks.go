@@ -578,6 +578,9 @@ func GetUserBooks(app core.App) func(e *core.RequestEvent) error {
 		if limit <= 0 {
 			limit = 8
 		}
+		if limit > 100 {
+			limit = 100
+		}
 
 		sortParam := e.Request.URL.Query().Get("sort")
 		var orderClause string
