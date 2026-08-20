@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## API & Performance
 
-- [ ] Trim whitespace from `proposed_note` in ProposeLinkEdit: in `api/handlers/links.go`, the `ProposeLinkEdit()` handler (around line 283-295) validates `proposed_note` length against 1000 chars but does not trim whitespace first. A note of 999 spaces followed by one character would pass the length check. Add `data.ProposedNote = strings.TrimSpace(data.ProposedNote)` before the length validation. Also add a check that at least one of `proposed_type` or `proposed_note` differs from the current values — currently a user can submit an edit that changes nothing.
 - [ ] Trim whitespace from `query` field in CreateSavedSearch: in `api/handlers/searches.go`, the `CreateSavedSearch()` handler requires `query` to be non-empty but does not trim whitespace before the check. A query of `"   "` (all spaces) passes validation and creates a saved search that returns no results when clicked. Add `data.Query = strings.TrimSpace(data.Query)` before the empty check, matching the trimming pattern used elsewhere.
 
 
