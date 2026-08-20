@@ -1668,7 +1668,7 @@ Returns the user's saved searches, newest first. Max 20 per user.
 
 ### `POST /me/saved-searches`  *(auth required)*
 
-Save a search query with optional filters. Max 20 per user.
+Save a search query with optional filters. Max 20 per user. `name` and `query` are trimmed of surrounding whitespace; whitespace-only values are rejected.
 
 ```json
 {

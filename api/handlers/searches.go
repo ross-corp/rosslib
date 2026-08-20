@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -53,7 +54,12 @@ func CreateSavedSearch(app core.App) func(e *core.RequestEvent) error {
 			Query   string         `json:"query"`
 			Filters map[string]any `json:"filters"`
 		}{}
-		if err := e.BindBody(&data); err != nil || data.Name == "" || data.Query == "" {
+		if err := e.BindBody(&data); err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name and query are required"})
+		}
+		data.Name = strings.TrimSpace(data.Name)
+		data.Query = strings.TrimSpace(data.Query)
+		if data.Name == "" || data.Query == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "name and query are required"})
 		}
 
