@@ -1472,7 +1472,7 @@ Update review metadata on a book in a label. Only provided fields are updated �
 }
 ```
 
-`rating` is 1–5 or null to clear.
+`rating` is 1–5 (0 clears). Out-of-range values return `400 { "error": "Rating must be between 1 and 5" }`.
 
 ### `DELETE /shelves/:shelfId/books/:olId`  *(auth required)*
 
