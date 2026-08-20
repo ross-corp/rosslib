@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## API & Performance
 
-- [ ] Trim whitespace from `query` field in CreateSavedSearch: in `api/handlers/searches.go`, the `CreateSavedSearch()` handler requires `query` to be non-empty but does not trim whitespace before the check. A query of `"   "` (all spaces) passes validation and creates a saved search that returns no results when clicked. Add `data.Query = strings.TrimSpace(data.Query)` before the empty check, matching the trimming pattern used elsewhere.
 
 
 ## API & Data Integrity
