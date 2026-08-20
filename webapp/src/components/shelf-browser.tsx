@@ -99,15 +99,6 @@ export default function ShelfBrowser({
                   href={`/books/${book.open_library_id}`}
                   className="group"
                 >
-                  {book.cover_url ? (
-                    <img
-                      src={book.cover_url}
-                      alt={book.title}
-                      className="w-full aspect-[2/3] object-cover rounded shadow-sm group-hover:shadow-md transition-shadow"
-                    />
-                  ) : (
-                    <BookCoverPlaceholder title={book.title} className="w-full aspect-[2/3]" />
-                  )}
                   <div className="relative">
                     {book.cover_url ? (
                       <img
@@ -116,11 +107,7 @@ export default function ShelfBrowser({
                         className="w-full aspect-[2/3] object-cover rounded shadow-sm group-hover:shadow-md transition-shadow"
                       />
                     ) : (
-                      <div className="w-full aspect-[2/3] rounded bg-surface-2 flex items-center justify-center">
-                        <span className="text-[10px] text-text-tertiary text-center px-1 line-clamp-3">
-                          {book.title}
-                        </span>
-                      </div>
+                      <BookCoverPlaceholder title={book.title} className="w-full aspect-[2/3]" />
                     )}
                     {book.series_position != null && (
                       <span className="absolute bottom-1 left-1 bg-surface-0/80 backdrop-blur-sm text-[10px] font-mono font-medium text-text-secondary border border-border rounded px-1 py-0.5 leading-none">
