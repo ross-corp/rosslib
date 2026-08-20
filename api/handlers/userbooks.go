@@ -351,6 +351,36 @@ func DeleteBook(app core.App) func(e *core.RequestEvent) error {
 			_ = app.Delete(rc)
 		}
 
+		// Clean up this user's book link votes, edits, and submitted links involving this book
+		bls, _ := app.FindRecordsByFilter("book_links",
+			"from_book = {:book} || to_book = {:book}",
+			"", 200, 0,
+			map[string]any{"book": book.Id},
+		)
+		for _, bl := range bls {
+			blvs, _ := app.FindRecordsByFilter("book_link_votes",
+				"user = {:user} && book_link = {:link}",
+				"", 100, 0,
+				map[string]any{"user": user.Id, "link": bl.Id},
+			)
+			for _, blv := range blvs {
+				_ = app.Delete(blv)
+			}
+			bles, _ := app.FindRecordsByFilter("book_link_edits",
+				"user = {:user} && book_link = {:link}",
+				"", 100, 0,
+				map[string]any{"user": user.Id, "link": bl.Id},
+			)
+			for _, ble := range bles {
+				_ = app.Delete(ble)
+			}
+			// Soft-delete links this user submitted
+			if bl.GetString("user") == user.Id && bl.GetString("deleted_at") == "" {
+				bl.Set("deleted_at", time.Now().UTC().Format(time.RFC3339))
+				_ = app.Save(bl)
+			}
+		}
+
 		// Clean up orphaned book_series if no other user has this book
 		var ubCount struct {
 			Count int `db:"count"`

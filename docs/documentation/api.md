@@ -454,7 +454,7 @@ Update metadata on a book in the user's library. Only provided fields are update
 
 ### `DELETE /me/books/:olId`  *(auth required)*
 
-Remove a book from the user's library. Also cleans up tag assignments and collection items.
+Remove a book from the user's library. Also cleans up tag assignments, collection items, genre ratings, review likes, book follows, quotes, reading sessions, review comments, and the user's book link votes/edits for links involving this book; soft-deletes book links the user submitted involving this book.
 
 ### `GET /me/books/:olId/status`  *(auth required)*
 
