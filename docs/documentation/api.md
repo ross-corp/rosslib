@@ -2251,7 +2251,7 @@ Remove upvote. Returns 204.
 
 ### `POST /links/:linkId/edits`  *(auth required)*
 
-Propose an edit to a community link. At least one of `proposed_type` or `proposed_note` must be provided. Only one pending edit per user per link. If `proposed_type` is provided, it must be one of: `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`.
+Propose an edit to a community link. At least one of `proposed_type` or `proposed_note` must be provided, and at least one must differ from the link's current values. Only one pending edit per user per link. If `proposed_type` is provided, it must be one of: `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`. `proposed_note` is trimmed of leading/trailing whitespace and limited to 1000 characters after trimming.
 
 ```json
 {
@@ -2263,6 +2263,8 @@ Propose an edit to a community link. At least one of `proposed_type` or `propose
 ```
 201 { "id": "...", "created_at": "..." }
 400 { "error": "at least one of proposed_type or proposed_note is required" }
+400 { "error": "edit must change the link type or note" }
+404 { "error": "Link not found" }
 409 { "error": "you already have a pending edit for this link" }
 ```
 

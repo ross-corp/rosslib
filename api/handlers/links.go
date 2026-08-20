@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -290,11 +291,22 @@ func ProposeLinkEdit(app core.App) func(e *core.RequestEvent) error {
 		if err := e.BindBody(&data); err != nil {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
 		}
+		data.ProposedNote = strings.TrimSpace(data.ProposedNote)
 		if data.ProposedType != "" && !validLinkTypes[data.ProposedType] {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "invalid link_type"})
 		}
 		if len(data.ProposedNote) > 1000 {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "note must be 1000 characters or fewer"})
+		}
+
+		link, err := app.FindRecordById("book_links", linkID)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Link not found"})
+		}
+		typeChanged := data.ProposedType != "" && data.ProposedType != link.GetString("link_type")
+		noteChanged := data.ProposedNote != "" && data.ProposedNote != link.GetString("note")
+		if !typeChanged && !noteChanged {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "edit must change the link type or note"})
 		}
 
 		coll, err := app.FindCollectionByNameOrId("book_link_edits")
