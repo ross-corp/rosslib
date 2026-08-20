@@ -140,6 +140,8 @@ func CreateThread(app core.App) func(e *core.RequestEvent) error {
 		if err := e.BindBody(&data); err != nil {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
 		}
+		data.Title = strings.TrimSpace(data.Title)
+		data.Body = strings.TrimSpace(data.Body)
 		if data.Title == "" || data.Body == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "title and body required"})
 		}

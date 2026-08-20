@@ -2029,7 +2029,7 @@ Create a new discussion thread on a book. Records a `created_thread` activity an
 { "title": "What did the ending mean?", "body": "I just finished and...", "spoiler": true }
 ```
 
-`title` max 500 characters, `body` max 10,000 characters.
+`title` max 500 characters, `body` max 10,000 characters. Both are trimmed of leading/trailing whitespace before validation; whitespace-only values are rejected.
 
 ```
 201 { "id": "...", "created_at": "..." }
