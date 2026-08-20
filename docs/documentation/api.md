@@ -743,7 +743,7 @@ Check if you follow a book. Returns `{ "following": true/false }`. Returns `{ "f
 
 ### `GET /me/followed-books`  *(auth required)*
 
-List books you follow, newest first. Supports pagination via `limit` (default 50, max 50) and `offset` (default 0) query params.
+List books you follow, newest first. Supports pagination via `limit` (default 50, max 50) and `offset` (default 0, max 10,000) query params. An `offset` above 10,000 returns `400 { "error": "Offset must be 10,000 or fewer" }`.
 
 ```json
 {
@@ -899,7 +899,7 @@ Fetches author detail from Open Library including a paginated slice of their wor
 
 **Query parameters:**
 - `limit` *(optional, default 24, max 100)* — number of works to return.
-- `offset` *(optional, default 0)* — offset into the works list.
+- `offset` *(optional, default 0, max 10,000)* — offset into the works list. Values above 10,000 return `400 { "error": "Offset must be 10,000 or fewer" }`.
 
 ```json
 {
@@ -952,7 +952,7 @@ Check if you follow an author. Returns `{ "following": true/false }`.
 
 ### `GET /me/followed-authors`  *(auth required)*
 
-List authors you follow. Supports pagination via `limit` (default 50, max 50) and `offset` (default 0) query params.
+List authors you follow. Supports pagination via `limit` (default 50, max 50) and `offset` (default 0, max 10,000) query params. An `offset` above 10,000 returns `400 { "error": "Offset must be 10,000 or fewer" }`.
 
 ```json
 {

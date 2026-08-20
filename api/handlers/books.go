@@ -1108,6 +1108,9 @@ func GetAuthorDetail(app core.App) func(e *core.RequestEvent) error {
 				offset = n
 			}
 		}
+		if offset > 10000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Offset must be 10,000 or fewer"})
+		}
 
 		// Fetch author metadata.
 		authorData, err := ol.get(fmt.Sprintf("/authors/%s.json", authorKey))
@@ -1313,6 +1316,9 @@ func GetFollowedAuthors(app core.App) func(e *core.RequestEvent) error {
 		offset, _ := strconv.Atoi(e.Request.URL.Query().Get("offset"))
 		if offset < 0 {
 			offset = 0
+		}
+		if offset > 10000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Offset must be 10,000 or fewer"})
 		}
 
 		var total int
@@ -1549,6 +1555,9 @@ func GetFollowedBooks(app core.App) func(e *core.RequestEvent) error {
 		offset, _ := strconv.Atoi(e.Request.URL.Query().Get("offset"))
 		if offset < 0 {
 			offset = 0
+		}
+		if offset > 10000 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Offset must be 10,000 or fewer"})
 		}
 
 		var total int
