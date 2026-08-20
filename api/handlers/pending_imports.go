@@ -146,7 +146,7 @@ func ResolvePendingImport(app core.App) func(e *core.RequestEvent) error {
 			// Map exclusive shelf to status tag
 			statusSlug := mapGoodreadsShelf(record.GetString("exclusive_shelf"))
 			if statusSlug != "" {
-				setStatusTag(app, user.Id, book.Id, statusSlug)
+				_ = setStatusTag(app, user.Id, book.Id, statusSlug)
 			}
 
 			// Mark resolved
@@ -401,7 +401,7 @@ func RetryPendingImport(app core.App) func(e *core.RequestEvent) error {
 		// Map exclusive shelf to status tag
 		statusSlug := mapGoodreadsShelf(record.GetString("exclusive_shelf"))
 		if statusSlug != "" {
-			setStatusTag(app, user.Id, book.Id, statusSlug)
+			_ = setStatusTag(app, user.Id, book.Id, statusSlug)
 		}
 
 		// Mark resolved

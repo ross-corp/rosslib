@@ -552,7 +552,7 @@ func CommitGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 			// Map exclusive shelf to status tag
 			statusSlug := mapGoodreadsShelf(b.ExclusiveShelfSlug)
 			if statusSlug != "" {
-				setStatusTag(app, user.Id, book.Id, statusSlug)
+				_ = setStatusTag(app, user.Id, book.Id, statusSlug)
 			}
 
 			// Assign custom shelf tags
@@ -584,7 +584,7 @@ func CommitGoodreadsImport(app core.App) func(e *core.RequestEvent) error {
 			// Override status to DNF if any custom shelf is mapped to DNF
 			for _, shelf := range b.CustomShelves {
 				if dnfShelves[shelf] {
-					setStatusTag(app, user.Id, book.Id, "dnf")
+					_ = setStatusTag(app, user.Id, book.Id, "dnf")
 					break
 				}
 			}
@@ -1425,7 +1425,7 @@ func CommitStoryGraphImport(app core.App) func(e *core.RequestEvent) error {
 			// Map StoryGraph status to status tag
 			statusSlug := mapStoryGraphStatus(b.ExclusiveShelfSlug)
 			if statusSlug != "" {
-				setStatusTag(app, user.Id, book.Id, statusSlug)
+				_ = setStatusTag(app, user.Id, book.Id, statusSlug)
 			}
 
 			// Assign custom shelf tags (StoryGraph tags)
@@ -1457,7 +1457,7 @@ func CommitStoryGraphImport(app core.App) func(e *core.RequestEvent) error {
 			// Override status to DNF if any custom shelf is mapped to DNF
 			for _, shelf := range b.CustomShelves {
 				if dnfShelves[shelf] {
-					setStatusTag(app, user.Id, book.Id, "dnf")
+					_ = setStatusTag(app, user.Id, book.Id, "dnf")
 					break
 				}
 			}
@@ -2081,7 +2081,7 @@ func CommitLibraryThingImport(app core.App) func(e *core.RequestEvent) error {
 			// Map status
 			statusSlug := mapLibraryThingStatusSlug(b.ExclusiveShelfSlug)
 			if statusSlug != "" {
-				setStatusTag(app, user.Id, book.Id, statusSlug)
+				_ = setStatusTag(app, user.Id, book.Id, statusSlug)
 			}
 
 			// Assign custom shelf tags
@@ -2113,7 +2113,7 @@ func CommitLibraryThingImport(app core.App) func(e *core.RequestEvent) error {
 			// Override status to DNF if any custom shelf is mapped to DNF
 			for _, shelf := range b.CustomShelves {
 				if dnfShelves[shelf] {
-					setStatusTag(app, user.Id, book.Id, "dnf")
+					_ = setStatusTag(app, user.Id, book.Id, "dnf")
 					break
 				}
 			}

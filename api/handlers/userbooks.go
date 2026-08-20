@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -10,6 +11,10 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 )
+
+// errUnknownStatusSlug is returned by setStatusTag when the slug doesn't match
+// any of the user's status tag values.
+var errUnknownStatusSlug = errors.New("unknown status slug")
 
 var validOLWorkID = regexp.MustCompile(`^OL\d+W$`)
 
@@ -84,7 +89,7 @@ func AddBook(app core.App) func(e *core.RequestEvent) error {
 
 		// Set status tag if provided
 		if data.StatusSlug != "" {
-			setStatusTag(app, user.Id, book.Id, data.StatusSlug)
+			_ = setStatusTag(app, user.Id, book.Id, data.StatusSlug)
 		}
 
 		recordActivity(app, user.Id, "shelved", map[string]any{"book": book.Id})
@@ -230,7 +235,7 @@ func UpdateBook(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		if data.StatusSlug != nil {
-			setStatusTag(app, user.Id, book.Id, *data.StatusSlug)
+			_ = setStatusTag(app, user.Id, book.Id, *data.StatusSlug)
 		}
 
 		refreshBookStats(app, book.Id)
@@ -542,7 +547,12 @@ func SetBookStatus(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusNotFound, map[string]any{"error": "Book not found"})
 		}
 
-		setStatusTag(app, user.Id, books[0].Id, data.Slug)
+		if err := setStatusTag(app, user.Id, books[0].Id, data.Slug); err != nil {
+			if errors.Is(err, errUnknownStatusSlug) {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Unknown status"})
+			}
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to set status"})
+		}
 		return e.JSON(http.StatusOK, map[string]any{"ok": true})
 	}
 }
@@ -864,14 +874,16 @@ func SearchUserBooks(app core.App) func(e *core.RequestEvent) error {
 }
 
 // setStatusTag sets the status tag for a user's book.
-func setStatusTag(app core.App, userID, bookID, statusSlug string) {
+// Returns errUnknownStatusSlug when the slug doesn't match any status value,
+// or another error for internal failures.
+func setStatusTag(app core.App, userID, bookID, statusSlug string) error {
 	if statusSlug == "" {
-		return
+		return errUnknownStatusSlug
 	}
 
 	key, values, err := ensureStatusTagKey(app, userID)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Find the matching value
@@ -883,7 +895,7 @@ func setStatusTag(app core.App, userID, bookID, statusSlug string) {
 		}
 	}
 	if targetValue == nil {
-		return
+		return errUnknownStatusSlug
 	}
 
 	// Remove existing status tag for this book (select_one mode)
@@ -893,20 +905,24 @@ func setStatusTag(app core.App, userID, bookID, statusSlug string) {
 		map[string]any{"user": userID, "book": bookID, "key": key.Id},
 	)
 	for _, e := range existing {
-		_ = app.Delete(e)
+		if err := app.Delete(e); err != nil {
+			return err
+		}
 	}
 
 	// Create new assignment
 	coll, err := app.FindCollectionByNameOrId("book_tag_values")
 	if err != nil {
-		return
+		return err
 	}
 	rec := core.NewRecord(coll)
 	rec.Set("user", userID)
 	rec.Set("book", bookID)
 	rec.Set("tag_key", key.Id)
 	rec.Set("tag_value", targetValue.Id)
-	_ = app.Save(rec)
+	if err := app.Save(rec); err != nil {
+		return err
+	}
 
 	// Auto-set date_started when status changes to "currently-reading"
 	if statusSlug == "currently-reading" {
@@ -920,6 +936,8 @@ func setStatusTag(app core.App, userID, bookID, statusSlug string) {
 			_ = app.Save(ubs[0])
 		}
 	}
+
+	return nil
 }
 
 // GetMyBookEditions handles GET /me/books/{olId}/editions

@@ -509,6 +509,8 @@ Set the reading status for a book.
 { "slug": "currently-reading" }
 ```
 
+Returns `400 {"error": "Unknown status"}` if the slug doesn't match any status value, `500` on save failure.
+
 ### `GET /me/books/status-map`  *(auth required)*
 
 Returns a map of all the user's books to their status slugs.

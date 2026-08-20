@@ -271,7 +271,7 @@ func SimulateGhosts(app core.App) func(e *core.RequestEvent) error {
 					continue
 				}
 
-				setStatusTag(app, ghost.Id, book.Id, "finished")
+				_ = setStatusTag(app, ghost.Id, book.Id, "finished")
 				refreshBookStats(app, book.Id)
 
 				// Record activities so they appear in feeds
