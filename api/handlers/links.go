@@ -225,6 +225,11 @@ func VoteLink(app core.App) func(e *core.RequestEvent) error {
 		}
 		linkID := e.Request.PathValue("linkId")
 
+		link, err := app.FindRecordById("book_links", linkID)
+		if err != nil || link.GetString("deleted_at") != "" {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Link not found"})
+		}
+
 		existing, _ := app.FindRecordsByFilter("book_link_votes",
 			"user = {:user} && book_link = {:link}",
 			"", 1, 0,
@@ -257,6 +262,11 @@ func UnvoteLink(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
 		}
 		linkID := e.Request.PathValue("linkId")
+
+		link, err := app.FindRecordById("book_links", linkID)
+		if err != nil || link.GetString("deleted_at") != "" {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Link not found"})
+		}
 
 		existing, _ := app.FindRecordsByFilter("book_link_votes",
 			"user = {:user} && book_link = {:link}",

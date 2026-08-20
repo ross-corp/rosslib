@@ -2248,11 +2248,11 @@ Soft-delete a link (author only). Returns 204.
 
 ### `POST /links/:linkId/vote`  *(auth required)*
 
-Upvote a link. Idempotent. Returns 204.
+Upvote a link. Idempotent. Returns 204. Returns 404 with `{ "error": "Link not found" }` if the link does not exist or is soft-deleted.
 
 ### `DELETE /links/:linkId/vote`  *(auth required)*
 
-Remove upvote. Returns 204.
+Remove upvote. Returns 204. Returns 404 with `{ "error": "Link not found" }` if the link does not exist or is soft-deleted.
 
 ### `POST /links/:linkId/edits`  *(auth required)*
 
