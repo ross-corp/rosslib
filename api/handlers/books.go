@@ -34,11 +34,14 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 		offset := (page - 1) * perPage
 
 		// Search local books first
-		localBooks, _ := app.FindRecordsByFilter("books",
+		localBooks, err := app.FindRecordsByFilter("books",
 			"title LIKE {:q} || authors LIKE {:q}",
 			"-created", perPage, offset,
 			map[string]any{"q": "%" + q + "%"},
 		)
+		if err != nil {
+			app.Logger().Error("local book search failed", "error", err)
+		}
 
 		var results []map[string]any
 		seenOLIDs := map[string]bool{}
@@ -50,10 +53,13 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 			for _, b := range localBooks {
 				bookIDs = append(bookIDs, b.Id)
 			}
-			allStats, _ := app.FindRecordsByFilter("book_stats",
+			allStats, err := app.FindRecordsByFilter("book_stats",
 				"book IN {:ids}", "", len(localBooks), 0,
 				map[string]any{"ids": bookIDs},
 			)
+			if err != nil {
+				app.Logger().Error("book stats lookup failed in search", "error", err)
+			}
 			for _, s := range allStats {
 				statsMap[s.GetString("book")] = s
 			}
