@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## API & Data Integrity
 
-- [ ] Validate `authorName` length in GetAuthorSeries: in `api/handlers/series.go`, the `GetAuthorSeries()` handler (around line 49-53) trims the `authorName` query parameter but doesn't validate its length. An extremely long author name is used in a `LIKE` query (`%name%`), which could be inefficient or abusive. Add a check: `if len(authorName) > 500 { return e.JSON(http.StatusBadRequest, map[string]any{"error": "Author name too long"}) }` after trimming.
 
 ## UX polish
 
