@@ -626,6 +626,9 @@ func UpdateShelfBook(app core.App) func(e *core.RequestEvent) error {
 			item.Set("rating", *data.Rating)
 		}
 		if data.ReviewText != nil {
+			if len(*data.ReviewText) > 10000 {
+				return e.JSON(http.StatusBadRequest, map[string]any{"error": "Review must be 10,000 characters or fewer"})
+			}
 			item.Set("review_text", *data.ReviewText)
 		}
 		if data.Spoiler != nil {
