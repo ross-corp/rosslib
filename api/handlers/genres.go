@@ -87,6 +87,9 @@ func GetGenreBooks(app core.App) func(e *core.RequestEvent) error {
 				page = n
 			}
 		}
+		if page > 1000 {
+			page = 1000
+		}
 		limit := 20
 		if l := e.Request.URL.Query().Get("limit"); l != "" {
 			if n, err := strconv.Atoi(l); err == nil && n > 0 && n <= 100 {

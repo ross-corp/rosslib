@@ -182,7 +182,7 @@ Searches both local catalog and Open Library concurrently. Local matches appear 
 
 **Query parameters:**
 - `q` *(required)* — search query
-- `page` *(optional, default 1)* — page number for pagination. Each page returns up to 20 results.
+- `page` *(optional, default 1, max 1000)* — page number for pagination. Each page returns up to 20 results. Values above 1000 are clamped to 1000.
 - `sort` *(optional)* — sort order: `reads` (most read) or `rating` (highest rated)
 - `year_min` / `year_max` *(optional)* — filter by publication year range
 
@@ -573,7 +573,7 @@ Returns genres derived from the `subjects` field on books in the local catalog, 
 Returns books matching a genre from the local catalog, filtered by the `subjects` field on books. Paginated.
 
 **Query parameters:**
-- `page` *(optional, default 1)* — page number
+- `page` *(optional, default 1, max 1000)* — page number; values above 1000 are clamped to 1000
 - `limit` *(optional, default 20, max 100)* — results per page
 - `sort` *(optional)* — sort order: `title` (A-Z), `rating` (highest first), `year` (newest first). Default: no explicit sort.
 
@@ -998,7 +998,7 @@ Search/browse users by username or display name. 20 per page.
 
 **Query parameters:**
 - `q` *(optional)* — search by username or display name
-- `page` *(optional, default 1)* — pagination
+- `page` *(optional, default 1, max 1000)* — pagination; values above 1000 are clamped to 1000
 - `sort` *(optional, default `newest`)* — sort order: `newest` (registration date), `books` (most books in library), `followers` (most followers)
 
 ### `GET /me/suggested-follows?limit=5`  *(auth required)*

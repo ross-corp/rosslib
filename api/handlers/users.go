@@ -20,6 +20,9 @@ func SearchUsers(app core.App) func(e *core.RequestEvent) error {
 		if page < 1 {
 			page = 1
 		}
+		if page > 1000 {
+			page = 1000
+		}
 		perPage := 20
 		offset := (page - 1) * perPage
 

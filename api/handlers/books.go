@@ -28,6 +28,9 @@ func SearchBooks(app core.App) func(e *core.RequestEvent) error {
 				page = n
 			}
 		}
+		if page > 1000 {
+			page = 1000
+		}
 		offset := (page - 1) * perPage
 
 		// Search local books first
