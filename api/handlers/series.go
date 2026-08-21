@@ -70,7 +70,11 @@ func GetAuthorSeries(app core.App) func(e *core.RequestEvent) error {
 			ORDER BY s.name
 			LIMIT 50
 		`).Bind(map[string]any{"pattern": "%" + authorName + "%"}).All(&rows)
-		if err != nil || len(rows) == 0 {
+		if err != nil {
+			app.Logger().Error("GetAuthorSeries query failed", "error", err)
+			return e.JSON(http.StatusOK, []any{})
+		}
+		if len(rows) == 0 {
 			return e.JSON(http.StatusOK, []any{})
 		}
 
@@ -146,6 +150,7 @@ func GetSeriesDetail(app core.App) func(e *core.RequestEvent) error {
 			ORDER BY CASE WHEN bs.position IS NULL THEN 1 ELSE 0 END, bs.position, b.title
 		`).Bind(map[string]any{"series": seriesID}).All(&books)
 		if err != nil {
+			app.Logger().Error("GetSeriesDetail books query failed", "error", err)
 			books = []bookRow{}
 		}
 
@@ -166,7 +171,7 @@ func GetSeriesDetail(app core.App) func(e *core.RequestEvent) error {
 				Slug   string `db:"slug"`
 			}
 			var statuses []statusRow
-			_ = app.DB().NewQuery(`
+			err := app.DB().NewQuery(`
 				SELECT btv.book AS book_id, tv.slug
 				FROM book_tag_values btv
 				JOIN tag_values tv ON btv.tag_value = tv.id
@@ -177,6 +182,9 @@ func GetSeriesDetail(app core.App) func(e *core.RequestEvent) error {
 				"user":    viewerID,
 				"bookIds": bookIDs,
 			}).All(&statuses)
+			if err != nil {
+				app.Logger().Error("GetSeriesDetail viewer status query failed", "error", err)
+			}
 			for _, s := range statuses {
 				progressMap[s.BookID] = s.Slug
 			}
