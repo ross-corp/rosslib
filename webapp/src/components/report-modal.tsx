@@ -91,27 +91,31 @@ export default function ReportModal({ contentType, contentId, onClose }: Props) 
     setSubmitting(true);
     setError(null);
 
-    const res = await fetch("/api/reports", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        content_type: contentType,
-        content_id: contentId,
-        reason,
-        details: details.trim() || undefined,
-      }),
-    });
+    try {
+      const res = await fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content_type: contentType,
+          content_id: contentId,
+          reason,
+          details: details.trim() || undefined,
+        }),
+      });
 
-    setSubmitting(false);
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setError(data?.error ?? "Failed to submit report");
+        return;
+      }
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      setError(data?.error ?? "Failed to submit report");
-      return;
+      setSuccess(true);
+      setTimeout(handleClose, 1500);
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
-
-    setSuccess(true);
-    setTimeout(handleClose, 1500);
   }
 
   return (
