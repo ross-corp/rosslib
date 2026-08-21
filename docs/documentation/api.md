@@ -931,7 +931,7 @@ Fetches author detail from Open Library including a paginated slice of their wor
 
 ### `GET /authors/:authorKey/series?name=<authorName>`
 
-Returns series containing books whose `authors` field matches the given name. The `name` query param is required. Capped at 50 results.
+Returns series containing books whose `authors` field matches the given name. The `name` query param is required and must be 500 characters or fewer (`400` otherwise). Capped at 50 results.
 
 ```json
 [

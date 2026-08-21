@@ -51,6 +51,9 @@ func GetAuthorSeries(app core.App) func(e *core.RequestEvent) error {
 		if authorName == "" {
 			return e.JSON(http.StatusOK, []any{})
 		}
+		if len(authorName) > 500 {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Author name too long"})
+		}
 
 		type seriesRow struct {
 			ID          string  `db:"id" json:"id"`
