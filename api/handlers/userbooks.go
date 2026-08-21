@@ -277,112 +277,167 @@ func DeleteBook(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		// Clean up tag assignments for this book
-		btvs, _ := app.FindRecordsByFilter("book_tag_values",
+		btvs, err := app.FindRecordsByFilter("book_tag_values",
 			"user = {:user} && book = {:book}",
 			"", 100, 0,
 			map[string]any{"user": user.Id, "book": book.Id},
 		)
+		if err != nil {
+			app.Logger().Error("DeleteBook cleanup lookup failed", "collection", "book_tag_values", "error", err)
+		}
 		for _, btv := range btvs {
-			_ = app.Delete(btv)
+			if err := app.Delete(btv); err != nil {
+				app.Logger().Error("DeleteBook cleanup failed", "collection", "book_tag_values", "error", err)
+			}
 		}
 
 		// Clean up collection items
-		cis, _ := app.FindRecordsByFilter("collection_items",
+		cis, err := app.FindRecordsByFilter("collection_items",
 			"user = {:user} && book = {:book}",
 			"", 100, 0,
 			map[string]any{"user": user.Id, "book": book.Id},
 		)
+		if err != nil {
+			app.Logger().Error("DeleteBook cleanup lookup failed", "collection", "collection_items", "error", err)
+		}
 		for _, ci := range cis {
-			_ = app.Delete(ci)
+			if err := app.Delete(ci); err != nil {
+				app.Logger().Error("DeleteBook cleanup failed", "collection", "collection_items", "error", err)
+			}
 		}
 
 		// Clean up genre ratings
-		grs, _ := app.FindRecordsByFilter("genre_ratings",
+		grs, err := app.FindRecordsByFilter("genre_ratings",
 			"user = {:user} && book = {:book}",
 			"", 100, 0,
 			map[string]any{"user": user.Id, "book": book.Id},
 		)
+		if err != nil {
+			app.Logger().Error("DeleteBook cleanup lookup failed", "collection", "genre_ratings", "error", err)
+		}
 		for _, gr := range grs {
-			_ = app.Delete(gr)
+			if err := app.Delete(gr); err != nil {
+				app.Logger().Error("DeleteBook cleanup failed", "collection", "genre_ratings", "error", err)
+			}
 		}
 
 		// Clean up review likes on this user's review
-		rls, _ := app.FindRecordsByFilter("review_likes",
+		rls, err := app.FindRecordsByFilter("review_likes",
 			"book = {:book} && review_user = {:user}",
 			"", 100, 0,
 			map[string]any{"book": book.Id, "user": user.Id},
 		)
+		if err != nil {
+			app.Logger().Error("DeleteBook cleanup lookup failed", "collection", "review_likes", "error", err)
+		}
 		for _, rl := range rls {
-			_ = app.Delete(rl)
+			if err := app.Delete(rl); err != nil {
+				app.Logger().Error("DeleteBook cleanup failed", "collection", "review_likes", "error", err)
+			}
 		}
 
 		// Clean up book follows
-		bfs, _ := app.FindRecordsByFilter("book_follows",
+		bfs, err := app.FindRecordsByFilter("book_follows",
 			"user = {:user} && book = {:book}",
 			"", 100, 0,
 			map[string]any{"user": user.Id, "book": book.Id},
 		)
+		if err != nil {
+			app.Logger().Error("DeleteBook cleanup lookup failed", "collection", "book_follows", "error", err)
+		}
 		for _, bf := range bfs {
-			_ = app.Delete(bf)
+			if err := app.Delete(bf); err != nil {
+				app.Logger().Error("DeleteBook cleanup failed", "collection", "book_follows", "error", err)
+			}
 		}
 
 		// Clean up book quotes for this user+book
-		bqs, _ := app.FindRecordsByFilter("book_quotes",
+		bqs, err := app.FindRecordsByFilter("book_quotes",
 			"user = {:user} && book = {:book}",
 			"", 100, 0,
 			map[string]any{"user": user.Id, "book": book.Id},
 		)
+		if err != nil {
+			app.Logger().Error("DeleteBook cleanup lookup failed", "collection", "book_quotes", "error", err)
+		}
 		for _, bq := range bqs {
-			_ = app.Delete(bq)
+			if err := app.Delete(bq); err != nil {
+				app.Logger().Error("DeleteBook cleanup failed", "collection", "book_quotes", "error", err)
+			}
 		}
 
 		// Clean up reading sessions for this user+book
-		rss, _ := app.FindRecordsByFilter("reading_sessions",
+		rss, err := app.FindRecordsByFilter("reading_sessions",
 			"user = {:user} && book = {:book}",
 			"", 100, 0,
 			map[string]any{"user": user.Id, "book": book.Id},
 		)
+		if err != nil {
+			app.Logger().Error("DeleteBook cleanup lookup failed", "collection", "reading_sessions", "error", err)
+		}
 		for _, rs := range rss {
-			_ = app.Delete(rs)
+			if err := app.Delete(rs); err != nil {
+				app.Logger().Error("DeleteBook cleanup failed", "collection", "reading_sessions", "error", err)
+			}
 		}
 
 		// Clean up review comments on this user's review
-		rcs, _ := app.FindRecordsByFilter("review_comments",
+		rcs, err := app.FindRecordsByFilter("review_comments",
 			"book = {:book} && review_user = {:user}",
 			"", 100, 0,
 			map[string]any{"book": book.Id, "user": user.Id},
 		)
+		if err != nil {
+			app.Logger().Error("DeleteBook cleanup lookup failed", "collection", "review_comments", "error", err)
+		}
 		for _, rc := range rcs {
-			_ = app.Delete(rc)
+			if err := app.Delete(rc); err != nil {
+				app.Logger().Error("DeleteBook cleanup failed", "collection", "review_comments", "error", err)
+			}
 		}
 
 		// Clean up this user's book link votes, edits, and submitted links involving this book
-		bls, _ := app.FindRecordsByFilter("book_links",
+		bls, err := app.FindRecordsByFilter("book_links",
 			"from_book = {:book} || to_book = {:book}",
 			"", 200, 0,
 			map[string]any{"book": book.Id},
 		)
+		if err != nil {
+			app.Logger().Error("DeleteBook cleanup lookup failed", "collection", "book_links", "error", err)
+		}
 		for _, bl := range bls {
-			blvs, _ := app.FindRecordsByFilter("book_link_votes",
+			blvs, err := app.FindRecordsByFilter("book_link_votes",
 				"user = {:user} && book_link = {:link}",
 				"", 100, 0,
 				map[string]any{"user": user.Id, "link": bl.Id},
 			)
-			for _, blv := range blvs {
-				_ = app.Delete(blv)
+			if err != nil {
+				app.Logger().Error("DeleteBook cleanup lookup failed", "collection", "book_link_votes", "error", err)
 			}
-			bles, _ := app.FindRecordsByFilter("book_link_edits",
+			for _, blv := range blvs {
+				if err := app.Delete(blv); err != nil {
+					app.Logger().Error("DeleteBook cleanup failed", "collection", "book_link_votes", "error", err)
+				}
+			}
+			bles, err := app.FindRecordsByFilter("book_link_edits",
 				"user = {:user} && book_link = {:link}",
 				"", 100, 0,
 				map[string]any{"user": user.Id, "link": bl.Id},
 			)
+			if err != nil {
+				app.Logger().Error("DeleteBook cleanup lookup failed", "collection", "book_link_edits", "error", err)
+			}
 			for _, ble := range bles {
-				_ = app.Delete(ble)
+				if err := app.Delete(ble); err != nil {
+					app.Logger().Error("DeleteBook cleanup failed", "collection", "book_link_edits", "error", err)
+				}
 			}
 			// Soft-delete links this user submitted
 			if bl.GetString("user") == user.Id && bl.GetString("deleted_at") == "" {
 				bl.Set("deleted_at", time.Now().UTC().Format(time.RFC3339))
-				_ = app.Save(bl)
+				if err := app.Save(bl); err != nil {
+					app.Logger().Error("DeleteBook cleanup failed", "collection", "book_links", "error", err)
+				}
 			}
 		}
 
@@ -390,17 +445,22 @@ func DeleteBook(app core.App) func(e *core.RequestEvent) error {
 		var ubCount struct {
 			Count int `db:"count"`
 		}
-		err := app.DB().NewQuery(`
+		err = app.DB().NewQuery(`
 			SELECT COUNT(*) as count FROM user_books WHERE book = {:book}
 		`).Bind(map[string]any{"book": book.Id}).One(&ubCount)
 		if err == nil && ubCount.Count == 0 {
-			bss, _ := app.FindRecordsByFilter("book_series",
+			bss, err := app.FindRecordsByFilter("book_series",
 				"book = {:book}",
 				"", 100, 0,
 				map[string]any{"book": book.Id},
 			)
+			if err != nil {
+				app.Logger().Error("DeleteBook cleanup lookup failed", "collection", "book_series", "error", err)
+			}
 			for _, bs := range bss {
-				_ = app.Delete(bs)
+				if err := app.Delete(bs); err != nil {
+					app.Logger().Error("DeleteBook cleanup failed", "collection", "book_series", "error", err)
+				}
 			}
 		}
 
