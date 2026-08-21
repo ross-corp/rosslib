@@ -855,7 +855,7 @@ Add a book to a series. Finds or creates the series by name.
 
 Returns `201` on new link, `200` if the link already exists (position is updated if provided).
 
-Validation: `series_name` is required and must be 255 characters or fewer; `position`, if provided, must be `>= 0` (`400` otherwise).
+Validation: `series_name` is required and must be 255 characters or fewer; `position`, if provided, must be between 0 and 10,000 inclusive (`400` otherwise).
 
 ---
 

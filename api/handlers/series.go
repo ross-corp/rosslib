@@ -328,8 +328,8 @@ func AddBookToSeries(app core.App) func(e *core.RequestEvent) error {
 		if len(data.SeriesName) > 255 {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "series_name must be 255 characters or fewer"})
 		}
-		if data.Position != nil && *data.Position < 0 {
-			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Position must be 0 or greater"})
+		if data.Position != nil && (*data.Position < 0 || *data.Position > 10000) {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Position must be between 0 and 10,000"})
 		}
 
 		// Find the book
