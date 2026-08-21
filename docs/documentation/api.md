@@ -2245,7 +2245,7 @@ Returns 201 with `{ id, created_at }`. Auto-upvotes by the creator. Returns 409 
 
 ### `DELETE /links/:linkId`  *(auth required)*
 
-Soft-delete a link (author only). Returns 204.
+Soft-delete a link (sets `deleted_at`; vote history is preserved). Allowed for the link author or a moderator (`is_moderator`). Returns 200 with `{ "message": "Link deleted" }`. Returns 404 with `{ "error": "Link not found" }` if the link does not exist or is already soft-deleted; 403 with `{ "error": "Not your link" }` otherwise.
 
 ### `POST /links/:linkId/vote`  *(auth required)*
 

@@ -201,14 +201,15 @@ func DeleteBookLink(app core.App) func(e *core.RequestEvent) error {
 		linkID := e.Request.PathValue("linkId")
 
 		link, err := app.FindRecordById("book_links", linkID)
-		if err != nil {
+		if err != nil || link.GetString("deleted_at") != "" {
 			return e.JSON(http.StatusNotFound, map[string]any{"error": "Link not found"})
 		}
-		if link.GetString("user") != user.Id {
+		if link.GetString("user") != user.Id && !user.GetBool("is_moderator") {
 			return e.JSON(http.StatusForbidden, map[string]any{"error": "Not your link"})
 		}
 
-		if err := app.Delete(link); err != nil {
+		link.Set("deleted_at", time.Now().UTC().Format("2006-01-02 15:04:05.000Z"))
+		if err := app.Save(link); err != nil {
 			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to delete"})
 		}
 
