@@ -68,6 +68,7 @@ func GetAuthorSeries(app core.App) func(e *core.RequestEvent) error {
 			JOIN books b ON bs.book = b.id
 			WHERE b.authors LIKE {:pattern}
 			ORDER BY s.name
+			LIMIT 50
 		`).Bind(map[string]any{"pattern": "%" + authorName + "%"}).All(&rows)
 		if err != nil || len(rows) == 0 {
 			return e.JSON(http.StatusOK, []any{})
