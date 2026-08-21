@@ -142,7 +142,9 @@ func SetGenreRatings(app core.App) func(e *core.RequestEvent) error {
 			map[string]any{"user": user.Id, "book": book.Id},
 		)
 		for _, r := range existing {
-			_ = app.Delete(r)
+			if err := app.Delete(r); err != nil {
+				return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to save genre ratings"})
+			}
 		}
 
 		// Create new ratings
