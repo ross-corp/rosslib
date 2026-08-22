@@ -45,7 +45,6 @@ Backlog of small tasks for nephewbot to pick off. Each item should be self-conta
 
 ## API & Data Integrity
 
-- [ ] Trim comment body in AddComment: in `api/handlers/threads.go`, `CreateThread()` trims both title and body with `strings.TrimSpace` (lines 143-144), but `AddComment()` does not trim `data.Body` before its non-empty check — a comment consisting only of spaces or newlines passes validation and renders as a blank comment. Add `data.Body = strings.TrimSpace(data.Body)` before the existing empty-body check in `AddComment()` so whitespace-only comments are rejected with the existing "body required" error.
 - [ ] Record created_link activity in CreateBookLink: in `api/handlers/links.go`, `CreateBookLink()` (lines 130-192) saves a community link but never calls `recordActivity()`, even though `created_link` is in the allowed activity types list (`api/handlers/activity.go` line 25) and the feed renderer already has a `created_link` case (`webapp/src/components/activity.tsx` line 257) that reads `link_type` and both book references. After the successful `app.Save(rec)` (line 183), add a `recordActivity(app, user.Id, "created_link", ...)` call passing the from-book ID as `book` and a `metadata` map with `link_type`, `to_book_ol_id` (`data.ToOpenLibraryID`), and `to_book_title` (`toBooks[0].GetString("title")`), following the call shape used in `api/handlers/threads.go` line 169.
 
 ## UX polish
