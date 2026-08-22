@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import BookCoverPlaceholder from "@/components/book-cover-placeholder";
 import { useToast } from "@/components/toast";
 import { type Edition, langName, formatLabel } from "@/lib/constants";
@@ -24,6 +25,7 @@ export default function EditionPicker({
   const [saving, setSaving] = useState<string | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(currentEditionKey);
   const toast = useToast();
+  const router = useRouter();
 
   async function loadMore() {
     setLoading(true);
@@ -58,7 +60,7 @@ export default function EditionPicker({
       if (res.ok) {
         setSelectedKey(edKey || null);
         setOpen(false);
-        window.location.reload();
+        router.refresh();
       } else {
         toast.error("Failed to select edition");
       }

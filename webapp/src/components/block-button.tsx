@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/components/toast";
 import ConfirmDialog from "@/components/confirm-dialog";
 
@@ -15,6 +16,7 @@ export default function BlockButton({
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const toast = useToast();
+  const router = useRouter();
 
   async function handleBlock() {
     setLoading(true);
@@ -26,7 +28,7 @@ export default function BlockButton({
     if (res.ok) {
       setBlocked(true);
       toast.success(`Blocked ${username}`);
-      window.location.reload();
+      router.refresh();
     }
   }
 
@@ -39,7 +41,7 @@ export default function BlockButton({
     if (res.ok) {
       setBlocked(false);
       toast.success(`Unblocked ${username}`);
-      window.location.reload();
+      router.refresh();
     }
   }
 

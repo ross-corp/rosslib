@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/components/toast";
 
 type Props = {
@@ -30,6 +31,7 @@ export default function ReadingProgress({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const toast = useToast();
+  const router = useRouter();
 
   const [deviceTotalPages, setDeviceTotalPages] = useState(
     initialDeviceTotalPages?.toString() ?? ""
@@ -137,8 +139,8 @@ export default function ReadingProgress({
     setSavingDevice(false);
     if (res.ok) {
       setEditingDevice(false);
-      // Reload to reflect new percentage calculations
-      window.location.reload();
+      // Refresh server data to reflect new percentage calculations
+      router.refresh();
     } else {
       setMessage("Failed to save");
     }
