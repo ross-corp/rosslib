@@ -184,6 +184,15 @@ func CreateBookLink(app core.App) func(e *core.RequestEvent) error {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": err.Error()})
 		}
 
+		recordActivity(app, user.Id, "created_link", map[string]any{
+			"book": fromBooks[0].Id,
+			"metadata": map[string]any{
+				"link_type":     data.LinkType,
+				"to_book_ol_id": data.ToOpenLibraryID,
+				"to_book_title": toBooks[0].GetString("title"),
+			},
+		})
+
 		return e.JSON(http.StatusOK, map[string]any{
 			"id":        rec.Id,
 			"link_type": data.LinkType,

@@ -2241,7 +2241,7 @@ Submit a community link from this book to another.
 
 Valid `link_type` values: `sequel`, `prequel`, `companion`, `mentioned_in`, `similar`, `adaptation`. Returns 400 with `"invalid link_type"` for any other value.
 
-Returns 201 with `{ id, created_at }`. Auto-upvotes by the creator. Returns 409 if the user already submitted this exact link.
+Returns 201 with `{ id, created_at }`. Auto-upvotes by the creator. Returns 409 if the user already submitted this exact link. Records a `created_link` activity for the submitting user (with `link_type`, `to_book_ol_id`, `to_book_title` metadata).
 
 ### `DELETE /links/:linkId`  *(auth required)*
 
