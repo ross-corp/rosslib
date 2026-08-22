@@ -354,7 +354,7 @@ Returns all community reviews for a book. Each user appears at most once (most r
 **Query params:**
 - `sort` — `newest` (default), `oldest`, `highest` (rating DESC), `lowest` (rating ASC), `most_liked` (like count DESC)
 
-The viewer's own review always appears first regardless of sort order. When authenticated, reviews from blocked/blocking users are excluded.
+The viewer's own review always appears first regardless of sort order. When authenticated, reviews from blocked/blocking users are excluded. Reviews from private users are excluded unless the reviewer is the viewer or the viewer has an active follow of the reviewer (anonymous viewers never see private users' reviews).
 
 ```json
 [

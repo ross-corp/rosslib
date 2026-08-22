@@ -791,7 +791,8 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 				   COALESCE((SELECT COUNT(*) FROM review_comments rc WHERE rc.book = ub.book AND rc.review_user = ub.user AND (rc.deleted_at IS NULL OR rc.deleted_at = '')), 0) as comment_count
 			FROM user_books ub
 			JOIN users u ON ub.user = u.id
-			WHERE ub.book = {:book} AND ub.review_text != '' AND ub.review_text IS NOT NULL`
+			WHERE ub.book = {:book} AND ub.review_text != '' AND ub.review_text IS NOT NULL
+			AND (u.is_private = false OR ub.user = {:viewer} OR EXISTS (SELECT 1 FROM follows f WHERE f.follower = {:viewer} AND f.followee = ub.user AND f.status = 'active'))`
 		params := map[string]any{"book": books[0].Id, "viewer": viewerID}
 
 		if viewerID != "" {
