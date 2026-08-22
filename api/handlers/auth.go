@@ -98,7 +98,7 @@ func Register(app core.App) func(e *core.RequestEvent) error {
 
 		// Create default Status tag key + values
 		if _, _, err := ensureStatusTagKey(app, record.Id); err != nil {
-			_ = err
+			app.Logger().Error("Register: failed to ensure status tag key", "error", err, "user", record.Id)
 		}
 
 		token, err := record.NewAuthToken()
@@ -181,7 +181,7 @@ func GoogleAuth(app core.App) func(e *core.RequestEvent) error {
 
 		// Create default Status tag key + values
 		if _, _, err := ensureStatusTagKey(app, newUser.Id); err != nil {
-			_ = err
+			app.Logger().Error("GoogleAuth: failed to ensure status tag key", "error", err, "user", newUser.Id)
 		}
 
 		return issueToken(e, newUser)
