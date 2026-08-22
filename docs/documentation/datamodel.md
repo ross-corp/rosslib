@@ -242,7 +242,7 @@ Append-only event log for social feeds. Written fire-and-forget from handlers �
 |---|---|---|
 | id | uuid PK | `gen_random_uuid()` |
 | user_id | uuid FK → users | the actor |
-| activity_type | varchar(50) | `shelved`, `rated`, `reviewed`, `created_thread`, `followed_user`, `followed_author`, `followed_book`, `started_book`, `finished_book`, `created_link` |
+| activity_type | varchar(50) | `shelved`, `rated`, `reviewed`, `created_thread`, `followed_user`, `followed_author`, `followed_book`, `started_book`, `finished_book`, `created_link`, `sent_recommendation` |
 | book_id | uuid FK → books | nullable |
 | target_user_id | uuid FK → users | nullable; for `followed_user` |
 | collection_id | uuid FK → collections | nullable; for `shelved` |
