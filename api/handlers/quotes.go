@@ -187,6 +187,9 @@ func CreateBookQuote(app core.App) func(e *core.RequestEvent) error {
 		if len(data.Note) > 500 {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "note must be 500 characters or fewer"})
 		}
+		if data.PageNumber != nil && (*data.PageNumber < 1 || *data.PageNumber > 50000) {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "page_number must be between 1 and 50000"})
+		}
 
 		isPublic := true
 		if data.IsPublic != nil {

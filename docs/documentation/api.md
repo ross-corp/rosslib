@@ -2169,7 +2169,7 @@ Create a new quote for a book.
 }
 ```
 
-`text` is required (max 2000 chars). `page_number`, `note` (max 500 chars), and `is_public` (default true) are optional.
+`text` is required (max 2000 chars). `page_number` (1–50000 if provided), `note` (max 500 chars), and `is_public` (default true) are optional.
 
 ```
 200 { "id": "...", "text": "...", "created_at": "..." }
