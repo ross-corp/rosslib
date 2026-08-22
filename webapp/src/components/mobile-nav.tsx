@@ -92,6 +92,7 @@ export default function MobileNav({
                 </Link>
                 <Link
                   href="/api/auth/logout"
+                  prefetch={false}
                   className="nav-link py-1.5"
                   onClick={() => setOpen(false)}
                 >

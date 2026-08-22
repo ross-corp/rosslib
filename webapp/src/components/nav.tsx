@@ -68,7 +68,12 @@ export default async function Nav() {
               >
                 {user.username}
               </Link>
-              <Link href="/api/auth/logout" className="nav-link" aria-label="Sign out">
+              <Link
+                href="/api/auth/logout"
+                prefetch={false}
+                className="nav-link"
+                aria-label="Sign out"
+              >
                 sign out
               </Link>
             </>
