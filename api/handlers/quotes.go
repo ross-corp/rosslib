@@ -58,6 +58,7 @@ func GetBookQuotes(app core.App) func(e *core.RequestEvent) error {
 			"offset": offset,
 		}).All(&quotes)
 		if err != nil {
+			app.Logger().Error("GetBookQuotes: quotes query failed", "error", err)
 			return e.JSON(http.StatusOK, []any{})
 		}
 
@@ -127,6 +128,7 @@ func GetMyBookQuotes(app core.App) func(e *core.RequestEvent) error {
 			"book": books[0].Id,
 		}).All(&quotes)
 		if err != nil {
+			app.Logger().Error("GetMyBookQuotes: quotes query failed", "error", err)
 			return e.JSON(http.StatusOK, []any{})
 		}
 
