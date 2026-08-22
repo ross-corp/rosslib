@@ -326,7 +326,11 @@ func AddComment(app core.App) func(e *core.RequestEvent) error {
 			Body   string  `json:"body"`
 			Parent *string `json:"parent"`
 		}{}
-		if err := e.BindBody(&data); err != nil || data.Body == "" {
+		if err := e.BindBody(&data); err != nil {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "body required"})
+		}
+		data.Body = strings.TrimSpace(data.Body)
+		if data.Body == "" {
 			return e.JSON(http.StatusBadRequest, map[string]any{"error": "body required"})
 		}
 		if len(data.Body) > 5000 {
