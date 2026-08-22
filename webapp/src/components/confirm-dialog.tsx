@@ -46,7 +46,7 @@ export default function ConfirmDialog({
         <div className="flex items-center gap-3">
           <button
             onClick={onConfirm}
-            className="text-xs px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 transition-colors"
+            className="text-xs px-4 py-2 rounded bg-danger text-badge-text hover:bg-danger-bg-hover transition-colors"
           >
             {confirmLabel}
           </button>
