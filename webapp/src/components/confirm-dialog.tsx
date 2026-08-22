@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 
 type Props = {
   title: string;
@@ -19,6 +19,19 @@ export default function ConfirmDialog({
 }: Props) {
   const titleId = useId();
   const descId = useId();
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onCancel]);
 
   return (
     <div
@@ -51,6 +64,7 @@ export default function ConfirmDialog({
             {confirmLabel}
           </button>
           <button
+            ref={cancelRef}
             onClick={onCancel}
             className="text-xs text-text-secondary hover:text-text-primary transition-colors"
           >
