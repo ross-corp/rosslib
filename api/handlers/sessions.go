@@ -40,7 +40,11 @@ func GetSessions(app core.App) func(e *core.RequestEvent) error {
 			WHERE "user" = {:user} AND book = {:book}
 			ORDER BY created DESC
 		`).Bind(map[string]any{"user": user.Id, "book": book.Id}).All(&sessions)
-		if err != nil || sessions == nil {
+		if err != nil {
+			app.Logger().Error("GetSessions: sessions query failed", "error", err)
+			sessions = []sessionRow{}
+		}
+		if sessions == nil {
 			sessions = []sessionRow{}
 		}
 
