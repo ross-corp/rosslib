@@ -254,6 +254,29 @@ function ActivityDescription({ item }: { item: ActivityItem }) {
           )}
         </>
       );
+    case "sent_recommendation":
+      return (
+        <>
+          recommended{" "}
+          {item.book && (
+            <Link
+              href={`/books/${item.book.open_library_id}`}
+              className="font-medium text-text-primary hover:underline"
+            >
+              {item.book.title}
+            </Link>
+          )}{" "}
+          to{" "}
+          {item.target_user && (
+            <Link
+              href={`/${item.target_user.username}`}
+              className="font-medium text-text-primary hover:underline"
+            >
+              {item.target_user.display_name || item.target_user.username}
+            </Link>
+          )}
+        </>
+      );
     case "created_link":
       return (
         <>

@@ -134,9 +134,6 @@ func SendRecommendation(app core.App) func(e *core.RequestEvent) error {
 		recordActivity(app, user.Id, "sent_recommendation", map[string]any{
 			"book":        book.Id,
 			"target_user": recipient.Id,
-			"metadata": map[string]any{
-				"note": body.Note,
-			},
 		})
 
 		return e.JSON(http.StatusCreated, map[string]any{
