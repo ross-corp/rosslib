@@ -77,8 +77,13 @@ export default async function FollowingPage({
     );
   }
 
-  const following = await fetchFollowing(username, page, token ?? undefined);
-  const hasNext = following.length >= PER_PAGE;
+  // The API clamps `limit` to 50 and derives its offset from `page * limit`,
+  // so a PER_PAGE+1 sentinel fetch isn't possible; probe the next page instead.
+  const [following, nextPage] = await Promise.all([
+    fetchFollowing(username, page, token ?? undefined),
+    fetchFollowing(username, page + 1, token ?? undefined),
+  ]);
+  const hasNext = following.length >= PER_PAGE && nextPage.length > 0;
 
   return (
     <>
