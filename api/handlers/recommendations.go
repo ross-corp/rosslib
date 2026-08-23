@@ -59,6 +59,11 @@ func SendRecommendation(app core.App) func(e *core.RequestEvent) error {
 		}
 		recipient := recipients[0]
 
+		// Blocked users cannot send recommendations; 404 to avoid revealing the block
+		if isBlockedEitherDirection(app, user.Id, recipient.Id) {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "User not found"})
+		}
+
 		// Find or create the book record
 		books, err := app.FindRecordsByFilter("books",
 			"open_library_id = {:olid}", "", 1, 0,
