@@ -30,6 +30,7 @@ type ThreadDetail = {
   created_at: string;
   locked_at: string | null;
   comments: Comment[];
+  total_comments: number;
 };
 
 async function fetchThread(threadId: string): Promise<ThreadDetail | null> {
@@ -156,6 +157,7 @@ export default async function ThreadPage({
           <ThreadComments
             threadId={threadId}
             initialComments={data.comments}
+            totalComments={data.total_comments}
             isLoggedIn={!!currentUser}
             currentUserId={currentUser?.user_id ?? null}
             isLocked={!!data.locked_at}

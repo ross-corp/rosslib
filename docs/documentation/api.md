@@ -2011,7 +2011,13 @@ Returns discussion threads for a book, ordered by most recent first. Paginated.
 
 ### `GET /threads/:threadId`
 
-Returns a single thread with all its comments. Includes `locked_at` (null if unlocked, ISO timestamp if locked).
+Returns a single thread with a page of its comments. Includes `locked_at` (null if unlocked, ISO timestamp if locked).
+
+Query params:
+- `limit` — max comments to return (default 100, max 200)
+- `offset` — number of comments to skip (default 0)
+
+Comments are ordered oldest-first. `total_comments` is the total count of non-deleted comments on the thread, independent of pagination.
 
 ```json
 {
@@ -2028,7 +2034,8 @@ Returns a single thread with all its comments. Includes `locked_at` (null if unl
       "body": "I think it meant...",
       "created_at": "2026-02-25T15:00:00Z"
     }
-  ]
+  ],
+  "total_comments": 42
 }
 ```
 

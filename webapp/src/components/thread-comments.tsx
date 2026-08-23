@@ -20,6 +20,7 @@ type Comment = {
 type Props = {
   threadId: string;
   initialComments: Comment[];
+  totalComments: number;
   isLoggedIn: boolean;
   currentUserId: string | null;
   isLocked?: boolean;
@@ -235,11 +236,14 @@ function CommentItem({
 export default function ThreadComments({
   threadId,
   initialComments,
+  totalComments,
   isLoggedIn,
   currentUserId,
   isLocked = false,
 }: Props) {
   const [comments, setComments] = useState<Comment[]>(initialComments);
+  const [total, setTotal] = useState(totalComments);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -257,11 +261,34 @@ export default function ThreadComments({
   }
 
   async function refreshComments() {
-    const res = await fetch(`/api/threads/${threadId}`);
+    // Refetch at least as many comments as are currently loaded (plus one for
+    // a newly posted comment), capped at the API's max page size.
+    const limit = Math.min(200, Math.max(100, comments.length + 1));
+    const res = await fetch(`/api/threads/${threadId}?limit=${limit}`);
     if (res.ok) {
       const data = await res.json();
       setComments(data.comments);
+      setTotal(data.total_comments);
     }
+  }
+
+  async function loadMore() {
+    setLoadingMore(true);
+    const res = await fetch(
+      `/api/threads/${threadId}?offset=${comments.length}`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      setComments((prev) => {
+        const seen = new Set(prev.map((c) => c.id));
+        return [
+          ...prev,
+          ...(data.comments as Comment[]).filter((c) => !seen.has(c.id)),
+        ];
+      });
+      setTotal(data.total_comments);
+    }
+    setLoadingMore(false);
   }
 
   async function handleSubmitComment(e: React.FormEvent) {
@@ -319,9 +346,7 @@ export default function ThreadComments({
   return (
     <div>
       <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-6">
-        {comments.length > 0
-          ? `Comments (${comments.length})`
-          : "Comments"}
+        {total > 0 ? `Comments (${total})` : "Comments"}
       </h2>
 
       {/* Locked banner */}
@@ -377,6 +402,20 @@ export default function ThreadComments({
               onDelete={handleDelete}
             />
           ))}
+        </div>
+      )}
+
+      {/* Load more */}
+      {comments.length < total && (
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="text-xs px-3 py-1.5 rounded border border-border text-text-secondary hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loadingMore ? "Loading..." : "Load more comments"}
+          </button>
         </div>
       )}
 

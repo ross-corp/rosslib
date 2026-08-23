@@ -2,12 +2,13 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ threadId: string }> }
 ) {
   const { threadId } = await params;
+  const search = new URL(req.url).search;
   const res = await fetch(
-    `${process.env.API_URL}/threads/${threadId}`,
+    `${process.env.API_URL}/threads/${threadId}${search}`,
     { cache: "no-store" }
   );
   const data = await res.json();

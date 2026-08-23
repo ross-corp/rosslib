@@ -463,6 +463,10 @@ Client component on user profile pages. Shows "Block" button that opens an inlin
 
 Client component on the book detail page for re-read tracking. Shows a list of past reading sessions with dates, ratings, and notes. Includes a "Log a read" button to add new sessions, and edit/delete controls on each session. Calls `GET/POST /api/me/books/:olId/sessions` and `PATCH/DELETE /api/me/sessions/:sessionId`.
 
+### `ThreadComments` (`components/thread-comments.tsx`)
+
+Client component that renders the comment section on the thread detail page: new-comment form, one-level-nested comment list with reply/delete/report actions, and a locked banner when the thread is locked. Receives `initialComments` (first page, up to 100) and `totalComments` from the server component. When fewer comments are loaded than `totalComments`, shows a "Load more comments" button that fetches the next page via `GET /api/threads/:threadId?offset=` and appends it (deduplicated by id). The heading shows the total comment count.
+
 ### `ThreadLockToggle` (`components/thread-lock-toggle.tsx`)
 
 Client component shown on the thread detail page for moderators only. Renders a Lock/Unlock toggle button. Calls `POST /api/threads/:threadId/lock` or `POST /api/threads/:threadId/unlock` and updates the button state optimistically.

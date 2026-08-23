@@ -204,6 +204,29 @@ func GetThread(app core.App) func(e *core.RequestEvent) error {
 			}
 		}
 
+		// Parse pagination params for comments
+		limit := 100
+		offset := 0
+		if l, err := strconv.Atoi(e.Request.URL.Query().Get("limit")); err == nil && l > 0 {
+			if l > 200 {
+				l = 200
+			}
+			limit = l
+		}
+		if o, err := strconv.Atoi(e.Request.URL.Query().Get("offset")); err == nil && o > 0 {
+			offset = o
+		}
+
+		// Get total comment count
+		type countResult struct {
+			Count int `db:"count"`
+		}
+		var cnt countResult
+		_ = app.DB().NewQuery(`
+			SELECT COUNT(*) as count FROM thread_comments tc
+			WHERE tc.thread = {:thread} AND (tc.deleted_at IS NULL OR tc.deleted_at = '')
+		`).Bind(map[string]any{"thread": threadID}).One(&cnt)
+
 		// Get comments
 		type commentRow struct {
 			ID          string  `db:"id" json:"id"`
@@ -223,7 +246,8 @@ func GetThread(app core.App) func(e *core.RequestEvent) error {
 			JOIN users u ON tc.user = u.id
 			WHERE tc.thread = {:thread} AND (tc.deleted_at IS NULL OR tc.deleted_at = '')
 			ORDER BY tc.created ASC
-		`).Bind(map[string]any{"thread": threadID}).All(&comments)
+			LIMIT {:limit} OFFSET {:offset}
+		`).Bind(map[string]any{"thread": threadID, "limit": limit, "offset": offset}).All(&comments)
 
 		var commentResults []map[string]any
 		for _, c := range comments {
@@ -263,8 +287,9 @@ func GetThread(app core.App) func(e *core.RequestEvent) error {
 			"body":         thread.GetString("body"),
 			"spoiler":      thread.GetBool("spoiler"),
 			"created_at":   thread.GetString("created"),
-			"locked_at":    lockedAt,
-			"comments":     commentResults,
+			"locked_at":      lockedAt,
+			"comments":       commentResults,
+			"total_comments": cnt.Count,
 		})
 	}
 }
