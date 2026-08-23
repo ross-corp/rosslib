@@ -352,3 +352,36 @@ func UpdateRecommendation(app core.App) func(e *core.RequestEvent) error {
 		return e.JSON(http.StatusOK, map[string]any{"message": "Recommendation updated"})
 	}
 }
+
+// DeleteRecommendation handles DELETE /me/recommendations/{recId}
+func DeleteRecommendation(app core.App) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		user := e.Auth
+		if user == nil {
+			return e.JSON(http.StatusUnauthorized, map[string]any{"error": "Authentication required"})
+		}
+
+		recID := e.Request.PathValue("recId")
+
+		rec, err := app.FindRecordById("recommendations", recID)
+		if err != nil {
+			return e.JSON(http.StatusNotFound, map[string]any{"error": "Recommendation not found"})
+		}
+
+		// Only the sender can cancel
+		if rec.GetString("sender") != user.Id {
+			return e.JSON(http.StatusForbidden, map[string]any{"error": "Not your recommendation"})
+		}
+
+		// Only pending recommendations can be cancelled
+		if rec.GetString("status") != "pending" {
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Only pending recommendations can be cancelled"})
+		}
+
+		if err := app.Delete(rec); err != nil {
+			return e.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to delete recommendation"})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"message": "Recommendation cancelled"})
+	}
+}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { formatTime } from "@/components/activity";
+import { useToast } from "@/components/toast";
 
 type SentRecommendation = {
   id: string;
@@ -27,11 +28,31 @@ const STATUS_FILTERS = ["all", "pending", "seen", "dismissed"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 export default function SentRecommendationList({
-  recommendations,
+  recommendations: initial,
 }: {
   recommendations: SentRecommendation[];
 }) {
+  const [recommendations, setRecommendations] =
+    useState<SentRecommendation[]>(initial);
   const [filter, setFilter] = useState<StatusFilter>("all");
+  const [cancelling, setCancelling] = useState<string | null>(null);
+  const toast = useToast();
+
+  async function cancelRecommendation(id: string) {
+    setCancelling(id);
+    try {
+      const res = await fetch(`/api/me/recommendations/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setRecommendations((prev) => prev.filter((r) => r.id !== id));
+      } else {
+        toast.error("Failed to cancel recommendation");
+      }
+    } finally {
+      setCancelling(null);
+    }
+  }
 
   const statusColors: Record<string, string> = {
     pending: "text-amber-600 border-amber-300",
@@ -138,11 +159,22 @@ export default function SentRecommendationList({
             )}
 
             {/* Status badge */}
-            <span
-              className={`inline-block mt-2 text-[10px] font-medium border rounded px-1.5 py-0.5 leading-none ${statusColors[rec.status] ?? "text-text-secondary border-border"}`}
-            >
-              {rec.status.charAt(0).toUpperCase() + rec.status.slice(1)}
-            </span>
+            <div className="flex items-center gap-2 mt-2">
+              <span
+                className={`inline-block text-[10px] font-medium border rounded px-1.5 py-0.5 leading-none ${statusColors[rec.status] ?? "text-text-secondary border-border"}`}
+              >
+                {rec.status.charAt(0).toUpperCase() + rec.status.slice(1)}
+              </span>
+              {rec.status === "pending" && (
+                <button
+                  onClick={() => cancelRecommendation(rec.id)}
+                  disabled={cancelling === rec.id}
+                  className="text-[10px] font-medium text-text-secondary border border-border rounded px-1.5 py-0.5 leading-none hover:text-text-primary disabled:opacity-50"
+                >
+                  {cancelling === rec.id ? "Cancelling…" : "Cancel"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       ))}

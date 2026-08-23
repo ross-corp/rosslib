@@ -251,6 +251,7 @@ func main() {
 		authed.GET("/me/recommendations/sent", handlers.GetSentRecommendations(app))
 		authed.GET("/me/recommendations", handlers.GetRecommendations(app))
 		authed.PATCH("/me/recommendations/{recId}", handlers.UpdateRecommendation(app))
+		authed.DELETE("/me/recommendations/{recId}", handlers.DeleteRecommendation(app))
 
 		// Saved searches
 		authed.GET("/me/saved-searches", handlers.GetSavedSearches(app))

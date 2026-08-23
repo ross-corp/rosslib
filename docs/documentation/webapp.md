@@ -183,7 +183,7 @@ webapp/src/app/
     ├── me/notification-preferences/route.ts     ← GET, PUT notification prefs
     ├── me/recommendations/route.ts               ← GET, POST recommendations
     ├── me/recommendations/sent/route.ts          ← GET sent recommendations
-    ├── me/recommendations/[recId]/route.ts       ← PATCH update recommendation status
+    ├── me/recommendations/[recId]/route.ts       ← PATCH update status, DELETE cancel pending
     ├── me/suggested-follows/route.ts             ← GET follow suggestions
     ├── me/saved-searches/route.ts                ← GET, POST saved searches
     ├── me/saved-searches/[id]/route.ts           ← DELETE saved search

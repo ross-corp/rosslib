@@ -2692,6 +2692,14 @@ Update a recommendation's status. Only the recipient can update.
 
 Valid statuses: `seen`, `dismissed`.
 
+### `DELETE /me/recommendations/:recId`  *(auth required)*
+
+Cancel a sent recommendation. Only the sender can cancel, and only while the recommendation is still `pending` (400 otherwise). Deletes the record.
+
+```json
+{ "message": "Recommendation cancelled" }
+```
+
 ---
 
 ## Background: Author Publication Poller
