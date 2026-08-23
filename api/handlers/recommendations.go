@@ -160,6 +160,11 @@ func GetRecommendations(app core.App) func(e *core.RequestEvent) error {
 		if status == "" {
 			status = "pending"
 		}
+		switch status {
+		case "pending", "seen", "dismissed", "all":
+		default:
+			return e.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid status"})
+		}
 
 		type recRow struct {
 			ID              string  `db:"id"`

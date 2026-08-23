@@ -2639,7 +2639,7 @@ Creates a recommendation record and sends a `book_recommendation` notification t
 List received recommendations for the current user.
 
 **Query parameters:**
-- `status` *(optional, default: `pending`)* — filter by `pending`, `seen`, `dismissed`, or `all`.
+- `status` *(optional, default: `pending`)* — filter by `pending`, `seen`, `dismissed`, or `all`. Any other value returns `400 { "error": "Invalid status" }`.
 
 Returns an array of recommendation objects, each including sender info (username, display_name, avatar_url) and book info (open_library_id, title, cover_url, authors).
 
