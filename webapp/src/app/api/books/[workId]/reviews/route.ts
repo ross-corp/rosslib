@@ -15,8 +15,11 @@ export async function GET(
   }
 
   const url = new URL(`${process.env.API_URL}/books/${workId}/reviews`);
-  const sort = new URL(req.url).searchParams.get("sort");
-  if (sort) url.searchParams.set("sort", sort);
+  const incoming = new URL(req.url).searchParams;
+  for (const key of ["sort", "limit", "offset"]) {
+    const value = incoming.get(key);
+    if (value) url.searchParams.set(key, value);
+  }
 
   const res = await fetch(url.toString(), {
     headers,

@@ -757,12 +757,21 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 			map[string]any{"id": workID},
 		)
 		if len(books) == 0 {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{"reviews": []any{}, "total": 0})
 		}
 
 		viewerID := ""
 		if e.Auth != nil {
 			viewerID = e.Auth.Id
+		}
+
+		limit, _ := strconv.Atoi(e.Request.URL.Query().Get("limit"))
+		if limit <= 0 || limit > 100 {
+			limit = 20
+		}
+		offset, _ := strconv.Atoi(e.Request.URL.Query().Get("offset"))
+		if offset < 0 {
+			offset = 0
 		}
 
 		type reviewRow struct {
@@ -782,13 +791,7 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 		}
 
 		var reviews []reviewRow
-		query := `
-			SELECT ub.id as user_book_id, ub.user as user_id, u.username, u.display_name, u.avatar,
-				   ub.rating, ub.review_text, ub.spoiler, ub.date_read,
-				   ub.date_added as date_added,
-				   COALESCE((SELECT COUNT(*) FROM review_likes rl WHERE rl.book = ub.book AND rl.review_user = ub.user), 0) as like_count,
-				   COALESCE((SELECT COUNT(*) FROM review_likes rl WHERE rl.book = ub.book AND rl.review_user = ub.user AND rl.user = {:viewer}), 0) as liked_by_me,
-				   COALESCE((SELECT COUNT(*) FROM review_comments rc WHERE rc.book = ub.book AND rc.review_user = ub.user AND (rc.deleted_at IS NULL OR rc.deleted_at = '')), 0) as comment_count
+		fromClause := `
 			FROM user_books ub
 			JOIN users u ON ub.user = u.id
 			WHERE ub.book = {:book} AND ub.review_text != '' AND ub.review_text IS NOT NULL
@@ -796,10 +799,26 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 		params := map[string]any{"book": books[0].Id, "viewer": viewerID}
 
 		if viewerID != "" {
-			query += `
+			fromClause += `
 			AND ub.user NOT IN (SELECT blocked FROM blocks WHERE blocker = {:viewer})
 			AND ub.user NOT IN (SELECT blocker FROM blocks WHERE blocked = {:viewer})`
 		}
+
+		// Total count across all pages
+		type countResult struct {
+			Count int `db:"count"`
+		}
+		var countRes countResult
+		_ = app.DB().NewQuery(`SELECT COUNT(*) as count`+fromClause).Bind(params).One(&countRes)
+		total := countRes.Count
+
+		query := `
+			SELECT ub.id as user_book_id, ub.user as user_id, u.username, u.display_name, u.avatar,
+				   ub.rating, ub.review_text, ub.spoiler, ub.date_read,
+				   ub.date_added as date_added,
+				   COALESCE((SELECT COUNT(*) FROM review_likes rl WHERE rl.book = ub.book AND rl.review_user = ub.user), 0) as like_count,
+				   COALESCE((SELECT COUNT(*) FROM review_likes rl WHERE rl.book = ub.book AND rl.review_user = ub.user AND rl.user = {:viewer}), 0) as liked_by_me,
+				   COALESCE((SELECT COUNT(*) FROM review_comments rc WHERE rc.book = ub.book AND rc.review_user = ub.user AND (rc.deleted_at IS NULL OR rc.deleted_at = '')), 0) as comment_count` + fromClause
 
 		// Sort: viewer's own review always first, then apply requested sort
 		sortParam := e.Request.URL.Query().Get("sort")
@@ -817,11 +836,14 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 			orderSuffix = "ub.date_added DESC"
 		}
 		query += `
-			ORDER BY CASE WHEN ub.user = {:viewer} THEN 0 ELSE 1 END, ` + orderSuffix
+			ORDER BY CASE WHEN ub.user = {:viewer} THEN 0 ELSE 1 END, ` + orderSuffix + `
+			LIMIT {:limit} OFFSET {:offset}`
+		params["limit"] = limit
+		params["offset"] = offset
 
 		err := app.DB().NewQuery(query).Bind(params).All(&reviews)
 		if err != nil {
-			return e.JSON(http.StatusOK, []any{})
+			return e.JSON(http.StatusOK, map[string]any{"reviews": []any{}, "total": 0})
 		}
 
 		// Batch-check which reviewers the viewer follows
@@ -886,7 +908,7 @@ func GetBookReviews(app core.App) func(e *core.RequestEvent) error {
 			result = []map[string]any{}
 		}
 
-		return e.JSON(http.StatusOK, result)
+		return e.JSON(http.StatusOK, map[string]any{"reviews": result, "total": total})
 	}
 }
 

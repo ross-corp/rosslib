@@ -349,31 +349,36 @@ Returns up to 5 users the viewer follows who have this book in their library. Re
 
 ### `GET /books/:workId/reviews`  *(optional auth)*
 
-Returns all community reviews for a book. Each user appears at most once (most recent review).
+Returns paginated community reviews for a book. Each user appears at most once (most recent review).
 
 **Query params:**
 - `sort` — `newest` (default), `oldest`, `highest` (rating DESC), `lowest` (rating ASC), `most_liked` (like count DESC)
+- `limit` — page size, default 20, max 100 (out-of-range values reset to 20)
+- `offset` — number of rows to skip, default 0
 
-The viewer's own review always appears first regardless of sort order. When authenticated, reviews from blocked/blocking users are excluded. Reviews from private users are excluded unless the reviewer is the viewer or the viewer has an active follow of the reviewer (anonymous viewers never see private users' reviews).
+The viewer's own review always appears first regardless of sort order. When authenticated, reviews from blocked/blocking users are excluded. Reviews from private users are excluded unless the reviewer is the viewer or the viewer has an active follow of the reviewer (anonymous viewers never see private users' reviews). `total` is the count of all visible reviews across pages.
 
 ```json
-[
-  {
-    "user_id": "abc123",
-    "username": "alice",
-    "display_name": "Alice",
-    "avatar_url": "https://...",
-    "rating": 4,
-    "review_text": "Loved it.",
-    "spoiler": false,
-    "date_read": "2025-06-15T00:00:00Z",
-    "date_dnf": null,
-    "date_added": "2025-06-20T14:32:10Z",
-    "is_followed": true,
-    "like_count": 3,
-    "liked_by_me": false
-  }
-]
+{
+  "reviews": [
+    {
+      "user_id": "abc123",
+      "username": "alice",
+      "display_name": "Alice",
+      "avatar_url": "https://...",
+      "rating": 4,
+      "review_text": "Loved it.",
+      "spoiler": false,
+      "date_read": "2025-06-15T00:00:00Z",
+      "date_dnf": null,
+      "date_added": "2025-06-20T14:32:10Z",
+      "is_followed": true,
+      "like_count": 3,
+      "liked_by_me": false
+    }
+  ],
+  "total": 42
+}
 ```
 
 ### `POST /books/:workId/reviews/:userId/like`  *(auth required)*

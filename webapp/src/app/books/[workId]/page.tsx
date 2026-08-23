@@ -208,19 +208,26 @@ async function fetchBook(workId: string): Promise<BookDetail | null> {
   return res.json();
 }
 
-async function fetchBookReviews(workId: string, token?: string, sort?: string): Promise<BookReview[]> {
+async function fetchBookReviews(
+  workId: string,
+  token?: string,
+  sort?: string,
+  limit?: number
+): Promise<{ reviews: BookReview[]; total: number }> {
   const headers: Record<string, string> = {};
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
   const url = new URL(`${process.env.API_URL}/books/${workId}/reviews`);
   if (sort) url.searchParams.set("sort", sort);
+  if (limit) url.searchParams.set("limit", String(limit));
   const res = await fetch(url.toString(), {
     headers,
     cache: "no-store",
   });
-  if (!res.ok) return [];
-  return res.json();
+  if (!res.ok) return { reviews: [], total: 0 };
+  const data = await res.json();
+  return { reviews: data.reviews ?? [], total: data.total ?? 0 };
 }
 
 async function fetchThreads(workId: string): Promise<BookThread[]> {
@@ -427,16 +434,19 @@ export default async function BookPage({
   searchParams,
 }: {
   params: Promise<{ workId: string }>;
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{ sort?: string; limit?: string }>;
 }) {
   const { workId } = await params;
-  const { sort: sortParam } = await searchParams;
+  const { sort: sortParam, limit: limitParam } = await searchParams;
   const reviewSort = REVIEW_SORT_OPTIONS.some((o) => o.value === sortParam) ? sortParam! : "newest";
+  const parsedLimit = Number(limitParam);
+  const reviewLimit =
+    Number.isInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 100) : 20;
   const [currentUser, token] = await Promise.all([getUser(), getToken()]);
 
-  const [book, reviews, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings, bookQuotes, myBookQuotes, sessions, friendReaders, followerCount] = await Promise.all([
+  const [book, reviewData, threads, bookLinks, tagKeys, myStatus, isFollowingBook, aggregateGenreRatings, myGenreRatings, bookQuotes, myBookQuotes, sessions, friendReaders, followerCount] = await Promise.all([
     fetchBook(workId),
-    fetchBookReviews(workId, token ?? undefined, reviewSort),
+    fetchBookReviews(workId, token ?? undefined, reviewSort, reviewLimit),
     fetchThreads(workId),
     fetchBookLinks(workId, token ?? undefined),
     currentUser && token ? fetchTagKeys(token) : Promise.resolve(null),
@@ -464,6 +474,8 @@ export default async function BookPage({
   ]);
 
   if (!book) notFound();
+
+  const { reviews, total: reviewTotal } = reviewData;
 
   // Fetch "more by this author" works
   const firstAuthor = book.authors?.find((a) => a.key) ?? null;
@@ -864,8 +876,8 @@ export default async function BookPage({
         <section className="border-t border-border pt-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider">
-              {reviews.length > 0
-                ? `Reviews (${reviews.length})`
+              {reviewTotal > 0
+                ? `Reviews (${reviewTotal})`
                 : "Reviews"}
             </h2>
             {reviews.length > 1 && (
@@ -1002,6 +1014,17 @@ export default async function BookPage({
                   </div>
                 </article>
               ))}
+            </div>
+          )}
+
+          {reviewTotal > reviews.length && reviewLimit < 100 && (
+            <div className="mt-8">
+              <Link
+                href={`/books/${workId}?limit=${Math.min(reviewLimit + 20, 100)}${reviewSort === "newest" ? "" : `&sort=${reviewSort}`}`}
+                className="inline-block text-sm border border-border rounded-md px-4 py-2 text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors"
+              >
+                Show more reviews
+              </Link>
             </div>
           )}
         </section>
